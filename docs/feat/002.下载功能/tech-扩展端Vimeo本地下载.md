@@ -664,7 +664,7 @@ playlist 过期可使用 `request.config_refresh_url` 重建一次资源快照;�
 
 ## 11. 资源模型
 
-Popup 和页面按钮使用同一批 `MediaResource`。ResourceBuffer 按视频分组持有资源(`videoId → resourceId → MediaResource` 两层 Map),两条写入路径共享同一模型:播放页身份路径用 `replaceSnapshot(videoId, resources)` 做整页快照替换——当前页面可见/已挂载的媒体是唯一真相,上一轮扫描的陈旧资源与切页前其他视频不残留;身份缺失聚合页的回退用 `mergeVideoResources(videoId, resources)` 按视频合并——新视频追加成组,组内按资源 id 去重、来源排序择优,视频顺序保持首次写入(捕获)顺序。旧的整体替换/追加 API 已删除,不存在第二套缓冲结构。badge 语义仍是当前页面可下载资源数(跨视频累计),聚合页可能到三位数。
+Popup 和页面按钮使用同一批 `MediaResource`。ResourceBuffer 按视频分组持有资源(`videoId → resourceId → MediaResource` 两层 Map),两条写入路径共享同一模型:播放页身份路径用 `replaceSnapshot(videoId, resources)` 做整页快照替换——当前页面可见/已挂载的媒体是唯一真相,上一轮扫描的陈旧资源与切页前其他视频不残留;身份缺失聚合页的回退用 `mergeVideoResources(videoId, resources)` 按视频合并——新视频追加成组,组内按资源 id 去重、来源排序择优,视频顺序保持首次写入(捕获)顺序。旧的整体替换/追加 API 已删除,不存在第二套缓冲结构。badge 语义是当前页面检测到的视频数(`getVideoCount()`,一个视频无论多少档位都算 1,空资源组与 popup 一样不计入),与 popup 检测数量口径一致。
 
 组数有上限(`MAX_VIDEO_GROUPS = 16`):长驻聚合页的回退重扫会持续并入新视频,组数不设上限则单调增长,最终撑破 `getResources` 响应限额让 popup 读取必败。`mergeVideoResources` 后组数超限时按首并入序淘汰最旧组(组资源与元数据一起删除),上限与 MAIN world 捕获上限、响应限额定容三方对齐;淘汰后该 videoId 不会再被回退路径重编排(站点侧每页编排一次的记录仍在),直到页面切换清空。
 

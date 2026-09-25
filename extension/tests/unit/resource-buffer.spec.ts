@@ -99,7 +99,7 @@ describe('ResourceBuffer', () => {
     buffer.mergeVideoResources('10', [first])
 
     expect(buffer.getAllResources()).toEqual([first, second])
-    expect(buffer.getCount()).toBe(2)
+    expect(buffer.getVideoCount()).toBe(2)
   })
 
   it('并入第 17 组时按首并入序淘汰最旧组：组与元数据回收、badge 回落、旧资源查不到', () => {
@@ -132,28 +132,31 @@ describe('ResourceBuffer', () => {
       Array.from({ length: 16 }, (_, offset) => String(offset + 2))
     )
 
-    // badge 是各组资源数之和，随淘汰回落而不是涨到 17。
+    // badge 是视频组数（每组 1 个视频），随淘汰回落而不是涨到 17。
     expect(mocks.updateBadge).toHaveBeenLastCalledWith({ count: 16 })
-    expect(buffer.getCount()).toBe(16)
+    expect(buffer.getVideoCount()).toBe(16)
 
     // 被淘汰组的资源跨组查找不再命中，未淘汰组不受影响。
     expect(buffer.getResource('v1:video')).toBeUndefined()
     expect(buffer.getResource('v2:video')?.url).toBe('https://cdn.example/v2.m4s')
   })
 
-  it('badge 计数是跨视频累计的资源数；同内容快照替换不重复通知', () => {
+  it('badge 计数是视频数：一个视频无论多少档位都算 1；同内容快照替换不重复通知', () => {
     const buffer = new TestResourceBuffer()
-    const first = createResource('v1:video', 'https://cdn.example/v1.m4s', 1)
-    const second = createResource('v2:video', 'https://cdn.example/v2.m4s', 2, undefined, '20')
+    const first = createResource('v1:video', 'https://cdn.example/v1.m4s', 1, undefined, '10')
+    const second = createResource('v2:video', 'https://cdn.example/v2.m4s', 2, undefined, '10')
+    const other = createResource('v3:video', 'https://cdn.example/v3.m4s', 3, undefined, '20')
 
-    buffer.mergeVideoResources('10', [first])
+    // 同一视频的两个档位只计 1，不按资源数累计。
+    buffer.mergeVideoResources('10', [first, second])
     expect(mocks.updateBadge).toHaveBeenLastCalledWith({ count: 1 })
 
-    buffer.mergeVideoResources('20', [second])
+    buffer.mergeVideoResources('20', [other])
     expect(mocks.updateBadge).toHaveBeenLastCalledWith({ count: 2 })
 
+    // 快照替换是整页语义：组 20 被移除，只剩组 10 的两个档位，视频数为 1。
     buffer.replaceSnapshot('10', [first, second])
-    expect(mocks.updateBadge).toHaveBeenLastCalledWith({ count: 2 })
+    expect(mocks.updateBadge).toHaveBeenLastCalledWith({ count: 1 })
 
     mocks.updateBadge.mockClear()
     buffer.replaceSnapshot('10', [first, second])
@@ -184,7 +187,7 @@ describe('ResourceBuffer', () => {
 
     // 聚合页并入的其他视频与旧资源都被整页快照替换，同 id 保留更高来源排序版本。
     expect(buffer.getAllResources()).toEqual([currentProgressive])
-    expect(buffer.getCount()).toBe(1)
+    expect(buffer.getVideoCount()).toBe(1)
   })
 
   it('快照替换同 id 时仍保留更高 sourceRank 资源', () => {
@@ -216,12 +219,12 @@ describe('ResourceBuffer', () => {
     buffer.mergeVideoResources('20', [
       createResource('v2:video', 'https://i.vimeocdn.com/video/b.jpg', 1, undefined, '20')
     ])
-    expect(buffer.getCount()).toBe(2)
+    expect(buffer.getVideoCount()).toBe(2)
 
     buffer.pageKey = 'page:b'
     vi.advanceTimersByTime(500)
 
-    expect(buffer.getCount()).toBe(0)
+    expect(buffer.getVideoCount()).toBe(0)
     buffer.stop()
   })
 

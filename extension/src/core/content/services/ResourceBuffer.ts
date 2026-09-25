@@ -164,11 +164,17 @@ export abstract class ResourceBuffer {
     return resources
   }
 
-  /** 获取资源总数（badge 语义：当前页面可下载资源数，跨视频累计）。 */
-  getCount(): number {
+  /**
+   * 获取视频数（badge 语义：当前页面检测到的视频数，与 popup 列表口径一致）。
+   *
+   * 一个视频无论有多少档位都算 1；空资源组没有可下载内容，与 popup 一样不计入。
+   */
+  getVideoCount(): number {
     let count = 0
     for (const group of this.videoGroups.values()) {
-      count += group.size
+      if (group.size > 0) {
+        count += 1
+      }
     }
 
     return count
@@ -198,12 +204,14 @@ export abstract class ResourceBuffer {
 
   /** 清空资源。 */
   clear(): void {
-    const previousCount = this.getCount()
+    const previousResourceCount = this.getAllResources().length
     this.videoGroups.clear()
     this.groupMetadata.clear()
 
-    if (previousCount > 0) {
-      logger.info(`[ResourceBuffer:${this.siteName}] 缓冲区已清空，清除 ${previousCount} 个资源`)
+    if (previousResourceCount > 0) {
+      logger.info(
+        `[ResourceBuffer:${this.siteName}] 缓冲区已清空，清除 ${previousResourceCount} 个资源`
+      )
       this.notifyUpdate()
     }
   }
@@ -337,7 +345,7 @@ export abstract class ResourceBuffer {
 
   /** 通知 background 更新 badge。 */
   private notifyUpdate(): void {
-    const count = this.getCount()
+    const count = this.getVideoCount()
 
     this.backgroundClient.updateBadge({ count }).catch(() => {
       // background 可能暂时不可用，badge 更新失败不影响页面扫描。
