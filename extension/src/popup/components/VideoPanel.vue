@@ -1,8 +1,10 @@
 <!--
   Popup 视频面板。
   主区四态互斥：扫描中 → 未连接引导（当前页不是 Vimeo 且无已打开的站点标签页）→ 空状态
-  （页面没有可下载视频）→ [多视频选择器（仅聚合页检测到多个视频时）] + 视频信息 + 四行档位
-  （Video / Audio / Subtitle / Image）+ 保存位置 + 时间裁剪。
+  （页面没有可下载视频）→ [多视频选择器（仅聚合页检测到多个视频时）] + 视频信息卡 + 四行档位
+  （Video / Audio / Subtitle / Image）+ 时间裁剪 + 保存位置。
+  视觉走 design.md（Geist 亮色）token（见 `core/constants/design.ts`）：卡片化布局 + 浮层
+  选择器，交互逻辑与重构前一致。
 -->
 <template>
   <main class="video-panel" :aria-busy="store.loading">
@@ -32,7 +34,7 @@
       </button>
     </div>
 
-    <!-- 空状态：当前页面没有可下载视频 -->
+    <!-- 空状态：当前页面没有可下载视频（零资源组不算检测到，见 buildDetectedVideos） -->
     <div v-else-if="videos.length === 0" class="panel-state">
       <div class="empty-icon" aria-hidden="true">
         <Icon :name="IconName.INBOX" :size="IconSize.XL" />
@@ -45,47 +47,42 @@
 
     <div v-else class="panel-body">
       <!--
-        多视频选择器：聚合页回退检测到多个视频时先选视频，信息区与四行档位随选择联动；
+        多视频选择器：聚合页回退检测到多个视频时先选视频，信息卡与四行档位随选择联动；
         播放页只有一个视频，选择器不渲染，布局与单视频页面完全一致。
       -->
-      <section v-if="videos.length > 1" class="video-switcher">
+      <section v-if="videos.length > 1" class="panel-card video-switcher">
         <p class="video-switcher-count">
           {{ t(I18N_KEYS.VIDEO_PANEL.DETECTED_COUNT, { count: videos.length }) }}
         </p>
-        <select
+        <VideoSelector
           v-model="selectedVideoId"
-          class="video-select"
-          :aria-label="t(I18N_KEYS.VIDEO_PANEL.VIDEO_SWITCHER_LABEL)"
-        >
-          <option v-for="video in videos" :key="video.videoId" :value="video.videoId">
-            {{ videoOptionLabel(video) }}
-          </option>
-        </select>
+          :videos="videos"
+          :label="t(I18N_KEYS.VIDEO_PANEL.VIDEO_SWITCHER_LABEL)"
+        />
       </section>
 
-      <!-- 视频信息 -->
-      <section class="video-info">
-        <img
-          v-if="posterUrl && !posterFailed"
-          class="poster"
-          :src="posterUrl"
-          alt=""
-          @error="posterFailed = true"
-        />
-        <div v-else class="poster poster-placeholder" aria-hidden="true">
-          <Icon :name="IconName.FILM" :size="IconSize.LG" />
-        </div>
+      <!-- 视频信息卡：封面 + 标题 + 作者/时长 + 当前档位 -->
+      <section class="panel-card video-info">
+        <VideoThumb class="poster" :src="selectedVideo?.thumbnailUrl" />
         <div class="video-info-text">
           <h3 class="video-title" :title="videoTitle">{{ videoTitle }}</h3>
-          <!-- 作者与时长是站点元数据，缺失时整行不渲染（不留空行） -->
-          <p v-if="videoAuthor" class="video-author">{{ videoAuthor }}</p>
-          <p v-if="videoDurationText" class="video-duration">{{ videoDurationText }}</p>
+          <!-- 作者与时长是站点元数据，缺失时对应片段不渲染，整行只有内容才出现 -->
+          <p v-if="videoAuthor || videoDurationText" class="video-byline">
+            <span v-if="videoAuthor" class="video-author">{{ videoAuthor }}</span>
+            <span
+              v-if="videoAuthor && videoDurationText"
+              class="byline-separator"
+              aria-hidden="true"
+              >·</span
+            >
+            <span v-if="videoDurationText" class="video-duration">{{ videoDurationText }}</span>
+          </p>
           <p class="video-meta">{{ videoMeta }}</p>
         </div>
       </section>
 
       <!-- 四行下载选项 -->
-      <section class="option-rows">
+      <section class="panel-card option-rows">
         <div v-for="row in rows" :key="row.kind" class="option-row" :data-row="row.kind">
           <span class="row-label">{{ t(row.labelKey) }}</span>
 
@@ -141,13 +138,13 @@
             :aria-label="downloadTitle(row)"
             @click="handleDownload(row)"
           >
-            <Icon :name="IconName.ARROW_DOWN" :size="IconSize.SM" color="#ffffff" />
+            <Icon :name="IconName.ARROW_DOWN" :size="IconSize.SM" :color="DESIGN_TOKENS.BG_100" />
           </button>
         </div>
       </section>
 
       <!-- 时间裁剪 -->
-      <section class="clip-section">
+      <section class="panel-card clip-section">
         <span class="row-label">{{ t(I18N_KEYS.VIDEO_PANEL.CLIP_TITLE) }}</span>
         <div class="clip-inputs">
           <label class="clip-field">
@@ -185,7 +182,7 @@
       </section>
 
       <!-- 保存位置：只存用户填写的相对子目录，归一化与路径拼接由 background 在下载边界完成 -->
-      <section class="save-path-section">
+      <section class="panel-card save-path-section">
         <label class="save-path-field">
           <span class="row-label">{{ t(I18N_KEYS.VIDEO_PANEL.SAVE_PATH_LABEL) }}</span>
           <input
@@ -207,7 +204,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { I18N_KEYS } from '@/core/constants/i18n'
-import { COMMON_COLORS } from '@/core/constants/style'
+import { DESIGN_TOKENS } from '@/core/constants/design'
 import { DEFAULT_DOWNLOAD_PATH, SettingsManager } from '@/core/storage/settings'
 import type { MediaResource } from '@/core/types'
 import { formatMediaDuration } from '@/core/utils/downloadStatus'
@@ -216,16 +213,13 @@ import { Icon, IconName, IconSize } from '@/core/components/icons'
 import { applyVimeoTimeRange, supportsVimeoTimeRange } from '@/sites/vimeo/media'
 import { parseVimeoTimeRange, type VimeoTimeRange } from '@/sites/vimeo/shared'
 import { useResourceStore } from '../stores/resourceStore'
+import VideoSelector from './VideoSelector.vue'
+import VideoThumb from './VideoThumb.vue'
 import {
   buildVideoPanelRows,
   COVER_FORMAT_LABEL,
-  groupDetectedVideos,
-  resolvePosterUrl,
-  resolveVideoAuthor,
-  resolveVideoDuration,
+  buildDetectedVideos,
   resolveVideoSelection,
-  resolveVideoTitle,
-  type DetectedVideo,
   type VideoPanelOption,
   type VideoPanelRow,
   type VideoPanelRowKind
@@ -241,15 +235,18 @@ const emit = defineEmits<{
   openSite: []
 }>()
 
-/** 封面加载失败后回退到占位图标。 */
-const posterFailed = ref(false)
-
 /** 时间裁剪输入；空串表示不裁剪。 */
 const clipStart = ref('')
 const clipEnd = ref('')
 
-/** 检测到的视频列表；顺序沿用 content 写入顺序（聚合页即捕获先后）。 */
-const videos = computed(() => groupDetectedVideos(store.resources))
+/**
+ * 检测到的视频列表。
+ *
+ * 组序与展示元数据来自 content 的 `videoGroups`，资源按 messageId 对号入座；零资源组不在
+ * 列表里（既不可选也不计入检测数），组元数据缺失时逐字段从资源兜底，选择器直接按此顺序
+ * 展示，不在 popup 层重排。
+ */
+const videos = computed(() => buildDetectedVideos(store.videoGroups, store.resources))
 
 /**
  * 多视频选择器的当前值。
@@ -273,14 +270,13 @@ watch(
 )
 
 /** 当前展示的视频；没有可下载视频时为 null，面板呈现空状态。 */
-const selectedVideo = computed<DetectedVideo | null>(
+const selectedVideo = computed(
   () =>
     videos.value.find(video => video.videoId === selectedVideoId.value) ?? videos.value[0] ?? null
 )
 
-/** 切换视频后不携带上一个视频的瞬态：封面失败回退与裁剪输入都重新开始。 */
+/** 切换视频后不携带上一个视频的瞬态：裁剪输入重新开始。 */
 watch(selectedVideoId, () => {
-  posterFailed.value = false
   clipStart.value = ''
   clipEnd.value = ''
 })
@@ -293,18 +289,12 @@ const rows = computed(() =>
 const resourcesById = computed(
   () => new Map((selectedVideo.value?.resources ?? []).map(resource => [resource.id, resource]))
 )
-const videoTitle = computed(() => resolveVideoTitle(selectedVideo.value?.resources ?? []))
-const videoAuthor = computed(() => resolveVideoAuthor(selectedVideo.value?.resources ?? []))
+const videoTitle = computed(() => selectedVideo.value?.title ?? '')
+const videoAuthor = computed(() => selectedVideo.value?.author)
 const videoDurationText = computed(() => {
-  const duration = resolveVideoDuration(selectedVideo.value?.resources ?? [])
+  const duration = selectedVideo.value?.durationSeconds
   return duration === undefined ? '' : formatMediaDuration(duration)
 })
-const posterUrl = computed(() => resolvePosterUrl(selectedVideo.value?.resources ?? []))
-
-/** 选择器里单个视频的文案：视频标题，缺失时回退到文件名或视频 ID。 */
-function videoOptionLabel(video: DetectedVideo): string {
-  return resolveVideoTitle(video.resources)
-}
 
 /**
  * 保存位置输入框的当前值。
@@ -385,7 +375,7 @@ watch(
   { immediate: true }
 )
 
-/** 信息区副标题：当前档位标签，文件大小已并入档位标签（见 `buildVideoPanelRows`）。 */
+/** 信息卡副标题：当前档位标签，文件大小已并入档位标签（见 `buildVideoPanelRows`）。 */
 const videoMeta = computed(() => {
   const option = selectedOptionOf('video')
   return option ? optionDisplayLabel(option) : ''
@@ -446,7 +436,7 @@ function selectedResourceId(kind: VideoPanelRowKind): string | undefined {
  * 档位的展示标签。
  *
  * Video 行切到「无音轨」时换用无音轨变体的标签：两个变体是大小不同的文件，标签里的大小随
- * 实际交付走。下拉、信息区副标题与行内下载按钮的可访问名都取这一个值，三处不会分叉。
+ * 实际交付走。下拉、信息卡副标题与行内下载按钮的可访问名都取这一个值，三处不会分叉。
  */
 function optionDisplayLabel(option: VideoPanelOption): string {
   return option.audioVariants && !videoSelection.value.withAudio
@@ -488,7 +478,7 @@ function downloadTitle(row: VideoPanelRow): string {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  background: #ffffff;
+  background: v-bind('DESIGN_TOKENS.BG_200');
 }
 
 .video-panel::-webkit-scrollbar {
@@ -496,26 +486,25 @@ function downloadTitle(row: VideoPanelRow): string {
 }
 
 .video-panel::-webkit-scrollbar-track {
-  background: v-bind('COMMON_COLORS.GRAY_100');
+  background: transparent;
 }
 
 .video-panel::-webkit-scrollbar-thumb {
-  background: v-bind('COMMON_COLORS.GRAY_300');
+  background: v-bind('DESIGN_TOKENS.GRAY_500');
   border-radius: 3px;
 }
 
 .video-panel::-webkit-scrollbar-thumb:hover {
-  background: v-bind('COMMON_COLORS.GRAY_400');
+  background: v-bind('DESIGN_TOKENS.GRAY_600');
 }
 
 .error-message {
   flex-shrink: 0;
-  font-size: 12px;
-  line-height: 16px;
-  color: v-bind('COMMON_COLORS.ERROR');
-  background: v-bind('COMMON_COLORS.ERROR_BG');
-  padding: 8px 12px;
-  border-bottom: 1px solid v-bind('COMMON_COLORS.GRAY_200');
+  font-size: v-bind('DESIGN_TOKENS.FS_12');
+  line-height: v-bind('DESIGN_TOKENS.LH_16');
+  color: v-bind('DESIGN_TOKENS.RED_900');
+  background: v-bind('DESIGN_TOKENS.RED_100');
+  padding: 8px 16px;
 }
 
 .panel-state {
@@ -529,8 +518,9 @@ function downloadTitle(row: VideoPanelRow): string {
 }
 
 .state-text {
-  font-size: 14px;
-  color: v-bind('COMMON_COLORS.GRAY_600');
+  font-size: v-bind('DESIGN_TOKENS.FS_14');
+  line-height: v-bind('DESIGN_TOKENS.LH_20');
+  color: v-bind('DESIGN_TOKENS.GRAY_900');
   text-align: center;
 }
 
@@ -541,14 +531,14 @@ function downloadTitle(row: VideoPanelRow): string {
   width: 56px;
   height: 56px;
   opacity: 0.4;
-  color: v-bind('COMMON_COLORS.GRAY_400');
+  color: v-bind('DESIGN_TOKENS.GRAY_700');
 }
 
 .spinner {
   width: 32px;
   height: 32px;
-  border: 3px solid v-bind('COMMON_COLORS.GRAY_200');
-  border-top-color: v-bind('COMMON_COLORS.PRIMARY');
+  border: 3px solid v-bind('DESIGN_TOKENS.GRAY_200');
+  border-top-color: v-bind('DESIGN_TOKENS.BLUE_700');
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -562,75 +552,61 @@ function downloadTitle(row: VideoPanelRow): string {
 .state-button {
   padding: 8px 16px;
   border: none;
-  border-radius: 6px;
-  background: v-bind('COMMON_COLORS.PRIMARY');
-  color: #ffffff;
-  font-size: 13px;
-  font-weight: 500;
+  border-radius: v-bind('DESIGN_TOKENS.RADIUS_SM');
+  background: v-bind('DESIGN_TOKENS.GRAY_1000');
+  color: v-bind('DESIGN_TOKENS.BG_100');
+  font-size: v-bind('DESIGN_TOKENS.FS_13');
+  line-height: v-bind('DESIGN_TOKENS.LH_16');
+  font-weight: v-bind('DESIGN_TOKENS.FW_500');
   cursor: pointer;
 }
 
 .state-button:hover {
-  background: v-bind('COMMON_COLORS.PRIMARY_DARK');
+  background: v-bind('DESIGN_TOKENS.GRAY_1000_HOVER');
 }
 
+/* 卡片化主区：底色 background-200 衬托白卡，卡间 12px 呼吸 */
 .panel-body {
   display: flex;
   flex-direction: column;
+  gap: 12px;
+  padding: 12px 16px 16px;
+}
+
+.panel-card {
+  background: v-bind('DESIGN_TOKENS.BG_100');
+  border: 1px solid v-bind('DESIGN_TOKENS.GRAY_ALPHA_400');
+  border-radius: v-bind('DESIGN_TOKENS.RADIUS_MD');
+  box-shadow: v-bind('DESIGN_TOKENS.SHADOW_CARD');
 }
 
 /* 多视频选择器：仅聚合页检测到多个视频时渲染 */
 .video-switcher {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 12px 16px;
-  border-bottom: 1px solid v-bind('COMMON_COLORS.GRAY_200');
+  gap: 8px;
+  padding: 12px;
 }
 
 .video-switcher-count {
   margin: 0;
-  font-size: 12px;
-  line-height: 16px;
-  color: v-bind('COMMON_COLORS.GRAY_600');
+  font-size: v-bind('DESIGN_TOKENS.FS_12');
+  line-height: v-bind('DESIGN_TOKENS.LH_16');
+  color: v-bind('DESIGN_TOKENS.GRAY_900');
 }
 
-.video-select {
-  width: 100%;
-  min-width: 0;
-  height: 32px;
-  padding: 0 8px;
-  border: 1px solid v-bind('COMMON_COLORS.GRAY_300');
-  border-radius: 6px;
-  background: #ffffff;
-  color: v-bind('COMMON_COLORS.GRAY_900');
-  font-size: 13px;
-  cursor: pointer;
-}
-
-/* 视频信息 */
+/* 视频信息卡 */
 .video-info {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
-  border-bottom: 1px solid v-bind('COMMON_COLORS.GRAY_200');
+  padding: 12px;
 }
 
 .poster {
-  width: 96px;
-  height: 54px;
-  flex-shrink: 0;
-  object-fit: cover;
-  border-radius: 6px;
-  background: v-bind('COMMON_COLORS.GRAY_200');
-}
-
-.poster-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: v-bind('COMMON_COLORS.GRAY_400');
+  width: 168px;
+  height: 94px;
+  border-radius: v-bind('DESIGN_TOKENS.RADIUS_SM');
 }
 
 .video-info-text {
@@ -642,27 +618,52 @@ function downloadTitle(row: VideoPanelRow): string {
 
 .video-title {
   margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 20px;
-  color: v-bind('COMMON_COLORS.GRAY_900');
+  font-size: v-bind('DESIGN_TOKENS.FS_14');
+  font-weight: v-bind('DESIGN_TOKENS.FW_600');
+  line-height: v-bind('DESIGN_TOKENS.LH_20');
+  letter-spacing: v-bind('DESIGN_TOKENS.TRACKING_HEADING');
+  color: v-bind('DESIGN_TOKENS.GRAY_1000');
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+/* 作者与时长合并为一条副行，超长省略而不把信息卡撑宽 */
+.video-byline {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.video-author,
+.video-duration,
+.byline-separator {
+  font-size: v-bind('DESIGN_TOKENS.FS_12');
+  line-height: v-bind('DESIGN_TOKENS.LH_16');
+  color: v-bind('DESIGN_TOKENS.GRAY_900');
+}
+
+.video-author {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.video-meta,
-.video-author,
 .video-duration {
-  margin: 0;
-  font-size: 12px;
-  line-height: 16px;
-  color: v-bind('COMMON_COLORS.GRAY_600');
+  flex-shrink: 0;
   font-variant-numeric: tabular-nums;
 }
 
-/* 作者名可长可短，超长时省略而不是把信息区撑宽 */
-.video-author {
+.video-meta {
+  margin: 0;
+  font-size: v-bind('DESIGN_TOKENS.FS_12');
+  line-height: v-bind('DESIGN_TOKENS.LH_16');
+  color: v-bind('DESIGN_TOKENS.GRAY_700');
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -672,8 +673,7 @@ function downloadTitle(row: VideoPanelRow): string {
 .option-rows {
   display: flex;
   flex-direction: column;
-  padding: 4px 0;
-  border-bottom: 1px solid v-bind('COMMON_COLORS.GRAY_200');
+  padding: 8px 0;
 }
 
 /* 标签列按最长行名定宽：headless Chromium 实测 13px/500 下 ru `Изображение` 89.5px，旧的 68px 会把它省略。 */
@@ -682,13 +682,14 @@ function downloadTitle(row: VideoPanelRow): string {
   grid-template-columns: 96px minmax(0, 1fr) 32px;
   align-items: center;
   gap: 8px;
-  padding: 6px 16px;
+  padding: 6px 12px;
 }
 
 .row-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: v-bind('COMMON_COLORS.GRAY_800');
+  font-size: v-bind('DESIGN_TOKENS.FS_12');
+  font-weight: v-bind('DESIGN_TOKENS.FW_500');
+  line-height: v-bind('DESIGN_TOKENS.LH_16');
+  color: v-bind('DESIGN_TOKENS.GRAY_1000');
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -699,12 +700,17 @@ function downloadTitle(row: VideoPanelRow): string {
   min-width: 0;
   height: 32px;
   padding: 0 8px;
-  border: 1px solid v-bind('COMMON_COLORS.GRAY_300');
-  border-radius: 6px;
-  background: #ffffff;
-  color: v-bind('COMMON_COLORS.GRAY_900');
-  font-size: 13px;
+  border: 1px solid v-bind('DESIGN_TOKENS.GRAY_ALPHA_400');
+  border-radius: v-bind('DESIGN_TOKENS.RADIUS_SM');
+  background: v-bind('DESIGN_TOKENS.BG_100');
+  color: v-bind('DESIGN_TOKENS.GRAY_1000');
+  font-size: v-bind('DESIGN_TOKENS.FS_13');
+  line-height: v-bind('DESIGN_TOKENS.LH_16');
   cursor: pointer;
+}
+
+.row-select:hover:not(:disabled) {
+  border-color: v-bind('DESIGN_TOKENS.GRAY_ALPHA_500');
 }
 
 .row-select-static {
@@ -718,8 +724,8 @@ function downloadTitle(row: VideoPanelRow): string {
 }
 
 .row-select:disabled {
-  background: v-bind('COMMON_COLORS.GRAY_100');
-  color: v-bind('COMMON_COLORS.GRAY_500');
+  background: v-bind('DESIGN_TOKENS.GRAY_100');
+  color: v-bind('DESIGN_TOKENS.GRAY_700');
   cursor: not-allowed;
 }
 
@@ -735,9 +741,9 @@ function downloadTitle(row: VideoPanelRow): string {
   padding: 0;
   border: none;
   background: none;
-  color: v-bind('COMMON_COLORS.GRAY_600');
-  font-size: 12px;
-  line-height: 16px;
+  color: v-bind('DESIGN_TOKENS.GRAY_900');
+  font-size: v-bind('DESIGN_TOKENS.FS_12');
+  line-height: v-bind('DESIGN_TOKENS.LH_16');
   white-space: nowrap;
   cursor: pointer;
 }
@@ -747,8 +753,8 @@ function downloadTitle(row: VideoPanelRow): string {
   width: 32px;
   height: 18px;
   flex-shrink: 0;
-  border-radius: 9px;
-  background: v-bind('COMMON_COLORS.GRAY_300');
+  border-radius: v-bind('DESIGN_TOKENS.RADIUS_FULL');
+  background: v-bind('DESIGN_TOKENS.GRAY_300');
   transition: background-color 0.15s ease;
 }
 
@@ -759,13 +765,13 @@ function downloadTitle(row: VideoPanelRow): string {
   left: 2px;
   width: 14px;
   height: 14px;
-  border-radius: 50%;
-  background: #ffffff;
+  border-radius: v-bind('DESIGN_TOKENS.RADIUS_FULL');
+  background: v-bind('DESIGN_TOKENS.BG_100');
   transition: transform 0.15s ease;
 }
 
 .audio-switch[aria-checked='true'] .audio-switch-track {
-  background: v-bind('COMMON_COLORS.PRIMARY');
+  background: v-bind('DESIGN_TOKENS.GRAY_1000');
 }
 
 .audio-switch[aria-checked='true'] .audio-switch-track::after {
@@ -774,13 +780,13 @@ function downloadTitle(row: VideoPanelRow): string {
 
 /* 禁用即「没有对应交付可切」，状态由旁边的文字说明，轨道退成中性灰 */
 .audio-switch:disabled {
-  color: v-bind('COMMON_COLORS.GRAY_400');
+  color: v-bind('DESIGN_TOKENS.GRAY_700');
   cursor: not-allowed;
 }
 
 /* 轨道退成中性灰，滑块仍停在生效的一侧，与旁边的状态文字一致 */
 .audio-switch:disabled .audio-switch-track {
-  background: v-bind('COMMON_COLORS.GRAY_200');
+  background: v-bind('DESIGN_TOKENS.GRAY_200');
 }
 
 .row-download {
@@ -788,8 +794,8 @@ function downloadTitle(row: VideoPanelRow): string {
   height: 32px;
   padding: 0;
   border: none;
-  border-radius: 6px;
-  background: v-bind('COMMON_COLORS.PRIMARY');
+  border-radius: v-bind('DESIGN_TOKENS.RADIUS_SM');
+  background: v-bind('DESIGN_TOKENS.GRAY_1000');
   display: flex;
   align-items: center;
   justify-content: center;
@@ -797,11 +803,11 @@ function downloadTitle(row: VideoPanelRow): string {
 }
 
 .row-download:hover:not(:disabled) {
-  background: v-bind('COMMON_COLORS.PRIMARY_DARK');
+  background: v-bind('DESIGN_TOKENS.GRAY_1000_HOVER');
 }
 
 .row-download:disabled {
-  background: v-bind('COMMON_COLORS.GRAY_300');
+  background: v-bind('DESIGN_TOKENS.GRAY_200');
   cursor: not-allowed;
 }
 
@@ -810,8 +816,7 @@ function downloadTitle(row: VideoPanelRow): string {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 12px 16px;
-  border-bottom: 1px solid v-bind('COMMON_COLORS.GRAY_200');
+  padding: 12px;
 }
 
 .clip-inputs {
@@ -828,8 +833,9 @@ function downloadTitle(row: VideoPanelRow): string {
 }
 
 .clip-field-label {
-  font-size: 12px;
-  color: v-bind('COMMON_COLORS.GRAY_600');
+  font-size: v-bind('DESIGN_TOKENS.FS_12');
+  line-height: v-bind('DESIGN_TOKENS.LH_16');
+  color: v-bind('DESIGN_TOKENS.GRAY_900');
 }
 
 .clip-input {
@@ -837,33 +843,39 @@ function downloadTitle(row: VideoPanelRow): string {
   min-width: 0;
   height: 32px;
   padding: 0 8px;
-  border: 1px solid v-bind('COMMON_COLORS.GRAY_300');
-  border-radius: 6px;
-  background: #ffffff;
-  color: v-bind('COMMON_COLORS.GRAY_900');
-  font-size: 13px;
+  box-sizing: border-box;
+  border: 1px solid v-bind('DESIGN_TOKENS.GRAY_ALPHA_400');
+  border-radius: v-bind('DESIGN_TOKENS.RADIUS_SM');
+  background: v-bind('DESIGN_TOKENS.BG_100');
+  color: v-bind('DESIGN_TOKENS.GRAY_1000');
+  font-size: v-bind('DESIGN_TOKENS.FS_13');
+  line-height: v-bind('DESIGN_TOKENS.LH_16');
   font-variant-numeric: tabular-nums;
 }
 
+.clip-input:hover:not(:disabled) {
+  border-color: v-bind('DESIGN_TOKENS.GRAY_ALPHA_500');
+}
+
 .clip-input:disabled {
-  background: v-bind('COMMON_COLORS.GRAY_100');
-  color: v-bind('COMMON_COLORS.GRAY_500');
+  background: v-bind('DESIGN_TOKENS.GRAY_100');
+  color: v-bind('DESIGN_TOKENS.GRAY_700');
   cursor: not-allowed;
 }
 
 .clip-hint {
   margin: 0;
-  font-size: 12px;
-  line-height: 16px;
-  color: v-bind('COMMON_COLORS.GRAY_500');
+  font-size: v-bind('DESIGN_TOKENS.FS_12');
+  line-height: v-bind('DESIGN_TOKENS.LH_16');
+  color: v-bind('DESIGN_TOKENS.GRAY_900');
 }
 
 /* 保存位置 */
 .save-path-section {
   display: flex;
   flex-direction: column;
-  padding: 12px 16px;
-  border-bottom: 1px solid v-bind('COMMON_COLORS.GRAY_200');
+  gap: 6px;
+  padding: 12px;
 }
 
 .save-path-field {
@@ -878,22 +890,26 @@ function downloadTitle(row: VideoPanelRow): string {
   min-width: 0;
   height: 32px;
   padding: 0 8px;
-  border: 1px solid v-bind('COMMON_COLORS.GRAY_300');
-  border-radius: 6px;
-  background: #ffffff;
-  color: v-bind('COMMON_COLORS.GRAY_900');
-  font-size: 13px;
+  border: 1px solid v-bind('DESIGN_TOKENS.GRAY_ALPHA_400');
+  border-radius: v-bind('DESIGN_TOKENS.RADIUS_SM');
+  background: v-bind('DESIGN_TOKENS.BG_100');
+  color: v-bind('DESIGN_TOKENS.GRAY_1000');
+  font-size: v-bind('DESIGN_TOKENS.FS_13');
+  line-height: v-bind('DESIGN_TOKENS.LH_16');
+}
+
+.save-path-input:hover {
+  border-color: v-bind('DESIGN_TOKENS.GRAY_ALPHA_500');
 }
 
 .state-button:focus-visible,
 .row-download:focus-visible,
 .row-select:focus-visible,
-.video-select:focus-visible,
 .audio-switch:focus-visible,
 .clip-input:focus-visible,
 .save-path-input:focus-visible {
-  outline: 2px solid #ffffff;
-  box-shadow: 0 0 0 4px v-bind('COMMON_COLORS.PRIMARY');
+  outline: none;
+  box-shadow: v-bind('DESIGN_TOKENS.FOCUS_RING');
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -103,11 +103,13 @@ export const METHOD_RESPONSE_LIMITS = {
   /**
    * getResources 返回完整资源缓存。
    *
-   * 聚合页回退按视频分组缓存（上限 8 个视频，单视频约 30 条资源、2.7KB 序列化体积），
-   * 实测 8 视频 113 条资源约 305KB，已超单视频时代的 256KB；对齐 getVimeoPlayerConfig 的
-   * 768KB 上界，覆盖最坏组合（8 视频 × 约 30 条 × 2.7KB ≈ 650KB）。
+   * 聚合页回退按视频分组缓存（上限 16 个视频，单视频约 30 条资源、2.7KB 序列化体积），
+   * 实测 8 视频 113 条资源约 305KB；对齐检测上限 16 后最坏组合为
+   * 16 视频 × 约 30 条 × 2.7KB ≈ 1.3MB，超出原 768KB 上界，取 1.5MB 覆盖并留余量。
+   * 组元数据随每条资源多带 groupMetadata（标题/作者/时长/封面约 0.25KB/条）：最坏组合
+   * 再加 16 × 30 × 0.25KB ≈ 120KB → 约 1.42MB，videoGroups 本身仅 16 组约 3KB，上限不调。
    */
-  getResources: 786432,
+  getResources: 1572864,
   /** getDownloadQueue 只返回未完成任务的轻量展示字段。 */
   getDownloadQueue: 65536,
   /** downloadBatch 返回资源回查与入队受理结果。 */

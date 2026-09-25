@@ -2,6 +2,20 @@
 
 > 记录本域(下载功能)每次文档修改:一行 why + 一行 from→to。
 
+## 2026-09-25 聚合页检测对齐竞品：上限 16、元数据通路与 Popup 现代化
+
+**Why**：聚合页回退沿用 8 条上限与串行加载，轮播持续供给新捕获却只在挂载窗口枚举一次，长驻聚合页视频组数无上限最终撑破 `getResources` 响应限额让 Popup 读取必败；同时 Popup 视觉与选择器缺封面，未对齐竞品的检测数量与观感。
+
+**From → To**：
+- 检测上限 8→16：MAIN world 捕获 LRU（`MAX_CAPTURED_CONFIGS`，超限按捕获序淘汰）、content 枚举截断（`MAX_FALLBACK_VIDEO_IDS`）与同时等待 videoId 数全部对齐 16；枚举响应限额 16KiB→32KiB，`getResources` 响应限额 768KiB→1.5MiB（定容：16 视频 × 约 30 条 × 2.7KB ≈ 1.3MB，组元数据随资源再加约 120KB）。
+- 回退重扫定时器：新增 3s 重扫（`scheduleFallbackResweep`）——页面稳定后轮播仍持续向 MAIN world 供给新捕获（实测 74s 累计 15 个）而 DOM 零相关 mutation（实测 80s），枚举只靠挂载窗口跑一次跟不上；重扫持续消费新捕获，身份守卫让定时器自然衰减。
+- 回退加载有界并发 4：新增纯函数 `runWithBoundedConcurrency`（Promise 池、`allSettled`、逐视频失败隔离）；16 视频全量枚举串行约 14s 起压到约 4s，单视频检出时延实测平均约 1.9s。
+- 视频组数上限：`ResourceBuffer.MAX_VIDEO_GROUPS=16`，`mergeVideoResources` 超限按首并入序淘汰最旧组（资源与元数据一起删）——修复长驻聚合页组数单调增长 → 响应超限 → Popup FETCH_FAILED；淘汰后该视频不进列表，选中保持逻辑自动回落第一项。
+- 元数据通路：`parseVimeoConfig` 提取组元数据（标题/作者/时长/封面，封面仅接受 https + `*.vimeocdn.com`）随 `MediaResource.groupMetadata`（transport-only）进 ResourceBuffer，`getResources` 响应新增必填 `videoGroups: VideoGroupSummary[]`（顺序=捕获序，title 缺失为空串，空资源组也在列）；组元数据唯一来源是校验链，不可信枚举通道不产生该结构。
+- Popup 现代化：新增 `core/constants/design.ts`（`DESIGN_TOKENS`，与 design.md 逐字符对齐，备案补值 `GRAY_1000_HOVER`）、`VideoThumb.vue`（封面 ↔ 占位兜底，`:key` 防换源残留）、`VideoSelector.vue`（combobox + listbox 封面选择器，键盘 + aria 完整）；`VideoPanel.vue` 信息区重构为 168×94 封面信息卡；`buildDetectedVideos` 消费 `videoGroups`（零资源组跳过不计数，标题兜底链 组标题→资源标题→文件名→videoId）。四行档位/时间裁剪/保存位置/下载逻辑零改动，i18n 零新键。
+- 已接受限制：badge 仍为资源数语义（可能三位数）；枚举与点查之间捕获上限淘汰可致单视频最长 12s 空等。
+- 文档：同步 `feat.md`（视频选择器/信息卡口径与检测上限验收）、`tech-扩展端Vimeo本地下载.md`（§5 / §5.2 / §11 / §12.3 / §12.4 / 新增 §12.9 / §13 / §14）。
+
 ## 2026-09-25 扩展聚合页多视频检测与 Popup 视频选择器
 
 **Why**：`vimeo.com/watch` 等聚合页没有唯一视频身份，Popup 一直是空态——页面预览过的视频明明已捕获原生 config 却无处下载；同时缓存「单视频整体替换」模型承担不了多视频并存。

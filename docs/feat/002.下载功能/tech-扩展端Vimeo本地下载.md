@@ -224,7 +224,7 @@ Vimeo `config` 是播放器启动 JSON。播放器用它取得 signed CDN URL、
 2. 网络来源只接受 `player.vimeo.com`、精确 `/video/{digits}/config`、`2xx`、JSON 响应。
 3. URL 中的 signed query 原样保存,日志只记录 host,不输出签名。
 4. URL videoId、config `video.id` 与 content 当前 videoId 必须一致。
-5. 单份响应限制 `512KiB`,每页最多保留 8 个 video config;只存在当前页面内存。
+5. 单份响应限制 `512KiB`,每页最多保留 16 个 video config,超限按捕获序淘汰最早;同时等待不同 videoId 的上限同为 16。只存在当前页面内存。
 6. content 通过有界 EventRpc 读取捕获结果:播放页按 videoId 点查(`getCapturedVimeoConfig`),身份缺失的聚合页枚举概要(`listCapturedVimeoConfigs`,见 §5.2);两种读取都不再次获取初始 config。
 7. fetch/XHR 包装只 clone 并读取成功的 config 响应,不修改原请求、不拦截媒体分片,也不缓存播放器响应体。
 8. 兜底通道只由 background 发起、只接受 Vimeo content 调用,只取最终响应仍在 `player.vimeo.com` 的播放页;请求失败按 RPC 错误返回,播放页没有可用内嵌 config 时返回 null,两者都不伪造结果。
@@ -255,14 +255,15 @@ Vimeo `config` 是播放器启动 JSON。播放器用它取得 signed CDN URL、
 
 `vimeo.com/watch` 等聚合页四路身份提取皆空,content 走回退通道:通过 EventRpc `listCapturedVimeoConfigs` 枚举 MAIN world 已捕获的原生 config 概要,逐视频走与播放页完全相同的校验链(点查 + videoId 一致校验 + URL 白名单)加载资源,按视频合并写入 ResourceBuffer 供 Popup 展示;页面按钮依赖页面身份,聚合页不渲染。
 
-RPC 合同:无入参;响应为按捕获先后排序的概要数组,每条含 `videoId`、标题与可选的时长/封面 URL,条数受 MAIN world 捕获上限(8)约束,响应体上限 16KiB。概要只作为发现提示:EventRpc 是宿主页面可伪造通道,content 侧只保留数字形态的 videoId 并截断到单页上限,概要里的标题/封面等业务数据不采信,一律按 videoId 走既有校验链路重新获取——payload 不可信边界与身份校验口径同播放页点查,未放宽。
+RPC 合同:无入参;响应为按捕获先后排序的概要数组,每条含 `videoId`、标题与可选的时长/封面 URL,条数受 MAIN world 捕获上限(16)约束,content 侧再截断到单页上限 16,响应体上限 32KiB(16 条 × 防御性最坏单条约 2KB)。概要只作为发现提示:EventRpc 是宿主页面可伪造通道,content 侧只保留数字形态的 videoId 并截断到单页上限,概要里的标题/封面等业务数据不采信,一律按 videoId 走既有校验链路重新获取——payload 不可信边界与身份校验口径同播放页点查,未放宽。
 
 编排口径:
 
 1. 每个 videoId 每页只编排一次:资源按 id 去重,失败视频(已下架/私有)的 background 兜底也不重放,重试没有增量价值。
-2. 回退串行逐视频加载,首视频可用前需完成枚举与首轮点查,实测延迟约 4-10s;与下一条的空等共同构成聚合页资源出现慢的成因。
-3. 身份在回退轮进行中出现时三处守卫中断:枚举前短路(有身份时整条回退路径不启动)、循环体复核(不再对剩余视频发起点查)、写前复核(等待期间出现身份的视频不写入)。身份分支已把 buffer 收敛为单视频快照,聚合资源不得混入。
-4. 已接受限制:枚举与点查之间 MAIN world 的 8 条上限按捕获序淘汰,被点查 videoId 的 config 可能已被淘汰,点查落空后按 `captureTimeoutMs` 空等(单视频场景最长约 12s,多轮最多叠加)。
+2. 回退加载为有界并发 4(`runWithBoundedConcurrency` 纯函数,Promise 池推进,`allSettled` 等全部在途任务结束后才抛第一个错误):单视频加载以 playlist 网络为主,实测串行约 0.9s/视频,SPA 返回聚合页时一次全量枚举可达 16 个视频(串行约 14s 起),并发 4 压到约 4s,单视频检出时延实测平均约 1.9s。逐视频失败隔离——单个视频(已下架/私有)的失败只记日志,不阻塞其余视频。
+3. 回退重扫定时器:页面稳定后轮播仍持续向 MAIN world 供给新捕获(实测 74s 内累计 15 个),但 DOM 不再产生 content 口径相关的变化(实测 80s 内零相关 mutation),枚举只靠挂载窗口跑一次跟不上;新增 3s 重扫定时器(`FALLBACK_RESWEEP_DELAY_MS`)反复执行回退路径,同一时刻最多一个,持续消费新捕获。
+4. 身份在回退轮进行中出现时三处守卫中断:枚举前短路(有身份时整条回退路径不启动)、循环体复核(不再对剩余视频派发任务)、写前复核(等待期间出现身份的视频不写入)。重扫定时器的停止条件同这条守卫:身份出现后定时器自然衰减,不再重新武装。身份分支已把 buffer 收敛为单视频快照,聚合资源不得混入。
+5. 已接受限制:枚举与点查之间 MAIN world 的 16 条上限按捕获序淘汰,被点查 videoId 的 config 可能已被淘汰,点查落空后按 `captureTimeoutMs` 空等(单视频场景最长约 12s,多轮最多叠加)。
 
 ### 5.3 config 必读字段
 
@@ -665,6 +666,8 @@ playlist 过期可使用 `request.config_refresh_url` 重建一次资源快照;�
 
 Popup 和页面按钮使用同一批 `MediaResource`。ResourceBuffer 按视频分组持有资源(`videoId → resourceId → MediaResource` 两层 Map),两条写入路径共享同一模型:播放页身份路径用 `replaceSnapshot(videoId, resources)` 做整页快照替换——当前页面可见/已挂载的媒体是唯一真相,上一轮扫描的陈旧资源与切页前其他视频不残留;身份缺失聚合页的回退用 `mergeVideoResources(videoId, resources)` 按视频合并——新视频追加成组,组内按资源 id 去重、来源排序择优,视频顺序保持首次写入(捕获)顺序。旧的整体替换/追加 API 已删除,不存在第二套缓冲结构。badge 语义仍是当前页面可下载资源数(跨视频累计),聚合页可能到三位数。
 
+组数有上限(`MAX_VIDEO_GROUPS = 16`):长驻聚合页的回退重扫会持续并入新视频,组数不设上限则单调增长,最终撑破 `getResources` 响应限额让 popup 读取必败。`mergeVideoResources` 后组数超限时按首并入序淘汰最旧组(组资源与元数据一起删除),上限与 MAIN world 捕获上限、响应限额定容三方对齐;淘汰后该 videoId 不会再被回退路径重编排(站点侧每页编排一次的记录仍在),直到页面切换清空。
+
 Vimeo 下载描述符随 `documentId` 携带恢复资源所需的最小合同:
 
 | 字段 | 口径 |
@@ -682,6 +685,8 @@ Vimeo 下载描述符随 `documentId` 携带恢复资源所需的最小合同:
 `expiresAt` 属于资源快照和页面面板状态,计算后为 Unix 绝对秒;不把 `request.expires` TTL 当作绝对时间写入描述符。
 
 `MediaResource` 另外携带展示用的元数据：`title` / `author` / `duration` 取自 config 的视频级字段（同一视频的所有档位一致，站点缺失就不带该字段），`size` 只在拿得到真实字节数时才有值；这四个字段都参与 `ResourceBuffer` 的同资源比较。
+
+组级展示元数据走独立 transport 通道：站点解析层（`parseVimeoConfig`）从校验链产出的 config 附加 `MediaResource.groupMetadata`（标题/作者/时长/封面，封面 URL 只接受 https 且 `*.vimeocdn.com` 域，非法时缺失；同一视频组内所有资源携带同一份），`ResourceBuffer` 按组收取，经 `getResources` 响应的 `videoGroups` 统一交给 popup，不作为资源自身字段消费。合并路径的组元数据按字段补齐（已有非空值保留、空缺字段由新元数据补齐，只增不改），即使某轮资源全部重复也能补全上一轮缺失的元数据。不可信通道（EventRpc 枚举概要等）不产生该结构——组元数据的唯一来源是校验链。
 
 `sourceId` 规则:
 
@@ -724,20 +729,24 @@ Popup 打开时如果当前标签页不是站点页面、并且窗口里也没�
 
 ### 12.3 当前视频判定与多视频选择器
 
-content 的 Vimeo 缓存按视频分组持有资源(见 §11):播放页走 `replaceSnapshot` 单视频快照,身份缺失的聚合页走回退通道(§5.2)按视频合并,页面面板仍只渲染有身份的那个视频。popup 通过 `getResources` 读取当前 tab 全部资源,按资源 `messageId`(= Vimeo videoId)分组,组序沿用 content 写入顺序(播放页是单视频快照;聚合页即捕获先后),popup 层不重排——同一行的档位只来自同一个视频。
+content 的 Vimeo 缓存按视频分组持有资源(见 §11):播放页走 `replaceSnapshot` 单视频快照,身份缺失的聚合页走回退通道(§5.2)按视频合并,页面面板仍只渲染有身份的那个视频。popup 通过 `getResources` 读取当前 tab 全部资源与必填的 `videoGroups: VideoGroupSummary[]`——「分组键(= videoId) + 组展示元数据(标题/作者/时长/封面)」的数组,顺序与缓存组序一致(播放页是单视频快照;聚合页即捕获先后);`title` 缺失时为空串,只有元数据、没有任何资源的组也在列。组元数据是展示层的权威来源(config 原值),资源自身字段只在组元数据缺失时逐字段兜底。
+
+`buildDetectedVideos`(popup 纯派生)把两者合成按序的视频展示列表:`videoGroups` 决定组序与展示元数据,资源按 `messageId`(= videoId)对号入座,popup 层不重排——同一行的档位只来自同一个视频。两条边界:零资源组跳过(只有 config 元数据、没有可下载档位的视频不进列表、不计入检测数,保证列出的每个视频都至少有一个档位可下);游离资源并入(扩展更新后旧 content script 未带组元数据时,资源按出现顺序追加成组,元数据从资源自身字段派生)。标题兜底链:组标题 → 资源标题 → 文件名 → videoId,最终不会是空串。
 
 - 单视频(播放页常态):选择器不渲染,布局与单视频页面一致。
-- 多视频(聚合页):视频信息区上方出现选择器——检测数量说明(`videoPanel.detectedCount`,`{count}` 插值)与视频下拉(`videoPanel.videoSwitcherLabel` 作可访问名);选项文案为视频标题(缺失时回退文件名/视频 ID)。默认选中第一项,资源刷新后保留仍存在的选择,选择失效时回到第一项;切换后视频信息、四行档位、音轨开关与时间裁剪联动,且不携带上一个视频的瞬态(封面加载失败状态复位、裁剪输入清空)。
-- `getResources` 响应上限从 256KiB 放宽到 768KiB:聚合页 8 视频实测 113 条资源约 305KB,最坏估算(8 视频 × 约 30 条 × 2.7KB 序列化体积)约 650KB,对齐 `getVimeoPlayerConfig` 的 768KiB 上界。
+- 多视频(聚合页):视频信息区上方出现选择器——检测数量说明(`videoPanel.detectedCount`,`{count}` 插值)与视频选择器(`VideoSelector.vue`:combobox 触发按钮 + listbox 浮层,焦点始终留在触发按钮,高亮项经 `aria-activedescendant` 通告,`videoPanel.videoSwitcherLabel` 作可访问名)。列表项带小封面与标题(封面缺失时占位块);默认选中第一项,资源刷新后保留仍存在的选择,选择失效时回到第一项;切换后视频信息、四行档位、音轨开关与时间裁剪联动,且不携带上一个视频的瞬态(封面加载失败状态复位、裁剪输入清空)。
+- `getResources` 响应上限从 768KiB 放宽到 1.5MiB(1572864 字节),按上限组合定容:16 视频 × 约 30 条 × 2.7KB ≈ 1.3MB(实测 8 视频 113 条约 305KB),组元数据随每条资源多带约 0.25KB、最坏再加 16 × 30 × 0.25KB ≈ 120KB,合计约 1.42MB;`videoGroups` 本身仅 16 组约 3KB。取 1.5MiB 覆盖并留余量。
 
 ### 12.4 视频信息区
 
+信息区以信息卡呈现：左侧 168×94 封面、右侧标题/作者/时长，卡片化布局与配色走 `DESIGN_TOKENS`（见 §12.9）。
+
 | 元素 | 口径 |
 | --- | --- |
-| 封面 | Image 档位资源的图片地址；缺失或加载失败时显示占位图标，不改变布局 |
-| 标题 | 资源的 `title`（来自 config `video.title`，见 §5.3）；缺失时回退文件名 |
-| 作者 | 资源的 `author`（来自 config `video.owner.name`）；站点没给时整行不渲染 |
-| 时长 | 资源的 `duration`（来自 config `video.duration`），用共享格式化器渲染成 `m:ss` / `h:mm:ss`；站点没给时整行不渲染 |
+| 封面 | 组元数据 `videoGroups[].thumbnailUrl`（来自校验链 config，见 §11）；缺失时回退 Image 档位资源的图片地址；两者皆缺或加载失败时显示占位图标，不改变布局 |
+| 标题 | `videoGroups[].title`（config `video.title` 原值，见 §5.3）；组元数据缺失时逐级回退资源 `title` → 文件名 → videoId（见 §12.3 标题兜底链） |
+| 作者 | `videoGroups[].author`（config `video.owner.name`）；组元数据缺失时回退资源 `author`；站点没给时整行不渲染 |
+| 时长 | `videoGroups[].durationSeconds`（config `video.duration`），用共享格式化器渲染成 `m:ss` / `h:mm:ss`；组元数据缺失时回退资源 `duration`；站点没给时整行不渲染 |
 | 副标题 | 当前选中档位的标签；文件大小已并入档位标签（见 §12.5） |
 
 作者与时长只取自 config 的显式字段，缺失就不渲染，不用文件名等间接数据冒充。
@@ -776,6 +785,12 @@ content 的 Vimeo 缓存按视频分组持有资源(见 §11):播放页走 `repl
 - 内嵌任务队列：下载状态与进度仍在顶部入口的浮层里（`downloadStatusStore` 未改动）。
 - 批量下载、勾选框、统计头、清空缓存：随批量模型一并删除（`clearBuffer` RPC 失去唯一调用方，已从 content register 移除）。
 
+### 12.9 视觉 token 与新组件
+
+- `core/constants/design.ts` 的 `DESIGN_TOKENS` 只收录 popup 实际消费的 design.md（Geist 亮色）token 子集：灰阶 / accent / 半透明描边、圆角、阴影与焦点环，命名与 design.md 的 token 名一一对应。唯一一处备案补值 `GRAY_1000_HOVER`（实心 gray-1000 填充的 hover 色）：design.md 只给「hover 沿色阶走」的规则而 gray 阶到 1000 为止，取半步提亮 `#323232`，已在 token 注释备案。组件经 `v-bind('DESIGN_TOKENS.*')` 桥接消费，禁止在 scoped CSS 里绕开 token 写裸值；dark 主题是后续独立事项（design.dark.md），不预留双套值。
+- `VideoThumb.vue`：信息卡大封面与选择器小封面共用的缩略图组件，只负责「图片 ↔ 占位」兜底——加载失败或缺失时渲染占位图标，不破布局、不出现 broken image；`:key="src"` 让换源时重建 `<img>`，防止切换视频瞬间残留上一张封面；尺寸与圆角由外层 class 控制。
+- `VideoSelector.vue`：多视频选择器（§12.3）。原生 `<select>` 无法在选项里渲染封面，改用「触发按钮 + listbox 浮层」的 combobox 模型，列表项带小封面与标题，支持键盘导航，焦点始终留在触发按钮、高亮项经 `aria-activedescendant` 通告，浮层经 `aria-controls` / `aria-expanded` 关联。
+
 ## 13. 文件结构
 
 ```text
@@ -787,6 +802,7 @@ extension/src/core/content/download/
 ├── downloadManager.ts                              # 页面唯一 FIFO 下载管理器
 └── browserDownload.ts
 extension/src/core/content/services/ResourceBuffer.ts
+extension/src/core/constants/design.ts              # Popup 视觉 token(DESIGN_TOKENS,design.md 亮色子集)
 extension/src/sites/vimeo/
 ├── shared.ts                                       # host/CDN 白名单、videoId 提取、descriptor 编解码
 ├── config.ts                                       # config/playlist 加载与过期刷新
@@ -817,8 +833,10 @@ extension/src/sites/vimeo/
 - `extension/src/sites/vimeo/content/frame.ts`:仅在 player frame 发布 videoId identity。
 - `extension/src/platforms/registry.ts`:`extension/vite.config.ts` 的 `webExtension({ manifest })` 只消费该纯数据注册表生成 matches、host permissions、content script 入口、`downloads`/`storage`/`identity` permissions 与 CSS web accessible resource；嵌入播放器 frame 使用独立 content script entry 开 `all_frames:true`。
 - `extension/src/popup/utils/tabs.ts`:站点 hostname 集合由注册表的 match patterns 派生，不两处维护；`ensureSupportedTabOpen` 只查找不新建，`openSiteTab` 在它之上补「确实没有才新建站点入口页」（§12.2）。
-- `extension/src/popup/components/VideoPanel.vue`:Popup 视频面板（未连接引导 / 空状态 / 多视频选择器 / 信息区 / 四行档位 / 时间裁剪 / 保存位置）。
-- `extension/src/popup/utils/videoPanel.ts`:面板的纯派生逻辑（多视频分组、四行档位、标题与封面）。
+- `extension/src/popup/components/VideoPanel.vue`:Popup 视频面板（未连接引导 / 空状态 / 多视频选择器 / 视频信息卡 / 四行档位 / 时间裁剪 / 保存位置）。
+- `extension/src/popup/components/VideoSelector.vue`:多视频选择器(combobox 触发按钮 + listbox 浮层,列表项带小封面与标题,见 §12.3 / §12.9)。
+- `extension/src/popup/components/VideoThumb.vue`:封面缩略图(图片 ↔ 占位兜底,信息卡与选择器共用,`:key` 防换源残留)。
+- `extension/src/popup/utils/videoPanel.ts`:面板的纯派生逻辑（`buildDetectedVideos` 消费 `videoGroups` 与资源合成检测列表、四行档位、标题与封面兜底链）。
 
 ## 14. 验收样本
 
@@ -840,7 +858,7 @@ extension/src/sites/vimeo/
 - Popup 面板在 Video 行选中 progressive 档位时禁用时间裁剪并说明原因，选中 DASH/HLS 档位后输入区间可下载片段；片段身份与文件名带 `:clip:{start}-{end}`，字幕与封面始终整片下载；关掉音轨开关后片段身份是 `dash:{trackId}:no-audio:clip:{start}-{end}`，缓存按去后缀的基础 ID 还原出纯视频档位。
 - Popup 面板 Video 行的下拉只列画质档位，音轨由独立开关切换：关掉后下载的是同画质的纯视频资源，下拉、信息区副标题与下载按钮的可访问名一起换成那条资源的标签（含它自己的大小）；当前画质只有一种交付时（playlist 无音轨、视频合计超限、progressive/HLS 直链）开关禁用并停在唯一可用的那一侧，`Best` 的无音轨交付落到最高画质的纯视频档。
 - Popup 面板与页面面板的档位文案随界面语言切换（`Best` 在 zh-CN 下显示 `最佳`），没有档位的行占位按钮读屏名称同样走词条；片段区间输入非法值（起点不小于终点、负数、`1e-7` 这类指数记法）时按整片下载，content 未回查到资源时 Popup 给出下载失败提示，不静默丢弃请求。
-- `vimeo.com/watch` 等无身份聚合页:Popup 显示检测数量与视频选择器,选项为各视频标题,切换后信息区与四行档位联动;页面按钮不渲染;只检测到一个视频时选择器不出现。
-- 身份在聚合页回退轮进行中出现时,在途回退按三处守卫中断,聚合资源不混入单视频 buffer;聚合页资源按视频分组写入,同一 videoId 每页只编排一次。
-- Unit/Integration 覆盖 config 捕获、聚合页枚举回退与按视频合并、身份出现守卫、`getResources` 响应限额、四行按钮、Chrome 状态进度、未知长度 `Downloading...`、重复点击锁、一次 signed refresh、adaptive `Best` 保持同 delivery、无音轨交付、字幕建模与白名单、片段区间透传与 packet 级裁剪、Popup 面板档位生成与裁剪调用、音轨开关的画质 × 开关映射与「无音轨 + 片段」组合、缓存按片段 ID 还原资源、刷新片段缺 `text_tracks` 时沿用旧轨、档位词条在 zh-CN 下不回退英文 label、14 个 locale 键集合与占位符对齐、文件名和 URL/MIME 边界。
+- `vimeo.com/watch` 等无身份聚合页:Popup 显示检测数量与视频选择器,列表项为各视频封面与标题,切换后信息区与四行档位联动;页面按钮不渲染;只检测到一个视频时选择器不出现;检测上限 16 个视频,页面稳定后轮播持续供给的新捕获由 3s 重扫跟进,零资源(无可下载档位)的视频不进选择器。
+- 身份在聚合页回退轮进行中出现时,在途回退按三处守卫中断(重扫定时器同受身份守卫约束、自然衰减),聚合资源不混入单视频 buffer;聚合页资源按视频分组写入,同一 videoId 每页只编排一次;长驻聚合页组数达 16 后按首并入序淘汰最旧组,badge 随之回落。
+- Unit/Integration 覆盖 config 捕获、聚合页枚举回退与按视频合并、回退重扫定时器与有界并发加载、组数上限淘汰、`videoGroups` 组元数据通路（校验链唯一来源、字段补齐、零资源组与游离资源边界）、身份出现守卫、`getResources` 响应限额、四行按钮、Chrome 状态进度、未知长度 `Downloading...`、重复点击锁、一次 signed refresh、adaptive `Best` 保持同 delivery、无音轨交付、字幕建模与白名单、片段区间透传与 packet 级裁剪、Popup 面板档位生成与裁剪调用、音轨开关的画质 × 开关映射与「无音轨 + 片段」组合、缓存按片段 ID 还原资源、刷新片段缺 `text_tracks` 时沿用旧轨、档位词条在 zh-CN 下不回退英文 label、14 个 locale 键集合与占位符对齐、文件名和 URL/MIME 边界。
 - 公网 smoke 固定使用 `https://vimeo.com/1196869805?fl=ip&fe=ec`（只提供 DASH 交付的样本），覆盖 injected mux 路径：取样本当前 config 实际给出的 DASH/HLS 选项，不预设 delivery，样本不再提供该交付时带原因 skip；面板缺失或始终给不出选项按真实回归失败处理。`pnpm test:e2e:vimeo` 只运行 `extension-e2e-vimeo-real` 这一个 project。Vimeo 明确返回 Cloudflare 人机验证时标记外部环境阻塞，不误报产品失败；Cloudflare 只能记为环境 skip，不能记为通过。

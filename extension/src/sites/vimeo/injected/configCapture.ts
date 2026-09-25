@@ -16,10 +16,20 @@ import { parseVimeoConfigUrlVideoId, type VimeoCapturedConfigSnapshot } from '@/
 /** 单个 config 响应允许捕获的最大字节数。 */
 const MAX_CAPTURE_RESPONSE_BYTES = 512 * 1024
 
-/** 单个页面最多保留的 video config 数量。 */
-const MAX_CAPTURED_CONFIGS = 8
+/**
+ * 单个页面最多保留的 video config 数量，超限按捕获顺序淘汰最早。
+ *
+ * 对齐聚合页回退检测的目标数量（content 侧枚举截断同为 16，竞品实测 12 个），
+ * 保证轮播播过的视频不会因自设上限提前丢失。
+ */
+const MAX_CAPTURED_CONFIGS = 16
 
-/** 同时等待不同 videoId 的上限，避免不可信 DOM 通道无限占用内存。 */
+/**
+ * 同时等待不同 videoId 的上限，避免不可信 DOM 通道无限占用内存。
+ *
+ * 不得低于聚合页回退枚举上限 16（content 侧 `MAX_FALLBACK_VIDEO_IDS`）：枚举出的每个
+ * videoId 都可能触发一次等待，低于它会让尾部的点查被直接拒绝。
+ */
 const MAX_PENDING_VIDEO_IDS = 16
 
 /** content 等待原生播放器 config 的最长时间。 */

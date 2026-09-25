@@ -90,7 +90,11 @@ export abstract class MessageHandler {
   /** 获取资源列表。 */
   private getResources(): ContentGetResourcesResponse {
     const resources = this.resourceBuffer.getAllResources()
-    return { resources, count: resources.length }
+    return {
+      resources,
+      count: resources.length,
+      videoGroups: this.resourceBuffer.getVideoGroups()
+    }
   }
 
   /** 按请求顺序回查资源并逐项下载。 */

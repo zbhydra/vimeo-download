@@ -6,7 +6,7 @@ import {
   type ResourceSourceKind
 } from '@/core/constants/resource'
 import { ResourceBuffer as CoreResourceBuffer } from '@/core/content/services/ResourceBuffer'
-import type { MediaResource } from '@/core/types'
+import type { MediaResource, VideoGroupMetadata } from '@/core/types'
 
 const mocks = vi.hoisted(() => ({
   updateBadge: vi.fn(() => Promise.resolve({ success: true }))
@@ -102,6 +102,45 @@ describe('ResourceBuffer', () => {
     expect(buffer.getCount()).toBe(2)
   })
 
+  it('并入第 17 组时按首并入序淘汰最旧组：组与元数据回收、badge 回落、旧资源查不到', () => {
+    const buffer = new TestResourceBuffer()
+
+    // 组上限 16（与 MAIN world 捕获上限对齐）：先写满 16 组，第 17 组并入触发最早组淘汰。
+    for (let videoIndex = 1; videoIndex <= 16; videoIndex += 1) {
+      const videoId = String(videoIndex)
+      buffer.mergeVideoResources(videoId, [
+        createResource(
+          `v${videoIndex}:video`,
+          `https://cdn.example/v${videoIndex}.m4s`,
+          videoIndex,
+          undefined,
+          videoId,
+          GROUP_META_A
+        )
+      ])
+    }
+    expect(buffer.getVideoGroups()).toHaveLength(16)
+
+    buffer.mergeVideoResources('17', [
+      createResource('v17:video', 'https://cdn.example/v17.m4s', 17, undefined, '17', GROUP_META_B)
+    ])
+
+    // 最早组（组 1）连同元数据被淘汰，组序从组 2 连续排到组 17。
+    const groups = buffer.getVideoGroups()
+    expect(groups).toHaveLength(16)
+    expect(groups.map(group => group.videoId)).toEqual(
+      Array.from({ length: 16 }, (_, offset) => String(offset + 2))
+    )
+
+    // badge 是各组资源数之和，随淘汰回落而不是涨到 17。
+    expect(mocks.updateBadge).toHaveBeenLastCalledWith({ count: 16 })
+    expect(buffer.getCount()).toBe(16)
+
+    // 被淘汰组的资源跨组查找不再命中，未淘汰组不受影响。
+    expect(buffer.getResource('v1:video')).toBeUndefined()
+    expect(buffer.getResource('v2:video')?.url).toBe('https://cdn.example/v2.m4s')
+  })
+
   it('badge 计数是跨视频累计的资源数；同内容快照替换不重复通知', () => {
     const buffer = new TestResourceBuffer()
     const first = createResource('v1:video', 'https://cdn.example/v1.m4s', 1)
@@ -185,14 +224,92 @@ describe('ResourceBuffer', () => {
     expect(buffer.getCount()).toBe(0)
     buffer.stop()
   })
+
+  it('getVideoGroups 按组序返回组元数据；无元数据的组标题回落空串', () => {
+    const buffer = new TestResourceBuffer()
+    buffer.mergeVideoResources('10', [
+      createResource('v1:video', 'https://cdn.example/v1.m4s', 0, undefined, '10', GROUP_META_A)
+    ])
+    buffer.mergeVideoResources('20', [
+      createResource('v2:video', 'https://cdn.example/v2.m4s', 0, undefined, '20', GROUP_META_B)
+    ])
+
+    expect(buffer.getVideoGroups()).toEqual([
+      { videoId: '10', ...GROUP_META_A },
+      { videoId: '20', ...GROUP_META_B }
+    ])
+
+    // 空资源组没有元数据可取，标题回落空串由 popup 用 videoId 兜底。
+    buffer.replaceSnapshot('30', [])
+    expect(buffer.getVideoGroups()).toEqual([{ videoId: '30', title: '' }])
+  })
+
+  it('mergeVideoResources 元数据按字段补齐：已有非空值保留，空缺由后续轮补全', () => {
+    const buffer = new TestResourceBuffer()
+    buffer.mergeVideoResources('10', [
+      createResource('v1:video', 'https://cdn.example/v1.m4s', 0)
+    ])
+    expect(buffer.getVideoGroups()).toEqual([{ videoId: '10', title: '' }])
+
+    buffer.mergeVideoResources('10', [
+      createResource('v1:video', 'https://cdn.example/v1.m4s', 0, undefined, '10', {
+        title: 'Partial Title'
+      })
+    ])
+    expect(buffer.getVideoGroups()).toEqual([{ videoId: '10', title: 'Partial Title' }])
+
+    buffer.mergeVideoResources('10', [
+      createResource('v1:video', 'https://cdn.example/v1.m4s', 0, undefined, '10', GROUP_META_A)
+    ])
+    expect(buffer.getVideoGroups()).toEqual([
+      // title 已有非空值保留，其余字段补齐。
+      { videoId: '10', title: 'Partial Title', ...restOf(GROUP_META_A) }
+    ])
+  })
+
+  it('快照替换整组替换元数据，清空时元数据随组清理', () => {
+    const buffer = new TestResourceBuffer()
+    buffer.mergeVideoResources('10', [
+      createResource('v1:video', 'https://cdn.example/v1.m4s', 0, undefined, '10', GROUP_META_A)
+    ])
+    buffer.mergeVideoResources('20', [
+      createResource('v2:video', 'https://cdn.example/v2.m4s', 0, undefined, '20', GROUP_META_B)
+    ])
+
+    buffer.replaceSnapshot('10', [
+      createResource('v3:video', 'https://cdn.example/v3.m4s', 0, undefined, '10', GROUP_META_B)
+    ])
+    expect(buffer.getVideoGroups()).toEqual([{ videoId: '10', ...GROUP_META_B }])
+
+    buffer.clear()
+    expect(buffer.getVideoGroups()).toEqual([])
+  })
 })
+
+/** 组元数据样本 A：四字段齐全。 */
+const GROUP_META_A: VideoGroupMetadata = {
+  title: 'First Video',
+  author: 'Author A',
+  durationSeconds: 30,
+  thumbnailUrl: 'https://i.vimeocdn.com/video/cover-a'
+}
+
+/** 组元数据样本 B：只有标题。 */
+const GROUP_META_B: VideoGroupMetadata = { title: 'Second Video' }
+
+/** 取样本中除 title 外的字段，用于断言「title 保留、其余补齐」。 */
+function restOf(metadata: VideoGroupMetadata): Omit<VideoGroupMetadata, 'title'> {
+  const { title: _title, ...rest } = metadata
+  return rest
+}
 
 function createResource(
   id: string,
   url: string,
   index: number,
   sourceKind: ResourceSourceKind = RESOURCE_SOURCE_KINDS.VIMEO_DASH_VIDEO,
-  messageId = '10'
+  messageId = '10',
+  groupMetadata?: VideoGroupMetadata
 ): MediaResource {
   return {
     id,
@@ -201,6 +318,7 @@ function createResource(
     url,
     type: RESOURCE_TYPES.VIDEO,
     sourceKind,
+    ...(groupMetadata ? { groupMetadata } : {}),
     metadata: {
       messageId
     }

@@ -82,8 +82,39 @@ export interface MediaResource {
   duration?: number
   /** 所属站点实体 ID */
   chatId?: string
+  /**
+   * 所属视频组的展示元数据；站点解析层从校验链产出的 config 附加，同一视频组内所有资源
+   * 携带同一份，ResourceBuffer 按组收取。transport-only：组级数据经 `videoGroups` 通道统一
+   * 给 popup，不作为资源自身字段消费。
+   */
+  groupMetadata?: VideoGroupMetadata
   /** 下载元数据（下载时必填） */
   metadata: DownloadMetadata
+}
+
+/**
+ * 视频组展示元数据（标题/作者/时长/封面）。
+ *
+ * 只能由站点解析层从校验链产出的原生 config 解析得到（Vimeo：`video.title` /
+ * `video.owner.name` / `video.duration` / `video.thumbnail_url`），随资源进入 ResourceBuffer
+ * 并经 `getResources` 响应的 `videoGroups` 交给 popup；不可信通道（EventRpc 枚举概要等）
+ * 不产生该结构。
+ */
+export interface VideoGroupMetadata {
+  /** 视频标题；config 未给出时为空串，由 popup 用 videoId 兜底展示。 */
+  title: string
+  /** 作者（上传者）名称；config 未给出时缺失。 */
+  author?: string
+  /** 视频时长（秒）。 */
+  durationSeconds?: number
+  /** 封面图 URL；仅接受 https 且 Vimeo CDN 域，非法时缺失。 */
+  thumbnailUrl?: string
+}
+
+/** `getResources` 响应的单视频分组项：分组键 + 该组展示元数据，顺序与缓存组序一致。 */
+export interface VideoGroupSummary extends VideoGroupMetadata {
+  /** 分组键（站点视频 ID，等于资源 messageId）。 */
+  videoId: string
 }
 
 /** 下载管理入口可见的未完成任务状态。 */

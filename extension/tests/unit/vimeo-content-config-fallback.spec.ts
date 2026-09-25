@@ -1,9 +1,10 @@
 /**
  * Vimeo content config 捕获降级与聚合页回退编排测试。
  *
- * 只替换 RPC 与配置同步边界：控制器、按钮面板与 config 解析链都是真实实现。覆盖四类——
- * 两个通道都拿不到快照时回到既有的空面板降级；兜底拿到快照时经同一解析链渲染出真实选项；
- * 聚合页回退按捕获顺序逐视频合并写入；身份/路由在回退轮进行中接管时的编排守卫与配对清空。
+ * 只替换 RPC 与配置同步边界（并发池用真实实现）：控制器、按钮面板与 config 解析链都是真实
+ * 实现。覆盖四类——两个通道都拿不到快照时回到既有的空面板降级；兜底拿到快照时经同一解析链
+ * 渲染出真实选项；聚合页回退经有界并发逐视频合并写入；身份/路由在回退轮进行中接管时的
+ * 编排守卫与配对清空。
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -35,7 +36,8 @@ const mocks = vi.hoisted(() => ({
   loggerError: vi.fn()
 }))
 
-vi.mock('@/sites/vimeo/content/configCaptureClient', () => ({
+vi.mock('@/sites/vimeo/content/configCaptureClient', async importOriginal => ({
+  ...(await importOriginal<typeof import('@/sites/vimeo/content/configCaptureClient')>()),
   requestCapturedVimeoConfig: mocks.requestCapturedVimeoConfig,
   listCapturedVimeoVideoIds: mocks.listCapturedVimeoVideoIds,
   resetVimeoConfigFallback: mocks.resetVimeoConfigFallback
@@ -150,89 +152,122 @@ describe('Vimeo content 聚合页回退编排', () => {
   let vimeoResourceBuffer: typeof import('@/sites/vimeo/content/resourceBuffer').vimeoResourceBuffer
 
   beforeEach(async () => {
+    // 回退编排的节奏全在 setTimeout（debounce 扫描、重扫定时）与 Promise 微任务里：
+    // 用 fake 定时器逐段推进，既消除并发完成顺序的抖动，也保证重扫定时器不泄漏到后续用例。
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
     vi.resetModules()
     vi.clearAllMocks()
     prepareAggregatePage()
     ;({ vimeoResourceBuffer } = await import('@/sites/vimeo/content/resourceBuffer'))
   })
 
-  it('身份缺失时按捕获顺序逐视频合并写入，每个视频只编排一次', async () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('身份缺失时逐视频合并写入，每个视频只编排一次', async () => {
     mocks.listCapturedVimeoVideoIds.mockResolvedValue(['111', '222'])
     mocks.requestCapturedVimeoConfig.mockImplementation((videoId: string) =>
       Promise.resolve(capturedFixture(videoId))
     )
     await startContent()
+    await advanceTimers(0)
 
-    await vi.waitFor(() => {
-      expect(vimeoResourceBuffer.mergeVideoResources).toHaveBeenCalledTimes(2)
-    })
-
-    expect(mocks.requestCapturedVimeoConfig).toHaveBeenNthCalledWith(1, '111')
-    expect(mocks.requestCapturedVimeoConfig).toHaveBeenNthCalledWith(2, '222')
-    expect(vimeoResourceBuffer.mergeVideoResources).toHaveBeenNthCalledWith(
-      1,
+    expect(vimeoResourceBuffer.mergeVideoResources).toHaveBeenCalledTimes(2)
+    expect(mocks.requestCapturedVimeoConfig).toHaveBeenCalledTimes(2)
+    expect(vimeoResourceBuffer.mergeVideoResources).toHaveBeenCalledWith(
       '111',
       expect.arrayContaining([expect.objectContaining({ messageId: '111' })])
     )
-    expect(vimeoResourceBuffer.mergeVideoResources).toHaveBeenNthCalledWith(
-      2,
+    expect(vimeoResourceBuffer.mergeVideoResources).toHaveBeenCalledWith(
       '222',
       expect.arrayContaining([expect.objectContaining({ messageId: '222' })])
     )
   })
 
-  it('身份在回退轮进行中出现时停止在途循环，不混入其他视频', async () => {
+  it('重扫定时器拾取后到的捕获，已编排视频不重复点查', async () => {
+    mocks.listCapturedVimeoVideoIds
+      .mockResolvedValueOnce(['111'])
+      .mockResolvedValue(['111', '333'])
+    mocks.requestCapturedVimeoConfig.mockImplementation((videoId: string) =>
+      Promise.resolve(capturedFixture(videoId))
+    )
+    await startContent()
+    await advanceTimers(0)
+    expect(vimeoResourceBuffer.mergeVideoResources).toHaveBeenCalledTimes(1)
+
+    await advanceTimers(3100)
+
+    expect(vimeoResourceBuffer.mergeVideoResources).toHaveBeenCalledTimes(2)
+    expect(vimeoResourceBuffer.mergeVideoResources).toHaveBeenCalledWith(
+      '333',
+      expect.arrayContaining([expect.objectContaining({ messageId: '333' })])
+    )
+    expect(mocks.requestCapturedVimeoConfig).toHaveBeenCalledTimes(2)
+  })
+
+  it('身份收敛后丢弃在途回退结果，不混入其他视频', async () => {
     const pendingFirst = createDeferred()
+    const pendingSecond = createDeferred()
     mocks.listCapturedVimeoVideoIds
       .mockResolvedValueOnce(['111', '222'])
       .mockResolvedValue([])
-    mocks.requestCapturedVimeoConfig.mockImplementation((videoId: string) =>
-      videoId === '111' ? pendingFirst.promise : Promise.resolve(capturedFixture(videoId))
-    )
+    mocks.requestCapturedVimeoConfig.mockImplementation((videoId: string) => {
+      if (videoId === '111') {
+        return pendingFirst.promise
+      }
+      if (videoId === '222') {
+        return pendingSecond.promise
+      }
+      return Promise.resolve(capturedFixture(videoId))
+    })
     await startContent()
-    await vi.waitFor(() => {
-      expect(mocks.requestCapturedVimeoConfig).toHaveBeenCalledWith('111')
-    })
+    await advanceTimers(0)
+    // 并发池一次性派发整轮枚举结果，'111' 与 '222' 同时在途。
+    expect(mocks.requestCapturedVimeoConfig).toHaveBeenCalledWith('111')
+    expect(mocks.requestCapturedVimeoConfig).toHaveBeenCalledWith('222')
 
-    // 身份出现触发重扫：页面收敛为单视频快照，buffer 被重置。
+    // 页面收敛出身份（happy-dom 的 MutationObserver 不走 fake 定时器，用路由变化触发重扫，
+    // 身份守卫的丢弃逻辑与 SPA 内身份出现完全一致）：buffer 重置为单视频快照。
     attachIdentity('333')
-    await vi.waitFor(() => {
-      expect(vimeoResourceBuffer.replaceSnapshot).toHaveBeenCalledWith('333', expect.anything())
-    })
+    history.replaceState(null, '', '/route-identity')
+    await advanceTimers(600)
+    expect(vimeoResourceBuffer.replaceSnapshot).toHaveBeenCalledWith('333', expect.anything())
     expect(vimeoResourceBuffer.resetForPageChange).toHaveBeenCalled()
 
-    // 此刻 '111' 的在途加载才完成：不得并入刚收敛的单视频 buffer，循环也不得起 '222'。
+    // 此刻两路在途加载才完成：写入守卫丢弃，不得并入刚收敛的单视频 buffer。
     pendingFirst.resolve(capturedFixture('111'))
-    await settle()
+    pendingSecond.resolve(capturedFixture('222'))
+    await advanceTimers(0)
 
     expect(vimeoResourceBuffer.mergeVideoResources).not.toHaveBeenCalled()
-    expect(mocks.requestCapturedVimeoConfig).not.toHaveBeenCalledWith('222')
   })
 
   it('SPA 路由切换时丢弃在途回退轮，旧页面资源不写进新页面', async () => {
     const pendingFirst = createDeferred()
+    const pendingSecond = createDeferred()
     mocks.listCapturedVimeoVideoIds
       .mockResolvedValueOnce(['111', '222'])
       .mockResolvedValue([])
     mocks.requestCapturedVimeoConfig.mockImplementation((videoId: string) =>
-      videoId === '111' ? pendingFirst.promise : Promise.resolve(capturedFixture(videoId))
+      videoId === '111' ? pendingFirst.promise : pendingSecond.promise
     )
     await startContent()
-    await vi.waitFor(() => {
-      expect(mocks.requestCapturedVimeoConfig).toHaveBeenCalledWith('111')
-    })
+    await advanceTimers(0)
+    expect(mocks.requestCapturedVimeoConfig).toHaveBeenCalledWith('111')
+    expect(mocks.requestCapturedVimeoConfig).toHaveBeenCalledWith('222')
 
     history.replaceState(null, '', '/route-discard')
-    // 路由切换处理先落定（重置 buffer），再让在途加载完成。
-    await vi.waitFor(() => {
-      expect(vimeoResourceBuffer.resetForPageChange).toHaveBeenCalled()
-    })
+    // 路由切换处理（0ms）与新页面首轮扫描（debounce 300ms）都在推进窗口内落定。
+    await advanceTimers(600)
+    expect(vimeoResourceBuffer.resetForPageChange).toHaveBeenCalled()
+
     pendingFirst.resolve(capturedFixture('111'))
-    // 冲掉在途编排与新页面的下一轮回退检测（枚举结果为空，直接结束）。
-    await settle()
+    pendingSecond.resolve(capturedFixture('222'))
+    await advanceTimers(0)
 
     expect(vimeoResourceBuffer.mergeVideoResources).not.toHaveBeenCalled()
-    expect(mocks.requestCapturedVimeoConfig).not.toHaveBeenCalledWith('222')
+    expect(mocks.requestCapturedVimeoConfig).toHaveBeenCalledTimes(2)
   })
 
   it('路由切换配对清空已编排记录，新页面重新逐视频编排', async () => {
@@ -241,29 +276,20 @@ describe('Vimeo content 聚合页回退编排', () => {
       Promise.resolve(capturedFixture(videoId))
     )
     await startContent()
-    await vi.waitFor(() => {
-      expect(vimeoResourceBuffer.mergeVideoResources).toHaveBeenCalledTimes(2)
-    })
+    await advanceTimers(0)
+    expect(vimeoResourceBuffer.mergeVideoResources).toHaveBeenCalledTimes(2)
 
     history.replaceState(null, '', '/route-reattach')
-    await vi.waitFor(() => {
-      expect(mocks.resetVimeoConfigFallback).toHaveBeenCalled()
-    })
-    await vi.waitFor(() => {
-      expect(vimeoResourceBuffer.mergeVideoResources).toHaveBeenCalledTimes(4)
-    })
-
+    await advanceTimers(600)
+    expect(mocks.resetVimeoConfigFallback).toHaveBeenCalled()
     expect(vimeoResourceBuffer.resetForPageChange).toHaveBeenCalled()
-    expect(vimeoResourceBuffer.mergeVideoResources).toHaveBeenNthCalledWith(
-      3,
-      '111',
-      expect.anything()
-    )
-    expect(vimeoResourceBuffer.mergeVideoResources).toHaveBeenNthCalledWith(
-      4,
-      '222',
-      expect.anything()
-    )
+    expect(vimeoResourceBuffer.mergeVideoResources).toHaveBeenCalledTimes(4)
+
+    // 并发池的完成顺序不保证与捕获顺序一致，只断言每个视频在新页面恰好再编排一次。
+    const mergeCalls = vi.mocked(vimeoResourceBuffer.mergeVideoResources).mock.calls
+    for (const videoId of ['111', '222']) {
+      expect(mergeCalls.filter(([mergedVideoId]) => mergedVideoId === videoId)).toHaveLength(2)
+    }
   })
 })
 
@@ -295,6 +321,11 @@ async function startContent(): Promise<void> {
   const { startVimeoContent } = await import('@/sites/vimeo/content/index')
   startVimeoContent()
   await Promise.resolve()
+}
+
+/** 推进 fake 定时器并冲掉微任务：覆盖 debounce 扫描、重扫定时与在途 Promise 的后续编排。 */
+async function advanceTimers(ms: number): Promise<void> {
+  await vi.advanceTimersByTimeAsync(ms)
 }
 
 /** 当前面板元素。 */

@@ -16,8 +16,43 @@ import type { VimeoCapturedConfigSnapshot } from '@/sites/vimeo/shared'
 /** background 兜底通道客户端。 */
 const backgroundClient = new BackgroundChannel()
 
-/** 聚合页回退检测单页 videoId 上限；与 MAIN world 捕获上限一致，伪造枚举最多浪费几次点查。 */
-const MAX_FALLBACK_VIDEO_IDS = 8
+/** 聚合页回退检测单页 videoId 上限；与 MAIN world 捕获上限及其等待上限（16）一致，伪造枚举最多浪费几次点查。 */
+const MAX_FALLBACK_VIDEO_IDS = 16
+
+/**
+ * 以有界并发逐项执行异步任务（Promise 池）。
+ *
+ * 最多同时运行 `limit` 个任务，用共享索引推进，不引入队列或持久化状态。任务函数须自行
+ * 兜底自身异常；池内若仍有任务抛错，等全部在途任务结束后再抛出第一个错误，保证不产生
+ * 未处理的 rejection。
+ */
+export async function runWithBoundedConcurrency<T>(
+  items: readonly T[],
+  limit: number,
+  task: (item: T) => Promise<void>
+): Promise<void> {
+  let nextIndex = 0
+
+  const runNext = async (): Promise<void> => {
+    while (true) {
+      const item = items[nextIndex]
+      nextIndex += 1
+      if (item === undefined) {
+        return
+      }
+      await task(item)
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(limit, items.length) }, runNext)
+  const settled = await Promise.allSettled(workers)
+  const firstRejected = settled.find(
+    (result): result is PromiseRejectedResult => result.status === 'rejected'
+  )
+  if (firstRejected) {
+    throw firstRejected.reason
+  }
+}
 
 /** 已经触发过兜底的 videoId；同一页面内不为同一视频重复请求 Vimeo。 */
 const fallbackVideoIds = new Set<string>()

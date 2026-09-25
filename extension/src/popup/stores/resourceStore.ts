@@ -11,7 +11,7 @@ import { defineStore } from 'pinia'
 import { I18nService } from '@/locales'
 import { logger } from '@/core/utils/logger'
 import { I18N_KEYS } from '@/core/constants/i18n'
-import type { MediaResource } from '@/core/types'
+import type { MediaResource, VideoGroupSummary } from '@/core/types'
 import { ContentChannel } from '@/popup/rpc/content.rpc'
 
 /** Popup 调用当前 tab content provider 的 RPC 客户端。 */
@@ -21,6 +21,13 @@ const contentClient = new ContentChannel()
 export const useResourceStore = defineStore('resource', () => {
   /** content 返回的当前 tab 资源，顺序不做二次排序。 */
   const resources = ref<MediaResource[]>([])
+
+  /**
+   * 每个视频组的展示元数据（标题/作者/时长/封面），顺序与资源分组序一致。
+   *
+   * 组序与元数据以它为权威来源，资源按 messageId 对号入座（见 `buildDetectedVideos`）。
+   */
+  const videoGroups = ref<VideoGroupSummary[]>([])
 
   /**
    * 当前是否正在查询资源。
@@ -76,6 +83,7 @@ export const useResourceStore = defineStore('resource', () => {
     loading.value = true
     error.value = null
     resources.value = []
+    videoGroups.value = []
 
     try {
       // Popup 打开时没有站点标签页属于预期情形（用户在任意非站点页面点开 Popup）：这里只
@@ -88,6 +96,9 @@ export const useResourceStore = defineStore('resource', () => {
 
       const result = await contentClient.getResources({ tabId: targetTabId.value })
       resources.value = [...result.resources]
+      // videoGroups 与资源同批到达；扩展更新后旧标签页里可能还驻留旧版 content script，
+      // 响应缺该字段时不让它炸成整次查询失败，按「无组元数据」呈现（面板从资源自兜底）。
+      videoGroups.value = Array.isArray(result.videoGroups) ? [...result.videoGroups] : []
     } catch (caughtError) {
       error.value =
         caughtError instanceof Error &&
@@ -134,6 +145,7 @@ export const useResourceStore = defineStore('resource', () => {
 
   return {
     resources,
+    videoGroups,
     loading,
     error,
     hasResources,

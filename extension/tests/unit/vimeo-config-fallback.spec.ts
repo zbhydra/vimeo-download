@@ -244,16 +244,16 @@ describe('Vimeo content 捕获枚举', () => {
     expect(mocks.listCapturedVimeoConfigs).toHaveBeenCalledWith({ timeout: CAPTURE_TIMEOUT_MS })
   })
 
-  it('枚举结果超过单页上限时截断', async () => {
+  it('枚举结果超过单页上限时截断到 16', async () => {
     mocks.listCapturedVimeoConfigs.mockResolvedValue({
-      videos: Array.from({ length: 10 }, (_item, index) => ({ videoId: String(index + 1) }))
+      videos: Array.from({ length: 20 }, (_item, index) => ({ videoId: String(index + 1) }))
     })
     const { listCapturedVimeoVideoIds } = await import(
       '@/sites/vimeo/content/configCaptureClient'
     )
 
     await expect(listCapturedVimeoVideoIds()).resolves.toEqual(
-      Array.from({ length: 8 }, (_item, index) => String(index + 1))
+      Array.from({ length: 16 }, (_item, index) => String(index + 1))
     )
   })
 
@@ -265,6 +265,54 @@ describe('Vimeo content 捕获枚举', () => {
 
     await expect(listCapturedVimeoVideoIds()).resolves.toEqual([])
     expect(mocks.loggerError).toHaveBeenCalled()
+  })
+})
+
+describe('Vimeo 回退加载并发池', () => {
+  it('单个任务失败被隔离，其余任务全部完成', async () => {
+    const { runWithBoundedConcurrency } = await import(
+      '@/sites/vimeo/content/configCaptureClient'
+    )
+
+    const completed: number[] = []
+    await expect(
+      runWithBoundedConcurrency(
+        [1, 2, 3, 4, 5, 6],
+        4,
+        async item => {
+          if (item === 2) {
+            throw new Error('[test] 视频资源加载失败')
+          }
+          completed.push(item)
+        }
+      )
+    ).rejects.toThrow('[test] 视频资源加载失败')
+
+    expect(completed).toEqual([1, 3, 4, 5, 6])
+  })
+
+  it('并发数受限于 limit 且覆盖全部条目', async () => {
+    const { runWithBoundedConcurrency } = await import(
+      '@/sites/vimeo/content/configCaptureClient'
+    )
+
+    let inFlight = 0
+    let peak = 0
+    const processed: number[] = []
+    await runWithBoundedConcurrency(
+      Array.from({ length: 12 }, (_item, index) => index),
+      4,
+      async item => {
+        inFlight += 1
+        peak = Math.max(peak, inFlight)
+        await new Promise(resolve => setTimeout(resolve, 5))
+        inFlight -= 1
+        processed.push(item)
+      }
+    )
+
+    expect(peak).toBe(4)
+    expect(processed).toHaveLength(12)
   })
 })
 

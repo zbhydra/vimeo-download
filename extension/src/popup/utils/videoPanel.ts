@@ -1,12 +1,18 @@
 /**
- * Popup 单视频面板的纯派生逻辑。
+ * Popup 视频面板的纯派生逻辑。
  *
- * Popup 拿到的是一批 `MediaResource`，面板需要把它们收敛到「一个视频、四行档位、一个时间
- * 区间」上。这里只做数据派生，不依赖 i18n 实例与 DOM，便于直接单测。
+ * Popup 拿到的是「组元数据 + 一批 `MediaResource`」，面板需要把它们收敛到「有序的视频列表、
+ * 一个选中视频、四行档位、一个时间区间」上。这里只做数据派生，不依赖 i18n 实例与 DOM，
+ * 便于直接单测。
  */
 
 import { I18N_KEYS } from '@/core/constants/i18n'
-import { RESOURCE_TYPES, type MediaResource, type ResourceType } from '@/core/types'
+import {
+  RESOURCE_TYPES,
+  type MediaResource,
+  type ResourceType,
+  type VideoGroupSummary
+} from '@/core/types'
 import { formatDownloadBytes } from '@/core/utils/downloadStatus'
 import { getVimeoResourceLabel, type VimeoLabelTranslator } from '@/sites/vimeo/media'
 import { decodeVimeoSourceDescriptor } from '@/sites/vimeo/shared'
@@ -125,33 +131,114 @@ export interface VideoPanelRow {
   options: VideoPanelOption[]
 }
 
-/** 缓冲区里检测到的一个视频及其全部资源。 */
+/**
+ * 缓冲区里检测到的一个视频：展示元数据 + 全部资源。
+ *
+ * 元数据以 `videoGroups` 的组级值为权威来源（config 原值，同组资源全部一致），资源自身字段
+ * 只在组元数据缺失（版本差、合并补齐未覆盖）时逐字段兜底。
+ */
 export interface DetectedVideo {
-  /** Vimeo videoId（资源 messageId）。 */
+  /** Vimeo videoId（资源 messageId，分组键）。 */
   videoId: string
-  /** 该视频的全部资源。 */
+  /** 展示标题；组与资源都没有标题时回退文件名，再退 videoId，不会是空串。 */
+  title: string
+  /** 作者；组与资源都没有时缺省，UI 整行不渲染。 */
+  author?: string
+  /** 时长（秒）；组与资源都没有时缺省。 */
+  durationSeconds?: number
+  /** 封面地址；组元数据与封面档位都没有时缺省，UI 渲染占位块。 */
+  thumbnailUrl?: string
+  /** 该视频的全部资源，四行档位与下载目标从中派生。 */
   resources: MediaResource[]
 }
 
 /**
- * 把缓存资源按 videoId 分成检测到的视频列表。
+ * 把 `getResources` 响应合并成按序的视频展示列表。
  *
- * 缓存按 videoId 分组写入：播放页是单视频快照，聚合页回退按捕获先后逐视频并入。分组键
- * 取 `messageId`（= Vimeo videoId），组序沿用资源顺序，选择器直接按此顺序展示，不在
- * popup 层重排。展示数据（标题/封面/时长/档位）一律从各组资源快照派生。
+ * `videoGroups` 决定组序与展示元数据，资源按 messageId 对号入座。两条边界约定：
+ * - **零资源组跳过**：只有 config 元数据、没有任何可下载档位的视频不进列表、不计入检测数，
+ *   保证「列出的每个视频都至少有一个档位可下」，选择器不出现选了什么也下不了的项。
+ * - **游离资源并入**：资源 messageId 不在 `videoGroups` 里（扩展更新后旧 content script
+ *   未带组元数据）时按资源顺序追加成组，元数据从资源自身字段派生。
  */
-export function groupDetectedVideos(resources: readonly MediaResource[]): DetectedVideo[] {
-  const groups = new Map<string, MediaResource[]>()
+export function buildDetectedVideos(
+  videoGroups: readonly VideoGroupSummary[],
+  resources: readonly MediaResource[]
+): DetectedVideo[] {
+  /** 按 messageId 收敛资源，键序即资源首次出现的顺序。 */
+  const resourcesByVideo = new Map<string, MediaResource[]>()
   for (const resource of resources) {
-    const group = groups.get(resource.messageId)
+    const group = resourcesByVideo.get(resource.messageId)
     if (group) {
       group.push(resource)
       continue
     }
-    groups.set(resource.messageId, [resource])
+    resourcesByVideo.set(resource.messageId, [resource])
   }
 
-  return Array.from(groups, ([videoId, groupResources]) => ({ videoId, resources: groupResources }))
+  const videos: DetectedVideo[] = []
+  const groupedVideoIds = new Set<string>()
+  for (const group of videoGroups) {
+    const groupResources = resourcesByVideo.get(group.videoId)
+    if (!groupResources) {
+      continue
+    }
+    groupedVideoIds.add(group.videoId)
+    videos.push(toDetectedVideo(group.videoId, group, groupResources))
+  }
+
+  for (const [videoId, groupResources] of resourcesByVideo) {
+    if (!groupedVideoIds.has(videoId)) {
+      videos.push(toDetectedVideo(videoId, undefined, groupResources))
+    }
+  }
+
+  return videos
+}
+
+/** 组元数据与资源快照合成一个展示条目；元数据缺失时逐字段从资源派生兜底。 */
+function toDetectedVideo(
+  videoId: string,
+  group: VideoGroupSummary | undefined,
+  resources: MediaResource[]
+): DetectedVideo {
+  const author = group?.author ?? resources.find(resource => resource.author)?.author
+  const duration =
+    group?.durationSeconds ?? resources.find(resource => resource.duration !== undefined)?.duration
+  const thumbnail = group?.thumbnailUrl ?? resolveResourcePoster(resources)
+
+  return {
+    videoId,
+    title: resolveEntryTitle(videoId, group, resources),
+    ...(author === undefined ? {} : { author }),
+    ...(duration === undefined ? {} : { durationSeconds: duration }),
+    ...(thumbnail === undefined ? {} : { thumbnailUrl: thumbnail }),
+    resources
+  }
+}
+
+/**
+ * 标题兜底链：组标题（config 原值）→ 资源标题 → 文件名 → videoId。
+ *
+ * 组标题缺失（空串）时资源标题多半与它同源，但版本差下资源可能比组元数据更完整，逐级
+ * 回退保证标题一定可展示；videoId 是契约规定的最终兜底。
+ */
+function resolveEntryTitle(
+  videoId: string,
+  group: VideoGroupSummary | undefined,
+  resources: readonly MediaResource[]
+): string {
+  if (group?.title) {
+    return group.title
+  }
+  const titled = resources.find(resource => resource.title)
+  return titled?.title ?? resources[0]?.filename ?? videoId
+}
+
+/** 从封面档位资源取展示封面；没有封面档位时返回 undefined，由 UI 渲染占位块。 */
+function resolveResourcePoster(resources: readonly MediaResource[]): string | undefined {
+  const cover = resources.find(resource => resource.type === RESOURCE_TYPES.IMAGE)
+  return cover?.thumbnail ?? cover?.url
 }
 
 /** 把当前视频资源归成四行；没有档位的行保留空列表，由 UI 展示禁用态。 */
@@ -292,26 +379,4 @@ function toVideoOption(
 function buildOptionLabel(resource: MediaResource, translate: VimeoLabelTranslator): string {
   const label = getVimeoResourceLabel(resource, translate)
   return resource.size === undefined ? label : `${label} · ${formatDownloadBytes(resource.size)}`
-}
-
-/** 信息区标题：优先站点解析出的标题，缺失时退回文件名或资源 ID。 */
-export function resolveVideoTitle(resources: readonly MediaResource[]): string {
-  const titled = resources.find(resource => resource.title)
-  return titled?.title ?? resources[0]?.filename ?? resources[0]?.id ?? ''
-}
-
-/** 信息区作者：站点没有给出作者时返回 undefined，由 UI 整行不渲染。 */
-export function resolveVideoAuthor(resources: readonly MediaResource[]): string | undefined {
-  return resources.find(resource => resource.author)?.author
-}
-
-/** 信息区时长（秒）：站点没有给出时长时返回 undefined，由 UI 整行不渲染。 */
-export function resolveVideoDuration(resources: readonly MediaResource[]): number | undefined {
-  return resources.find(resource => resource.duration !== undefined)?.duration
-}
-
-/** 信息区封面：封面行资源的图片地址，没有封面档位时返回 undefined。 */
-export function resolvePosterUrl(resources: readonly MediaResource[]): string | undefined {
-  const cover = resources.find(resource => resource.type === RESOURCE_TYPES.IMAGE)
-  return cover?.thumbnail ?? cover?.url
 }

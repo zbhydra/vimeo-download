@@ -1,22 +1,22 @@
 /**
- * Popup 单视频面板：当前视频判定、四行档位、时间裁剪与行内下载。
+ * Popup 视频面板：视频列表合并、当前视频判定、四行档位、时间裁剪与行内下载。
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
-import { defineComponent } from 'vue'
+import { defineComponent, nextTick } from 'vue'
 
 import { I18N_KEYS } from '@/core/constants/i18n'
 import { RESOURCE_SOURCE_KINDS, RESOURCE_TYPES, type ResourceType } from '@/core/constants/resource'
-import type { MediaResource } from '@/core/types'
+import type { MediaResource, VideoGroupSummary } from '@/core/types'
 import enUS from '@/locales/en-US.json'
 import zhCN from '@/locales/zh-CN.json'
 import { useResourceStore } from '@/popup/stores/resourceStore'
 import {
+  buildDetectedVideos,
   buildVideoPanelRows,
-  groupDetectedVideos,
   resolveVideoSelection,
   type VideoPanelOption
 } from '@/popup/utils/videoPanel'
@@ -60,17 +60,19 @@ const SITE_TAB = { id: 7, url: 'https://vimeo.com/1196869805', active: true } as
  * 挂载面板并写入 store 资源。
  *
  * `locale` 用于验证文案真的来自词条表；`targetTab` 传 null 表示 Popup 打开时不在站点页面
- * 且没有其它站点标签页，用于覆盖引导态。资源必须在 `initialize` 落定之后再写入，否则会被
- * 它内部的整体替换清掉。
+ * 且没有其它站点标签页，用于覆盖引导态。资源与组元数据必须在 `initialize` 落定之后再写入，
+ * 否则会被它内部的整体替换清掉。
  */
 async function mountPanel(
   resources: MediaResource[],
   locale: 'en-US' | 'zh-CN' = 'en-US',
-  targetTab: chrome.tabs.Tab | null = SITE_TAB
+  targetTab: chrome.tabs.Tab | null = SITE_TAB,
+  videoGroups: VideoGroupSummary[] = []
 ): Promise<VueWrapper> {
   const store = useResourceStore()
   await store.initialize(targetTab)
   store.resources = resources
+  store.videoGroups = videoGroups
 
   return mount(VideoPanel, {
     global: {
@@ -98,20 +100,75 @@ function lastDownloadedResource(target: VueWrapper): MediaResource {
 }
 
 describe('videoPanel 派生逻辑', () => {
-  it('按 messageId 分组为检测到的视频列表，组序沿用资源顺序', () => {
-    const videos = groupDetectedVideos([
-      vimeoResource({ optionId: 'best', label: 'Best', index: 0 }),
-      vimeoResource({ optionId: 'best', label: 'Best', index: 0, videoId: '111' }),
-      vimeoResource({ optionId: 'dash:video-track', label: '1080p HD', index: 1 })
-    ])
+  it('按 videoGroups 组序合并资源：零资源组跳过，组元数据优取 config 值', () => {
+    const videos = buildDetectedVideos(
+      [
+        { videoId: VIDEO_ID, title: 'Config Title', author: 'Config Author', durationSeconds: 61 },
+        // 只有元数据、没有任何资源的「幽灵组」：不进列表、不计入检测数。
+        { videoId: 'ghost', title: 'Ghost' },
+        { videoId: '111', title: '' }
+      ],
+      [
+        vimeoResource({ optionId: 'best', label: 'Best', index: 0 }),
+        vimeoResource({ optionId: 'best', label: 'Best', index: 0, videoId: '111' }),
+        vimeoResource({ optionId: 'dash:video-track', label: '1080p HD', index: 1 })
+      ]
+    )
 
     expect(videos.map(video => video.videoId)).toEqual([VIDEO_ID, '111'])
-    expect(videos[0]?.resources).toHaveLength(2)
-    expect(videos[1]?.resources).toHaveLength(1)
+    expect(videos[0].title).toBe('Config Title')
+    expect(videos[0].author).toBe('Config Author')
+    expect(videos[0].durationSeconds).toBe(61)
+    expect(videos[0].resources).toHaveLength(2)
+    // 组标题缺失（空串）时回退资源标题，而不是直接跳到 videoId。
+    expect(videos[1].title).toBe('Demo Video')
+    expect(videos[1].resources).toHaveLength(1)
+  })
+
+  it('组元数据缺封面时回退封面档位资源；标题全缺时按「文件名 → videoId」兜底', () => {
+    const videos = buildDetectedVideos(
+      [
+        { videoId: VIDEO_ID, title: '' },
+        { videoId: '222', title: '', thumbnailUrl: 'https://i.vimeocdn.com/video/222.jpg' },
+        { videoId: '333', title: '' }
+      ],
+      [
+        rawResource(VIDEO_ID, { filename: 'clip.mp4' }),
+        rawResource('222', { title: 'Resource Title' }),
+        rawResource('333', {})
+      ]
+    )
+
+    expect(videos.map(video => video.videoId)).toEqual([VIDEO_ID, '222', '333'])
+    expect(videos[0].title).toBe('clip.mp4')
+    expect(videos[1].title).toBe('Resource Title')
+    // 契约规定的最终兜底：连文件名都没有时直接展示 videoId，不会出现空标题。
+    expect(videos[2].title).toBe('333')
+  })
+
+  it('封面优取组元数据 thumbnailUrl；资源 messageId 不在组里时按资源顺序追加（版本差兜底）', () => {
+    const videos = buildDetectedVideos(
+      [{ videoId: VIDEO_ID, title: 'Demo Video', thumbnailUrl: 'https://i.vimeocdn.com/video/group.jpg' }],
+      [
+        vimeoResource({ optionId: 'best', label: 'Best', index: 0 }),
+        vimeoResource({ optionId: 'best-thumbnail', label: 'Thumbnail', index: 1, kind: 'image' }),
+        // 旧 content script 只回资源不带组元数据时，该视频按资源字段派生后追加在列表尾。
+        rawResource('999', { title: 'Skew Video', author: 'Skew Author', duration: 125 })
+      ]
+    )
+
+    // 组元数据出现即权威：封面取 thumbnailUrl，不用封面档位资源的缩略图顶替。
+    expect(videos[0].thumbnailUrl).toBe('https://i.vimeocdn.com/video/group.jpg')
+    expect(videos[0].thumbnailUrl).not.toBe(`https://i.vimeocdn.com/video/${VIDEO_ID}.jpg`)
+    expect(videos[1].videoId).toBe('999')
+    expect(videos[1].title).toBe('Skew Video')
+    expect(videos[1].author).toBe('Skew Author')
+    expect(videos[1].durationSeconds).toBe(125)
   })
 
   it('没有资源时不产生分组', () => {
-    expect(groupDetectedVideos([])).toEqual([])
+    expect(buildDetectedVideos([{ videoId: VIDEO_ID, title: 'Ghost' }], [])).toEqual([])
+    expect(buildDetectedVideos([], [])).toEqual([])
   })
 
   it('四行按类型归位，无档位的行保持空列表', () => {
@@ -250,10 +307,20 @@ describe('VideoPanel', () => {
     ])
 
     expect(wrapper.get('.video-title').text()).toBe('Demo Video')
-    expect(wrapper.get('.poster').attributes('src')).toBe(
+    expect(wrapper.get('.poster img').attributes('src')).toBe(
       `https://i.vimeocdn.com/video/${VIDEO_ID}.jpg`
     )
     expect(wrapper.get('.video-meta').text()).toBe('Best · 5.0 GB')
+  })
+
+  it('信息卡封面优取组元数据 thumbnailUrl', async () => {
+    wrapper = await mountPanel(defaultResources(), 'en-US', SITE_TAB, [
+      { videoId: VIDEO_ID, title: 'Demo Video', thumbnailUrl: 'https://i.vimeocdn.com/video/group.jpg' }
+    ])
+
+    expect(wrapper.get('.poster img').attributes('src')).toBe(
+      'https://i.vimeocdn.com/video/group.jpg'
+    )
   })
 
   it('信息区渲染作者与时长，时长用既有格式化器呈现', async () => {
@@ -272,11 +339,13 @@ describe('VideoPanel', () => {
     expect(wrapper.get('.video-duration').text()).toBe('1:02:05')
   })
 
-  it('作者与时长缺失时两行都不渲染', async () => {
+  it('作者与时长缺失时两行都不渲染，没有封面时渲染占位块', async () => {
     wrapper = await mountPanel([vimeoResource({ optionId: 'best', label: 'Best', index: 0 })])
 
     expect(wrapper.find('.video-author').exists()).toBe(false)
     expect(wrapper.find('.video-duration').exists()).toBe(false)
+    expect(wrapper.find('.poster img').exists()).toBe(false)
+    expect(wrapper.find('.thumb-placeholder').exists()).toBe(true)
   })
 
   it('档位标签带上真实大小，拿不到大小的档位保持原标签', async () => {
@@ -660,37 +729,119 @@ describe('VideoPanel', () => {
     expect(wrapper.find('.video-switcher').exists()).toBe(false)
   })
 
-  it('多视频时渲染选择器：检测数量与各视频标题，切换联动四行档位并重置裁剪输入', async () => {
-    wrapper = await mountPanel([
-      vimeoResource({ optionId: 'best', label: 'Best', index: 0 }),
-      vimeoResource({
-        optionId: 'best',
-        label: 'Best',
-        index: 0,
-        videoId: '222',
-        title: 'Other Video'
-      })
-    ])
+  it('多视频时渲染选择器：检测数量与封面列表项，切换联动四行档位并重置裁剪输入', async () => {
+    wrapper = await mountPanel(
+      [
+        vimeoResource({ optionId: 'best', label: 'Best', index: 0 }),
+        vimeoResource({
+          optionId: 'best',
+          label: 'Best',
+          index: 0,
+          videoId: '222',
+          title: 'Other Video'
+        })
+      ],
+      'en-US',
+      SITE_TAB,
+      [
+        { videoId: VIDEO_ID, title: 'Demo Video', thumbnailUrl: 'https://i.vimeocdn.com/video/a.jpg' },
+        { videoId: '222', title: 'Other Video' }
+      ]
+    )
 
     expect(wrapper.get('.video-switcher-count').text()).toBe(
       enUS['videoPanel.detectedCount'].replace('{count}', '2')
     )
-    const select = wrapper.get<HTMLSelectElement>('.video-select')
-    expect(select.findAll('option').map(option => option.text())).toEqual([
-      'Demo Video',
-      'Other Video'
-    ])
+    // 浮层默认收起；触发按钮展示当前选中视频。
+    expect(wrapper.find('.selector-listbox').exists()).toBe(false)
+    expect(wrapper.get('.trigger-title').text()).toBe('Demo Video')
+    expect(wrapper.get('.trigger-thumb img').attributes('src')).toBe(
+      'https://i.vimeocdn.com/video/a.jpg'
+    )
+
+    // 打开浮层：列表项是「小封面 + 标题」，当前选中项带 aria-selected。
+    await wrapper.get('.selector-trigger').trigger('click')
+    const options = wrapper.findAll('[role="option"]')
+    expect(options.map(option => option.text())).toEqual(['Demo Video', 'Other Video'])
+    expect(options[0].attributes('aria-selected')).toBe('true')
+    expect(options[1].attributes('aria-selected')).toBe('false')
+
     // 默认展示第一个视频；四行档位来自它的资源。
     expect(wrapper.get('.video-title').text()).toBe('Demo Video')
     expect(videoOptionIds(wrapper)).toEqual([`vimeo:${VIDEO_ID}:video:best`])
 
     // 第一个视频上填过裁剪区间，切换后不携带到下一个视频。
     await wrapper.findAll<HTMLInputElement>('.clip-input')[0].setValue('12.5')
-    await select.setValue('222')
+    await options[1].trigger('click')
 
+    expect(wrapper.find('.selector-listbox').exists()).toBe(false)
+    expect(wrapper.get('.trigger-title').text()).toBe('Other Video')
     expect(wrapper.get('.video-title').text()).toBe('Other Video')
     expect(wrapper.findAll<HTMLInputElement>('.clip-input')[0].element.value).toBe('')
     expect(videoOptionIds(wrapper)).toEqual(['vimeo:222:video:best'])
+  })
+
+  it('选择器键盘路径：方向键移动高亮，Enter 选中，Esc 关闭；点击浮层外也关闭', async () => {
+    wrapper = await mountPanel(
+      [
+        vimeoResource({ optionId: 'best', label: 'Best', index: 0 }),
+        vimeoResource({
+          optionId: 'best',
+          label: 'Best',
+          index: 0,
+          videoId: '222',
+          title: 'Other Video'
+        })
+      ],
+      'en-US',
+      SITE_TAB,
+      [{ videoId: VIDEO_ID, title: 'Demo Video' }, { videoId: '222', title: 'Other Video' }]
+    )
+    const trigger = wrapper.get('.selector-trigger')
+
+    // ↑/↓ 在收起时打开浮层，↓ 移动高亮，Enter 选中高亮项。
+    await trigger.trigger('keydown', { key: 'ArrowDown' })
+    expect(wrapper.find('.selector-listbox').exists()).toBe(true)
+    await trigger.trigger('keydown', { key: 'ArrowDown' })
+    await trigger.trigger('keydown', { key: 'Enter' })
+    expect(wrapper.get('.video-title').text()).toBe('Other Video')
+
+    // 再次打开后 Esc 关闭，选择保持不变。
+    await trigger.trigger('click')
+    expect(wrapper.find('.selector-listbox').exists()).toBe(true)
+    await trigger.trigger('keydown', { key: 'Escape' })
+    expect(wrapper.find('.selector-listbox').exists()).toBe(false)
+    expect(wrapper.get('.video-title').text()).toBe('Other Video')
+
+    // 浮层外按下（pointerdown）关闭。happy-dom 不触发 document 级监听器，这里经 spy 取到
+    // 组件注册的监听器，按「浮层内 / 浮层外」两种 target 直接调用验证判定分支。
+    const addListenerSpy = vi.spyOn(document, 'addEventListener')
+    try {
+      await trigger.trigger('click')
+      const pointerListener = addListenerSpy.mock.calls
+        .filter(([type]) => type === 'pointerdown')
+        .map(([, listener]) => listener)
+        .at(-1) as (event: Event) => void
+      expect(pointerListener).toBeDefined()
+
+      pointerListener(pointerEventAt(trigger.element))
+      await nextTick()
+      expect(wrapper.find('.selector-listbox').exists()).toBe(true)
+
+      pointerListener(pointerEventAt(document.body))
+      await nextTick()
+      expect(wrapper.find('.selector-listbox').exists()).toBe(false)
+    } finally {
+      addListenerSpy.mockRestore()
+    }
+  })
+
+  it('全部视频组都零资源时按空状态呈现，可重新扫描', async () => {
+    wrapper = await mountPanel([], 'en-US', SITE_TAB, [{ videoId: 'ghost', title: 'Ghost' }])
+
+    expect(wrapper.get('.state-text').text()).toBe(enUS['videoPanel.empty'])
+    await wrapper.get('.state-button').trigger('click')
+    expect(wrapper.emitted('refresh')).toHaveLength(1)
   })
 
   it('当前页不是 Vimeo 时给出引导提示与跳转按钮，且不叠加错误条', async () => {
@@ -807,6 +958,38 @@ const KIND_RESOURCE_TYPES: Record<VimeoOptionKind, ResourceType> = {
   audio: RESOURCE_TYPES.AUDIO,
   subtitle: RESOURCE_TYPES.SUBTITLE,
   image: RESOURCE_TYPES.IMAGE
+}
+
+/**
+ * 构造带指定 target 的 pointerdown 事件。
+ *
+ * happy-dom 不触发 document 级监听器，取到监听器直接调用时用它在实例上覆写只读的 `target`。
+ */
+function pointerEventAt(target: EventTarget | null): Event {
+  const event = new Event('pointerdown')
+  Object.defineProperty(event, 'target', { value: target })
+  return event
+}
+
+/**
+ * 构造最小化的裸资源：不走 vimeoResource 的 descriptor 工厂，只覆盖合并逻辑关心的字段，
+ * 用于验证「组元数据缺失 / 标题全缺 / 版本差游离资源」这类边界。
+ */
+function rawResource(
+  videoId: string,
+  fields: { title?: string; filename?: string; author?: string; duration?: number }
+): MediaResource {
+  return {
+    id: `vimeo:${videoId}:video:best`,
+    messageId: videoId,
+    index: 0,
+    url: DASH_URL,
+    type: RESOURCE_TYPES.VIDEO,
+    sourceKind: RESOURCE_SOURCE_KINDS.VIMEO_DASH_VIDEO,
+    mimeType: 'video/mp4',
+    metadata: { messageId: videoId },
+    ...fields
+  }
 }
 
 /** 构造带合法 descriptor 的 Vimeo 资源。 */

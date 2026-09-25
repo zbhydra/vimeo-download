@@ -110,8 +110,14 @@ export const METHOD_RESPONSE_LIMITS = {
   applySiteConfig: 1024,
   /** getCapturedVimeoConfig 返回一份有界的原生 config JSON。 */
   getCapturedVimeoConfig: 786432,
-  /** listCapturedVimeoConfigs 返回最多捕获上限条的有界概要。 */
-  listCapturedVimeoConfigs: 16384,
+  /**
+   * listCapturedVimeoConfigs 返回最多捕获上限条（16 条）的有界概要。
+   *
+   * 每条含 videoId、标题、时长与封面 URL；按防御性最坏组合估算（长标题按 255 字符全
+   * CJK 约 0.8KB + 封面 URL 约 0.15KB，单条约 1KB），16 条约 16KB 已贴近下限，故按
+   * 原先 8 条时代的 2KB/条预算同步翻倍到 32KB，远低于 EventRpc 响应 frame 上限 1MB。
+   */
+  listCapturedVimeoConfigs: 32768,
   /** downloadMedia 返回下载结果。 */
   downloadMedia: 4096
 } as const satisfies Record<keyof InjectedHandler, number>

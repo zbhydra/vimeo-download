@@ -199,6 +199,31 @@ describe('Vimeo config capture', () => {
     expect(capture.getCapturedVimeoConfig(VIDEO_ID)).toBeNull()
   })
 
+  it('captures beyond the cap evict the oldest config by capture order', async () => {
+    const capture = await import('@/sites/vimeo/injected/configCapture')
+    capture.installVimeoConfigCapture()
+
+    const total = 17
+    const firstId = Number(VIDEO_ID)
+    for (let offset = 0; offset < total; offset += 1) {
+      const videoId = String(firstId + offset)
+      FakeXMLHttpRequest.nextResponse = {
+        responseType: 'json',
+        response: configFixture({ videoId }),
+        responseURL: signedConfigUrl(videoId),
+        headers: { 'content-type': 'application/json' }
+      }
+      const xhr = new XMLHttpRequest()
+      xhr.open('GET', signedConfigUrl(videoId))
+      xhr.send()
+    }
+
+    const summaries = capture.listCapturedVimeoConfigs()
+    expect(summaries).toHaveLength(16)
+    expect(summaries[0]?.videoId).toBe(String(firstId + 1))
+    expect(summaries.at(-1)?.videoId).toBe(String(firstId + total - 1))
+  })
+
   it('enumerates captured configs as ordered display summaries', async () => {
     const firstConfig = configFixture()
     const secondId = '1196869806'

@@ -7,7 +7,7 @@
 
 import { I18N_KEYS } from '@/core/constants/i18n'
 import { RESOURCE_SOURCE_KINDS, RESOURCE_TYPES } from '@/core/constants/resource'
-import type { MediaResource, ResourceSourceKind } from '@/core/types'
+import type { MediaResource, ResourceSourceKind, VideoGroupMetadata } from '@/core/types'
 import type { JsonObject, JsonValue } from '@/core/rpc/types'
 import {
   decodeVimeoSourceDescriptor,
@@ -93,6 +93,11 @@ export interface VimeoParsedConfig {
   refreshConfigUrl?: string
   /** signed URL 绝对过期时间（Unix 秒）。 */
   expiresAt?: number
+  /**
+   * 组展示元数据；`video.title` 原值进 `groupMetadata.title`（缺失为空串，与 `title` 的
+   * 文件名兜底值区分开），`/config/request` 刷新片段缺 `video` 时沿用刷新前值。
+   */
+  groupMetadata: VideoGroupMetadata
   /** progressive MP4 列表。 */
   progressive: VimeoProgressiveFile[]
   /** DASH playlist URL。 */
@@ -217,6 +222,8 @@ export interface VimeoDownloadOption {
   author?: string
   /** 视频时长（秒），用于 Popup 信息区；缺失时不展示。 */
   duration?: number
+  /** 组展示元数据，统一取自 config，随资源进入 ResourceBuffer 的 videoGroups 通道。 */
+  groupMetadata: VideoGroupMetadata
   /** 文件名。 */
   filename: string
   /** 下载或 config URL。 */
@@ -306,6 +313,16 @@ export function parseVimeoConfig(
       timestamp !== undefined && expiresInSeconds !== undefined
         ? timestamp + expiresInSeconds
         : undefined,
+    groupMetadata: {
+      // 组元数据取 config 原值：标题缺失保持空串（popup 用 videoId 兜底），不落文件名用的
+      // DEFAULT_TITLE；刷新片段缺 `video` 时与上面各字段一样沿用刷新前值。
+      title: readString(video?.title) ?? fallbackConfig?.groupMetadata?.title ?? '',
+      author: readString(owner?.name) ?? fallbackConfig?.groupMetadata?.author,
+      durationSeconds:
+        readPositiveInt(video?.duration) ?? fallbackConfig?.groupMetadata?.durationSeconds,
+      thumbnailUrl:
+        readGroupThumbnailUrl(video?.thumbnail_url) ?? fallbackConfig?.groupMetadata?.thumbnailUrl
+    },
     progressive: readProgressiveFiles(files.progressive),
     dashPlaylistUrl: readDashPlaylistUrl(files.dash),
     hlsPlaylistUrl: readHlsPlaylistUrl(files.hls),
@@ -448,6 +465,7 @@ export function createVimeoResource(option: VimeoDownloadOption, index: number):
     title: option.title,
     author: option.author,
     duration: option.duration,
+    groupMetadata: option.groupMetadata,
     size: option.size,
     thumbnail: option.kind === 'image' ? option.url : undefined,
     mimeType: option.mimeType,
@@ -781,6 +799,12 @@ function readHlsPlaylistUrl(value: JsonValue | undefined): string | undefined {
 function readAllowedFetchUrl(value: JsonValue | undefined): string | undefined {
   const url = readString(value)
   return url && isAllowedVimeoFetchUrl(url) ? url : undefined
+}
+
+/** 读取视频封面 URL；只接受 https 且 `*.vimeocdn.com` 域，非法时省略该字段。 */
+function readGroupThumbnailUrl(value: JsonValue | undefined): string | undefined {
+  const url = readString(value)
+  return url && isVimeoMediaCdnUrl(url) ? url : undefined
 }
 
 /** 读取 thumbnails。 */
@@ -1179,18 +1203,19 @@ function createBestAudioOption(
 /**
  * 创建统一 option 并同步 descriptor。
  *
- * 标题、作者与时长统一取自 config，保证同一视频的所有档位展示同一份元数据；放在展开之后
- * 覆写，档位构造处不需要（也无法）各自设置。
+ * 标题、作者、时长与组元数据统一取自 config，保证同一视频的所有档位展示同一份元数据；
+ * 放在展开之后覆写，档位构造处不需要（也无法）各自设置。
  */
 function createOption(
   config: VimeoParsedConfig,
-  input: Omit<VimeoDownloadOption, 'descriptor' | 'title' | 'author' | 'duration'>
+  input: Omit<VimeoDownloadOption, 'descriptor' | 'title' | 'author' | 'duration' | 'groupMetadata'>
 ): VimeoDownloadOption {
   return {
     ...input,
     title: config.title,
     author: config.author,
     duration: config.duration,
+    groupMetadata: config.groupMetadata,
     descriptor: {
       version: 2,
       videoId: config.videoId,

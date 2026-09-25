@@ -181,6 +181,70 @@ describe('Vimeo media parsing', () => {
     expect(refreshed.duration).toBe(754)
   })
 
+  it('解析组元数据：标题/作者/时长/封面取 config 原值并透传到每个档位', () => {
+    const thumbnailUrl = 'https://i.vimeocdn.com/video/democover_640'
+    const config = parseVimeoConfig(
+      configFixture({ ownerName: 'Demo Author', duration: 731, thumbnailUrl }),
+      CONFIG_URL
+    )
+    expect(config.groupMetadata).toEqual({
+      title: 'Demo Video',
+      author: 'Demo Author',
+      durationSeconds: 731,
+      thumbnailUrl
+    })
+
+    const resources = buildVimeoDownloadOptions(config, null).map((option, index) =>
+      createVimeoResource(option, index)
+    )
+    expect(resources.length).toBeGreaterThan(1)
+    for (const resource of resources) {
+      expect(resource.groupMetadata).toEqual(config.groupMetadata)
+    }
+  })
+
+  it('封面 URL 非 https 或不在 vimeocdn 域时省略，config 不带封面字段同样省略', () => {
+    const insecure = parseVimeoConfig(
+      configFixture({ thumbnailUrl: 'http://i.vimeocdn.com/video/insecure' }),
+      CONFIG_URL
+    )
+    expect(insecure.groupMetadata.thumbnailUrl).toBeUndefined()
+
+    const foreignHost = parseVimeoConfig(
+      configFixture({ thumbnailUrl: 'https://evil.example.com/video/cover' }),
+      CONFIG_URL
+    )
+    expect(foreignHost.groupMetadata.thumbnailUrl).toBeUndefined()
+
+    const missing = parseVimeoConfig(configFixture(), CONFIG_URL)
+    expect(missing.groupMetadata.thumbnailUrl).toBeUndefined()
+  })
+
+  it('config 不带标题时组元数据标题为空串，文件名标题仍走默认兜底', () => {
+    const config = parseVimeoConfig(configFixture({ title: null }), CONFIG_URL)
+
+    expect(config.groupMetadata.title).toBe('')
+    expect(config.title).toBe('vimeo-video')
+  })
+
+  it('config/request 刷新片段缺 video 时沿用刷新前的组元数据', () => {
+    const base = parseVimeoConfig(
+      configFixture({
+        ownerName: 'Demo Author',
+        duration: 60,
+        thumbnailUrl: 'https://i.vimeocdn.com/video/democover_640'
+      }),
+      CONFIG_URL
+    )
+    const refreshed = parseVimeoConfig(
+      configRequestFixture({ dash: false }),
+      REFRESH_CONFIG_URL,
+      base
+    )
+
+    expect(refreshed.groupMetadata).toEqual(base.groupMetadata)
+  })
+
   it('读取 progressive 的真实 size，media 层的标签字面量不带大小', () => {
     const config = parseVimeoConfig(configFixture({ progressiveSize: 5_242_880 }), CONFIG_URL)
 
@@ -825,6 +889,10 @@ interface ConfigFixtureOptions {
   readonly ownerName?: string
   /** `video.duration`；不传表示 config 不带时长。 */
   readonly duration?: number
+  /** `video.title`；`null` 表示 config 不带标题字段，字符串为显式标题。 */
+  readonly title?: string | null
+  /** `video.thumbnail_url`；不传表示 config 不带封面字段。 */
+  readonly thumbnailUrl?: string
 }
 
 function configFixture(options: ConfigFixtureOptions = {}) {
@@ -888,9 +956,14 @@ function configFixture(options: ConfigFixtureOptions = {}) {
     },
     video: {
       id: 1201819515,
-      title: 'Demo Video',
+      ...(options.title === undefined
+        ? { title: 'Demo Video' }
+        : options.title === null
+          ? {}
+          : { title: options.title }),
       ...(options.ownerName === undefined ? {} : { owner: { name: options.ownerName } }),
       ...(options.duration === undefined ? {} : { duration: options.duration }),
+      ...(options.thumbnailUrl === undefined ? {} : { thumbnail_url: options.thumbnailUrl }),
       thumbs: {
         640: 'https://i.vimeocdn.com/video/low.jpg',
         1280: 'https://i.vimeocdn.com/video/high.jpg'

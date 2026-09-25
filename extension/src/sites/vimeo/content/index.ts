@@ -30,11 +30,24 @@ import { VimeoButtonPanel } from './buttons'
 import {
   listCapturedVimeoVideoIds,
   requestCapturedVimeoConfig,
-  resetVimeoConfigFallback
+  resetVimeoConfigFallback,
+  runWithBoundedConcurrency
 } from './configCaptureClient'
 import { vimeoMessageHandler } from './messageHandler'
 import { vimeoResourceBuffer } from './resourceBuffer'
 import { synchronizeVimeoConfig } from './siteConfig'
+
+/**
+ * 聚合页回退重扫间隔。
+ *
+ * 轮播在页面稳定后仍持续向 MAIN world 供给新捕获（实测 74s 内累计 15 个），但此后页面不再
+ * 产生 content 口径相关的 DOM 变化（实测 80s 内零相关 mutation），枚举推进只能靠定时重扫；
+ * 间隔取秒级即可跟上轮播节奏，每轮成本仅一次本地枚举 RPC。
+ */
+const FALLBACK_RESWEEP_DELAY_MS = 3_000
+
+/** 聚合页回退加载的最大并发数：单视频加载以 playlist 网络为主，4 路已能压满等待窗口。 */
+const FALLBACK_LOAD_CONCURRENCY = 4
 
 /** Vimeo content 控制器。 */
 class VimeoContentController {
@@ -58,6 +71,9 @@ class VimeoContentController {
 
   /** 聚合页回退检测已编排过的 videoId；与 ResourceBuffer 同步重置，避免重复编排。 */
   private readonly fallbackLoadedVideoIds = new Set<string>()
+
+  /** 聚合页回退重扫定时器；同一时刻最多存在一个。 */
+  private fallbackResweepTimer: number | null = null
 
   /** player frame helper 提供的兜底身份。 */
   private frameIdentity: VimeoVideoIdentity | null = null
@@ -267,17 +283,25 @@ class VimeoContentController {
    * 身份缺失页面（如 vimeo.com/watch 聚合页）的回退检测。
    *
    * 聚合页没有唯一主角视频，页面身份四路提取皆空；但轮播/预览播放过的视频 config 已被
-   * MAIN world 按 videoId 捕获。枚举这些捕获概要（宿主页面可伪造，仅当待查询提示），逐个
-   * 走既有校验链路取资源并按视频合并写入 ResourceBuffer 供 popup 展示；页面按钮依赖页面
-   * 身份，聚合页不渲染。每个 videoId 每页只编排一次：资源按 id 去重，失败视频（已下架/
-   * 私有）的 background 兜底也不会重放，重试没有增量价值。
+   * MAIN world 按 videoId 捕获。枚举这些捕获概要（宿主页面可伪造，仅当待查询提示），走既有
+   * 校验链路取资源并按视频合并写入 ResourceBuffer 供 popup 展示；页面按钮依赖页面身份，
+   * 聚合页不渲染。
+   *
+   * 加载为有界并发（`FALLBACK_LOAD_CONCURRENCY`）：实测串行约 0.9s/视频，SPA 返回聚合页时
+   * MAIN world 仍持有整组捕获，一次全量枚举可达 16 个视频（串行约 14s 起），并发 4 压到
+   * 约 4s。逐视频失败隔离——单个视频（已下架/私有）的失败只记日志，不阻塞其余视频。
+   * 每个 videoId 每页只编排一次：资源按 id 去重，失败视频的 background 兜底也不会重放，
+   * 重试没有增量价值。
    */
   private async loadFallbackCapturedVideos(): Promise<void> {
     // 页面已收敛出身份（含回退轮进行中身份出现的场合）时整条回退路径短路：不枚举捕获、
     // 不向校验链路发起点查，SPA 过渡期身份瞬时缺失也不会把聚合结果混进单视频 buffer。
+    // 重扫的停止条件同样是这条守卫：身份出现后定时器自然衰减，不再重新武装。
     if (this.currentVideoId !== null) {
       return
     }
+
+    this.scheduleFallbackResweep()
 
     const videoIds = await listCapturedVimeoVideoIds()
     if (videoIds.length === 0) {
@@ -285,26 +309,23 @@ class VimeoContentController {
     }
 
     const pageHref = window.location.href
-    for (const videoId of videoIds) {
-      // SPA 路由已切换时丢弃整轮结果，避免旧页面资源写进新页面的缓存。
-      if (window.location.href !== pageHref) {
-        return
-      }
-      // 身份在回退轮进行中出现：在途循环立即停止——不再对剩余视频发起点查（避免对 CDN
-      // 重复拉流），也不把其他视频混进刚重置的单视频 buffer。
-      if (this.currentVideoId !== null) {
+    const loadOne = async (videoId: string): Promise<void> => {
+      // SPA 路由已切换或身份出现时不再派发新任务，避免旧页面资源写进新页面的缓存、
+      // 或对 CDN 重复拉流；仍在途的任务由下方写入守卫丢弃。
+      if (window.location.href !== pageHref || this.currentVideoId !== null) {
         return
       }
       if (this.fallbackLoadedVideoIds.has(videoId)) {
-        continue
+        return
       }
+      // 先登记再加载：并发的回退轮（扫描与重扫定时器）据此去重，同一 videoId 只编排一次。
       this.fallbackLoadedVideoIds.add(videoId)
 
       try {
         const snapshot = await this.loadCapturedResources(videoId)
         // 等待期间身份或页面切换的，同一视频也不写入：buffer 已被身份分支重置，混入即串页。
         if (!snapshot || window.location.href !== pageHref || this.currentVideoId !== null) {
-          continue
+          return
         }
 
         vimeoResourceBuffer.mergeVideoResources(videoId, snapshot.resources)
@@ -318,6 +339,20 @@ class VimeoContentController {
         )
       }
     }
+
+    await runWithBoundedConcurrency(videoIds, FALLBACK_LOAD_CONCURRENCY, loadOne)
+  }
+
+  /** 安排下一轮聚合页回退重扫；轮播持续供给新捕获，由身份守卫决定是否继续。 */
+  private scheduleFallbackResweep(): void {
+    if (this.fallbackResweepTimer !== null) {
+      return
+    }
+
+    this.fallbackResweepTimer = window.setTimeout(() => {
+      this.fallbackResweepTimer = null
+      void this.loadFallbackCapturedVideos()
+    }, FALLBACK_RESWEEP_DELAY_MS)
   }
 
   /** 把同一资源快照同步给页面面板与 popup 缓存。 */
