@@ -119,6 +119,7 @@
   "videoPanel.notOnVimeo": "หน้านี้ไม่ใช่หน้า Vimeo เปิด Vimeo เพื่อดาวน์โหลดวิดีโอ",
   "videoPanel.openVimeo": "เปิด Vimeo",
   "videoPanel.unavailable": "ไม่มี",
+  "videoPanel.directRow.label": "ดาวน์โหลดโดยตรง",
   "videoPanel.savePath.label": "ตำแหน่งที่บันทึก",
   "videoPanel.savePath.placeholder": "โฟลเดอร์ย่อยใน Downloads",
   "videoPanel.clip.title": "ตัดช่วง",

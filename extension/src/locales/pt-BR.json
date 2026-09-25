@@ -119,6 +119,7 @@
   "videoPanel.notOnVimeo": "Esta página não é uma página do Vimeo. Abra o Vimeo para baixar vídeos.",
   "videoPanel.openVimeo": "Abrir o Vimeo",
   "videoPanel.unavailable": "Indisponível",
+  "videoPanel.directRow.label": "Download direto",
   "videoPanel.savePath.label": "Local de salvamento",
   "videoPanel.savePath.placeholder": "Subpasta em Downloads",
   "videoPanel.clip.title": "Cortar",

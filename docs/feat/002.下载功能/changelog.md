@@ -2,6 +2,19 @@
 
 > 记录本域(下载功能)每次文档修改:一行 why + 一行 from→to。
 
+## 2026-09-25 Popup 补齐竞品操作项：直接下载行与剪辑双滑杆
+
+**Why**：竞品 Popup 提供 progressive 直链独立入口、区间滑杆与下载子目录；本插件的保存位置早已落地，但 Video 行仍把 progressive 直链混在合流档位里（音轨开关与裁剪控件对直链无意义），裁剪也只有数字输入、缺「拖一下就掐头去尾」的操作路径。
+
+**From → To**：
+- 直接下载行：行分组重构为 Video / 直接下载 / Audio / Subtitle / Image——Video 行只列 DASH/HLS 合流档位（音轨开关语义不变，`Best` 派生自 progressive 时由直接下载行承载），新 direct 行只列 progressive 直链（下拉 + 行内下载，无音轨开关、不参与裁剪，恒全片全音轨），固定在 Video 行之后；当前视频没有 progressive 档位时整行不渲染（与其余行的禁用占位不同）。信息区副标题在 Video 行无档位时回退直接下载行。i18n 新键 `videoPanel.directRow.label`（14 locale）。
+- 剪辑双滑杆：新增 `TrimSlider.vue` + `popup/utils/trimSlider.ts`（0.1s 粒度钳制/步进/文本化纯函数），与裁剪数字输入双向绑定同一状态；滑杆上限 = 视频时长（组元数据 `durationSeconds` 优先、资源时长兜底、都没有为 0 禁用）；键盘 ±1s / Shift ±10s / Home / End，双 handle `role="slider"` + aria 完整；交互写回恒为十进制文本，`parseVimeoTimeRange` 约束恒成立；空输入只做显示兜底不回写，「不填 = 整片」不变；`:clip:` 下载链零改动。
+- 保存位置：本轮复审确认既有实现（`chrome.storage.local` 持久化 `settings.downloadPath`，popup change 时写入、空值回填默认；background 下载前读设置拼 `{子目录}/{文件名}`，净化集中在 `BrowserDownloadService` 一处）与文档一致，零代码改动。
+- 顺手修复：TrimSlider 轨道与 handle 的 pointerdown 过滤非主键（右键按下会先误移 handle 再弹 contextmenu）。
+- 已接受限制：直接下载行正向渲染与「落盘子目录生效」因验证环境无 progressive 样本未获真实站点证据（单测覆盖，环境受限非缺陷）。
+- 测试：新增 `trim-slider.spec.ts`（9 用例），`video-panel.spec.ts` 补直接下载行归行与双滑杆联动用例；全量 442 通过。
+- 文档：同步 `feat.md`（功能范围、Popup 面板小节与验收标准）、`tech-扩展端Vimeo本地下载.md`（§3 / §8.1 / §12.1 / §12.3~§12.7 / §12.9 / §13 / §14）。
+
 ## 2026-09-25 badge 改为视频数语义
 
 **Why**：聚合页资源条数大（8 视频实测 115 条），badge 按资源数累计会显示三位数，与 Popup「检测到 N 视频」口径不一致；产品口径是一个视频无论多少档位都算 1。

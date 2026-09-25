@@ -119,6 +119,7 @@
   "videoPanel.notOnVimeo": "현재 페이지는 Vimeo 페이지가 아닙니다. Vimeo를 열면 동영상을 다운로드할 수 있습니다.",
   "videoPanel.openVimeo": "Vimeo 열기",
   "videoPanel.unavailable": "없음",
+  "videoPanel.directRow.label": "직접 다운로드",
   "videoPanel.savePath.label": "저장 위치",
   "videoPanel.savePath.placeholder": "다운로드 폴더의 하위 폴더",
   "videoPanel.clip.title": "구간 자르기",

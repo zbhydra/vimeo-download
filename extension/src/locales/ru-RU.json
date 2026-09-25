@@ -119,6 +119,7 @@
   "videoPanel.notOnVimeo": "Эта страница не является страницей Vimeo. Откройте Vimeo, чтобы скачать видео.",
   "videoPanel.openVimeo": "Открыть Vimeo",
   "videoPanel.unavailable": "Недоступно",
+  "videoPanel.directRow.label": "Прямое скачивание",
   "videoPanel.savePath.label": "Место сохранения",
   "videoPanel.savePath.placeholder": "Подпапка в папке загрузок",
   "videoPanel.clip.title": "Обрезка",

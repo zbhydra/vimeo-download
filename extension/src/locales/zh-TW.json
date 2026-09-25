@@ -119,6 +119,7 @@
   "videoPanel.notOnVimeo": "目前頁面不是 Vimeo 頁面，開啟 Vimeo 後才能下載影片",
   "videoPanel.openVimeo": "開啟 Vimeo",
   "videoPanel.unavailable": "無",
+  "videoPanel.directRow.label": "直接下載",
   "videoPanel.savePath.label": "儲存位置",
   "videoPanel.savePath.placeholder": "下載目錄下的子資料夾",
   "videoPanel.clip.title": "時間裁剪",

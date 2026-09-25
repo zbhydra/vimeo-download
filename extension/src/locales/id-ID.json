@@ -119,6 +119,7 @@
   "videoPanel.notOnVimeo": "Halaman ini bukan halaman Vimeo. Buka Vimeo untuk mengunduh video.",
   "videoPanel.openVimeo": "Buka Vimeo",
   "videoPanel.unavailable": "Tidak tersedia",
+  "videoPanel.directRow.label": "Unduhan langsung",
   "videoPanel.savePath.label": "Lokasi penyimpanan",
   "videoPanel.savePath.placeholder": "Subfolder di folder Unduhan",
   "videoPanel.clip.title": "Potong",

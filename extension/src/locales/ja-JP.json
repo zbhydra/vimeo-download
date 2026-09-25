@@ -119,6 +119,7 @@
   "videoPanel.notOnVimeo": "このページは Vimeo のページではありません。Vimeo を開くと動画をダウンロードできます。",
   "videoPanel.openVimeo": "Vimeo を開く",
   "videoPanel.unavailable": "なし",
+  "videoPanel.directRow.label": "直接ダウンロード",
   "videoPanel.savePath.label": "保存先",
   "videoPanel.savePath.placeholder": "ダウンロードフォルダー内のサブフォルダー",
   "videoPanel.clip.title": "トリミング",

@@ -1,5 +1,5 @@
 /**
- * Popup 视频面板：视频列表合并、当前视频判定、四行档位、时间裁剪与行内下载。
+ * Popup 视频面板：视频列表合并、当前视频判定、五行档位、时间裁剪与行内下载。
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -171,19 +171,60 @@ describe('videoPanel 派生逻辑', () => {
     expect(buildDetectedVideos([], [])).toEqual([])
   })
 
-  it('四行按类型归位，无档位的行保持空列表', () => {
+  it('五行按类型归位：DASH/HLS 归 Video 行，progressive 归直接下载行，无档位的行保持空列表', () => {
     const rows = buildVideoPanelRows(
       [
         vimeoResource({ optionId: 'best', label: 'Best', index: 0 }),
-        vimeoResource({ optionId: 'dash:audio', label: '195 kbps', index: 1, kind: 'audio' }),
-        vimeoResource({ optionId: 'best-thumbnail', label: 'Thumbnail', index: 2, kind: 'image' })
+        vimeoResource({
+          optionId: 'progressive:1080p:30',
+          label: '1080p MP4',
+          delivery: 'progressive',
+          index: 1,
+          size: 30 * 1024 ** 2
+        }),
+        vimeoResource({ optionId: 'dash:audio', label: '195 kbps', index: 2, kind: 'audio' }),
+        vimeoResource({ optionId: 'best-thumbnail', label: 'Thumbnail', index: 3, kind: 'image' })
       ],
       key => key
     )
 
-    expect(rows.map(row => row.kind)).toEqual(['video', 'audio', 'subtitle', 'image'])
-    expect(rows.map(row => row.options.length)).toEqual([1, 1, 0, 1])
-    expect(rows[3].labelKey).toBe(I18N_KEYS.RESOURCE_ITEM.TYPE_IMAGE)
+    expect(rows.map(row => row.kind)).toEqual(['video', 'direct', 'audio', 'subtitle', 'image'])
+    expect(rows.map(row => row.options.length)).toEqual([1, 1, 1, 0, 1])
+    expect(rows[4].labelKey).toBe(I18N_KEYS.RESOURCE_ITEM.TYPE_IMAGE)
+    // 直接下载行有自己的行名词条，下拉值就是资源 ID（progressive 无音轨变体可归并）。
+    expect(rows[1].labelKey).toBe(I18N_KEYS.VIDEO_PANEL.DIRECT_ROW_LABEL)
+    expect(rows[1].options[0].id).toBe(`vimeo:${VIDEO_ID}:video:progressive:1080p:30`)
+    expect(rows[1].options[0].label).toBe('1080p MP4 · 30.0 MB')
+    expect(rows[1].options[0].audioVariants).toBeUndefined()
+  })
+
+  it('页面只有 progressive 直链时 Video 行为空，直链（含 Best）全部落「直接下载」行', () => {
+    const rows = buildVideoPanelRows(
+      [
+        vimeoResource({
+          optionId: 'best',
+          label: 'Best',
+          delivery: 'progressive',
+          index: 0,
+          size: 40 * 1024 ** 2
+        }),
+        vimeoResource({
+          optionId: 'progressive:720p:30',
+          label: '720p MP4',
+          delivery: 'progressive',
+          index: 1
+        })
+      ],
+      key => key
+    )
+
+    expect(rows.find(row => row.kind === 'video')?.options).toEqual([])
+    const direct = rows.find(row => row.kind === 'direct')?.options ?? []
+    expect(direct.map(option => option.id)).toEqual([
+      `vimeo:${VIDEO_ID}:video:best`,
+      `vimeo:${VIDEO_ID}:video:progressive:720p:30`
+    ])
+    expect(direct[0].label).toBe('Best · 40.0 MB')
   })
 
   it('Video 行按 videoTrackId 归并同画质的两个音轨变体，Best 单独成项', () => {
@@ -495,7 +536,7 @@ describe('VideoPanel', () => {
     ).toBe(true)
   })
 
-  it('progressive 档位禁用时间裁剪并锁定音轨开关，DASH 档位两处都恢复可用', async () => {
+  it('progressive 直链归「直接下载」行：Video 行不列直链，直链行无音轨开关且下载恒为整片', async () => {
     wrapper = await mountPanel([
       vimeoResource({
         optionId: 'progressive:1080p:30',
@@ -511,19 +552,51 @@ describe('VideoPanel', () => {
       })
     ])
 
+    // Video 行只列 DASH/HLS 合流档位；progressive 单独成行，且没有音轨开关（直链自带音轨）。
+    expect(videoOptions(wrapper)).toEqual(['1080p HD'])
+    const directRow = wrapper.get('.option-row[data-row="direct"]')
+    expect(directRow.get('option').text()).toBe('1080p MP4')
+    expect(directRow.find('.audio-switch').exists()).toBe(false)
+
+    // 直链不支持裁剪：填好区间后从直链行下载，资源身份不带 `:clip:` 后缀（恒为整片）。
+    const inputs = wrapper.findAll<HTMLInputElement>('.clip-input')
+    await inputs[0].setValue('12.5')
+    await inputs[1].setValue('30')
+    await directRow.get('.row-download').trigger('click')
+    expect(lastDownloadedResource(wrapper).id).toBe(`vimeo:${VIDEO_ID}:video:progressive:1080p:30`)
+  })
+
+  it('当前视频没有 progressive 档位时不渲染直接下载行，其余行保留禁用态', async () => {
+    wrapper = await mountPanel(defaultResources())
+
+    expect(wrapper.find('.option-row[data-row="direct"]').exists()).toBe(false)
+    expect(wrapper.find('.option-row[data-row="audio"]').exists()).toBe(true)
+  })
+
+  it('页面只有 progressive 直链时渲染直接下载行，Video 行与裁剪一并禁用', async () => {
+    wrapper = await mountPanel([
+      vimeoResource({
+        optionId: 'progressive:1080p:30',
+        label: '1080p MP4',
+        delivery: 'progressive',
+        index: 0
+      })
+    ])
+
+    const videoSelect = wrapper.get<HTMLSelectElement>('.option-row[data-row="video"] select')
+    expect(videoSelect.element.disabled).toBe(true)
+    expect(videoSelect.get('option').text()).toBe(enUS['videoPanel.unavailable'])
+    // 没有 DASH/HLS 档位可裁剪：裁剪禁用；直链自带音轨，开关锁在「有音轨」并禁用。
     expect(wrapper.get<HTMLInputElement>('.clip-input').element.disabled).toBe(true)
     expect(wrapper.get('.clip-hint').text()).toBe(enUS['videoPanel.clip.unsupported'])
-    // progressive 直链自带音轨、没有第二份纯视频交付，开关只能锁在「有音轨」。
+    expect(wrapper.find('.trim-slider-disabled').exists()).toBe(true)
+    expect(wrapper.get('[role="slider"]').attributes('aria-disabled')).toBe('true')
     expect(audioSwitch(wrapper).attributes('aria-checked')).toBe('true')
     expect(audioSwitch(wrapper).attributes('disabled')).toBeDefined()
 
-    await wrapper
-      .get('.option-row[data-row="video"] select')
-      .setValue(`vimeo:${VIDEO_ID}:video:dash:video-track`)
-
-    expect(wrapper.get<HTMLInputElement>('.clip-input').element.disabled).toBe(false)
-    expect(wrapper.get('.clip-hint').text()).toBe(enUS['videoPanel.clip.hint'])
-    expect(audioSwitch(wrapper).attributes('disabled')).toBeUndefined()
+    // 直接下载行仍然可用：下载那条直链。
+    await wrapper.get('.option-row[data-row="direct"] .row-download').trigger('click')
+    expect(lastDownloadedResource(wrapper).id).toBe(`vimeo:${VIDEO_ID}:video:progressive:1080p:30`)
   })
 
   it('填好区间后下载走 applyVimeoTimeRange，身份与文件名都带上区间', async () => {
@@ -541,6 +614,35 @@ describe('VideoPanel', () => {
     const clipped = lastDownloadedResource(wrapper)
     expect(clipped.id).toBe(`vimeo:${VIDEO_ID}:video:dash:video-track:clip:12.5-30`)
     expect(clipped.filename).toBe('Demo-Video-dash-video-track-clip-12.5-30s.mp4')
+  })
+
+  it('裁剪双滑杆与数字输入双向同步：滑杆步进写回输入，输入编辑反映到滑杆读数', async () => {
+    wrapper = await mountPanel(defaultResources(), 'en-US', SITE_TAB, [
+      { videoId: VIDEO_ID, title: 'Demo Video', durationSeconds: 60 }
+    ])
+
+    const handles = wrapper.findAll('[role="slider"]')
+    const inputs = wrapper.findAll<HTMLInputElement>('.clip-input')
+    expect(inputs[0].element.value).toBe('')
+
+    // 起点滑杆步进写回输入；终点输入为空时补全长，一次拖动即生成完整区间。
+    await handles[0].trigger('keydown', { key: 'ArrowRight' })
+    expect(inputs[0].element.value).toBe('1')
+    expect(inputs[1].element.value).toBe('60')
+
+    // Shift 组合键粗步 +10s。
+    await handles[0].trigger('keydown', { key: 'ArrowRight', shiftKey: true })
+    expect(inputs[0].element.value).toBe('11')
+
+    // 数字输入是同一状态的另一入口：编辑后滑杆读数随之更新。
+    await inputs[1].setValue('30')
+    expect(handles[1].attributes('aria-valuenow')).toBe('30')
+
+    // 起点步进钳在终点，不产生交叉区间。
+    await inputs[0].setValue('29.5')
+    await handles[0].trigger('keydown', { key: 'ArrowRight' })
+    expect(inputs[0].element.value).toBe('30')
+    expect(handles[0].attributes('aria-valuenow')).toBe('30')
   })
 
   it('区间只作用于可裁剪档位，字幕与封面仍下载整片', async () => {
@@ -629,21 +731,16 @@ describe('VideoPanel', () => {
   it('音轨偏好跨档位保持：锁在「有音轨」的档位不改写偏好，切回有得选的档位仍是无音轨', async () => {
     wrapper = await mountPanel([
       ...defaultResources(),
-      vimeoResource({
-        optionId: 'progressive:2160p:30',
-        label: '2160p MP4',
-        delivery: 'progressive',
-        index: 4
-      })
+      vimeoResource({ optionId: 'hls:track', label: 'HLS 1080p', delivery: 'hls', index: 4 })
     ])
 
     await audioSwitch(wrapper).trigger('click')
     expect(audioSwitch(wrapper).attributes('aria-checked')).toBe('false')
 
-    // progressive 没有纯视频交付：开关锁「有音轨」并禁用，但只影响呈现，不改写用户偏好。
+    // HLS 直链自带音轨：开关锁「有音轨」并禁用，但只影响呈现，不改写用户偏好。
     await wrapper
       .get('.option-row[data-row="video"] select')
-      .setValue(`vimeo:${VIDEO_ID}:video:progressive:2160p:30`)
+      .setValue(`vimeo:${VIDEO_ID}:video:hls:track`)
     expect(audioSwitch(wrapper).attributes('aria-checked')).toBe('true')
     expect(audioSwitch(wrapper).attributes('disabled')).toBeDefined()
 
@@ -729,7 +826,7 @@ describe('VideoPanel', () => {
     expect(wrapper.find('.video-switcher').exists()).toBe(false)
   })
 
-  it('多视频时渲染选择器：检测数量与封面列表项，切换联动四行档位并重置裁剪输入', async () => {
+  it('多视频时渲染选择器：检测数量与封面列表项，切换联动五行档位并重置裁剪输入', async () => {
     wrapper = await mountPanel(
       [
         vimeoResource({ optionId: 'best', label: 'Best', index: 0 }),
@@ -766,7 +863,7 @@ describe('VideoPanel', () => {
     expect(options[0].attributes('aria-selected')).toBe('true')
     expect(options[1].attributes('aria-selected')).toBe('false')
 
-    // 默认展示第一个视频；四行档位来自它的资源。
+    // 默认展示第一个视频；五行档位来自它的资源。
     expect(wrapper.get('.video-title').text()).toBe('Demo Video')
     expect(videoOptionIds(wrapper)).toEqual([`vimeo:${VIDEO_ID}:video:best`])
 

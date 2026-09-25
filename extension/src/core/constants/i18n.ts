@@ -81,6 +81,8 @@ export const I18N_KEYS = {
     OPEN_VIMEO: 'videoPanel.openVimeo',
     /** 该行没有可用档位 */
     UNAVAILABLE: 'videoPanel.unavailable',
+    /** 直接下载行：progressive 直链单文件档位，独立于 Video 行的 DASH/HLS 合流档位 */
+    DIRECT_ROW_LABEL: 'videoPanel.directRow.label',
     /** 保存位置标题 */
     SAVE_PATH_LABEL: 'videoPanel.savePath.label',
     /** 保存位置输入占位，说明填的是下载目录下的子目录 */

@@ -119,6 +119,7 @@
   "videoPanel.notOnVimeo": "Trang này không phải là trang Vimeo. Mở Vimeo để tải video.",
   "videoPanel.openVimeo": "Mở Vimeo",
   "videoPanel.unavailable": "Không có",
+  "videoPanel.directRow.label": "Tải xuống trực tiếp",
   "videoPanel.savePath.label": "Vị trí lưu",
   "videoPanel.savePath.placeholder": "Thư mục con trong thư mục Tải xuống",
   "videoPanel.clip.title": "Cắt đoạn",

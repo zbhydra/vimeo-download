@@ -119,6 +119,7 @@
   "videoPanel.notOnVimeo": "This page isn't a Vimeo page. Open Vimeo to download videos.",
   "videoPanel.openVimeo": "Open Vimeo",
   "videoPanel.unavailable": "Unavailable",
+  "videoPanel.directRow.label": "Direct download",
   "videoPanel.savePath.label": "Save location",
   "videoPanel.savePath.placeholder": "Subfolder in Downloads",
   "videoPanel.clip.title": "Trim",

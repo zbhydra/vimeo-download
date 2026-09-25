@@ -119,6 +119,7 @@
   "videoPanel.notOnVimeo": "Cette page n'est pas une page Vimeo. Ouvrez Vimeo pour télécharger des vidéos.",
   "videoPanel.openVimeo": "Ouvrir Vimeo",
   "videoPanel.unavailable": "Indisponible",
+  "videoPanel.directRow.label": "Téléchargement direct",
   "videoPanel.savePath.label": "Emplacement d'enregistrement",
   "videoPanel.savePath.placeholder": "Sous-dossier dans Téléchargements",
   "videoPanel.clip.title": "Découper",

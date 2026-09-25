@@ -119,6 +119,7 @@
   "videoPanel.notOnVimeo": "Questa pagina non è una pagina Vimeo. Apri Vimeo per scaricare i video.",
   "videoPanel.openVimeo": "Apri Vimeo",
   "videoPanel.unavailable": "Non disponibile",
+  "videoPanel.directRow.label": "Download diretto",
   "videoPanel.savePath.label": "Posizione di salvataggio",
   "videoPanel.savePath.placeholder": "Sottocartella in Download",
   "videoPanel.clip.title": "Ritaglia",

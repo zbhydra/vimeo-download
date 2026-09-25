@@ -2,7 +2,7 @@
  * Popup 视频面板的纯派生逻辑。
  *
  * Popup 拿到的是「组元数据 + 一批 `MediaResource`」，面板需要把它们收敛到「有序的视频列表、
- * 一个选中视频、四行档位、一个时间区间」上。这里只做数据派生，不依赖 i18n 实例与 DOM，
+ * 一个选中视频、五行档位、一个时间区间」上。这里只做数据派生，不依赖 i18n 实例与 DOM，
  * 便于直接单测。
  */
 
@@ -17,8 +17,13 @@ import { formatDownloadBytes } from '@/core/utils/downloadStatus'
 import { getVimeoResourceLabel, type VimeoLabelTranslator } from '@/sites/vimeo/media'
 import { decodeVimeoSourceDescriptor } from '@/sites/vimeo/shared'
 
-/** 面板四行；数组顺序即展示顺序。 */
-export const VIDEO_PANEL_ROW_KINDS = ['video', 'audio', 'subtitle', 'image'] as const
+/**
+ * 面板各行；数组顺序即展示顺序。
+ *
+ * `direct`（直接下载）是 progressive 直链的专属行：单文件自带音轨、无需合流、不支持裁剪，
+ * 与 Video 行的 DASH/HLS 合流档位交付形态不同，按竞品布局分成两行。
+ */
+export const VIDEO_PANEL_ROW_KINDS = ['video', 'direct', 'audio', 'subtitle', 'image'] as const
 
 /**
  * 封面行格式标识。
@@ -31,9 +36,10 @@ export const COVER_FORMAT_LABEL = 'JPG'
 /** 面板行类型。 */
 export type VideoPanelRowKind = (typeof VIDEO_PANEL_ROW_KINDS)[number]
 
-/** 一行与资源类型的唯一对应关系。 */
+/** 一行与资源类型的唯一对应关系；`direct` 行同样只收视频资源，走独立的 progressive 过滤。 */
 const ROW_RESOURCE_TYPES: Record<VideoPanelRowKind, ResourceType> = {
   video: RESOURCE_TYPES.VIDEO,
+  direct: RESOURCE_TYPES.VIDEO,
   audio: RESOURCE_TYPES.AUDIO,
   subtitle: RESOURCE_TYPES.SUBTITLE,
   image: RESOURCE_TYPES.IMAGE
@@ -42,6 +48,7 @@ const ROW_RESOURCE_TYPES: Record<VideoPanelRowKind, ResourceType> = {
 /** 行标签词条；与页面按钮面板共用同一批类型词，两处行名不会分叉。 */
 const ROW_LABEL_KEYS: Record<VideoPanelRowKind, string> = {
   video: I18N_KEYS.RESOURCE_ITEM.TYPE_VIDEO,
+  direct: I18N_KEYS.VIDEO_PANEL.DIRECT_ROW_LABEL,
   audio: I18N_KEYS.RESOURCE_ITEM.TYPE_AUDIO,
   subtitle: I18N_KEYS.RESOURCE_ITEM.TYPE_SUBTITLE,
   image: I18N_KEYS.RESOURCE_ITEM.TYPE_IMAGE
@@ -148,7 +155,7 @@ export interface DetectedVideo {
   durationSeconds?: number
   /** 封面地址；组元数据与封面档位都没有时缺省，UI 渲染占位块。 */
   thumbnailUrl?: string
-  /** 该视频的全部资源，四行档位与下载目标从中派生。 */
+  /** 该视频的全部资源，五行档位与下载目标从中派生。 */
   resources: MediaResource[]
 }
 
@@ -241,7 +248,7 @@ function resolveResourcePoster(resources: readonly MediaResource[]): string | un
   return cover?.thumbnail ?? cover?.url
 }
 
-/** 把当前视频资源归成四行；没有档位的行保留空列表，由 UI 展示禁用态。 */
+/** 把当前视频资源归成五行；没有档位的行保留空列表，由 UI 展示禁用态。 */
 export function buildVideoPanelRows(
   resources: readonly MediaResource[],
   translate: VimeoLabelTranslator
@@ -252,10 +259,31 @@ export function buildVideoPanelRows(
     options:
       kind === 'video'
         ? buildVideoOptions(resources, translate)
-        : resources
-            .filter(resource => resource.type === ROW_RESOURCE_TYPES[kind])
-            .map(resource => ({ id: resource.id, label: buildOptionLabel(resource, translate) }))
+        : kind === 'direct'
+          ? buildDirectOptions(resources, translate)
+          : resources
+              .filter(resource => resource.type === ROW_RESOURCE_TYPES[kind])
+              .map(resource => ({ id: resource.id, label: buildOptionLabel(resource, translate) }))
   }))
+}
+
+/**
+ * 构造「直接下载」行的 progressive 直链档位。
+ *
+ * progressive 是浏览器下载管理器直取的单文件 MP4（自带音轨、无需页面内合流、不支持裁剪），
+ * 交付形态与 DASH/HLS 合流档位不同，单独成行；下拉值就是资源 ID，行内按钮直接下载。
+ */
+function buildDirectOptions(
+  resources: readonly MediaResource[],
+  translate: VimeoLabelTranslator
+): VideoPanelOption[] {
+  return resources
+    .filter(
+      resource =>
+        resource.type === RESOURCE_TYPES.VIDEO &&
+        decodeVimeoSourceDescriptor(resource.documentId)?.delivery === 'progressive'
+    )
+    .map(resource => ({ id: resource.id, label: buildOptionLabel(resource, translate) }))
 }
 
 /** 归并中的 Video 画质档位：代表资源 + 另一个音轨变体。 */
@@ -269,7 +297,7 @@ interface VideoQualityEntry {
 }
 
 /**
- * 构造 Video 行的下拉档位。
+ * 构造 Video 行的下拉档位（只含 DASH/HLS 合流档位，progressive 直链归「直接下载」行）。
  *
  * 身份规则不在这里重写：`dash:{trackId}` 与 `dash:{trackId}:no-audio` 仍是两个独立资源、两个
  * 独立 ID，这里只把同一条 video track 的两个变体并成一条下拉项，由音轨开关二选一。有无音轨的
@@ -277,7 +305,8 @@ interface VideoQualityEntry {
  * 读结构化字段，不解析 ID 后缀。
  *
  * `Best` 单独成项：它 spread 了被选中的选项，也带 `videoTrackId`，按 track 归并会把它并回它
- * 派生自的那条 track、从下拉里消失（判定口径与 `getVimeoResourceChoice` 一致）。
+ * 派生自的那条 track、从下拉里消失（判定口径与 `getVimeoResourceChoice` 一致）。`Best` 来自
+ * progressive（页面只有直链交付）时同样不进本行，由「直接下载」行承载。
  */
 function buildVideoOptions(
   resources: readonly MediaResource[],
@@ -294,6 +323,11 @@ function buildVideoOptions(
     }
 
     const descriptor = decodeVimeoSourceDescriptor(resource.documentId)
+    // progressive 直链归「直接下载」行：单文件交付没有第二份纯视频变体可归并，也不支持裁剪。
+    if (descriptor?.delivery === 'progressive') {
+      continue
+    }
+
     const withAudio = descriptor?.audioTrackId !== undefined
 
     if (descriptor?.optionId === 'best') {
@@ -301,7 +335,7 @@ function buildVideoOptions(
       continue
     }
 
-    // progressive / HLS 直链自带音轨、没有第二份纯视频交付，没有 `videoTrackId` 可归并。
+    // HLS 直链自带音轨、没有第二份纯视频交付，没有 `videoTrackId` 可归并。
     const trackId = descriptor?.delivery === 'dash' ? descriptor.videoTrackId : undefined
     if (!trackId) {
       entries.push({ resource, withAudio: true })

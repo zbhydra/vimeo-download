@@ -72,7 +72,7 @@ https://*.vimeocdn.com/*
 | top content(`vimeo.com` / 顶层 `player.vimeo.com`) | 提取 `videoId`、通过 EventRpc 消费捕获的 config(播放页按 videoId 点查、身份缺失聚合页枚举概要,见 §5.2)、注入按钮、维护 tab 资源缓存；按来源把直连文件（progressive / thumbnail / 字幕）分流到 background，并在页面存活时查询 Chrome 进度 |
 | player-frame content(`player.vimeo.com`) | 只把 frame 内 `videoId` postMessage 给 top content 作为 identity 兜底;不传 config 或 signed URL,不启动资源缓存与下载调度 |
 | injected / MAIN world | `document_start` 安装原生 config 捕获,保留完整 signed URL 与 JSON,并按捕获序提供有界概要枚举；只执行需要分片读取和 remux 的 DASH/HLS 下载,不做后端通信 |
-| popup | 视频面板（见 §12）：播放页展示单视频,身份缺失聚合页展示多视频选择器;展示当前 tab 的视频信息、四行档位与时间裁剪，按选中档位触发单个下载；入队与排重走 `core/content/download/downloadManager.ts` 的共享队列合同，下载状态与进度由顶部入口的浮层读取 |
+| popup | 视频面板（见 §12）：播放页展示单视频,身份缺失聚合页展示多视频选择器;展示当前 tab 的视频信息、档位行（Video / 直接下载 / Audio / Subtitle / Image，见 §12.5）与时间裁剪，按选中档位触发单个下载；入队与排重走 `core/content/download/downloadManager.ts` 的共享队列合同，下载状态与进度由顶部入口的浮层读取 |
 | background | 不负责初始资源发现；校验 Vimeo caller、descriptor、CDN/MIME 边界，必要时刷新一次 signed config，并用 `chrome.downloads` 创建或查询 Progressive/Thumbnail/字幕任务 |
 
 Manifest 申请 `downloads` permission。Progressive/Thumbnail 使用 `chrome.downloads.download()`，任务创建后由 Chrome 网络栈和下载管理器持有，不依赖页面或 MV3 Service Worker 持续运行；跳转、刷新或关闭来源 tab 不会取消已经创建的任务。DASH/HLS 仍使用 `fetch -> segment buffers -> remux -> objectURL -> a.click()`，因此其读取和 remux 跟随页面生命周期。adaptive mux 复用 website `client_mux` 已验证的 Mediabunny 思路,但实现位置在 extension 侧。
@@ -564,7 +564,7 @@ content downloadOne
 - 状态查询只接受当前扩展创建的 download ID，并校验 Chrome 报告的 `finalUrl` 与响应 MIME；进行中的越界任务立即取消。
 - 字幕响应 MIME 接受 `text/*`、`application/ttml+xml`、`application/x-subrip`，以及 CDN 默认的 `application/octet-stream` / `binary/octet-stream`（与 `core/injected/downloadValidation.ts` 对 DASH media segment 的既有口径一致）。字幕是纯文本，安全边界在 URL 白名单而不是 MIME，MIME 拒绝只会得到一条取消后重试必然重现的失败路径。
 - Chrome 返回服务端授权/禁止/失败中断时，background 从原生 refresh config 只重建 Progressive/Thumbnail 列表，不加载无关 DASH/HLS playlist；恢复同一个直连选项并重建一次任务，第二次失败直接提示用户重试。
-- `filename` 由 background 拼成 `{保存子目录}/{文件名}` 的相对路径：文件名只保留单段名字（目录分隔符与控制字符替换成空格、截断 180、清洗后正好是 `.` / `..` 时换兜底名），保存子目录逐段丢弃非法段（绝对路径的开头 `/` 与连续 `/` 造成的空段、`.` / `..` 回退段、`~` 开头段、含 `:` 或 `<>"|?*` 与控制字符的段），全部丢弃时回退默认子目录。Chrome 只接受下载目录下的相对路径，绝对路径、空路径与含 `..` 的路径会让整个下载失败（见 §12.7）。
+- `filename` 由 background 拼成 `{保存子目录}/{文件名}` 的相对路径：文件名只保留单段名字（目录分隔符与控制字符替换成空格、截断 180、清洗后正好是 `.` / `..` 时换兜底名），保存子目录反斜杠先按分隔符归一（`..\x` 不能绕过回退段判定），再逐段丢弃非法段（绝对路径的开头 `/` 与连续 `/` 造成的空段、`.` / `..` 回退段、`~` 开头段、含 `:` 或 `<>"|?*` 与控制字符的段），段累计超过 120 字符时丢弃其后各段，全部丢弃时回退默认子目录。Chrome 只接受下载目录下的相对路径，绝对路径、空路径与含 `..` 的路径会让整个下载失败（见 §12.7）。
 - 冲突时由 Chrome 自动 uniquify。
 
 ### 8.2 DASH video mux
@@ -706,7 +706,7 @@ vimeo:{videoId}:image:thumbnail
 
 ### 12.1 尺寸与骨架
 
-固定 `672px` 宽，最小 `300px`、最大 `600px` 高（`src/style.css` 的 `--popup-width` / `--popup-min-height` / `--popup-max-height`）。popup 被裁掉的部分不会出现滚动条，所以宽度下限取固定区的实际排版：headless Chromium 按真实 locale 文案 + SF Pro 实测，最坏状态（未登录 + 额度可见 + 升级 CTA + 刷新按钮可见）下 `header` 功能控件最宽 `574.7px`（fr-FR）、`footer` 整句单行最宽 `470.8px`（ja-JP），`672px` 在两者之上留有余量，且距 Chrome popup 上限 `800px` 有 128px。`header` 一行放不下时功能控件折到第二行（`AppHeader.vue` 的 `flex-wrap`），文案不省略也不裁切。`header`（品牌 / 下载状态 / 额度 / 语言 / 登录）与 `footer`（支持邮箱）固定，主区从上到下是：视频选择器（仅多视频时出现，见 §12.3）→ 视频信息 → 四行档位 → 时间裁剪 → 保存位置；内容超过上限时只有主区内部滚动。
+固定 `672px` 宽，最小 `300px`、最大 `600px` 高（`src/style.css` 的 `--popup-width` / `--popup-min-height` / `--popup-max-height`）。popup 被裁掉的部分不会出现滚动条，所以宽度下限取固定区的实际排版：headless Chromium 按真实 locale 文案 + SF Pro 实测，最坏状态（未登录 + 额度可见 + 升级 CTA + 刷新按钮可见）下 `header` 功能控件最宽 `574.7px`（fr-FR）、`footer` 整句单行最宽 `470.8px`（ja-JP），`672px` 在两者之上留有余量，且距 Chrome popup 上限 `800px` 有 128px。`header` 一行放不下时功能控件折到第二行（`AppHeader.vue` 的 `flex-wrap`），文案不省略也不裁切。`header`（品牌 / 下载状态 / 额度 / 语言 / 登录）与 `footer`（支持邮箱）固定，主区从上到下是：视频选择器（仅多视频时出现，见 §12.3）→ 视频信息 → 档位行（Video / 直接下载 / Audio / Subtitle / Image，见 §12.5）→ 时间裁剪 → 保存位置；内容超过上限时只有主区内部滚动。
 
 宽度变化的附带影响：popup 内升级弹窗（`core/content/components/UpgradeModal.vue`，宽度上限 `400px`）在旧的 400px popup 里命中 `@media (max-width: 400px)`，内容内边距被压到 24px；672px 后该断点在 popup 内不再命中，弹窗用满 400px、内边距回到 32px。该断点在 Content Script 注入页仍生效（媒体查询按页面视口求值，窄于 400px 的页面窗口会命中），故保留。
 
@@ -734,7 +734,7 @@ content 的 Vimeo 缓存按视频分组持有资源(见 §11):播放页走 `repl
 `buildDetectedVideos`(popup 纯派生)把两者合成按序的视频展示列表:`videoGroups` 决定组序与展示元数据,资源按 `messageId`(= videoId)对号入座,popup 层不重排——同一行的档位只来自同一个视频。两条边界:零资源组跳过(只有 config 元数据、没有可下载档位的视频不进列表、不计入检测数,保证列出的每个视频都至少有一个档位可下);游离资源并入(扩展更新后旧 content script 未带组元数据时,资源按出现顺序追加成组,元数据从资源自身字段派生)。标题兜底链:组标题 → 资源标题 → 文件名 → videoId,最终不会是空串。
 
 - 单视频(播放页常态):选择器不渲染,布局与单视频页面一致。
-- 多视频(聚合页):视频信息区上方出现选择器——检测数量说明(`videoPanel.detectedCount`,`{count}` 插值)与视频选择器(`VideoSelector.vue`:combobox 触发按钮 + listbox 浮层,焦点始终留在触发按钮,高亮项经 `aria-activedescendant` 通告,`videoPanel.videoSwitcherLabel` 作可访问名)。列表项带小封面与标题(封面缺失时占位块);默认选中第一项,资源刷新后保留仍存在的选择,选择失效时回到第一项;切换后视频信息、四行档位、音轨开关与时间裁剪联动,且不携带上一个视频的瞬态(封面加载失败状态复位、裁剪输入清空)。
+- 多视频(聚合页):视频信息区上方出现选择器——检测数量说明(`videoPanel.detectedCount`,`{count}` 插值)与视频选择器(`VideoSelector.vue`:combobox 触发按钮 + listbox 浮层,焦点始终留在触发按钮,高亮项经 `aria-activedescendant` 通告,`videoPanel.videoSwitcherLabel` 作可访问名)。列表项带小封面与标题(封面缺失时占位块);默认选中第一项,资源刷新后保留仍存在的选择,选择失效时回到第一项;切换后视频信息、档位行、音轨开关与时间裁剪联动,且不携带上一个视频的瞬态(封面加载失败状态复位、裁剪输入清空)。
 - `getResources` 响应上限从 768KiB 放宽到 1.5MiB(1572864 字节),按上限组合定容:16 视频 × 约 30 条 × 2.7KB ≈ 1.3MB(实测 8 视频 113 条约 305KB),组元数据随每条资源多带约 0.25KB、最坏再加 16 × 30 × 0.25KB ≈ 120KB,合计约 1.42MB;`videoGroups` 本身仅 16 组约 3KB。取 1.5MiB 覆盖并留余量。
 
 ### 12.4 视频信息区
@@ -747,34 +747,40 @@ content 的 Vimeo 缓存按视频分组持有资源(见 §11):播放页走 `repl
 | 标题 | `videoGroups[].title`（config `video.title` 原值，见 §5.3）；组元数据缺失时逐级回退资源 `title` → 文件名 → videoId（见 §12.3 标题兜底链） |
 | 作者 | `videoGroups[].author`（config `video.owner.name`）；组元数据缺失时回退资源 `author`；站点没给时整行不渲染 |
 | 时长 | `videoGroups[].durationSeconds`（config `video.duration`），用共享格式化器渲染成 `m:ss` / `h:mm:ss`；组元数据缺失时回退资源 `duration`；站点没给时整行不渲染 |
-| 副标题 | 当前选中档位的标签；文件大小已并入档位标签（见 §12.5） |
+| 副标题 | 当前选中档位的标签；文件大小已并入档位标签（见 §12.5）；Video 行没有档位（页面只有 progressive 直链）时回退直接下载行的当前档位 |
 
 作者与时长只取自 config 的显式字段，缺失就不渲染，不用文件名等间接数据冒充。
 
-### 12.5 四行档位
+### 12.5 档位行
 
-- 行与资源类型一一对应（Video / Audio / Subtitle / Image），与页面按钮面板共用同一批资源和同一批类型词条；行标签、下拉的可访问名称都走 i18n。
+- 行与交付形态对应（Video / 直接下载 / Audio / Subtitle / Image），直接下载行固定在 Video 行之后；与页面按钮面板共用同一批资源，行标签、下拉的可访问名称都走 i18n（直接下载行用专属词条 `videoPanel.directRow.label`，其余行沿用资源类型词条）。
 - 每行是「行标签 + `<select>` 档位下拉 + 行内下载按钮」；Image 行只有一个固定档位，用静态文本 `JPG` 替代下拉（封面固定交付 jpg，格式名属于技术标识，不进词条表）。
+- Video 行只列 DASH/HLS 合流档位，progressive 直链档位全部移到直接下载行——单文件自带音轨、无需页面内合流，交付形态不同，拆开后音轨开关与裁剪控件不再对直链档位出现。`Best` 的归属跟随其交付形态：派生自 DASH/HLS 时在 Video 行，页面只有 progressive 直链（`Best` 由 progressive 承载）时 Video 行无档位，由直接下载行承载。
+- 直接下载行只列 progressive 直链档位：无音轨开关、不参与时间裁剪（§8.5），恒为全片全音轨的单文件下载。当前视频没有 progressive 档位时整行不渲染——与其余行「禁用 + Unavailable 占位」的语义不同，一行永远不可用的直接下载是视觉噪音。
 - 档位标签在拿到真实字节数时追加 ` · {格式化大小}`：progressive 用 config 的 `size`，DASH 用 init segment + 各 media segment 的字节和，任一 segment 缺 `size` 就整条不显示大小，不用码率估算顶替；页面按钮面板保持纯标签，不追加大小。
-- 默认选中该行第一项（`Best` / `Best Audio` / 首个字幕语言 / 缩略图）；资源刷新后保留仍存在的选择，否则回到第一项。
-- 某行没有可用档位（如没有字幕）时，下拉禁用并显示 `videoPanel.unavailable`，行内下载按钮禁用。
+- 默认选中该行第一项（`Best` / 首个直链档位 / `Best Audio` / 首个字幕语言 / 缩略图）；资源刷新后保留仍存在的选择，否则回到第一项。
+- 某行没有可用档位（如没有字幕）时，下拉禁用并显示 `videoPanel.unavailable`，行内下载按钮禁用；直接下载行除外（见上，整行不渲染）。
 - Video 行的音轨是**独立开关**（`videoPanel.audioSwitch.*`：`label` 是可访问名称，`withAudio` / `withoutAudio` 是两个状态文案），画质仍由下拉选。同一条 video track 的 `dash:{trackId}` 与 `dash:{trackId}:no-audio` 仍是两个独立资源、两个独立 ID（身份规则不变，见 §11），只是在 Popup 的下拉里并成一条画质档位，由开关二选一。页面按钮面板是平铺按钮模型（没有行内开关的渲染位），带音轨 / 无音轨各是一个按钮；两处共享同一批资源与同一身份规则，只是呈现方式不同。
-- 开关的可用性由当前画质决定：两个变体都在时才可切换；只有纯视频交付时（playlist 本来就没有音轨、视频 + 音频合计超限）锁在「无音轨」并禁用，只有带音轨交付时（progressive / HLS 直链自带音轨）锁在「有音轨」并禁用。开关态只活在 Popup 组件内，与行内选中态同级，不写存储。
+- 开关的可用性由当前画质决定：两个变体都在时才可切换；只有纯视频交付时（playlist 本来就没有音轨、视频 + 音频合计超限）锁在「无音轨」并禁用，只有带音轨交付时（HLS 直链自带音轨；progressive 直链已移出 Video 行）锁在「有音轨」并禁用。开关态只活在 Popup 组件内，与行内选中态同级，不写存储。
 - 档位标签随开关取**实际交付**那一条资源：切到「无音轨」时下拉、信息区副标题与行内下载按钮的可访问名一起换成无音轨资源的标签（含它自己的大小，两个变体大小不同）。`Best` 没有对应的 `best:no-audio` 资源，它的无音轨交付落到最高画质的纯视频档，标签同样跟着那条资源走。
 - 英文词标签（`Best` / `Best Audio` / `(no audio)` / `Thumbnail`）由 media 层在 descriptor 里给出 i18n 词条键（§11 的 `labelKey/labelParams`），UI 只负责翻译；`1080p HD`、`720p MP4`、`128 kbps` 这类数字加单位的技术标识不带词条键。
 - 行内下载按钮点击后只下载该行当前选中的那一个档位，不做批量。
 
 ### 12.6 时间裁剪
 
+- 输入控件是「双滑杆 + 起止数字输入」绑定同一状态（`clipStart` / `clipEnd`）：双滑杆（`TrimSlider.vue`，数值逻辑抽在 `popup/utils/trimSlider.ts` 纯函数）把拖拽/点按位置按 **0.1s 粒度**钳制后写回输入，数字输入的解析结果原样喂给滑杆展示；起点不越过终点、两端不越出 `[0, 上限]` 的交叉与边界钳制都在滑杆交互层完成，父组件状态恒为合法区间端点。
+- 滑杆写回输入的秒数恒为十进制文本（整数不带小数点、小数保留一位，无指数记法），`parseVimeoTimeRange` 的十进制文本约束因此恒成立。空输入只做显示兜底（起点 0 / 终点全长），不回写输入，「不填 = 整片」语义不变；对侧输入为空时滑杆交互补默认端点，一次拖动即生成完整区间。
+- 滑杆时长上限取视频时长：组元数据 `durationSeconds`（§12.4 同源）优先，缺失时取各档位资源时长的最大值；两者都没有时上限为 0，滑杆整体禁用（没有可表达的区间，与「档位不可裁剪」同视）。
+- 键盘与可访问性：双 handle 各自可聚焦（`role="slider"`），方向键 ±1s、Shift ±10s、Home/End 跳到该 handle 的边界（起点 `[0, 终点]`、终点 `[起点, 上限]`）；`aria-valuemin/max/now/text` 与起止可访问名完整，禁用时 `aria-disabled` 通告；两端刻度是纯展示（读屏值走 handle 的 `aria-valuetext`）。
 - 起点/终点为秒、相对媒体起点；区间合法（起点 ≥ 0、终点 > 起点，且两个秒数都能写成 `:clip:` 后缀认的十进制文本）才生效，未填或不合法时按整片下载——`1e-7` 这类指数记法属于不合法。
-- 可用性由 Video 行当前档位决定：只有 `dash` / `hls` 交付能按 packet 取区间。progressive 档位禁用输入并在面板上说明原因（`videoPanel.clip.unsupported`），可用时展示区间只对 DASH/HLS 生效的说明（`videoPanel.clip.hint`）。
-- 生效后 Video / Audio 行的下载调用 `applyVimeoTimeRange`，身份与文件名带 `:clip:{start}-{end}`；Subtitle / Image 行不参与裁剪，始终整片下载。无音轨档位同样可裁剪，身份形如 `dash:{trackId}:no-audio:clip:{start}-{end}`——`:no-audio` 段在内、`:clip:` 追加在最后，去后缀仍能定位回那条纯视频档位。
+- 可用性由 Video 行当前档位决定：只有 `dash` / `hls` 交付能按 packet 取区间。Video 行没有可裁剪档位（页面只有 progressive 直链）时滑杆与数字输入一并禁用并在面板上说明原因（`videoPanel.clip.unsupported`），可用时展示区间只对 DASH/HLS 生效的说明（`videoPanel.clip.hint`）。
+- 生效后 Video / Audio 行的下载调用 `applyVimeoTimeRange`，身份与文件名带 `:clip:{start}-{end}`；Subtitle / Image / 直接下载行不参与裁剪，始终整片下载。无音轨档位同样可裁剪，身份形如 `dash:{trackId}:no-audio:clip:{start}-{end}`——`:no-audio` 段在内、`:clip:` 追加在最后，去后缀仍能定位回那条纯视频档位。
 - 片段不写进缓存：popup 只发送片段资源 ID，content 侧 `VimeoResourceBuffer.getResource` 命中不到时去掉 `:clip:` 后缀取回全片档位，再用同一份 `applyVimeoTimeRange` 还原区间；两条路径用同一个函数，身份完全一致。
 
 ### 12.7 保存位置
 
 - 面板底部一行「保存位置（`videoPanel.savePath.label`）+ 文本输入」，值持久化在 `chrome.storage.local` 的 `settings.downloadPath`（既有 `SettingsManager`，不新建存储层）；默认值 `vimeo-video-downloader`，输入变化在 `change` 时写回，不逐按键写。
-- 存的是**下载目录下的相对子目录**，不存绝对路径。归一化与合法性判定只在真正调用 `chrome.downloads.download` 的 background（`BrowserDownloadService`）做一次：Popup 只负责显示与保存原始输入，不复制一份校验规则。目录段丢弃规则与文件名清洗见 §8.1。
+- 存的是**下载目录下的相对子目录**，不存绝对路径。归一化与合法性判定只在真正调用 `chrome.downloads.download` 的 background（`BrowserDownloadService`）做一次：Popup 只做去空白与空值回填默认（空输入按默认子目录写回并显示），不复制一份校验规则。目录段丢弃规则与文件名清洗见 §8.1。
 - 作用范围只有 `isBrowserManagedSourceKind` 的交付（Progressive MP4 / 封面 / 字幕）。DASH/HLS 走页面内 mux 后的 `anchor.download`（§8.2、§8.3），MAIN world 没有 `chrome.*`，不经这条路径，始终落浏览器默认下载目录；默认选中的 `Best` 通常是 DASH，因此这一项默认不生效。
 - 注入面因此收紧而非放开：文件名保持单段（`/` 仍被替换成空格），只有保存子目录允许保留 `/` 作为分隔符，且绝对路径、盘符、`..`、`~`、空段一律丢弃，交给 Chrome 的永远是非空相对路径。
 
@@ -790,6 +796,7 @@ content 的 Vimeo 缓存按视频分组持有资源(见 §11):播放页走 `repl
 - `core/constants/design.ts` 的 `DESIGN_TOKENS` 只收录 popup 实际消费的 design.md（Geist 亮色）token 子集：灰阶 / accent / 半透明描边、圆角、阴影与焦点环，命名与 design.md 的 token 名一一对应。唯一一处备案补值 `GRAY_1000_HOVER`（实心 gray-1000 填充的 hover 色）：design.md 只给「hover 沿色阶走」的规则而 gray 阶到 1000 为止，取半步提亮 `#323232`，已在 token 注释备案。组件经 `v-bind('DESIGN_TOKENS.*')` 桥接消费，禁止在 scoped CSS 里绕开 token 写裸值；dark 主题是后续独立事项（design.dark.md），不预留双套值。
 - `VideoThumb.vue`：信息卡大封面与选择器小封面共用的缩略图组件，只负责「图片 ↔ 占位」兜底——加载失败或缺失时渲染占位图标，不破布局、不出现 broken image；`:key="src"` 让换源时重建 `<img>`，防止切换视频瞬间残留上一张封面；尺寸与圆角由外层 class 控制。
 - `VideoSelector.vue`：多视频选择器（§12.3）。原生 `<select>` 无法在选项里渲染封面，改用「触发按钮 + listbox 浮层」的 combobox 模型，列表项带小封面与标题，支持键盘导航，焦点始终留在触发按钮、高亮项经 `aria-activedescendant` 通告，浮层经 `aria-controls` / `aria-expanded` 关联。
+- `TrimSlider.vue`：时间裁剪双滑杆（自研，无 UI 库）。双 handle 各自可聚焦（`role="slider"`），键盘步进与 aria 见 §12.6；轨道点按把离点击位置最近的 handle 拨过去并接管后续拖拽（只响应主键，非主键一律忽略）；0.1s 粒度的钳制/步进/秒数文本化抽在 `popup/utils/trimSlider.ts` 纯函数，组件只上报交互产生的钳制结果，区间状态由父组件持有、与裁剪数字输入双向绑定（§12.6）。
 
 ## 13. 文件结构
 
@@ -833,10 +840,12 @@ extension/src/sites/vimeo/
 - `extension/src/sites/vimeo/content/frame.ts`:仅在 player frame 发布 videoId identity。
 - `extension/src/platforms/registry.ts`:`extension/vite.config.ts` 的 `webExtension({ manifest })` 只消费该纯数据注册表生成 matches、host permissions、content script 入口、`downloads`/`storage`/`identity` permissions 与 CSS web accessible resource；嵌入播放器 frame 使用独立 content script entry 开 `all_frames:true`。
 - `extension/src/popup/utils/tabs.ts`:站点 hostname 集合由注册表的 match patterns 派生，不两处维护；`ensureSupportedTabOpen` 只查找不新建，`openSiteTab` 在它之上补「确实没有才新建站点入口页」（§12.2）。
-- `extension/src/popup/components/VideoPanel.vue`:Popup 视频面板（未连接引导 / 空状态 / 多视频选择器 / 视频信息卡 / 四行档位 / 时间裁剪 / 保存位置）。
+- `extension/src/popup/components/VideoPanel.vue`:Popup 视频面板（未连接引导 / 空状态 / 多视频选择器 / 视频信息卡 / 档位行 / 时间裁剪 / 保存位置）。
+- `extension/src/popup/components/TrimSlider.vue`:时间裁剪双滑杆(双 handle 键盘/aria 完整,与裁剪数字输入双向绑定同一状态,见 §12.6 / §12.9)。
 - `extension/src/popup/components/VideoSelector.vue`:多视频选择器(combobox 触发按钮 + listbox 浮层,列表项带小封面与标题,见 §12.3 / §12.9)。
 - `extension/src/popup/components/VideoThumb.vue`:封面缩略图(图片 ↔ 占位兜底,信息卡与选择器共用,`:key` 防换源残留)。
-- `extension/src/popup/utils/videoPanel.ts`:面板的纯派生逻辑（`buildDetectedVideos` 消费 `videoGroups` 与资源合成检测列表、四行档位、标题与封面兜底链）。
+- `extension/src/popup/utils/videoPanel.ts`:面板的纯派生逻辑（`buildDetectedVideos` 消费 `videoGroups` 与资源合成检测列表、五行档位——Video 行只列 DASH/HLS 合流档位、直接下载行只列 progressive 直链——标题与封面兜底链）。
+- `extension/src/popup/utils/trimSlider.ts`:双滑杆纯数值逻辑(0.1s 粒度钳制/键盘步进/秒数文本化,见 §12.6)。
 
 ## 14. 验收样本
 
@@ -854,11 +863,11 @@ extension/src/sites/vimeo/
 - 有 DASH video 时,页面面板的 Video 行同时给出带音轨与 `(no audio)` 两个并列按钮,`Best` 默认是带音轨版本。
 - 有 `text_tracks` 时,Subtitle 行按语言展示可下载按钮,下载的是字幕文件本身（WebVTT/TTML/SRT）；没有字幕时该行是禁用占位。
 - DASH/HLS 选项带区间时下载的是片段,区间并入 sourceId 与文件名,刷新 signed URL 后仍保留区间；progressive 选项不支持区间。
-- Popup 面板展示当前视频的封面、标题与画质，四行档位默认选中第一项；没有字幕时 Subtitle 行禁用，没有缩略图时 Image 行按钮禁用。
-- Popup 面板在 Video 行选中 progressive 档位时禁用时间裁剪并说明原因，选中 DASH/HLS 档位后输入区间可下载片段；片段身份与文件名带 `:clip:{start}-{end}`，字幕与封面始终整片下载；关掉音轨开关后片段身份是 `dash:{trackId}:no-audio:clip:{start}-{end}`，缓存按去后缀的基础 ID 还原出纯视频档位。
-- Popup 面板 Video 行的下拉只列画质档位，音轨由独立开关切换：关掉后下载的是同画质的纯视频资源，下拉、信息区副标题与下载按钮的可访问名一起换成那条资源的标签（含它自己的大小）；当前画质只有一种交付时（playlist 无音轨、视频合计超限、progressive/HLS 直链）开关禁用并停在唯一可用的那一侧，`Best` 的无音轨交付落到最高画质的纯视频档。
+- Popup 面板展示当前视频的封面、标题与画质，档位行默认选中第一项；当前视频有 progressive 直链时 Video 行之后出现「直接下载」行，没有该档位时整行不渲染；没有字幕时 Subtitle 行禁用，没有缩略图时 Image 行按钮禁用。
+- Popup 面板在 Video 行没有可裁剪档位（页面只有 progressive 直链）时禁用时间裁剪并说明原因，选中 DASH/HLS 档位后可通过双滑杆或数字输入区间下载片段，滑杆与数字输入联动同一区间、上限为视频时长；片段身份与文件名带 `:clip:{start}-{end}`，字幕与封面始终整片下载；关掉音轨开关后片段身份是 `dash:{trackId}:no-audio:clip:{start}-{end}`，缓存按去后缀的基础 ID 还原出纯视频档位。
+- Popup 面板 Video 行的下拉只列 DASH/HLS 画质档位，音轨由独立开关切换：关掉后下载的是同画质的纯视频资源，下拉、信息区副标题与下载按钮的可访问名一起换成那条资源的标签（含它自己的大小）；当前画质只有一种交付时（playlist 无音轨、视频合计超限、HLS 直链）开关禁用并停在唯一可用的那一侧，`Best` 的无音轨交付落到最高画质的纯视频档；「直接下载」行的 progressive 直链没有音轨开关，下载恒为全片全音轨单文件。
 - Popup 面板与页面面板的档位文案随界面语言切换（`Best` 在 zh-CN 下显示 `最佳`），没有档位的行占位按钮读屏名称同样走词条；片段区间输入非法值（起点不小于终点、负数、`1e-7` 这类指数记法）时按整片下载，content 未回查到资源时 Popup 给出下载失败提示，不静默丢弃请求。
-- `vimeo.com/watch` 等无身份聚合页:Popup 显示检测数量与视频选择器,列表项为各视频封面与标题,切换后信息区与四行档位联动;页面按钮不渲染;只检测到一个视频时选择器不出现;检测上限 16 个视频,页面稳定后轮播持续供给的新捕获由 3s 重扫跟进,零资源(无可下载档位)的视频不进选择器。
+- `vimeo.com/watch` 等无身份聚合页:Popup 显示检测数量与视频选择器,列表项为各视频封面与标题,切换后信息区与档位行联动;页面按钮不渲染;只检测到一个视频时选择器不出现;检测上限 16 个视频,页面稳定后轮播持续供给的新捕获由 3s 重扫跟进,零资源(无可下载档位)的视频不进选择器。
 - 身份在聚合页回退轮进行中出现时,在途回退按三处守卫中断(重扫定时器同受身份守卫约束、自然衰减),聚合资源不混入单视频 buffer;聚合页资源按视频分组写入,同一 videoId 每页只编排一次;长驻聚合页组数达 16 后按首并入序淘汰最旧组,badge 随之回落。
-- Unit/Integration 覆盖 config 捕获、聚合页枚举回退与按视频合并、回退重扫定时器与有界并发加载、组数上限淘汰、`videoGroups` 组元数据通路（校验链唯一来源、字段补齐、零资源组与游离资源边界）、身份出现守卫、`getResources` 响应限额、四行按钮、Chrome 状态进度、未知长度 `Downloading...`、重复点击锁、一次 signed refresh、adaptive `Best` 保持同 delivery、无音轨交付、字幕建模与白名单、片段区间透传与 packet 级裁剪、Popup 面板档位生成与裁剪调用、音轨开关的画质 × 开关映射与「无音轨 + 片段」组合、缓存按片段 ID 还原资源、刷新片段缺 `text_tracks` 时沿用旧轨、档位词条在 zh-CN 下不回退英文 label、14 个 locale 键集合与占位符对齐、文件名和 URL/MIME 边界。
+- Unit/Integration 覆盖 config 捕获、聚合页枚举回退与按视频合并、回退重扫定时器与有界并发加载、组数上限淘汰、`videoGroups` 组元数据通路（校验链唯一来源、字段补齐、零资源组与游离资源边界）、身份出现守卫、`getResources` 响应限额、四行按钮、Chrome 状态进度、未知长度 `Downloading...`、重复点击锁、一次 signed refresh、adaptive `Best` 保持同 delivery、无音轨交付、字幕建模与白名单、片段区间透传与 packet 级裁剪、Popup 面板档位生成（Video 行只列 DASH/HLS、progressive 直链归直接下载行、无直链整行不渲染）与裁剪调用、音轨开关的画质 × 开关映射与「无音轨 + 片段」组合、裁剪双滑杆的 0.1s 钳制/键盘步进/边界与 aria、缓存按片段 ID 还原资源、刷新片段缺 `text_tracks` 时沿用旧轨、档位词条在 zh-CN 下不回退英文 label、14 个 locale 键集合与占位符对齐、文件名和 URL/MIME 边界。
 - 公网 smoke 固定使用 `https://vimeo.com/1196869805?fl=ip&fe=ec`（只提供 DASH 交付的样本），覆盖 injected mux 路径：取样本当前 config 实际给出的 DASH/HLS 选项，不预设 delivery，样本不再提供该交付时带原因 skip；面板缺失或始终给不出选项按真实回归失败处理。`pnpm test:e2e:vimeo` 只运行 `extension-e2e-vimeo-real` 这一个 project。Vimeo 明确返回 Cloudflare 人机验证时标记外部环境阻塞，不误报产品失败；Cloudflare 只能记为环境 skip，不能记为通过。

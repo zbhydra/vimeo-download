@@ -1,8 +1,9 @@
 <!--
   Popup 视频面板。
   主区四态互斥：扫描中 → 未连接引导（当前页不是 Vimeo 且无已打开的站点标签页）→ 空状态
-  （页面没有可下载视频）→ [多视频选择器（仅聚合页检测到多个视频时）] + 视频信息卡 + 四行档位
-  （Video / Audio / Subtitle / Image）+ 时间裁剪 + 保存位置。
+  （页面没有可下载视频）→ [多视频选择器（仅聚合页检测到多个视频时）] + 视频信息卡 + 档位行
+  （Video [DASH/HLS 合流] / 直接下载 [progressive，仅有该档位时渲染] / Audio / Subtitle /
+  Image）+ 时间裁剪（双滑杆 + 数字输入）+ 保存位置。
   视觉走 design.md（Geist 亮色）token（见 `core/constants/design.ts`）：卡片化布局 + 浮层
   选择器，交互逻辑与重构前一致。
 -->
@@ -47,7 +48,7 @@
 
     <div v-else class="panel-body">
       <!--
-        多视频选择器：聚合页回退检测到多个视频时先选视频，信息卡与四行档位随选择联动；
+        多视频选择器：聚合页回退检测到多个视频时先选视频，信息卡与五行档位随选择联动；
         播放页只有一个视频，选择器不渲染，布局与单视频页面完全一致。
       -->
       <section v-if="videos.length > 1" class="panel-card video-switcher">
@@ -81,9 +82,13 @@
         </div>
       </section>
 
-      <!-- 四行下载选项 -->
+      <!--
+        档位行。Video 行只列 DASH/HLS 合流档位（音轨开关语义不变）；「直接下载」行只列
+        progressive 直链（单文件全音轨，无开关、不支持裁剪），当前视频没有该档位时整行不渲染
+        ——一行永远 Unavailable 的直接下载是视觉噪音，与既有行的禁用态语义不同。
+      -->
       <section class="panel-card option-rows">
-        <div v-for="row in rows" :key="row.kind" class="option-row" :data-row="row.kind">
+        <div v-for="row in visibleRows" :key="row.kind" class="option-row" :data-row="row.kind">
           <span class="row-label">{{ t(row.labelKey) }}</span>
 
           <select
@@ -143,9 +148,22 @@
         </div>
       </section>
 
-      <!-- 时间裁剪 -->
+      <!--
+        时间裁剪：双滑杆与数字输入绑定同一状态（clipStart/clipEnd），滑杆交互按 0.1s 钳制后
+        写回输入；档位不可裁剪（progressive/字幕/封面恒为全片）时两者一并禁用。
+      -->
       <section class="panel-card clip-section">
         <span class="row-label">{{ t(I18N_KEYS.VIDEO_PANEL.CLIP_TITLE) }}</span>
+        <TrimSlider
+          :start="sliderStartSeconds"
+          :end="sliderEndSeconds"
+          :max="clipMaxSeconds"
+          :disabled="!clipAvailable"
+          :start-label="t(I18N_KEYS.VIDEO_PANEL.CLIP_START)"
+          :end-label="t(I18N_KEYS.VIDEO_PANEL.CLIP_END)"
+          @update:start="handleSliderStart"
+          @update:end="handleSliderEnd"
+        />
         <div class="clip-inputs">
           <label class="clip-field">
             <span class="clip-field-label">{{ t(I18N_KEYS.VIDEO_PANEL.CLIP_START) }}</span>
@@ -213,8 +231,10 @@ import { Icon, IconName, IconSize } from '@/core/components/icons'
 import { applyVimeoTimeRange, supportsVimeoTimeRange } from '@/sites/vimeo/media'
 import { parseVimeoTimeRange, type VimeoTimeRange } from '@/sites/vimeo/shared'
 import { useResourceStore } from '../stores/resourceStore'
+import TrimSlider from './TrimSlider.vue'
 import VideoSelector from './VideoSelector.vue'
 import VideoThumb from './VideoThumb.vue'
+import { formatClipSecondsText } from '../utils/trimSlider'
 import {
   buildVideoPanelRows,
   COVER_FORMAT_LABEL,
@@ -285,6 +305,14 @@ const rows = computed(() =>
   buildVideoPanelRows(selectedVideo.value?.resources ?? [], (key, params) =>
     params ? t(key, params) : t(key)
   )
+)
+
+/**
+ * 实际渲染的行：直接下载行只在当前视频有 progressive 档位时出现，其余行始终渲染
+ * （无档位走禁用 + Unavailable 占位，与既有口径一致）。
+ */
+const visibleRows = computed(() =>
+  rows.value.filter(row => row.kind !== 'direct' || row.options.length > 0)
 )
 const resourcesById = computed(
   () => new Map((selectedVideo.value?.resources ?? []).map(resource => [resource.id, resource]))
@@ -377,7 +405,8 @@ watch(
 
 /** 信息卡副标题：当前档位标签，文件大小已并入档位标签（见 `buildVideoPanelRows`）。 */
 const videoMeta = computed(() => {
-  const option = selectedOptionOf('video')
+  // Video 行没有档位（页面只有 progressive 直链）时退到直接下载行的当前档位。
+  const option = selectedOptionOf('video') ?? selectedOptionOf('direct')
   return option ? optionDisplayLabel(option) : ''
 })
 
@@ -398,6 +427,52 @@ const activeClipRange = computed<VimeoTimeRange | null>(() => {
     endSeconds: Number.parseFloat(clipEnd.value)
   })
 })
+
+/**
+ * 滑杆的时长上限：组元数据时长优先，缺失时取各档位资源时长的最大值；两者都没有时为 0
+ * （滑杆禁用——没有可表达区间，与「档位不可裁剪」同视）。
+ */
+const clipMaxSeconds = computed(() => {
+  const groupDuration = selectedVideo.value?.durationSeconds
+  if (groupDuration !== undefined && groupDuration > 0) {
+    return groupDuration
+  }
+  const resourceDurations = (selectedVideo.value?.resources ?? [])
+    .map(resource => resource.duration)
+    .filter((duration): duration is number => duration !== undefined && duration > 0)
+  return resourceDurations.length > 0 ? Math.max(...resourceDurations) : 0
+})
+
+/**
+ * 滑杆展示值：数字输入的解析结果原样传入（非法钳制与起点≤终点的交叉钳制都在滑杆组件内
+ * 完成）；输入为空时落到默认端点（0 / 全长）——这只是显示兜底，不回写输入，空输入的
+ * 「不裁剪」语义保持原样。
+ */
+const sliderStartSeconds = computed(() => {
+  const parsed = Number.parseFloat(clipStart.value)
+  return Number.isFinite(parsed) ? parsed : 0
+})
+
+const sliderEndSeconds = computed(() => {
+  const parsed = Number.parseFloat(clipEnd.value)
+  return Number.isFinite(parsed) ? parsed : clipMaxSeconds.value
+})
+
+/** 滑杆起点交互写回输入；终点为空时补全长，让一次拖动就生成完整区间。 */
+function handleSliderStart(seconds: number): void {
+  clipStart.value = formatClipSecondsText(seconds)
+  if (!Number.isFinite(Number.parseFloat(clipEnd.value))) {
+    clipEnd.value = formatClipSecondsText(clipMaxSeconds.value)
+  }
+}
+
+/** 滑杆终点交互写回输入；起点为空时补 0，语义同上。 */
+function handleSliderEnd(seconds: number): void {
+  clipEnd.value = formatClipSecondsText(seconds)
+  if (!Number.isFinite(Number.parseFloat(clipStart.value))) {
+    clipStart.value = formatClipSecondsText(0)
+  }
+}
 
 /** 同步下拉选择；`<select>` 只上报字符串值，非法值直接忽略。 */
 function handleSelect(kind: VideoPanelRowKind, event: Event): void {
@@ -669,7 +744,7 @@ function downloadTitle(row: VideoPanelRow): string {
   white-space: nowrap;
 }
 
-/* 四行下载选项 */
+/* 下载选项行：Video / 直接下载 / Audio / Subtitle / Image，直接下载行仅有 progressive 时渲染 */
 .option-rows {
   display: flex;
   flex-direction: column;
