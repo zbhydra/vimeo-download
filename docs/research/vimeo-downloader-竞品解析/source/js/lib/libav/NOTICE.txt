@@ -1,0 +1,37 @@
+libav.js — h264-aac-mp3 variant
+===============================
+
+The files in this directory are unmodified artifacts from the upstream project:
+
+    Project: libav.js
+    Author:  Yahweasel
+    Version: v6.5.7.1
+    Variant: h264-aac-mp3
+    Source:  https://github.com/Yahweasel/libav.js/releases/tag/v6.5.7.1
+
+libav.js is a WebAssembly + JavaScript compilation of FFmpeg libraries
+(libavformat, libavcodec, libavfilter, libavutil, libswresample, libswscale).
+
+Files
+-----
+- libav-6.5.7.1-h264-aac-mp3.wasm.mjs   (ES module glue; loader entry)
+- libav-6.5.7.1-h264-aac-mp3.wasm.wasm  (WebAssembly binary)
+
+License
+-------
+libav.js is distributed under the GNU Lesser General Public License, version 2.1
+or (at the user's option) any later version. See:
+
+    https://github.com/Yahweasel/libav.js/blob/master/LICENSE
+
+This plugin dynamically loads the above artifacts at runtime for
+segment-level demux/remux. The binaries are NOT modified; any user may
+replace them with their own build of libav.js of the same variant.
+
+Corresponding source
+--------------------
+Full source for this exact binary is available in the release archive at:
+
+    https://github.com/Yahweasel/libav.js/releases/download/v6.5.7.1/libav.js-6.5.7.1.zip
+
+as required by LGPL-2.1.

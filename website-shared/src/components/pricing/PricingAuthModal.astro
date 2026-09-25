@@ -1,0 +1,40 @@
+---
+/**
+ * Pricing 登录弹窗包装。
+ *
+ * 复用 DownloadAuthModal 的 HTML/CSS 和 homepage auth runtime，避免 Pricing 复制
+ * 大量登录表单；外层只注入 Pricing controller 所需的精简文案 payload。
+ */
+import DownloadAuthModal from '../../download/components/DownloadAuthModal.astro'
+import type { DownloadWorkspaceContent } from '../../download/schema'
+
+const { copy } = Astro.props as {
+  copy: DownloadWorkspaceContent
+}
+const authCopy = {
+  sendingCode: copy.auth.sendingCode,
+  sendCodeSuccess: copy.auth.sendCodeSuccess,
+  continueWithGoogle: copy.auth.continueWithGoogle,
+  googleLoading: copy.auth.googleLoading,
+  enterEmailFirst: copy.errors.enterEmailFirst,
+  enterEmailAndCode: copy.errors.enterEmailAndCode,
+  sendCodeFailed: copy.errors.sendCodeFailed,
+  googleSignInFailed: copy.errors.googleSignInFailed,
+  googleClientMissing: copy.errors.googleClientMissing,
+  signInFailed: copy.errors.signInFailed
+}
+---
+
+<div data-pricing-auth-root>
+  <script
+    is:inline
+    type="application/json"
+    data-pricing-auth-copy
+    set:html={JSON.stringify(authCopy)}
+  />
+  <DownloadAuthModal copy={copy} skinClass="pricing-auth-modal" idPrefix="pricing" />
+</div>
+
+<script>
+  import './pricing-auth-controller'
+</script>

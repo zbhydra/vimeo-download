@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "Vimeo Video Downloader",
+    "description": "Chrome 웹 스토어 확장 프로그램 이름"
+  },
+  "extensionDescription": {
+    "message": "vimeo.com 및 player.vimeo.com에서 동영상, 오디오, 커버 이미지를 원하는 화질로 다운로드하세요.",
+    "description": "Chrome 웹 스토어 확장 프로그램 설명 - 132자까지"
+  },
+  "actionTitle": {
+    "message": "Vimeo Downloader 열기",
+    "description": "브라우저 작업 제목"
+  }
+}

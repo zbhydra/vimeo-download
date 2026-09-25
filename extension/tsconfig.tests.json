@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["chrome", "node", "vitest/globals"]
+  },
+  "include": [
+    "src/vite-env.d.ts",
+    "tests/**/*.ts",
+    "scripts/**/*.mjs"
+  ],
+  "exclude": []
+}

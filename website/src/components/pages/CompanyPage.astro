@@ -1,0 +1,395 @@
+---
+/**
+ * Shared renderer for the localized About and Contact pages.
+ *
+ * Route locale -> typed company copy -> visible semantic content and dates ->
+ * page-level JSON-LD -> the global Layout shell.
+ */
+import { COMPANY_PAGES_PUBLISHED_DATE, getCompanyContent } from '../../company/companyContent'
+import { type Locale } from '../../i18n/content'
+import { localePaths } from '../../i18n/ui'
+import { CHROME_WEB_STORE_URL, DEVELOPER_EMAIL, OFFICIAL_X_HANDLE, OFFICIAL_X_URL } from '../../lib/site.mjs'
+import Layout from '../../layouts/Layout.astro'
+import XBrandIcon from '../site/XBrandIcon.astro'
+
+/** Company information page variants supported by this renderer. */
+export type CompanyPageKind = 'about' | 'contact'
+
+interface Props {
+  /** Current locale selected by the static route. */
+  locale?: Locale
+  /** Semantic page kind and content selection key. */
+  pageKind: CompanyPageKind
+}
+
+const { locale = 'en-US', pageKind } = Astro.props as Props
+const companyContent = getCompanyContent(locale)
+const page = companyContent[pageKind]
+const localePath = localePaths[locale] || ''
+const currentLocalePath = localePath === '' ? '/' : `/${localePath}/`
+const aboutPath = `${currentLocalePath}about/`
+const contactPath = `${currentLocalePath}contact/`
+const privacyPath = `${currentLocalePath}privacy/`
+const termsPath = `${currentLocalePath}terms/`
+const pageUrl = new URL(Astro.url.pathname.endsWith('/') ? Astro.url.pathname : `${Astro.url.pathname}/`, Astro.site).href
+const organizationId = new URL('/#organization', Astro.site).href
+const contactPointId = new URL('/#support', Astro.site).href
+const primaryHref = pageKind === 'about' ? contactPath : `mailto:${DEVELOPER_EMAIL}?subject=Vimeo%20Video%20Downloader%20support%20request`
+const primaryLabel = pageKind === 'about' ? companyContent.about.contactLabel : companyContent.contact.emailLabel
+const companyPageSchema = {
+  '@context': 'https://schema.org',
+  '@type': pageKind === 'about' ? 'AboutPage' : 'ContactPage',
+  '@id': `${pageUrl}#webpage`,
+  url: pageUrl,
+  name: page.title,
+  description: page.seoDescription,
+  inLanguage: locale,
+  datePublished: COMPANY_PAGES_PUBLISHED_DATE,
+  dateModified: COMPANY_PAGES_PUBLISHED_DATE,
+  author: {
+    '@id': organizationId
+  },
+  publisher: {
+    '@id': organizationId
+  },
+  mainEntity: {
+    '@id': pageKind === 'about' ? organizationId : contactPointId
+  }
+}
+---
+
+<Layout
+  locale={locale}
+  title={page.seoTitle}
+  description={page.seoDescription}
+  includeSoftwareApplicationSchema={false}
+  structuredData={[companyPageSchema]}
+>
+  <article class="company-page" data-company-page={pageKind}>
+    <header class="company-hero">
+      <div class="container company-hero-content">
+        <p class="company-eyebrow">{page.eyebrow}</p>
+        <h1>{page.title}</h1>
+        <p class="company-intro">{page.intro}</p>
+        <p class="company-date">
+          {page.updatedLabel}
+          <time datetime={COMPANY_PAGES_PUBLISHED_DATE}>{page.updatedAt}</time>
+        </p>
+        <div class="company-actions" aria-label={page.eyebrow}>
+          <a class="company-primary-link" href={primaryHref}>{primaryLabel}</a>
+          {pageKind === 'about' && (
+            <a
+              class="company-secondary-link"
+              href={CHROME_WEB_STORE_URL}
+              target="_blank"
+              rel="noopener"
+            >
+              {companyContent.about.chromeStoreLabel}
+            </a>
+          )}
+          {pageKind === 'contact' && (
+            <>
+              <a
+                class="company-secondary-link company-social-link"
+                href={OFFICIAL_X_URL}
+                target="_blank"
+                rel="me noopener noreferrer"
+                data-ga-event="official_x_click"
+                data-ga-source="contact"
+                data-ga-target="official_x"
+              >
+                <XBrandIcon />
+                <span>{companyContent.officialXLabel}</span>
+                <span class="company-social-handle">{OFFICIAL_X_HANDLE}</span>
+              </a>
+              <span class="company-email">{DEVELOPER_EMAIL}</span>
+            </>
+          )}
+        </div>
+      </div>
+    </header>
+
+    <div class="company-sections">
+      {page.sections.map((section, index) => (
+        <section class="company-section" aria-labelledby={`${pageKind}-section-${index}`}>
+          <div class="container company-section-layout">
+            <h2 id={`${pageKind}-section-${index}`}>{section.title}</h2>
+            <div class="company-section-copy">
+              {section.paragraphs.map(paragraph => <p>{paragraph}</p>)}
+              {section.items && (
+                <ul>
+                  {section.items.map(item => <li>{item}</li>)}
+                </ul>
+              )}
+            </div>
+          </div>
+        </section>
+      ))}
+    </div>
+
+    <nav class="company-related" aria-label={companyContent.footerGroupLabel}>
+      <div class="container company-related-links">
+        {pageKind === 'about' ? (
+          <a href={contactPath}>{companyContent.about.contactLabel}</a>
+        ) : (
+          <a href={aboutPath}>{companyContent.contact.aboutLabel}</a>
+        )}
+        <a href={privacyPath}>{page.privacyLabel}</a>
+        <a href={termsPath}>{page.termsLabel}</a>
+      </div>
+    </nav>
+  </article>
+</Layout>
+
+<style>
+  .company-page {
+    color: var(--color-gray-900);
+  }
+
+  .company-hero {
+    border-bottom: 1px solid var(--color-gray-200);
+    background: var(--color-surface);
+  }
+
+  .company-hero-content {
+    padding-top: 72px;
+    padding-bottom: 72px;
+  }
+
+  .company-eyebrow {
+    margin: 0 0 16px;
+    color: var(--color-primary);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 20px;
+  }
+
+  h1 {
+    max-width: 820px;
+    margin: 0;
+    color: var(--color-gray-900);
+    font-family: var(--font-display);
+    font-size: 48px;
+    font-weight: 700;
+    line-height: 1.12;
+    letter-spacing: 0;
+  }
+
+  .company-intro {
+    max-width: 760px;
+    margin: 24px 0 0;
+    color: var(--color-gray-600);
+    font-size: 18px;
+    line-height: 30px;
+  }
+
+  .company-date {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 20px 0 0;
+    color: var(--color-gray-500);
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  .company-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-top: 32px;
+  }
+
+  .company-primary-link,
+  .company-secondary-link {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 18px;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 20px;
+    text-decoration: none;
+  }
+
+  .company-primary-link {
+    border: 1px solid var(--color-primary);
+    background: var(--color-primary);
+    color: #ffffff;
+  }
+
+  .company-primary-link:hover {
+    border-color: var(--color-primary-dark);
+    background: var(--color-primary-dark);
+  }
+
+  .company-secondary-link {
+    border: 1px solid var(--color-gray-300);
+    background: #ffffff;
+    color: var(--color-gray-800);
+  }
+
+  .company-secondary-link:hover {
+    border-color: var(--color-gray-400);
+    color: var(--color-primary);
+  }
+
+  .company-social-link {
+    gap: 8px;
+  }
+
+  .company-social-handle {
+    color: var(--color-gray-500);
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .company-social-link:hover .company-social-handle {
+    color: inherit;
+  }
+
+  .company-primary-link:focus-visible,
+  .company-secondary-link:focus-visible,
+  .company-related a:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+  }
+
+  .company-email {
+    overflow-wrap: anywhere;
+    color: var(--color-gray-600);
+    font-size: 15px;
+  }
+
+  .company-section {
+    border-bottom: 1px solid var(--color-gray-200);
+    background: #ffffff;
+  }
+
+  .company-section:nth-child(even) {
+    background: var(--color-gray-50);
+  }
+
+  .company-section-layout {
+    display: grid;
+    grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1.3fr);
+    gap: 64px;
+    padding-top: 48px;
+    padding-bottom: 48px;
+  }
+
+  .company-section h2 {
+    margin: 0;
+    color: var(--color-gray-900);
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 32px;
+    letter-spacing: 0;
+  }
+
+  .company-section-copy {
+    min-width: 0;
+  }
+
+  .company-section-copy p {
+    margin: 0;
+    color: var(--color-gray-600);
+    font-size: 16px;
+    line-height: 27px;
+  }
+
+  .company-section-copy p + p {
+    margin-top: 16px;
+  }
+
+  .company-section-copy ul {
+    display: grid;
+    gap: 12px;
+    margin: 20px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .company-section-copy li {
+    position: relative;
+    padding-left: 22px;
+    color: var(--color-gray-700);
+    font-size: 15px;
+    line-height: 24px;
+  }
+
+  .company-section-copy li::before {
+    position: absolute;
+    top: 9px;
+    left: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    content: '';
+  }
+
+  .company-related {
+    background: var(--color-gray-900);
+  }
+
+  .company-related-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 28px;
+    padding-top: 28px;
+    padding-bottom: 28px;
+  }
+
+  .company-related a {
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    text-decoration: none;
+  }
+
+  .company-related a:hover {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+
+  @media (max-width: 960px) {
+    .company-hero-content {
+      padding-top: 48px;
+      padding-bottom: 48px;
+    }
+
+    h1 {
+      font-size: 36px;
+      line-height: 1.2;
+    }
+
+    .company-intro {
+      font-size: 16px;
+      line-height: 26px;
+    }
+
+    .company-section-layout {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 20px;
+      padding-top: 36px;
+      padding-bottom: 36px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .company-primary-link,
+    .company-secondary-link {
+      width: 100%;
+    }
+
+    .company-email {
+      width: 100%;
+    }
+  }
+</style>

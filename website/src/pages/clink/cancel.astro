@@ -1,0 +1,25 @@
+---
+/** ClinkBill 英文支付取消回跳页。 */
+import ClinkReturnPage from '../../components/pages/ClinkReturnPage.astro'
+import { clinkReturnContent } from '../../i18n/clink-return'
+import Layout from '../../layouts/Layout.astro'
+import { PRODUCT_NAME } from '../../lib/site.mjs'
+
+const copy = clinkReturnContent.cancel
+---
+
+<Layout
+  locale="en-US"
+  title={`${copy.title} | ${PRODUCT_NAME}`}
+  description={copy.description}
+  includeSoftwareApplicationSchema={false}
+  includeAlternateLanguageLinks={false}
+  includeLanguageSwitcher={false}
+  robots="noindex, nofollow, noarchive"
+>
+  <ClinkReturnPage
+    status="cancel"
+    successCopy={clinkReturnContent.success}
+    cancelCopy={clinkReturnContent.cancel}
+  />
+</Layout>

@@ -1,0 +1,86 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.browser-data
+docs/scratch/
+.pnpm-store
+
+backend/data
+
+**/log/
+**/__pycache__/
+**/.venv/
+**/.pycache/
+**/.cache/
+**/.mypy_cache/
+**/.pytest_cache/
+**/.ruff_cache/
+**/.mypys_cache/
+# PDM 的 .pdm-python 是文件不是目录，不能带尾斜杠（带尾斜杠只匹配目录，规则等于失效）
+**/.pdm-python
+*.pyc
+*.pyo
+.env
+.env.local
+.env.*.local
+# deploy 环境配置（hydra 2026-04-30：.env.test/.env.prod/.env.staging 不入 git；仅 .env.example commit）
+.env.test
+.env.prod
+.env.staging
+.env.dev
+backend/deploy/.env.test
+backend/deploy/.env.prod
+backend/deploy/.env.staging
+backend/deploy/.env.dev
+backend/deploy/.env.local
+# 前提：`backend/deploy/.env.download` 与 `backend/deploy/.env.*.download` 的忽略规则随 download 节点
+# 部署链路一并删除（2026-09-20，本项目不部署该节点）。若将来重建 download 节点，必须在此恢复这两条，
+# 否则节点 .env 里的下载 token 公钥 / Redis 口令等密钥会随提交入库。
+backend/deploy/.env.prod-*
+admin/deploy/.env.prod
+admin/deploy/.env.prod-*
+backend/config.yaml
+
+
+
+node_modules
+dist
+dist-ssr
+*.local
+*.tsbuildinfo
+
+# Test outputs
+coverage/
+/test-screenshots
+/test-user-data
+/.test-user-data
+/test-data
+# Playwright 产物目录在各子项目（admin/extension/website）都会生成，不锚定根
+test-results/
+playwright-report/
+extension/tests/logs/
+website/.tmp-workspace-snapshot-*
+.superpowers
+.superpowers
+
+# Editor directories and files
+# .vscode/*
+# !.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+dist.zip
+
+# Claude Code cache
+.claude/tsc-cache
+.alma-snapshots

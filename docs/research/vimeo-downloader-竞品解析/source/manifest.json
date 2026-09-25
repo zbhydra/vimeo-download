@@ -1,0 +1,49 @@
+{
+   "action": {
+      "default_icon": {
+         "128": "icons/logo.png"
+      },
+      "default_popup": "popup.html",
+      "default_title": "__MSG_extName__"
+   },
+   "background": {
+      "service_worker": "js/background.js"
+   },
+   "content_scripts": [ {
+      "all_frames": true,
+      "js": [ "js/inject.js" ],
+      "matches": [ "\u003Call_urls>" ],
+      "run_at": "document_start",
+      "world": "MAIN"
+   }, {
+      "all_frames": true,
+      "js": [ "js/content-script-vimeo-popup-integration.js" ],
+      "matches": [ "\u003Call_urls>" ],
+      "run_at": "document_start"
+   }, {
+      "js": [ "js/content-script-auto-login.js" ],
+      "matches": [ "https://api.vimeomediadownloader.com/*" ],
+      "run_at": "document_end"
+   } ],
+   "content_security_policy": {
+      "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';",
+      "sandbox": "sandbox allow-scripts allow-forms allow-popups allow-modals; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'; child-src 'self';"
+   },
+   "default_locale": "en",
+   "description": "__MSG_extDes__",
+   "homepage_url": "https://chrome.google.com/webstore/detail/llangkpnndilncfkpgcpolnmgjgnompo",
+   "host_permissions": [ "\u003Call_urls>" ],
+   "icons": {
+      "128": "icons/logo.png"
+   },
+   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2WbEP+DeYC5fBXl99qDf7moM2SiIPrytO/8bpjCeYB8Q3ptz/QhCHqIDm61ENEpyeWcQSPH5wBoA+XBWGrBZY+zN2nwKhEA5AqzMMeXCKvnO17s+53wE316mpyre9u6Jo3gdv9CHPaSHQyuZoqP1iJAC4LBIrkx64rjnGZjRYc5KMqP859C6ADyioOHsDBsAGKH66utm3h89rHCFSeFEydI7G/TULJcExgJVoIIakTzH5ToJSgUe3bkMj0IjyaTVTRxfZMiW8atu9swDMyApwxIitK5bRtJu7uBn9NPjWgHnLe1N94F2xQRi3LTnL2xMgG9Z8hxNaFWMwunGx081/wIDAQAB",
+   "manifest_version": 3,
+   "name": "__MSG_extName__",
+   "options_ui": {
+      "open_in_tab": true,
+      "page": "options.html"
+   },
+   "permissions": [ "offscreen", "storage", "downloads", "tabs", "webNavigation", "notifications" ],
+   "update_url": "https://clients2.google.com/service/update2/crx",
+   "version": "2.6.14"
+}

@@ -1,0 +1,31 @@
+/**
+ * 由 rpc-generate 生成的 {{channel}} Chrome RPC 客户端。
+ *
+ * 来源：{{source}}
+ */
+
+import { ChromeRpcTransport } from '@/core/rpc/transports/ChromeRpcTransport'
+import type {
+  RpcCallOptions,
+{{methodParamsImportLine}}  RpcMethodResult,
+  RpcTransport
+} from '@/core/rpc/types'
+import type { {{handlerType}} } from '{{registerImport}}'
+
+/** {{caller}} 调用 {{channel}} provider 的生成客户端。 */
+export class {{className}} {
+  /** RPC transport。 */
+  private readonly transport: RpcTransport
+
+  /** 创建 {{className}}。 */
+  constructor(options: RpcCallOptions = {}) {
+    this.transport = new ChromeRpcTransport('{{channel}}', options)
+  }
+
+{{methods}}
+
+  /** 销毁 RPC transport。 */
+  destroy(): void {
+    this.transport.destroy()
+  }
+}

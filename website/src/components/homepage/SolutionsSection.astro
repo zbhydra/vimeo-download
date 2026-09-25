@@ -1,0 +1,151 @@
+---
+/**
+ * 首页 Solutions 区块（原飞书稿 "What Works for Private Videos?"）
+ *
+ * 结构：标题 → intro 定义段 → Quick answer 强调块 → 方案卡网格（4 张）。
+ * 方案卡为 <article>（纯展示、不可点击、无跳转）。
+ *
+ * 选型：与 Benefits 卡（仅标题+描述）结构差异大（本组件多 useWhen bullet 列表），
+ * 故拆为独立单一职责组件，避免 variant 联合类型分支。
+ *
+ * 布局：方案卡单列堆叠（一行一个），所有视口一致。每张卡信息量大
+ * （描述 + useWhen 多条 bullet），多列横排在桌面端显得拥挤割裂，故全宽单列阅读最顺。
+ */
+import type { HomepageSolutionMessage } from '../../i18n/schema'
+
+interface Props {
+  /** 区块标题 */
+  title: string
+  /** 定义段 */
+  intro: string
+  /** Quick answer 强调段 */
+  quickAnswer: string
+  /** 方案卡列表 */
+  items: HomepageSolutionMessage[]
+}
+
+const { title, intro, quickAnswer, items } = Astro.props as Props
+---
+
+<section class="solutions">
+  <div class="container">
+    <div class="solutions-shell">
+      <h2>{title}</h2>
+      <p class="solutions-intro">{intro}</p>
+      <p class="solutions-quick-answer">{quickAnswer}</p>
+      <div class="solutions-grid">
+        {items.map(item => (
+          <article class="solution-card">
+            <h3>{item.title}</h3>
+            <p class="solution-card-desc">{item.description}</p>
+            <p class="solution-card-label">{item.useWhenLabel}</p>
+            <ul class="solution-card-list">
+              {item.useWhen.map(point => <li>{point}</li>)}
+            </ul>
+          </article>
+        ))}
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .solutions {
+    padding: 0 0 28px;
+  }
+
+  /* 区块外壳：与 InfoTable / HowTo 的 shell 同规格，让标题+卡片网格整体收进一张大卡，与全页"每区块一张卡"的节奏一致，避免标题段裸浮在页面背景上 */
+  .solutions-shell {
+    border-radius: 36px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.86));
+    box-shadow: 0 28px 72px rgba(15, 23, 42, 0.08);
+    padding: clamp(28px, 4vw, 42px);
+  }
+
+  .solutions h2 {
+    font-size: clamp(1.75rem, 3vw, 2.5rem);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    color: var(--color-gray-900);
+  }
+
+  .solutions-intro {
+    margin-top: 12px;
+    color: var(--color-gray-600);
+    font-size: 15px;
+    line-height: 1.65;
+  }
+
+  /* Quick answer 强调块：蓝色弱底，区别于普通 intro 段 */
+  .solutions-quick-answer {
+    margin-top: 14px;
+    padding: 16px 18px;
+    border-radius: 16px;
+    background: rgba(37, 99, 235, 0.06);
+    border: 1px solid rgba(37, 99, 235, 0.12);
+    color: var(--color-gray-900);
+    font-size: 15px;
+    line-height: 1.7;
+    font-weight: 600;
+  }
+
+  /* 单列堆叠：一行一个方案卡，全宽阅读（卡内含 useWhen 多条 bullet，多列横排会拥挤） */
+  .solutions-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 18px;
+    margin-top: 24px;
+  }
+
+  /* 方案卡：偏灰底，与白色 shell 形成层次（对齐 HowTo step-card），不可点击（<article>） */
+  .solution-card {
+    padding: 28px;
+    border-radius: 26px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: rgba(248, 250, 252, 0.92);
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.06);
+  }
+
+  .solution-card h3 {
+    font-size: 20px;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+
+  .solution-card-desc {
+    margin-top: 10px;
+    color: var(--color-gray-600);
+    font-size: 15px;
+    line-height: 1.65;
+  }
+
+  .solution-card-label {
+    margin-top: 16px;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-gray-500);
+  }
+
+  .solution-card-list {
+    margin-top: 8px;
+    padding-left: 18px;
+    color: var(--color-gray-600);
+    line-height: 1.7;
+    font-size: 14px;
+  }
+
+  @media (max-width: 640px) {
+    .solutions-shell {
+      padding: 24px 20px;
+      border-radius: 28px;
+    }
+
+    .solution-card {
+      padding: 22px;
+      border-radius: 22px;
+    }
+  }
+</style>

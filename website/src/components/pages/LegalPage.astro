@@ -1,0 +1,295 @@
+---
+/**
+ * Legal document page.
+ *
+ * Render flow:
+ * route -> legal content fallback -> semantic article/sections -> Layout SEO/schema.
+ */
+import Layout from '../../layouts/Layout.astro'
+import { getLegalPageContent, type LegalPageKind } from '../../legal/legalContent'
+import { PRODUCT_NAME } from '../../lib/site.mjs'
+import { type Locale } from '../../i18n/content'
+
+interface Props {
+  /** Current locale route. */
+  locale?: Locale
+  /** Which legal page to render. */
+  pageKind: LegalPageKind
+}
+
+/** A paragraph split into plain text, bold runs, and links. */
+interface InlineNode {
+  text: string
+  bold?: boolean
+  href?: string
+}
+
+const INLINE_TOKEN_PATTERN = /\*\*([^*]+)\*\*|\[([^\]]+)\]\(([^)\s]+)\)/g
+const PARAGRAPH_BREAK_PATTERN = /\n{2,}/
+const HTML_ESCAPES: Record<string, string> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;'
+}
+
+const escapeHtml = (value: string) => value.replace(/[&<>"]/g, character => HTML_ESCAPES[character])
+
+/**
+ * Splits `**bold**` and `[label](href)` markup into nodes.
+ *
+ * Legal copy is authored as plain strings that mirror its Markdown source, so
+ * both markers are resolved here rather than baked into every locale file.
+ */
+const toInlineNodes = (value: string): InlineNode[] => {
+  const nodes: InlineNode[] = []
+  let cursor = 0
+
+  for (const match of value.matchAll(INLINE_TOKEN_PATTERN)) {
+    const index = match.index ?? 0
+    if (index > cursor) {
+      nodes.push({ text: value.slice(cursor, index) })
+    }
+
+    if (match[1] !== undefined) {
+      nodes.push({ text: match[1], bold: true })
+    } else {
+      nodes.push({ text: match[2], href: match[3] })
+    }
+
+    cursor = index + match[0].length
+  }
+
+  if (cursor < value.length) {
+    nodes.push({ text: value.slice(cursor) })
+  }
+
+  return nodes
+}
+
+/** Renders inline markup to escaped HTML for `set:html`. */
+const renderInlineHtml = (value: string) =>
+  toInlineNodes(value)
+    .map(node => {
+      const text = escapeHtml(node.text)
+      if (node.href !== undefined) {
+        return `<a href="${escapeHtml(node.href)}">${text}</a>`
+      }
+
+      return node.bold ? `<strong>${text}</strong>` : text
+    })
+    .join('')
+
+const { locale = 'en-US', pageKind } = Astro.props as Props
+const page = getLegalPageContent(locale, pageKind)
+const introParagraphs = page.intro.split(PARAGRAPH_BREAK_PATTERN)
+const toSectionId = (title: string) => title.toLowerCase().replaceAll(' ', '-')
+const normalizePathname = (pathname: string) => {
+  if (pathname === '' || pathname === '/') {
+    return '/'
+  }
+
+  return pathname.endsWith('/') ? pathname : `${pathname}/`
+}
+const pageUrl = new URL(normalizePathname(Astro.url.pathname), Astro.site).href
+const legalSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  url: pageUrl,
+  name: page.title,
+  description: page.seoDescription,
+  publisher: {
+    '@type': 'Organization',
+    name: PRODUCT_NAME,
+    url: new URL('/', Astro.site).href
+  }
+}
+const structuredDataItems = page.updatedAtIso
+  ? [{ ...legalSchema, dateModified: page.updatedAtIso }]
+  : [legalSchema]
+---
+
+<Layout
+  locale={locale}
+  title={page.seoTitle}
+  description={page.seoDescription}
+  includeSoftwareApplicationSchema={false}
+  structuredData={structuredDataItems}
+>
+  <article class="legal-page" data-legal-page data-legal-page-kind={pageKind}>
+    <div class="container">
+      <header class="legal-header">
+        <p class="legal-eyebrow">{page.navLabel}</p>
+        <h1>{page.title}</h1>
+        {introParagraphs.map(paragraph => <p class="legal-intro" set:html={renderInlineHtml(paragraph)} />)}
+        {page.updatedAt && page.updatedAtIso && (
+          <p class="legal-updated">{page.updatedLabel}: <time datetime={page.updatedAtIso}>{page.updatedAt}</time></p>
+        )}
+      </header>
+
+      <div class="legal-layout">
+        <div class="legal-content">
+          {page.sections.map(section => (
+            <section class="legal-section" id={toSectionId(section.title)}>
+              <h2>{section.title}</h2>
+              {section.blocks.map(block => block.kind === 'paragraph' ? (
+                <p set:html={renderInlineHtml(block.text)} />
+              ) : (
+                <ul>
+                  {block.items.map(item => <li set:html={renderInlineHtml(item)} />)}
+                </ul>
+              ))}
+            </section>
+          ))}
+        </div>
+
+        <nav class="legal-toc" aria-label={page.navLabel}>
+          {page.sections.map(section => (
+            <a href={`#${toSectionId(section.title)}`}>{section.title}</a>
+          ))}
+        </nav>
+      </div>
+    </div>
+  </article>
+</Layout>
+
+<style>
+  .legal-page {
+    padding: 56px 0 88px;
+  }
+
+  .legal-header {
+    max-width: 820px;
+    margin-bottom: 36px;
+  }
+
+  .legal-eyebrow {
+    color: var(--color-primary);
+    font-size: 13px;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  .legal-header h1 {
+    margin-top: 10px;
+    font-size: 52px;
+    line-height: 1.04;
+    letter-spacing: 0;
+  }
+
+  .legal-intro {
+    max-width: 760px;
+    margin-top: 16px;
+    color: var(--color-gray-600);
+    font-size: 17px;
+    line-height: 1.75;
+  }
+
+  .legal-updated {
+    margin-top: 16px;
+    color: var(--color-gray-500);
+    font-size: 14px;
+  }
+
+  .legal-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 820px) 240px;
+    gap: 52px;
+    align-items: start;
+  }
+
+  .legal-content {
+    display: grid;
+    gap: 30px;
+  }
+
+  .legal-section {
+    padding-top: 28px;
+    border-top: 1px solid rgba(15, 23, 42, 0.1);
+    scroll-margin-top: 110px;
+  }
+
+  .legal-section h2 {
+    font-size: 24px;
+    line-height: 1.2;
+    letter-spacing: 0;
+  }
+
+  .legal-section p {
+    margin-top: 12px;
+    color: var(--color-gray-700);
+    font-size: 15px;
+    line-height: 1.85;
+  }
+
+  .legal-section ul {
+    margin-top: 12px;
+    padding-left: 20px;
+  }
+
+  .legal-section li {
+    color: var(--color-gray-700);
+    font-size: 15px;
+    line-height: 1.85;
+  }
+
+  .legal-toc {
+    position: sticky;
+    top: 112px;
+    display: grid;
+    gap: 10px;
+    padding-left: 18px;
+    border-left: 1px solid rgba(15, 23, 42, 0.12);
+  }
+
+  .legal-toc a {
+    color: var(--color-gray-500);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.45;
+  }
+
+  .legal-toc a:hover,
+  .legal-toc a:focus-visible {
+    color: var(--color-primary);
+  }
+
+  @media (max-width: 900px) {
+    .legal-page {
+      padding: 42px 0 72px;
+    }
+
+    .legal-header h1 {
+      font-size: 40px;
+    }
+
+    .legal-layout {
+      grid-template-columns: 1fr;
+      gap: 28px;
+    }
+
+    .legal-toc {
+      position: static;
+      order: -1;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      padding: 14px 0 18px;
+      border-left: 0;
+      border-top: 1px solid rgba(15, 23, 42, 0.1);
+      border-bottom: 1px solid rgba(15, 23, 42, 0.1);
+    }
+  }
+
+  @media (max-width: 560px) {
+    .legal-header h1 {
+      font-size: 34px;
+    }
+
+    .legal-intro {
+      font-size: 16px;
+    }
+
+    .legal-toc {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

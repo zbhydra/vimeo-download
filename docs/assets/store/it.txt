@@ -1,0 +1,182 @@
+Vimeo Video Downloader — Salva video, audio e immagini di copertina da Vimeo in Chrome
+
+Un'estensione Chrome per chi guarda Vimeo e vuole una copia locale del video che sta già riproducendo, con un pannello nella pagina per scaricare video, audio e immagine di copertina.
+
+
+COS'È
+
+Vimeo Video Downloader è un'estensione Chrome per le pagine Vimeo (vimeo.com, www.vimeo.com e player.vimeo.com). Legge le informazioni di riproduzione che il player Vimeo sulla pagina ha già caricato e le trasforma in pulsanti di download per il video, la sua traccia audio e la sua immagine di copertina.
+
+Non è un client Vimeo, non è un bot e non è un downloader autonomo. Funziona interamente dentro la pagina Vimeo che hai già aperto e lavora solo sul video che quella pagina sta riproducendo in quel momento.
+
+
+A CHI È RIVOLTA
+
+Probabilmente sei arrivato su questa pagina perché vuoi una di queste cose:
+
+1. Una copia locale di un video che stai guardando
+   Il video si riproduce nel browser, ma la pagina non offre alcun modo per salvarlo.
+
+2. Una qualità specifica invece di quella predefinita
+   Vuoi il file 720p o 1080p, oppure solo la traccia audio, invece di quello che il player sta trasmettendo in quel momento.
+
+3. L'immagine di copertina
+   Vuoi l'immagine di copertina del video come file separato.
+
+4. Più file senza ripetere gli stessi clic
+   Vuoi selezionare più voci nell'elenco del popup e metterle in coda tutte insieme.
+
+Se nulla di tutto questo corrisponde alla tua situazione, le opzioni di salvataggio del tuo browser probabilmente bastano e questa estensione non ti serve.
+
+
+FUNZIONI PRINCIPALI
+
+### Pannello di download nella pagina
+Quando si carica una pagina video di Vimeo, l'estensione aggiunge un piccolo pannello accanto al titolo del video con tre righe:
+
+- Video: un pulsante per ogni qualità video disponibile
+- Audio: un pulsante per ogni traccia audio disponibile
+- Image: l'immagine di copertina
+
+Se quel tipo di file non è disponibile per il video corrente, la riga mostra un trattino al posto del pulsante. Il pannello viene ricostruito quando passi a un altro video senza ricaricare la pagina.
+
+### Download dei video
+Salva il video come file MP4. A seconda di ciò che il player Vimeo offre per quel video, vedrai:
+
+- Voci MP4 dirette etichettate con la risoluzione, per esempio «720p MP4» o «1080p MP4»
+- Voci adattive etichettate «1080p HD», in cui le tracce video e audio vengono combinate in un unico MP4 prima del salvataggio
+- Una voce di riserva «1080p HLS» per i video che offrono solo questa modalità di consegna
+- Un pulsante «Best» che sceglie la qualità più alta disponibile per quel video
+
+Vengono elencate solo le qualità che Vimeo serve davvero per quel video. L'estensione non inventa, non ingrandisce e non transcodifica nulla.
+
+### Download dell'audio
+Salva la traccia audio da sola come file M4A. I pulsanti riportano il bitrate audio (per esempio «128 kbps»), più un pulsante «Best Audio» che sceglie il bitrate più alto disponibile.
+
+### Download dell'immagine di copertina
+Salva l'immagine di copertina del video come file JPEG.
+
+### Elenco delle risorse nel popup
+Fai clic sull'icona dell'estensione per vedere tutte le voci scaricabili che la scheda corrente ha individuato:
+
+- Raggruppate per tipo, con il conteggio di video, audio e immagini
+- Download di una singola voce, di una selezione spuntata o dell'intero elenco
+- Avanzamento in tempo reale, velocità di trasferimento e stato per ogni voce
+- Svuota l'elenco e rianalizza la pagina
+
+### Download in blocco
+I download passano da un'unica coda, quindi puoi accodare più voci insieme senza aprire una nuova scheda per ogni file. I file vengono scritti su disco uno dopo l'altro.
+
+### File di grandi dimensioni
+I file che Chrome riesce a recuperare da solo vengono affidati al gestore di download di Chrome, così il trasferimento prosegue indipendentemente dal fatto che la pagina sia ancora aperta. I video adattivi (segmentati) devono essere assemblati nella pagina, e questo percorso ha un budget di memoria: per impostazione predefinita un video segmentato oltre 768 MB non viene proposto per il download, e un download in corso viene interrotto se supera quel budget.
+
+Questo budget è regolabile dalla configurazione remota dell'estensione, quindi può essere alzato o abbassato senza pubblicare una nuova versione.
+
+### Progettata per il comportamento delle pagine Vimeo
+Vimeo è una single-page application. L'estensione osserva la navigazione tra i video e ricostruisce il pannello per il video su cui ti trovi davvero, invece di mostrare voci obsolete del precedente.
+
+### Indipendente dal pulsante di download del player
+L'estensione non fa clic al posto tuo su nulla nel player Vimeo. Legge la configurazione di riproduzione che il player ha già caricato nel tuo browser e offre i propri pulsanti di salvataggio.
+
+
+COME FUNZIONA
+
+1. Installa l'estensione dal Chrome Web Store
+2. Fissa l'icona alla barra degli strumenti per averla a portata di mano
+3. Apri una qualsiasi pagina video su vimeo.com o player.vimeo.com e avvia la riproduzione
+4. Accanto al titolo del video compare un pannello di download con le righe Video, Audio e Image
+5. Fai clic sulla qualità che vuoi, oppure apri l'icona dell'estensione per l'elenco completo
+6. Il file viene scritto dal browser sul tuo disco locale
+
+L'accesso è facoltativo. Serve solo per il tuo limite giornaliero di download e per lo stato dell'abbonamento; non è necessario perché l'estensione legga la pagina.
+
+
+PER COSA FUNZIONA E COSA NON FA
+
+Funziona per:
+- Video che si riproducono nel tuo browser su vimeo.com, www.vimeo.com e player.vimeo.com
+- Scegliere una qualità specifica o la traccia audio invece del flusso predefinito
+- Salvare l'immagine di copertina
+- Accodare più voci dalla stessa pagina
+
+Non fa:
+- Scaricare video Vimeo privati, protetti da password, a pagamento o altrimenti ad accesso limitato. Sono controlli di accesso di Vimeo stesso e l'estensione non può e non intende aggirarli: se il player non riesce a riprodurre il video nel tuo browser, nemmeno l'estensione può salvarlo
+- Rimuovere o aggirare DRM
+- Leggere informazioni che la pagina non ha già caricato
+- Funzionare su siti diversi da Vimeo
+- Funzionare nelle app Vimeo per desktop o mobile: questa è solo un'estensione del browser
+- Fare crawling o scraping in background
+
+
+DOMANDE FREQUENTI
+
+D: Serve un account per usare l'estensione?
+R: No. Puoi scaricare senza accedere. L'accesso è facoltativo e influisce solo sul limite giornaliero di download e sullo stato dell'abbonamento.
+
+D: Può scaricare video Vimeo privati, protetti da password o a pagamento?
+R: No. Quelle restrizioni sono applicate da Vimeo, non da questa estensione. L'estensione vede solo le informazioni di riproduzione che Vimeo ha già consegnato al tuo browser per un video che sei in grado di riprodurre. Non sblocca, non indovina e non aggira nulla.
+
+D: Quali qualità posso ottenere?
+R: Quelle che Vimeo serve per quello specifico video. Le pagine tipiche offrono diverse risoluzioni MP4 dirette e/o un flusso adattivo, e l'opzione più alta disponibile viene sempre proposta come «Best». Se una risoluzione superiore non è nell'elenco, significa che Vimeo non la sta servendo al tuo browser.
+
+D: Perché alcuni download hanno un limite di dimensione?
+R: Ai file che Chrome può recuperare direttamente l'estensione non aggiunge alcun limite. I video adattivi (segmentati) devono essere combinati nella pagina, il che occupa memoria, quindi si applica un budget. È regolabile dalla configurazione remota dell'estensione e per impostazione predefinita è 768 MB.
+
+D: L'estensione carica i miei dati da qualche parte?
+R: I contenuti multimediali non passano mai da un server gestito dagli sviluppatori. I file video, audio e immagine vanno dai server di Vimeo al tuo browser e poi al tuo disco locale. L'estensione contatta l'API degli sviluppatori solo per l'accesso, il limite giornaliero di download, lo stato dell'abbonamento e un piccolo file di configurazione remota.
+
+D: Quali permessi richiede l'estensione?
+R: storage (salvare le tue impostazioni e lo stato di accesso), identity (accesso con Google tramite la finestra di autorizzazione di Chrome), downloads (scrivere file sul tuo disco) e l'accesso alle pagine Vimeo e al CDN media di Vimeo per mostrare il pannello e recuperare i file.
+
+D: È gratuita?
+R: Esiste un limite giornaliero di download gratuito, e un nuovo account o dispositivo parte con il primo giorno illimitato. È disponibile un piano Unlimited a pagamento per download giornalieri più alti o illimitati. L'elenco completo è nella pagina dei prezzi del sito dell'estensione.
+
+D: Quali browser sono supportati?
+R: Chrome e gli altri browser basati su Chromium, come Edge e Brave.
+
+D: Funziona su tutte le pagine Vimeo?
+R: Funziona sulle pagine video di vimeo.com, www.vimeo.com e player.vimeo.com. Le pagine che non riproducono un singolo video (profili, feed, risultati di ricerca) non hanno nulla che l'estensione possa leggere.
+
+D: Quali formati di file vengono prodotti?
+R: MP4 per il video, M4A per l'audio, JPEG per l'immagine di copertina.
+
+
+NOTE TECNICHE
+
+- Browser: Chrome, Edge, Brave e altri browser basati su Chromium
+- Manifest V3
+- Permessi host: vimeo.com, www.vimeo.com, player.vimeo.com e gli host del CDN media di Vimeo
+- Download: i file diretti passano dal gestore di download di Chrome; i video segmentati vengono assemblati nella pagina
+- Budget di memoria per i video adattivi: 768 MB per impostazione predefinita, configurabile da remoto
+- Lingue dell'interfaccia: 14 localizzazioni
+
+
+LINGUE DELL'INTERFACCIA SUPPORTATE
+
+- Inglese
+- Cinese (semplificato e tradizionale)
+- Giapponese
+- Coreano
+- Tedesco
+- Spagnolo
+- Francese
+- Italiano
+- Portoghese
+- Russo
+- Indonesiano
+- Thailandese
+- Vietnamita
+
+
+INSTALLAZIONE
+
+Se vuoi una copia locale di un video Vimeo che puoi già guardare, installa Vimeo Video Downloader dal Chrome Web Store. L'estensione si attiva solo sulle pagine Vimeo.
+
+
+NOTE LEGALI E CONFORMITÀ
+
+Questa estensione è uno strumento di terze parti sviluppato in modo indipendente. Non è affiliata a Vimeo, Inc., non è approvata da Vimeo, Inc. e non ha alcun legame con Vimeo, Inc. Vimeo è un marchio di Vimeo, Inc.
+
+L'estensione è pensata per salvare contenuti a cui hai già accesso legittimo. Sei responsabile del rispetto della normativa sul diritto d'autore applicabile, delle leggi locali e dei termini di servizio di Vimeo e dell'autore originale del contenuto. Non usare questa estensione per ridistribuire materiale protetto da diritto d'autore, per aggirare i controlli di accesso di contenuti a cui non hai diritto o per qualsiasi scopo non autorizzato.
+
+L'estensione funziona localmente nel tuo browser. Gli sviluppatori non gestiscono alcun server che riceva, memorizzi o inoltri i contenuti che scarichi, e l'estensione non raccoglie i video, gli audio o le immagini che salvi.

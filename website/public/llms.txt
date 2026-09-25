@@ -1,0 +1,37 @@
+# Vimeo Video Downloader
+
+> Browser-based Vimeo video downloader for public Vimeo links. Paste a Vimeo URL, choose the resolution you need, and save the MP4 locally without installing an app or creating an account.
+
+## Core Product
+
+- [Vimeo Video Downloader Home](https://vimeo-video-downloader.example/): Main Vimeo download entry with link parsing, resolution selection, and troubleshooting for links that cannot be parsed.
+- [Vimeo Downloader](https://vimeo-video-downloader.example/vimeo-downloader/): Dedicated Vimeo downloader landing page with the supported link formats and download steps.
+- [Pricing](https://vimeo-video-downloader.example/pricing/): Buy one-time Credits for website downloads, or review the Unlimited plan for the browser extension.
+- [About Vimeo Video Downloader](https://vimeo-video-downloader.example/about/): Product identity, website and extension responsibilities, privacy principles, and access boundaries.
+- [Contact Vimeo Video Downloader](https://vimeo-video-downloader.example/contact/): Public support channel for account, download, extension, billing, and privacy questions.
+- [Full content index](https://vimeo-video-downloader.example/llms-full.txt): Complete AI-readable page index including language entrances, technical indexes, and update pages.
+
+## Download Tools
+
+- [Vimeo Downloader](https://vimeo-video-downloader.example/vimeo-downloader/): Parse public Vimeo video links on vimeo.com, www.vimeo.com, and player.vimeo.com, then download the available renditions.
+
+## Updates
+
+- [Changelog](https://vimeo-video-downloader.example/changelog/): Product release notes for Vimeo download support, larger file handling, and product updates.
+- [Sitemap](https://vimeo-video-downloader.example/sitemap.xml): XML sitemap index for canonical pages and per-language sitemap files.
+
+## Key Facts
+
+- Product name: Vimeo Video Downloader.
+- Site domain: vimeo-video-downloader.example.
+- Platform type: Browser website for public Vimeo links; the browser extension adds larger and queued downloads.
+- Supported source platform: Vimeo only (vimeo.com, www.vimeo.com, player.vimeo.com).
+- Default language: English.
+- Language coverage: 14 website locales.
+- Safety boundary: Vimeo Video Downloader never asks for Vimeo or Google passwords, verification codes, API credentials, or session files.
+
+## Contact
+
+- [About](https://vimeo-video-downloader.example/about/)
+- [Contact](https://vimeo-video-downloader.example/contact/)
+- [Changelog](https://vimeo-video-downloader.example/changelog/)

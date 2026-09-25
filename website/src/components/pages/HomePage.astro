@@ -1,0 +1,279 @@
+---
+/**
+ * 首页（Vimeo Video Downloader 着陆页）
+ *
+ * 区块顺序：Hero（解析工具 + Trust Points）→ situation 情景匹配表 → howTo 三步
+ * → solutions 四方案 → benefits 六卖点 → troubleshooting 排错（内联）
+ * → permission 合规声明（内联）→ comparison 方法对比表 → crossLinks 平台互链 → faq。
+ *
+ * 关键约定：
+ * - 页面唯一 H1 = 解析工具标题（workspace.parse.title），由 DownloadParseResults 默认 headingLevel='h1' 渲染。
+ * - SEO meta（title/description）统一取自 pages.homepage.seo，三语言同逻辑，无 en-US 特例。
+ * - FAQ JSON-LD 通过 Layout 的 structuredData prop 注入（走 Layout 结构化数据统一出口），
+ *   不再用失效的 slot="head"（Layout 无 named slot）。
+ */
+import Layout from '../../layouts/Layout.astro'
+import HomepageFaqSection from '../homepage/HomepageFaqSection.astro'
+import HomepageHowToSection from '../homepage/HomepageHowToSection.astro'
+import CrossLinksSection from '../homepage/CrossLinksSection.astro'
+import InfoTable from '../homepage/InfoTable.astro'
+import SolutionsSection from '../homepage/SolutionsSection.astro'
+import BenefitsSection from '../homepage/BenefitsSection.astro'
+import DownloadWorkspace from '../download/DownloadWorkspace.astro'
+import { CHROME_WEB_STORE_URL } from '../../lib/site.mjs'
+import { content, getContent, type Locale } from '../../i18n/content'
+import { localePaths } from '../../i18n/ui'
+
+interface Props {
+  locale?: Locale
+}
+
+const installUrl = CHROME_WEB_STORE_URL
+
+const { locale = 'en-US' } = Astro.props as Props
+const t = getContent(locale)
+const fallbackHomepage = content['en-US'].pages.homepage
+const homepage = t.pages.homepage
+// 首页独立 SEO meta，三语言统一从 pages.homepage.seo 取值（不再走 en-US 硬编码特例）
+const { title, description } = homepage.seo
+const homepageFaq = homepage.faq.items
+const localePath = localePaths[locale] || ''
+const currentLocalePath = localePath === '' ? '/' : `/${localePath}/`
+const crossLinks = homepage.crossLinks
+
+// FAQPage 结构化数据：经 Layout 的 structuredData prop 注入 <head>（替代失效的 slot="head"）
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: homepageFaq.map(item => ({
+    '@type': 'Question',
+    name: item.question,
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: item.answer
+    }
+  }))
+}
+---
+
+<Layout
+  locale={locale}
+  title={title}
+  description={description}
+  structuredData={[faqSchema]}
+>
+  <section class="hero hero-tool">
+    <div class="hero-noise hero-noise-left"></div>
+    <div class="hero-noise hero-noise-right"></div>
+    <div class="container">
+      <DownloadWorkspace
+        copy={homepage.workspace}
+        installUrl={installUrl}
+        locale={locale}
+        showLargeFileExtensionGuideByDefault
+      />
+      <ul class="hero-trust-points">
+        {homepage.heroTrustPoints.map(point => (
+          <li class="hero-trust-point">
+            <svg class="hero-trust-check" viewBox="0 0 20 20" aria-hidden="true">
+              <path d="M5 10.5l3.2 3.2L15 7" />
+            </svg>
+            <span>{point}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  <InfoTable copy={homepage.situation} />
+  <HomepageHowToSection copy={homepage.howTo ?? fallbackHomepage.howTo!} />
+  <SolutionsSection
+    title={homepage.solutions.title}
+    intro={homepage.solutions.intro}
+    quickAnswer={homepage.solutions.quickAnswer}
+    items={homepage.solutions.items}
+  />
+  <BenefitsSection
+    title={homepage.benefits.title}
+    intro={homepage.benefits.intro}
+    items={homepage.benefits.items}
+  />
+
+  <section class="homepage-trouble">
+    <div class="container">
+      <div class="homepage-trouble-shell">
+        <h2>{homepage.troubleshooting.title}</h2>
+        <p class="homepage-trouble-intro">{homepage.troubleshooting.intro}</p>
+        <ul class="homepage-trouble-list">
+          {homepage.troubleshooting.items.map(item => <li>{item}</li>)}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="homepage-permission">
+    <div class="container">
+      <div class="homepage-permission-card">
+        <h2>{homepage.permission.title}</h2>
+        <p>{homepage.permission.note}</p>
+      </div>
+    </div>
+  </section>
+
+  <InfoTable copy={homepage.comparison} />
+
+  {crossLinks && (
+    <CrossLinksSection
+      title={crossLinks.title}
+      items={crossLinks.items}
+      localePath={currentLocalePath}
+      gaSource="homepage_crosslinks"
+    />
+  )}
+  <HomepageFaqSection copy={homepage.faq} />
+</Layout>
+
+<style>
+  .hero-tool {
+    position: relative;
+    overflow: clip;
+    /* 底部间距固定 28px，与全站所有区块统一节奏（.info-table/.solutions/.benefits 等均为 0 0 28px）严格对齐 */
+    padding: clamp(32px, 6vw, 56px) 0 28px;
+  }
+
+  .hero-noise {
+    position: absolute;
+    width: min(32vw, 420px);
+    aspect-ratio: 1;
+    border-radius: 999px;
+    filter: blur(36px);
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .hero-noise-left {
+    top: 96px;
+    left: -80px;
+    background: radial-gradient(circle, rgba(37, 99, 235, 0.18) 0%, rgba(37, 99, 235, 0) 72%);
+  }
+
+  .hero-noise-right {
+    right: -120px;
+    bottom: 40px;
+    background: radial-gradient(circle, rgba(249, 115, 22, 0.14) 0%, rgba(249, 115, 22, 0) 72%);
+  }
+
+  /* Trust Points：紧贴解析卡下方的液态玻璃信息条，半透明 + 背景模糊 + 高光边，与主卡同属一套玻璃材质，避免徽标孤立漂浮在空背景上；移动端换行自适应 */
+  .hero-trust-points {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px 30px;
+    margin-top: 10px;
+    padding: 18px clamp(20px, 3vw, 30px);
+    border-radius: 26px;
+    list-style: none;
+    /* 上亮下暗的渐变白底，制造玻璃体积感 */
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.5));
+    /* 偏白描边充当玻璃高光边缘 */
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    box-shadow:
+      0 18px 50px rgba(15, 23, 42, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(18px) saturate(180%);
+    -webkit-backdrop-filter: blur(18px) saturate(180%);
+  }
+
+  .hero-trust-point {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-gray-800);
+  }
+
+  /* 对勾图标用品牌蓝描边，与解析卡片视觉同源 */
+  .hero-trust-check {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: var(--color-primary);
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* 排错区块（飞书独立 H2，内联） */
+  .homepage-trouble {
+    padding: 0 0 28px;
+  }
+
+  /* 区块外壳：与 InfoTable / HowTo / Solutions / Benefits 的 shell 同规格，让排错清单整体收进一张大卡，与全页"每区块一张卡"的节奏一致 */
+  .homepage-trouble-shell {
+    border-radius: 36px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.86));
+    box-shadow: 0 28px 72px rgba(15, 23, 42, 0.08);
+    padding: clamp(28px, 4vw, 42px);
+  }
+
+  .homepage-trouble h2 {
+    font-size: clamp(1.75rem, 3vw, 2.5rem);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+  }
+
+  .homepage-trouble-intro {
+    margin-top: 12px;
+    color: var(--color-gray-600);
+    font-size: 15px;
+    line-height: 1.65;
+  }
+
+  .homepage-trouble-list {
+    margin-top: 16px;
+    padding-left: 20px;
+  }
+
+  .homepage-trouble-list li {
+    color: var(--color-gray-600);
+    line-height: 1.9;
+    font-size: 15px;
+  }
+
+  /* 合规声明区块（飞书独立 H2，橙色弱底卡片，内联） */
+  .homepage-permission {
+    padding: 0 0 28px;
+  }
+
+  .homepage-permission-card {
+    padding: 20px;
+    border-radius: 24px;
+    background: rgba(249, 115, 22, 0.08);
+    border: 1px solid rgba(249, 115, 22, 0.18);
+  }
+
+  .homepage-permission-card h2 {
+    font-size: clamp(1.4rem, 2.4vw, 1.9rem);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+  }
+
+  .homepage-permission-card p {
+    margin-top: 12px;
+    color: var(--color-gray-700);
+    font-size: 15px;
+    line-height: 1.75;
+  }
+
+  @media (max-width: 640px) {
+    .homepage-trouble-shell {
+      padding: 24px 20px;
+      border-radius: 28px;
+    }
+  }
+</style>

@@ -1,0 +1,222 @@
+---
+/**
+ * Website 通用确认弹窗。
+ *
+ * 页面脚本通过 site/confirm.ts 写入标题、正文和按钮文案，组件只负责提供稳定 DOM
+ * 与全站一致的视觉样式。
+ */
+---
+
+<div class="site-confirm-modal" data-site-confirm-modal hidden>
+  <button
+    type="button"
+    class="site-confirm-backdrop"
+    data-site-confirm-cancel
+    aria-label="Cancel"
+  ></button>
+
+  <div
+    class="site-confirm-dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="site-confirm-title"
+    aria-describedby="site-confirm-message"
+  >
+    <button
+      type="button"
+      class="site-confirm-close"
+      data-site-confirm-cancel
+      aria-label="Cancel"
+    >
+      <span aria-hidden="true">×</span>
+    </button>
+
+    <div class="site-confirm-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" focusable="false">
+        <path
+          d="M12 3.2 2.8 19.1c-.6 1.1.1 2.4 1.4 2.4h15.6c1.3 0 2-1.3 1.4-2.4L12 3.2Z"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linejoin="round"
+        />
+        <path
+          d="M12 8.2v5.2M12 17.1h.01"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+        />
+      </svg>
+    </div>
+
+    <div class="site-confirm-copy">
+      <h2 id="site-confirm-title" data-site-confirm-title></h2>
+      <p id="site-confirm-message" data-site-confirm-message></p>
+    </div>
+
+    <div class="site-confirm-actions">
+      <button type="button" class="btn-secondary site-confirm-action" data-site-confirm-cancel>
+        Cancel
+      </button>
+      <button type="button" class="btn-primary site-confirm-action" data-site-confirm-submit>
+        Continue
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  import '../../scripts/site/confirm'
+</script>
+
+<style>
+  .site-confirm-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 180;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+  }
+
+  .site-confirm-modal[hidden] {
+    display: none;
+  }
+
+  .site-confirm-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(248, 250, 252, 0.74);
+    backdrop-filter: blur(8px);
+  }
+
+  .site-confirm-dialog {
+    position: relative;
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 18px;
+    width: min(520px, 100%);
+    padding: 26px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 8px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 252, 0.96));
+    color: var(--color-gray-900);
+    box-shadow: 0 32px 100px rgba(15, 23, 42, 0.16);
+  }
+
+  .site-confirm-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 38px;
+    height: 38px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.06);
+    color: var(--color-gray-800);
+    font-size: 23px;
+    line-height: 1;
+  }
+
+  .site-confirm-close:hover {
+    background: rgba(15, 23, 42, 0.1);
+  }
+
+  .site-confirm-close:focus-visible,
+  .site-confirm-action:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+  }
+
+  .site-confirm-icon {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    background: rgba(249, 115, 22, 0.1);
+    color: var(--color-accent);
+  }
+
+  .site-confirm-icon svg {
+    width: 26px;
+    height: 26px;
+  }
+
+  .site-confirm-copy {
+    min-width: 0;
+    padding-right: 34px;
+  }
+
+  .site-confirm-copy h2 {
+    margin: 0;
+    font-size: 1.38rem;
+    line-height: 1.18;
+    letter-spacing: 0;
+  }
+
+  .site-confirm-copy p {
+    margin-top: 10px;
+    color: var(--color-gray-600);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.7;
+  }
+
+  :global(.site-confirm-copy p a) {
+    color: #005ff2;
+    font-weight: 800;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  :global(.site-confirm-copy p a:hover) {
+    color: #0059ec;
+  }
+
+  :global(.site-confirm-copy p a:focus-visible) {
+    outline: 2px solid #005ff2;
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  .site-confirm-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 4px;
+  }
+
+  .site-confirm-action {
+    min-width: 120px;
+    min-height: 46px;
+    border-radius: 8px;
+  }
+
+  @media (max-width: 560px) {
+    .site-confirm-modal {
+      align-items: end;
+      padding: 16px;
+    }
+
+    .site-confirm-dialog {
+      grid-template-columns: 1fr;
+      gap: 14px;
+      padding: 22px;
+    }
+
+    .site-confirm-copy {
+      padding-right: 0;
+    }
+
+    .site-confirm-actions {
+      display: grid;
+      grid-template-columns: 1fr;
+    }
+
+    .site-confirm-action {
+      width: 100%;
+    }
+  }
+</style>

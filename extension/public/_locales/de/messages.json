@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "Vimeo Video Downloader",
+    "description": "Chrome Web Store Erweiterungsname"
+  },
+  "extensionDescription": {
+    "message": "Vimeo-Videos, Audio und Titelbilder von vimeo.com und player.vimeo.com in jeder verfügbaren Qualität herunterladen.",
+    "description": "Chrome Web Store Erweiterungsbeschreibung - max 132 Zeichen"
+  },
+  "actionTitle": {
+    "message": "Vimeo Downloader öffnen",
+    "description": "Browser-Aktions-Titel"
+  }
+}

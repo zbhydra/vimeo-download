@@ -1,0 +1,21 @@
+---
+import LegalPage from '../../components/pages/LegalPage.astro'
+import { localePaths } from '../../i18n/ui'
+import type { Locale } from '../../i18n/content'
+
+export function getStaticPaths() {
+  return Object.entries(localePaths)
+    .map(([locale, path]) => {
+      if (locale === 'en-US') return []
+      return {
+        params: { lang: path },
+        props: { locale }
+      }
+    })
+    .flat()
+}
+
+const { locale } = Astro.props as { locale: Locale }
+---
+
+<LegalPage locale={locale} pageKind="privacy" />

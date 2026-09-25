@@ -1,0 +1,87 @@
+---
+import Layout from '../../layouts/Layout.astro'
+import { paymentReturnContent } from '../../i18n/payment-return'
+import { PRODUCT_NAME } from '../../lib/site.mjs'
+---
+
+<Layout
+  locale="en-US"
+  title={`Payment canceled | ${PRODUCT_NAME}`}
+  description="Your PayPal payment was canceled."
+  includeSoftwareApplicationSchema={false}
+  robots="noindex, nofollow, noarchive"
+>
+  <main class="paypal-return-page" data-paypal-return-page data-paypal-return-status="cancel">
+    <section class="paypal-return-card">
+      <p class="paypal-return-eyebrow">PayPal</p>
+      <h1>Payment canceled</h1>
+      <p class="paypal-return-description">
+        This order was not paid. You can close this tab and choose a payment
+        method again in the original window.
+      </p>
+      <a class="btn-primary paypal-return-pricing" href="/pricing/" data-subscription-href="/ext-pricing/">{paymentReturnContent.backToPricing}</a>
+    </section>
+  </main>
+</Layout>
+
+<script>
+  import { initPayPalReturnPage } from '@website-shared/components/credit-purchase/paypal-return'
+
+  const root = document.querySelector<HTMLElement>('[data-paypal-return-page]')
+  if (root) {
+    initPayPalReturnPage({
+      status: 'cancel',
+      orderNo: root.dataset.paypalOrderNo || null
+    })
+  }
+</script>
+
+<style>
+  .paypal-return-page {
+    display: grid;
+    min-height: 68vh;
+    place-items: center;
+    padding: 120px 24px 72px;
+    background:
+      radial-gradient(circle at 18% 16%, rgba(37, 99, 235, 0.1), transparent 32%),
+      radial-gradient(circle at 82% 12%, rgba(248, 113, 113, 0.12), transparent 30%);
+  }
+
+  .paypal-return-card {
+    width: min(620px, 100%);
+    padding: 34px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 28px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 28px 70px rgba(15, 23, 42, 0.12);
+    text-align: center;
+  }
+
+  .paypal-return-eyebrow {
+    margin: 0 0 12px;
+    color: #b45309;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .paypal-return-card h1 {
+    margin: 0;
+    color: var(--color-gray-900);
+    font-size: clamp(34px, 5vw, 54px);
+    letter-spacing: -0.05em;
+  }
+
+  .paypal-return-description {
+    margin: 16px 0 0;
+    color: var(--color-gray-600);
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.6;
+  }
+
+  .paypal-return-pricing {
+    margin-top: 24px;
+  }
+</style>

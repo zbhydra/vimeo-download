@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "Vimeo Video Downloader",
+    "description": "Название расширения Chrome Web Store"
+  },
+  "extensionDescription": {
+    "message": "Скачивайте видео, аудио и обложки с vimeo.com и player.vimeo.com в любом доступном качестве.",
+    "description": "Описание расширения Chrome Web Store - макс 132 символа"
+  },
+  "actionTitle": {
+    "message": "Открыть Vimeo Downloader",
+    "description": "Browser action title"
+  }
+}

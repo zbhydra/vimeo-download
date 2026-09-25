@@ -1,0 +1,85 @@
+app:
+  name: "{APP_NAME}"
+  version: "0.1.0"
+  host: "0.0.0.0"
+  port: {BACKEND_PORT_PY}
+  debug: false
+  env: "dev"
+  public_api_base_url: "{PUBLIC_API_BASE_URL}"
+  public_website_base_url: "{PUBLIC_WEBSITE_BASE_URL}"
+  # business 挂完整业务路由；download 只挂下载节点数据面和内部 health。
+  role: "{APP_ROLE}"
+
+service_node:
+  health_check_interval_seconds: 60
+  internal_auth_token: "{SERVICE_NODE_INTERNAL_AUTH_TOKEN}"
+
+download_token:
+  algorithm: "{DOWNLOAD_TOKEN_ALGORITHM}"
+  resource_token_secret: "{RESOURCE_TOKEN_SECRET}"
+  # business role 用于签发 media_download token；download role 配置片段见文件底部。
+  private_key: "{DOWNLOAD_TOKEN_PRIVATE_KEY}"
+  public_keys:
+{DOWNLOAD_TOKEN_PUBLIC_KEYS}
+
+database:
+  host: "{DB_HOST}"
+  port: 3306
+  user: "{DB_USER}"
+  password: "{DB_PASSWD}"
+  database: "{DB_NAME}"
+  pool_size: 50
+  max_overflow: 100
+
+logging:
+  level: "{LOGGER_LEVEL}"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "log/app.log"
+
+api:
+  title: "Vimeo Video Downloader API"
+  description: "Vimeo Video Downloader backend API"
+  version: "0.1.0"
+  docs_url: "/docs"
+  redoc_url: "/redoc"
+
+auth:
+  jwt_secret_key: "abcabcss$%^&*()_+"
+  jwt_algorithm: "HS256"
+  google_client_id: "{GOOGLE_CLIENT_ID}"
+  # 可选：仅新自定义 Google 按钮 OAuth code flow 需要，留空不影响 One Tap 和旧 callback。
+  google_client_secret: "{GOOGLE_CLIENT_SECRET}"
+  access_token_expire: 2592000
+  refresh_token_expire: 5184000
+  refresh_token_remember_days: 30
+  max_login_attempts: 5
+  lock_duration_minutes: 30
+  rate_limit_times: 10
+  rate_limit_period: 60
+
+admin:
+  access_token_expire: 1800
+  refresh_token_expire: 604800
+
+redis:
+  host: "{REDIS_HOST}"
+  port: {REDIS_PORT}
+  db: 0
+  password: {REDIS_PASSWORD}
+  pool_size: 5000
+  pool_timeout: 5
+  key_prefix: "{APP_NAME}"
+  socket_timeout: 5
+  socket_connect_timeout: 5
+  retry_on_timeout: true
+  retry_attempts: 3
+
+feishu_alarm:
+  enabled: true
+  # 真实群机器人 webhook 不入库，由部署侧经 .env 的 FEISHU_ALARM_WEBHOOK_URL 注入（deploy 脚本渲染本占位符）。
+  # 不要在这里写字面量：远端 config.yaml 每次发布都被本模板整份覆盖，手工改的值下次发布即失效。
+  # 留空时 send_feishu_alarm 走「未配置」分支并记 WARNING，不会静默失败——但告警也就不会发出。
+  webhook_url: "{FEISHU_ALARM_WEBHOOK_URL}"
+  timeout_seconds: 5
+
+{SMTP_CONFIG}

@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "Vimeo Video Downloader",
+    "description": "Chrome ウェブストア拡張機能名"
+  },
+  "extensionDescription": {
+    "message": "vimeo.com と player.vimeo.com の動画・音声・カバー画像を、選べる画質でダウンロード。",
+    "description": "Chrome ウェブストア拡張機能説明 - 132文字まで"
+  },
+  "actionTitle": {
+    "message": "Vimeo Downloader を開く",
+    "description": "ブラウザアクションのタイトル"
+  }
+}

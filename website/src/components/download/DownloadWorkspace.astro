@@ -1,0 +1,31 @@
+---
+/**
+ * Vimeo Video Downloader 站点的下载工作区轻包装。
+ *
+ * 站点层只负责 locale 和品牌 skin；实际下载 DOM 与状态机来自
+ * website-shared，站点层不重复维护下载状态机。
+ */
+import SharedDownloadWorkspace from '@website-shared/download/components/SharedDownloadWorkspace.astro'
+import type { DownloadWorkspaceContent } from '../../i18n/schema'
+
+const {
+  copy,
+  installUrl,
+  headingLevel = 'h1',
+  showLargeFileExtensionGuideByDefault = false
+} = Astro.props as {
+  copy: DownloadWorkspaceContent
+  installUrl: string
+  headingLevel?: 'h1' | 'h2' | 'p'
+  showLargeFileExtensionGuideByDefault?: boolean
+}
+---
+
+<SharedDownloadWorkspace
+  copy={copy}
+  installUrl={installUrl}
+  headingLevel={headingLevel}
+  showLargeFileExtensionGuideByDefault={showLargeFileExtensionGuideByDefault}
+  skinClass="vimeo-download-workspace"
+  deferRuntime
+/>

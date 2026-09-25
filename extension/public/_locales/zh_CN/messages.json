@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "Vimeo Video Downloader",
+    "description": "Chrome 网上应用店扩展名称"
+  },
+  "extensionDescription": {
+    "message": "从 vimeo.com 与 player.vimeo.com 下载视频、音频和封面图，可选择任意可用画质。",
+    "description": "Chrome 网上应用店扩展描述 - 最多132字符"
+  },
+  "actionTitle": {
+    "message": "打开 Vimeo 下载器",
+    "description": "浏览器动作标题"
+  }
+}

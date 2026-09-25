@@ -1,0 +1,215 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getContent, type Locale } from '../i18n/content';
+
+const locale: Locale = 'en-US';
+const t = getContent(locale);
+const title = t.pages.changelog.seoTitle || t.pages.changelog.title;
+const description = t.pages.changelog.seoDescription || t.pages.changelog.description;
+---
+
+<Layout locale={locale} title={title} description={description}>
+
+  <article class="changelog-page">
+    <div class="container">
+      <header class="page-header">
+        <h1>{t.pages.changelog.title}</h1>
+        <p class="subtitle">{t.pages.changelog.description}</p>
+      </header>
+
+      <div class="changelog-timeline">
+        {t.pages.changelog.entries.map((entry, index) => (
+          <div class={`changelog-entry ${index === 0 ? 'latest' : ''}`}>
+            <div class="entry-header">
+              <div class="entry-version">{entry.version}</div>
+              <div class="entry-date">{entry.date}</div>
+            </div>
+            <h2 class="entry-title">{entry.title}</h2>
+            <p class="entry-description">{entry.description}</p>
+
+            {entry.features && entry.features.length > 0 && (
+              <div class="entry-section">
+                <h3>{t.pages.changelog.labels.features}</h3>
+                <ul>
+                  {entry.features.map(feature => (
+                    <li>{feature}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {entry.fixes && entry.fixes.length > 0 && (
+              <div class="entry-section">
+                <h3>{t.pages.changelog.labels.fixes}</h3>
+                <ul>
+                  {entry.fixes.map(fix => (
+                    <li>{fix}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  </article>
+</Layout>
+
+<style is:global>
+  .changelog-page .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-lg);
+  }
+
+  .changelog-page {
+    padding: var(--spacing-xl) 0;
+  }
+
+  .changelog-page .page-header {
+    text-align: center;
+    margin-bottom: var(--spacing-2xl);
+  }
+
+  .changelog-page .page-header h1 {
+    font-size: 48px;
+    font-weight: 700;
+    color: var(--color-gray-900);
+    margin-bottom: var(--spacing-sm);
+    letter-spacing: -0.02em;
+  }
+
+  .changelog-page .page-header .subtitle {
+    font-size: 18px;
+    color: var(--color-gray-600);
+    margin-bottom: var(--spacing-md);
+  }
+
+  .changelog-timeline {
+    position: relative;
+  }
+
+  .changelog-timeline::before {
+    content: '';
+    position: absolute;
+    left: 20px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--color-gray-200);
+  }
+
+  .changelog-entry {
+    position: relative;
+    padding-left: 60px;
+    padding-bottom: var(--spacing-2xl);
+  }
+
+  .changelog-entry::before {
+    content: '';
+    position: absolute;
+    left: 11px;
+    top: 8px;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border: 3px solid var(--color-gray-400);
+    border-radius: 50%;
+    z-index: 1;
+  }
+
+  .changelog-entry.latest::before {
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+    box-shadow: 0 0 0 4px rgba(51, 144, 236, 0.2);
+  }
+
+  .entry-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .entry-version {
+    display: inline-flex;
+    padding: 4px 12px;
+    font-size: 14px;
+    font-weight: 600;
+    color: white;
+    background: var(--color-primary);
+    border-radius: var(--radius-md);
+  }
+
+  .entry-date {
+    font-size: 14px;
+    color: var(--color-gray-500);
+  }
+
+  .entry-title {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .entry-description {
+    font-size: 16px;
+    color: var(--color-gray-600);
+    margin-bottom: var(--spacing-md);
+  }
+
+  .entry-section {
+    margin-top: var(--spacing-md);
+  }
+
+  .entry-section h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .entry-section ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .entry-section li {
+    padding: var(--spacing-xs) 0;
+    padding-left: 24px;
+    font-size: 14px;
+    color: var(--color-gray-700);
+    line-height: 1.6;
+    position: relative;
+  }
+
+  .entry-section li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: var(--color-success);
+    font-weight: 600;
+  }
+
+  @media (max-width: 640px) {
+    .changelog-page .page-header h1 {
+      font-size: 36px;
+    }
+
+    .changelog-entry {
+      padding-left: 40px;
+    }
+
+    .changelog-timeline::before {
+      left: 11px;
+    }
+
+    .changelog-entry::before {
+      left: 2px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+</style>

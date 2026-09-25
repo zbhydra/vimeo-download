@@ -1,0 +1,208 @@
+---
+/**
+ * Vimeo 平台 SEO 落地页模板
+ *
+ * 结构：Hero(DownloadWorkspace) → Features → HowTo → FAQ
+ *
+ * JSON-LD 输出 FAQPage + WebApplication 两个 schema。
+ */
+import Layout from '../../layouts/Layout.astro'
+import DownloadWorkspace from '../download/DownloadWorkspace.astro'
+import HomepageHowToSection from '../homepage/HomepageHowToSection.astro'
+import HomepageFaqSection from '../homepage/HomepageFaqSection.astro'
+import { getContent, type Locale } from '../../i18n/content'
+import { CHROME_WEB_STORE_URL, PRODUCT_NAME } from '../../lib/site.mjs'
+
+/** 支持的平台类型 */
+type Platform = 'vimeo'
+
+interface Props {
+  /** 当前语言 */
+  locale: Locale
+  /** 目标平台 */
+  platform: Platform
+}
+
+const installUrl = CHROME_WEB_STORE_URL
+
+const { locale, platform } = Astro.props as Props
+const t = getContent(locale)
+const page = t.pages.platformDownloaders[platform]
+
+// 构造 workspace copy：基于首页 workspace，覆盖 parse 区域的平台定制字段
+const workspaceCopy = {
+  ...t.pages.homepage.workspace,
+  parse: {
+    ...t.pages.homepage.workspace.parse,
+    title: page.workspace.title,
+    helperText: page.workspace.helperText,
+    linkPlaceholder: page.workspace.linkPlaceholder
+  }
+}
+
+// JSON-LD: FAQPage schema
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: page.faq.items.map(item => ({
+    '@type': 'Question',
+    name: item.question,
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: item.answer
+    }
+  }))
+}
+
+// JSON-LD: WebApplication schema
+const webAppSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: PRODUCT_NAME,
+  url: new URL(Astro.url.pathname, Astro.site).href,
+  applicationCategory: 'MultimediaApplication',
+  operatingSystem: 'Any',
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'USD'
+  }
+}
+---
+
+<Layout
+  locale={locale}
+  title={page.seo.title}
+  description={page.seo.description}
+  includeSoftwareApplicationSchema={false}
+  structuredData={[faqSchema, webAppSchema]}
+>
+  <!-- Hero: DownloadWorkspace -->
+  <section class="hero hero-tool">
+    <div class="hero-noise hero-noise-left"></div>
+    <div class="hero-noise hero-noise-right"></div>
+    <div class="container">
+      <DownloadWorkspace
+        copy={workspaceCopy}
+        installUrl={installUrl}
+        locale={locale}
+        headingLevel="h1"
+      />
+    </div>
+  </section>
+
+  <!-- Features: 平台核心卖点 -->
+  <section class="platform-features">
+    <div class="container">
+      <div class="platform-features-header">
+        <h2>{page.features.title}</h2>
+        <p>{page.features.subtitle}</p>
+      </div>
+      <div class="platform-features-grid">
+        {page.features.items.map((item, index) => (
+          <article class="platform-feature-card">
+            <span class="platform-feature-index">0{index + 1}</span>
+            <h3>{item.title}</h3>
+            <p>{item.description}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- HowTo 步骤 -->
+  <HomepageHowToSection copy={page.howTo} />
+
+  <!-- FAQ -->
+  <HomepageFaqSection copy={page.faq} />
+</Layout>
+
+<style>
+  /* Features 区块 */
+  .platform-features {
+    padding: 0 0 28px;
+  }
+
+  .platform-features-header {
+    max-width: 42rem;
+    margin: 0 auto 32px;
+    text-align: center;
+  }
+
+  .platform-features-header h2 {
+    font-size: clamp(1.75rem, 3vw, 2.5rem);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+  }
+
+  .platform-features-header p {
+    margin-top: 14px;
+    color: var(--color-gray-500);
+    font-size: 16px;
+    line-height: 1.6;
+    font-weight: 400;
+  }
+
+  .platform-features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+  }
+
+  .platform-feature-card {
+    padding: 28px;
+    border-radius: 28px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.78));
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.06);
+  }
+
+  .platform-feature-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 42px;
+    min-height: 42px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.06);
+    color: var(--color-gray-700);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+  }
+
+  .platform-feature-card h3 {
+    margin-top: 16px;
+    font-size: 28px;
+    line-height: 1.05;
+    letter-spacing: -0.04em;
+  }
+
+  .platform-feature-card p {
+    margin-top: 14px;
+    color: var(--color-gray-600);
+    font-size: 15px;
+    line-height: 1.75;
+  }
+
+  @media (max-width: 960px) {
+    .platform-features-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .platform-features {
+      padding-bottom: 20px;
+    }
+
+    .platform-feature-card {
+      padding: 22px;
+      border-radius: 22px;
+    }
+
+    .platform-feature-card h3 {
+      font-size: 22px;
+    }
+  }
+</style>

@@ -1,0 +1,182 @@
+Vimeo Video Downloader — Vimeo-Videos, Audio und Titelbilder in Chrome speichern
+
+Eine Chrome-Erweiterung für Vimeo-Zuschauer, die eine lokale Kopie des Videos möchten, das sie gerade ansehen – mit einem Panel direkt auf der Seite für Video-, Audio- und Titelbild-Downloads.
+
+
+WAS DAS IST
+
+Vimeo Video Downloader ist eine Chrome-Erweiterung für Vimeo-Seiten (vimeo.com, www.vimeo.com und player.vimeo.com). Sie liest die Wiedergabeinformationen, die der Vimeo-Player auf der Seite bereits geladen hat, und macht daraus Download-Schaltflächen für das Video, dessen Audiospur und dessen Titelbild.
+
+Sie ist kein Vimeo-Client, kein Bot und kein eigenständiger Downloader. Sie läuft vollständig in der Vimeo-Seite, die Sie bereits geöffnet haben, und arbeitet nur mit dem Video, das diese Seite gerade abspielt.
+
+
+FÜR WEN DAS GEDACHT IST
+
+Sie sind vermutlich auf dieser Seite gelandet, weil Sie eines der Folgenden möchten:
+
+1. Eine lokale Kopie eines Videos, das Sie gerade ansehen
+   Das Video lässt sich im Browser abspielen, aber die Seite bietet keine Speichermöglichkeit.
+
+2. Eine bestimmte Qualität statt der Standardqualität
+   Sie möchten die 720p- oder 1080p-Datei oder nur die Audiospur, statt das, was der Player gerade zufällig streamt.
+
+3. Das Titelbild
+   Sie möchten das Vorschaubild des Videos als eigene Datei.
+
+4. Mehrere Dateien ohne wiederholtes Klicken
+   Sie möchten mehrere Einträge in der Popup-Liste auswählen und in einem Zug einreihen.
+
+Wenn nichts davon auf Sie zutrifft, reichen die Speicherfunktionen Ihres Browsers wahrscheinlich aus und Sie brauchen diese Erweiterung nicht.
+
+
+KERN-FUNKTIONEN
+
+### Download-Panel auf der Seite
+Wenn eine Vimeo-Videoseite geladen wird, fügt die Erweiterung neben dem Titelbereich des Videos ein kleines Panel mit drei Zeilen ein:
+
+- Video – eine Schaltfläche pro verfügbarer Videoqualität
+- Audio – eine Schaltfläche pro verfügbarer Audiospur
+- Image – das Titelbild
+
+Ist eine dieser Dateiarten für das aktuelle Video nicht verfügbar, zeigt die Zeile statt einer Schaltfläche einen Bindestrich. Beim Wechsel zu einem anderen Video ohne Neuladen der Seite wird das Panel neu aufgebaut.
+
+### Video-Downloads
+Das Video wird als MP4-Datei gespeichert. Je nachdem, was der Vimeo-Player für dieses Video bereitstellt, sehen Sie:
+
+- Direkte MP4-Einträge mit Angabe der Auflösung, zum Beispiel „720p MP4“ oder „1080p MP4“
+- Adaptive Einträge mit der Bezeichnung „1080p HD“, bei denen Video- und Audiospur vor dem Speichern zu einer einzigen MP4-Datei zusammengesetzt werden
+- Einen Rückfall-Eintrag „1080p HLS“ für Videos, die nur diese Auslieferung anbieten
+- Eine Schaltfläche „Best“, die die höchste für dieses Video verfügbare Qualität auswählt
+
+Aufgelistet werden nur die Qualitäten, die Vimeo für dieses Video tatsächlich ausliefert. Die Erweiterung erfindet nichts, skaliert nichts hoch und transcodiert nichts.
+
+### Audio-Downloads
+Die Audiospur wird separat als M4A-Datei gespeichert. Die Schaltflächen sind mit der Audiobitrate beschriftet (zum Beispiel „128 kbps“), dazu gibt es eine Schaltfläche „Best Audio“, die die höchste verfügbare Bitrate wählt.
+
+### Titelbild herunterladen
+Das Titelbild des Videos wird als JPEG-Datei gespeichert.
+
+### Ressourcenliste im Popup
+Klicken Sie auf das Erweiterungssymbol, um alle herunterladbaren Einträge zu sehen, die der aktuelle Tab ermittelt hat:
+
+- Nach Typ gruppiert, mit Anzahl für Video, Audio und Bild
+- Einzelne Einträge, eine Auswahl oder alles in der Liste herunterladen
+- Live-Fortschritt, Übertragungsgeschwindigkeit und Status pro Eintrag
+- Liste leeren und Seite neu einlesen
+
+### Stapel-Downloads
+Downloads laufen über eine einzige Warteschlange, sodass Sie mehrere Einträge auf einmal einreihen können, ohne für jede Datei einen neuen Tab zu öffnen. Die Dateien werden nacheinander auf die Festplatte geschrieben.
+
+### Große Dateien
+Dateien, die Chrome selbst abrufen kann, gehen an den Chrome-Downloadmanager, sodass die Übertragung unabhängig davon weiterläuft, ob die Seite noch geöffnet ist. Adaptive (segmentierte) Videos müssen auf der Seite zusammengesetzt werden, und dieser Weg hat ein Speicherbudget: Standardmäßig wird ein segmentiertes Video über 768 MB nicht zum Download angeboten, und ein laufender Download wird abgebrochen, wenn er dieses Budget überschreitet.
+
+Dieses Budget lässt sich über die Remote-Konfiguration der Erweiterung anpassen, also erhöhen oder senken, ohne eine neue Version auszuliefern.
+
+### Auf das Verhalten der Vimeo-Seite ausgelegt
+Vimeo ist eine Single-Page-Anwendung. Die Erweiterung beobachtet den Wechsel zwischen Videos und baut das Panel für das Video neu auf, auf dem Sie sich tatsächlich befinden, statt veraltete Einträge des vorherigen Videos anzuzeigen.
+
+### Unabhängig von der Download-Schaltfläche des Players
+Die Erweiterung klickt nichts im Vimeo-Player für Sie an. Sie liest die Wiedergabekonfiguration, die der Player bereits in Ihren Browser geladen hat, und bietet eigene Speicherschaltflächen an.
+
+
+SO FUNKTIONIERT ES
+
+1. Installieren Sie die Erweiterung aus dem Chrome Web Store
+2. Heften Sie das Symbol für den schnellen Zugriff an die Symbolleiste
+3. Öffnen Sie eine beliebige Videoseite auf vimeo.com oder player.vimeo.com und starten Sie die Wiedergabe
+4. Neben dem Videotitel erscheint ein Download-Panel mit den Zeilen Video, Audio und Image
+5. Klicken Sie auf die gewünschte Qualität oder öffnen Sie das Erweiterungssymbol für die vollständige Liste
+6. Die Datei wird von Ihrem Browser auf Ihre lokale Festplatte geschrieben
+
+Die Anmeldung ist optional. Sie dient nur Ihrem täglichen Download-Kontingent und Ihrem Abonnementstatus; zum Auslesen der Seite ist sie nicht erforderlich.
+
+
+WOFÜR ES GEEIGNET IST UND WAS ES NICHT TUT
+
+Geeignet für:
+- Videos, die in Ihrem eigenen Browser auf vimeo.com, www.vimeo.com und player.vimeo.com abspielbar sind
+- Die Wahl einer bestimmten Qualität oder der Audiospur statt des Standardstreams
+- Das Speichern des Titelbilds
+- Das Einreihen mehrerer Einträge von derselben Seite
+
+Nicht geeignet für:
+- Den Download privater, passwortgeschützter, kostenpflichtiger oder anderweitig zugriffsbeschränkter Vimeo-Videos. Das sind die Zugriffskontrollen von Vimeo selbst; die Erweiterung kann und will sie nicht umgehen. Wenn der Player das Video in Ihrem Browser nicht abspielen kann, kann die Erweiterung es ebenfalls nicht speichern
+- Das Entfernen oder Umgehen von DRM
+- Das Auslesen von Informationen, die die Seite noch nicht geladen hat
+- Den Einsatz auf anderen Websites als Vimeo
+- Den Einsatz in den Vimeo-Desktop- oder Mobil-Apps – dies ist ausschließlich eine Browser-Erweiterung
+- Jegliches Crawling oder Scraping im Hintergrund
+
+
+HÄUFIG GESTELLTE FRAGEN
+
+F: Brauche ich ein Konto, um die Erweiterung zu nutzen?
+A: Nein. Sie können ohne Anmeldung herunterladen. Die Anmeldung ist optional und betrifft nur Ihr tägliches Download-Kontingent und Ihren Abonnementstatus.
+
+F: Können private, passwortgeschützte oder kostenpflichtige Vimeo-Videos heruntergeladen werden?
+A: Nein. Diese Beschränkungen setzt Vimeo durch, nicht diese Erweiterung. Die Erweiterung sieht nur die Wiedergabeinformationen, die Vimeo bereits an Ihren Browser ausgeliefert hat, für ein Video, das Sie abspielen können. Sie entsperrt, errät oder umgeht nichts.
+
+F: Welche Qualitäten bekomme ich?
+A: Die, die Vimeo für dieses konkrete Video ausliefert. Typische Seiten bieten mehrere direkte MP4-Auflösungen und/oder einen adaptiven Stream; die höchste verfügbare Option wird immer als „Best“ angeboten. Fehlt eine höhere Auflösung in der Liste, liefert Vimeo sie nicht an Ihren Browser aus.
+
+F: Warum gibt es bei manchen Downloads eine Größenbeschränkung?
+A: Bei Dateien, die Chrome direkt abrufen kann, fügt die Erweiterung keine Beschränkung hinzu. Adaptive (segmentierte) Videos müssen auf der Seite zusammengesetzt werden, was Speicher belegt, daher gilt ein Budget. Es ist über die Remote-Konfiguration der Erweiterung einstellbar und beträgt standardmäßig 768 MB.
+
+F: Lädt die Erweiterung meine Daten irgendwohin hoch?
+A: Die Medien selbst laufen niemals über einen Server der Entwickler. Video-, Audio- und Bilddateien gehen von Vimeos Servern in Ihren Browser und dann auf Ihre lokale Festplatte. Die Erweiterung kontaktiert die API der Entwickler nur für die Anmeldung, Ihr tägliches Download-Kontingent, Ihren Abonnementstatus und eine kleine Remote-Einstellungsdatei.
+
+F: Welche Berechtigungen braucht die Erweiterung?
+A: storage (Speichern Ihrer Einstellungen und Ihres Anmeldestatus), identity (Google-Anmeldung über das Autorisierungsfenster von Chrome), downloads (Schreiben von Dateien auf Ihre Festplatte) sowie Zugriff auf Vimeo-Seiten und das Medien-CDN von Vimeo, damit das Panel angezeigt und die Dateien abgerufen werden können.
+
+F: Ist sie kostenlos?
+A: Es gibt ein kostenloses tägliches Download-Kontingent, und ein neues Konto oder Gerät startet mit einem unbegrenzten ersten Tag. Für mehr oder unbegrenzte tägliche Downloads gibt es einen kostenpflichtigen Unlimited-Plan. Die vollständige Liste steht auf der Preisseite der Website der Erweiterung.
+
+F: Welche Browser werden unterstützt?
+A: Chrome und andere Chromium-basierte Browser wie Edge und Brave.
+
+F: Funktioniert sie auf jeder Vimeo-Seite?
+A: Sie funktioniert auf Videoseiten auf vimeo.com, www.vimeo.com und player.vimeo.com. Seiten, die kein einzelnes Video abspielen – Profile, Feeds, Suchergebnisse – bieten der Erweiterung nichts zum Auslesen.
+
+F: Welche Dateiformate entstehen?
+A: MP4 für Video, M4A für Audio, JPEG für das Titelbild.
+
+
+TECHNISCHE HINWEISE
+
+- Browser: Chrome, Edge, Brave und andere Chromium-basierte Browser
+- Manifest V3
+- Host-Berechtigungen: vimeo.com, www.vimeo.com, player.vimeo.com und die Medien-CDN-Hosts von Vimeo
+- Downloads: direkte Dateien über den Chrome-Downloadmanager, segmentierte Videos werden auf der Seite zusammengesetzt
+- Speicherbudget für adaptive Videos: standardmäßig 768 MB, remote konfigurierbar
+- UI-Sprachen: 14 Locales
+
+
+UNTERSTÜTZTE UI-SPRACHEN
+
+- Englisch
+- Chinesisch (vereinfacht und traditionell)
+- Japanisch
+- Koreanisch
+- Deutsch
+- Spanisch
+- Französisch
+- Italienisch
+- Portugiesisch
+- Russisch
+- Indonesisch
+- Thailändisch
+- Vietnamesisch
+
+
+INSTALLATION
+
+Wenn Sie eine lokale Kopie eines Vimeo-Videos möchten, das Sie bereits ansehen können, installieren Sie Vimeo Video Downloader aus dem Chrome Web Store. Die Erweiterung wird nur auf Vimeo-Seiten aktiv.
+
+
+RECHTLICHES UND COMPLIANCE
+
+Diese Erweiterung ist ein unabhängig entwickeltes Drittanbieter-Werkzeug. Sie ist nicht mit Vimeo, Inc. verbunden, wird von Vimeo, Inc. nicht unterstützt und steht in keiner Beziehung zu Vimeo, Inc. Vimeo ist eine Marke von Vimeo, Inc.
+
+Die Erweiterung ist dafür gedacht, Inhalte zu speichern, auf die Sie bereits rechtmäßigen Zugriff haben. Sie sind dafür verantwortlich, geltendes Urheberrecht, lokale Vorschriften und die Nutzungsbedingungen von Vimeo sowie der ursprünglichen Urheber der Inhalte einzuhalten. Nutzen Sie diese Erweiterung nicht, um urheberrechtlich geschütztes Material weiterzuverbreiten, Zugriffskontrollen für Inhalte zu umgehen, auf die Sie keinen Anspruch haben, oder für sonstige unzulässige Zwecke.
+
+Die Erweiterung läuft lokal in Ihrem Browser. Die Entwickler betreiben keinen Server, der die von Ihnen heruntergeladenen Medien empfängt, speichert oder weiterleitet, und die Erweiterung sammelt die von Ihnen gespeicherten Videos, Audiodateien oder Bilder nicht.

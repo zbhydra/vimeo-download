@@ -1,0 +1,1549 @@
+---
+/**
+ * Pricing 页面 DOM 壳。
+ *
+ * 路由静态装配积分或订阅商品，账号摘要与订阅管理共用。
+ * 交互逻辑由 pricing-page-controller.ts 使用命令式 DOM 接管。
+ */
+import OrderCheckoutModal from '../order-checkout/OrderCheckoutModal.astro'
+import PricingAuthModal from './PricingAuthModal.astro'
+import PricingSubscriptionConfirmModal from './PricingSubscriptionConfirmModal.astro'
+import type { DownloadWorkspaceContent } from '../../download/schema'
+
+interface PricingPageContent {
+  seo: {
+    title: string
+    description: string
+  }
+  hero: {
+    eyebrow: string
+    title: string
+    description: string
+  }
+  /** 主推商品的徽章文案；未配置的站点不渲染徽章、不标记主推卡。 */
+  popularLabel?: string
+  account: {
+    title: string
+    loading: string
+    signedOutTitle: string
+    signedOutDescription: string
+    signInCta: string
+    signedInLabel: string
+    creditsLabel: string
+    subscriptionLabel: string
+    expiresLabel: string
+    statusLabel: string
+    dailyUsageLabel: string
+    resetLabel: string
+    autoRenewLabel: string
+    active: string
+    expired: string
+    noExpiry: string
+    freePlan: string
+    unlimited: string
+    loadFailed: string
+  }
+  subscriptionManagement: {
+    /** 账号订阅行的管理入口文案。 */
+    buttonLabel: string
+    /** 创建订阅管理入口失败时的用户提示。 */
+    loadFailed: string
+  }
+  subscription: {
+    title: string
+    eyebrow: string
+    /** 订阅卡的卖点清单，逐条 SSR 渲染；未配置的站点不渲染清单。 */
+    benefits?: readonly string[]
+    /** 购买按钮下的支付保障说明；未配置的站点不渲染。 */
+    trustNote?: string
+    monthlyLabel: string
+    yearlyLabel: string
+    /** 订阅卡价格旁的终生周期标签，也用于账户区终生权益的到期栏。 */
+    lifetimeLabel: string
+    /** 订阅季卡价格下方的省钱标注；未配置的站点不渲染。 */
+    quarterlySavingsLabel?: string
+    dailyLimitLabel: string
+    autoRenewOn: string
+    autoRenewOff: string
+    usageNotice: string
+    loading: string
+    loadFailed: string
+    noPlan: string
+    noChannels: string
+    buyNow: string
+    loginToBuy: string
+    alreadyActive: string
+    creatingOrder: string
+    pendingPaymentTitle: string
+    pendingPayment: string
+    successTitle: string
+    successDescription: string
+    failedTitle: string
+    close: string
+    cancelPayment: string
+    supportMailPrefix: string
+    createFailed: string
+    invalidPaymentData: string
+    priceUpdated: string
+    gatewayFailed: string
+    orderNotFound: string
+    orderExpired: string
+    paymentCanceled: string
+    fulfillmentFailed: string
+    pollFailed: string
+    pollTimeout: string
+    authExpired: string
+    installConfirmTitle: string
+    installConfirmMessage: string
+    installConfirmLinkLabel: string
+    installConfirmCancel: string
+    installConfirmContinue: string
+    reviewReward?: {
+      offerMessage: string
+      reviewButton: string
+      checkingTitle: string
+      checkingMessage: string
+      countdown: string
+      claimingTitle: string
+      claimingMessage: string
+      successTitle: string
+      successMessage: string
+      alreadyClaimedTitle: string
+      alreadyClaimedMessage: string
+      failedTitle: string
+      failedMessage: string
+      busyMessage: string
+      retry: string
+      close: string
+    }
+  }
+  credits: {
+    title: string
+    description: string
+    loading: string
+    loadFailed: string
+    noConfigs: string
+    packageEyebrow: string
+    creditsAmount: string
+    /** Credits 卡价格旁的一次性标注（如 one-time）；未配置的站点不渲染。 */
+    oneTimeLabel?: string
+    buyNow: string
+    loginToBuy: string
+    noChannels: string
+    webOnlyNotice: string
+  }
+  extensionSource: {
+    primaryCta: string
+    signedOutCta: string
+    /** 符合资格账号在插件来源页看到的好评赠送标题。 */
+    reviewRewardTitle?: string
+    /** 好评赠送入口的操作说明。 */
+    reviewRewardDescription?: string
+  }
+  /** 页底购买答疑；未配置的站点不渲染 FAQ 区块。 */
+  faq?: {
+    title: string
+    description?: string
+    items: readonly {
+      question: string
+      answer: string
+    }[]
+  }
+}
+
+const { copy, workspaceCopy, extensionInstallUrl, supportEmail, showHero = false, mode } = Astro.props as {
+  copy: PricingPageContent
+  workspaceCopy: DownloadWorkspaceContent
+  extensionInstallUrl: string
+  /** 商品卡下方展示的支持邮箱；未配置的站点不渲染。 */
+  supportEmail?: string
+  /** 是否渲染页面 hero 标题区（默认关闭，保持既有页面不变）。 */
+  showHero?: boolean
+  /** 路由确定的购买商品类型。 */
+  mode: 'credits' | 'subscription'
+}
+---
+
+<section
+  class="pricing-page"
+  data-pricing-page
+  data-pricing-mode={mode}
+>
+  <script is:inline type="application/json" data-pricing-copy set:html={JSON.stringify(copy)} />
+
+  <div class="container pricing-container">
+    {
+      showHero && (
+        <header class="pricing-hero">
+          <p class="pricing-hero-eyebrow">{copy.hero.eyebrow}</p>
+          <h1 class="pricing-hero-title" data-pricing-hero-title>{copy.hero.title}</h1>
+          <p class="pricing-hero-description" data-pricing-hero-description>{copy.hero.description}</p>
+        </header>
+      )
+    }
+
+    <div class="pricing-account-stack">
+      <aside class="pricing-account" data-pricing-account>
+        <p class="pricing-account-loading" data-pricing-account-loading>
+          {copy.account.loading}
+        </p>
+        <div class="pricing-account-signed-out" data-pricing-account-signed-out hidden>
+          <p class="pricing-account-title">{copy.account.signedOutTitle}</p>
+          <p>{copy.account.signedOutDescription}</p>
+          <button type="button" class="pricing-secondary-button" data-pricing-login>
+            {copy.account.signInCta}
+          </button>
+        </div>
+        <div class="pricing-account-signed-in" data-pricing-account-signed-in hidden>
+          <div class="pricing-account-balance-row">
+            <div class="pricing-account-menu-wrap">
+              <button
+                type="button"
+                class="pricing-avatar"
+                data-pricing-account-button
+                aria-label={workspaceCopy.checkin.accountButtonLabel}
+                aria-expanded="false"
+              >
+                <img class="pricing-avatar-image" data-pricing-user-avatar alt="" hidden />
+                <span class="pricing-avatar-initial" data-pricing-user-initial aria-hidden="true"></span>
+              </button>
+              <div
+                class="pricing-account-menu"
+                data-pricing-account-menu
+                role="menu"
+                aria-label={workspaceCopy.checkin.accountMenuLabel}
+                hidden
+              >
+                <div class="pricing-account-email" data-pricing-account-email role="presentation"></div>
+                <button type="button" class="pricing-account-logout" data-pricing-account-logout role="menuitem">
+                  {workspaceCopy.auth.logout}
+                </button>
+              </div>
+            </div>
+            <p class="pricing-credit-pill" data-pricing-user-credits>
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" class="credits-icon-star">
+                <path d="M12 3.8 14.5 9l5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8L12 3.8Z" />
+              </svg>
+              <!-- 硬币/代币：实心圆盘 + 奶油色内环和中心点，对比自带不透底色（modern 主题显示） -->
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" class="credits-icon-coin">
+                <circle cx="12" cy="12" r="9.5" />
+                <circle cx="12" cy="12" r="5.5" fill="none" stroke="#fef3c7" />
+                <circle cx="12" cy="12" r="1.8" fill="#fef3c7" stroke="none" />
+              </svg>
+              <span data-pricing-user-credits-label></span>
+            </p>
+          </div>
+          <div class="pricing-account-plan-row">
+            <p class="pricing-account-plan-line">
+              <span data-pricing-user-subscription></span>
+              <span aria-hidden="true">·</span>
+              <span data-pricing-user-expires></span>
+            </p>
+            <button
+              type="button"
+              class="pricing-subscription-manage-button"
+              data-pricing-subscription-manage-button
+              hidden
+            >
+              {copy.subscriptionManagement.buttonLabel}
+            </button>
+          </div>
+        </div>
+        <p class="pricing-inline-error" data-pricing-account-error hidden></p>
+      </aside>
+
+      {
+        mode === 'subscription' && copy.subscription.reviewReward &&
+          copy.extensionSource.reviewRewardTitle &&
+          copy.extensionSource.reviewRewardDescription && (
+          <button
+            type="button"
+            class="pricing-review-reward-banner"
+            data-pricing-review-reward-banner
+            hidden
+          >
+            <span class="pricing-review-reward-days" aria-hidden="true">7</span>
+            <span class="pricing-review-reward-content">
+              <span class="pricing-review-reward-title">{copy.extensionSource.reviewRewardTitle}</span>
+              <span class="pricing-review-reward-description">
+                {copy.extensionSource.reviewRewardDescription}
+              </span>
+            </span>
+            <span class="pricing-review-reward-chevron" aria-hidden="true"></span>
+          </button>
+        )
+      }
+    </div>
+
+    <section class="pricing-product-section" aria-label={copy.hero.title}>
+      <div class="pricing-product-list" data-pricing-product-list>
+        {mode === 'credits' && <div class="pricing-credit-list" data-pricing-credit-list>
+          <p class="pricing-inline-status sr-only" role="status">{copy.credits.loading}</p>
+          {[0, 1, 2].map(() => (
+            <div class="pricing-skeleton-card" aria-hidden="true">
+              <span class="pricing-skeleton-eyebrow" />
+              <span class="pricing-skeleton-name" />
+              <span class="pricing-skeleton-price" />
+              <span class="pricing-skeleton-button" />
+            </div>
+          ))}
+        </div>}
+
+        {mode === 'subscription' && <div
+          class="pricing-subscription-list"
+          data-pricing-subscription-list
+        >
+          <p class="pricing-inline-status sr-only" role="status">{copy.subscription.loading}</p>
+          {[0, 1, 2].map(() => (
+            <div class="pricing-skeleton-card" aria-hidden="true">
+              <span class="pricing-skeleton-name" />
+              <span class="pricing-skeleton-eyebrow" />
+              <span class="pricing-skeleton-price" />
+              <span class="pricing-skeleton-button" />
+              <span class="pricing-skeleton-note" />
+              <div class="pricing-skeleton-benefits">
+                <span /><span /><span />
+              </div>
+            </div>
+          ))}
+        </div>}
+      </div>
+      {supportEmail && (
+        <p class="pricing-support-email">
+          {copy.subscription.supportMailPrefix}<a href={`mailto:${supportEmail}`}>{supportEmail}</a>
+        </p>
+      )}
+    </section>
+  </div>
+
+  {
+    copy.faq && (
+      <div class="container pricing-faq-container">
+        <section class="pricing-faq" data-pricing-faq aria-labelledby="pricing-faq-title">
+          <header class="pricing-faq-header">
+            <p class="pricing-faq-eyebrow">FAQ</p>
+            <h2 class="pricing-faq-title" id="pricing-faq-title">
+              {copy.faq.title}
+            </h2>
+            {copy.faq.description && <p class="pricing-faq-description">{copy.faq.description}</p>}
+          </header>
+          <div class="pricing-faq-list">
+            {copy.faq.items.map(item => (
+              <details class="pricing-faq-item" data-pricing-faq-item>
+                <summary class="pricing-faq-question">
+                  <span>{item.question}</span>
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M6 9.5 12 15.5 18 9.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </summary>
+                <p class="pricing-faq-answer">{item.answer}</p>
+              </details>
+            ))}
+          </div>
+        </section>
+      </div>
+    )
+  }
+
+  {mode === 'credits' && <template data-pricing-credit-card-template>
+    <article class="pricing-product-card pricing-credit-card">
+      <p class="pricing-card-eyebrow pricing-card-quota" data-pricing-credit-eyebrow></p>
+      <div class="pricing-credit-price-row">
+        <p class="pricing-credit-price" data-pricing-credit-price></p>
+        {copy.credits.oneTimeLabel && <p class="pricing-credit-period">{copy.credits.oneTimeLabel}</p>}
+      </div>
+      <div class="pricing-credit-meta-row">
+        <p class="pricing-credit-amount" data-pricing-credit-amount></p>
+        <p class="pricing-credit-unit-price" data-pricing-credit-unit-price></p>
+      </div>
+      <p class="pricing-credit-note" data-pricing-credit-note hidden></p>
+      <button
+        type="button"
+        class="pricing-secondary-button"
+        data-pricing-credit-buy
+      ></button>
+    </article>
+  </template>}
+
+  {mode === 'subscription' && <template data-pricing-subscription-card-template>
+    <article class="pricing-product-card pricing-subscription-card" data-pricing-subscription-card>
+      {copy.popularLabel && <p class="pricing-card-badge">{copy.popularLabel}</p>}
+      <p class="pricing-card-name">{copy.subscription.title}</p>
+      <p class="pricing-card-quota">{copy.subscription.eyebrow}</p>
+
+      <div class="pricing-subscription-price-row">
+        <p class="pricing-price" data-pricing-subscription-price></p>
+        <p class="pricing-period" data-pricing-subscription-period></p>
+      </div>
+      <p class="pricing-savings" data-pricing-subscription-savings hidden></p>
+
+      <p class="pricing-inline-error" data-pricing-subscription-error hidden></p>
+      <button
+        type="button"
+        class="pricing-primary-button"
+        data-pricing-subscription-buy
+        data-ga-event="upgrade_cta_click"
+        data-ga-source="pricing"
+        data-ga-location="subscription_card"
+        disabled
+      >
+        {copy.subscription.buyNow}
+      </button>
+      {copy.subscription.trustNote && <p class="pricing-trust-note">{copy.subscription.trustNote}</p>}
+      {
+        copy.subscription.benefits && (
+          <ul class="pricing-benefits">
+            {copy.subscription.benefits.map(benefit => (
+              <li>
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M4.5 12.5 9.8 17.8 19.5 6.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <span>{benefit}</span>
+              </li>
+            ))}
+            <li data-pricing-subscription-billing-row hidden>
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M4.5 12.5 9.8 17.8 19.5 6.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              <span data-pricing-subscription-billing></span>
+            </li>
+          </ul>
+        )
+      }
+    </article>
+  </template>}
+
+  {mode === 'credits' && <template data-pricing-skeleton-template>
+    <div class="pricing-skeleton-card" aria-hidden="true">
+      <span class="pricing-skeleton-eyebrow" />
+      <span class="pricing-skeleton-name" />
+      <span class="pricing-skeleton-price" />
+      <span class="pricing-skeleton-button" />
+    </div>
+  </template>}
+
+  {mode === 'subscription' && <template data-pricing-skeleton-template>
+    <div class="pricing-skeleton-card" aria-hidden="true">
+      <span class="pricing-skeleton-name" />
+      <span class="pricing-skeleton-eyebrow" />
+      <span class="pricing-skeleton-price" />
+      <span class="pricing-skeleton-button" />
+      <span class="pricing-skeleton-note" />
+      <div class="pricing-skeleton-benefits">
+        <span /><span /><span />
+      </div>
+    </div>
+  </template>}
+
+  <PricingAuthModal copy={workspaceCopy} />
+  <OrderCheckoutModal copy={workspaceCopy} />
+  {mode === 'subscription' && copy.subscription.reviewReward && (
+    <PricingSubscriptionConfirmModal copy={copy.subscription} extensionInstallUrl={extensionInstallUrl} />
+  )}
+</section>
+
+<script>
+  import './pricing-page-controller'
+</script>
+
+<style is:global>
+  .pricing-page {
+    padding: clamp(28px, 4vw, 48px) 0 32px;
+  }
+
+  .pricing-container,
+  .pricing-product-section,
+  .pricing-product-list,
+  .pricing-product-card,
+  .pricing-account,
+  .pricing-account-stack {
+    min-width: 0;
+  }
+
+  .pricing-container {
+    display: grid;
+    gap: 40px;
+  }
+
+  .pricing-account,
+  .pricing-product-card {
+    position: relative;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 2px 2px rgba(0, 0, 0, 0.04);
+  }
+
+  .pricing-account-stack {
+    display: grid;
+    gap: 8px;
+    justify-self: start;
+    width: min(420px, 100%);
+  }
+
+  .pricing-account {
+    display: grid;
+    gap: 16px;
+    justify-self: start;
+    width: 100%;
+    padding: 16px;
+    align-content: start;
+  }
+
+  /* light 主题把账户区收成居中的胶囊条，宽度跟随内容；modern 主题保持全宽账户条。 */
+  html:not([data-ui-theme='modern']) .pricing-account-stack {
+    justify-self: center;
+    width: auto;
+    max-width: 100%;
+  }
+
+  html:not([data-ui-theme='modern']) .pricing-account {
+    justify-self: center;
+    width: auto;
+    max-width: 100%;
+    padding: 12px 24px;
+    border-radius: 999px;
+  }
+
+  html:not([data-ui-theme='modern']) .pricing-account-loading {
+    text-align: center;
+  }
+
+  html:not([data-ui-theme='modern']) .pricing-account-signed-out,
+  html:not([data-ui-theme='modern']) .pricing-account-signed-in {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 6px 16px;
+    text-align: center;
+  }
+
+  html:not([data-ui-theme='modern']) .pricing-account-balance-row {
+    justify-content: center;
+  }
+
+  html:not([data-ui-theme='modern']) .pricing-account .pricing-secondary-button {
+    min-height: 36px;
+    border-radius: 999px;
+  }
+
+  .pricing-review-reward-banner {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) 10px;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 72px;
+    padding: 10px 16px 10px 12px;
+    border: 1px solid #cae7ff;
+    border-radius: 16px;
+    background: #f0f7ff;
+    color: var(--color-gray-900);
+    box-shadow: 0 2px 2px rgba(0, 0, 0, 0.04);
+    text-align: left;
+    cursor: pointer;
+    transition:
+      background var(--transition-fast),
+      border-color var(--transition-fast),
+      box-shadow var(--transition-fast);
+  }
+
+  .pricing-review-reward-banner[hidden] {
+    display: none;
+  }
+
+  .pricing-review-reward-days {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    background: #006bff;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .pricing-review-reward-content {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .pricing-review-reward-title {
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 20px;
+    overflow-wrap: anywhere;
+  }
+
+  .pricing-review-reward-description {
+    color: #4d4d4d;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 17px;
+    overflow-wrap: anywhere;
+  }
+
+  .pricing-review-reward-chevron {
+    width: 8px;
+    height: 8px;
+    border-top: 2px solid #006bff;
+    border-right: 2px solid #006bff;
+    transform: rotate(45deg);
+  }
+
+  .pricing-review-reward-banner:hover {
+    border-color: #94ccff;
+    background: #e9f4ff;
+    box-shadow: 0 4px 8px rgba(0, 107, 255, 0.08);
+  }
+
+  .pricing-review-reward-banner:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #006bff;
+  }
+
+  .pricing-card-eyebrow {
+    color: var(--color-primary);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0;
+  }
+
+  /* ---------- Hero（light 主题基样式；modern 主题由消费站点样式覆盖） ---------- */
+  .pricing-hero {
+    display: grid;
+    justify-items: center;
+    gap: 14px;
+    text-align: center;
+  }
+
+  .pricing-hero-eyebrow {
+    color: var(--color-gray-500);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
+
+  .pricing-hero-title {
+    max-width: 720px;
+    color: var(--color-gray-900);
+    font-family: var(--font-display);
+    font-size: clamp(32px, 5vw, 44px);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    text-wrap: balance;
+  }
+
+  .pricing-hero-description {
+    max-width: 600px;
+    color: var(--color-gray-500);
+    font-size: 16px;
+    line-height: 1.65;
+    text-wrap: balance;
+  }
+
+  /* ---------- 商品卡内容（套餐名 / 等宽额度行 / 主推徽章 / 卖点清单 / 保障说明） ---------- */
+  .pricing-card-name {
+    color: var(--color-gray-900);
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.3;
+  }
+
+  .pricing-card-quota {
+    color: var(--color-gray-500);
+    font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    font-weight: 500;
+    letter-spacing: 0;
+  }
+
+  .pricing-card-badge {
+    position: absolute;
+    top: -13px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 4px 14px;
+    border-radius: 999px;
+    background: var(--color-primary);
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    line-height: 18px;
+    white-space: nowrap;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
+  }
+
+  /* 订阅卡徽章只标记列表首张主推卡。 */
+  .pricing-subscription-card > .pricing-card-badge {
+    display: none;
+  }
+
+  .pricing-benefits {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 20px 0 0;
+    border-top: 1px solid var(--color-gray-100);
+    list-style: none;
+  }
+
+  .pricing-benefits li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    color: var(--color-gray-700);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* 仅一条可见权益时居中（隐藏的计费行不计入），多条保持左对齐列表。 */
+  .pricing-benefits li:only-child,
+  .pricing-benefits:has(> li:nth-child(2):last-child[hidden]) > li:first-child {
+    justify-self: center;
+  }
+
+  .pricing-benefits [data-pricing-subscription-billing-row] {
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--color-primary) 8%, white);
+    color: var(--color-primary-dark);
+    font-weight: 700;
+  }
+
+  .pricing-benefits li[hidden] {
+    display: none;
+  }
+
+  .pricing-benefits svg {
+    width: 16px;
+    height: 16px;
+    margin-top: 2px;
+    stroke: var(--color-primary);
+    stroke-width: 2.4;
+    flex: 0 0 auto;
+  }
+
+  .pricing-support-email {
+    margin: 24px auto 0;
+    color: var(--color-gray-700);
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.5;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  /* ---------- 加载骨架卡：与商品卡同框同栅格，光带扫过表示加载中 ---------- */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .pricing-skeleton-card {
+    display: grid;
+    align-content: start;
+    gap: 12px;
+    padding: 24px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 2px 2px rgba(0, 0, 0, 0.04);
+  }
+
+  .pricing-skeleton-name,
+  .pricing-skeleton-eyebrow,
+  .pricing-skeleton-price,
+  .pricing-skeleton-note,
+  .pricing-skeleton-benefits span {
+    display: block;
+    border-radius: 7px;
+    background: linear-gradient(90deg, var(--color-gray-100) 32%, var(--color-gray-50) 50%, var(--color-gray-100) 68%);
+    background-size: 200% 100%;
+    animation: pricing-skeleton-sweep 1.4s ease-in-out infinite;
+  }
+
+  .pricing-skeleton-name {
+    width: 56%;
+    height: 18px;
+  }
+
+  .pricing-skeleton-eyebrow {
+    width: 36%;
+    height: 12px;
+  }
+
+  .pricing-skeleton-price {
+    width: 46%;
+    height: 34px;
+  }
+
+  .pricing-skeleton-note {
+    width: 52%;
+    height: 12px;
+    justify-self: center;
+  }
+
+  .pricing-skeleton-button {
+    display: block;
+    min-height: 48px;
+    border-radius: 10px;
+    background: linear-gradient(90deg, var(--color-gray-100) 32%, var(--color-gray-50) 50%, var(--color-gray-100) 68%);
+    background-size: 200% 100%;
+    animation: pricing-skeleton-sweep 1.4s ease-in-out infinite;
+  }
+
+  .pricing-skeleton-benefits {
+    display: grid;
+    gap: 10px;
+    padding-top: 20px;
+    border-top: 1px solid var(--color-gray-100);
+  }
+
+  .pricing-skeleton-benefits span:nth-child(1) {
+    width: 82%;
+  }
+
+  .pricing-skeleton-benefits span:nth-child(2) {
+    width: 68%;
+  }
+
+  .pricing-skeleton-benefits span:nth-child(3) {
+    width: 76%;
+  }
+
+  @keyframes pricing-skeleton-sweep {
+    from {
+      background-position: 180% 0;
+    }
+    to {
+      background-position: -80% 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pricing-skeleton-name,
+    .pricing-skeleton-eyebrow,
+    .pricing-skeleton-price,
+    .pricing-skeleton-note,
+    .pricing-skeleton-benefits span,
+    .pricing-skeleton-button {
+      animation: none;
+    }
+  }
+
+  .pricing-support-email a {
+    color: var(--color-primary);
+    font-weight: 800;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+
+  .pricing-support-email a:hover {
+    color: var(--color-primary-dark);
+  }
+
+  .pricing-support-email a:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  .pricing-trust-note {
+    margin-top: -4px;
+    color: var(--color-gray-400);
+    font-size: 12.5px;
+    line-height: 1.4;
+    text-align: center;
+  }
+
+  /* Credits 主推卡（controller 标记的中间档）：蓝描边 + 实心 CTA。 */
+  .pricing-credit-card.is-featured {
+    border: 2px solid var(--color-primary);
+  }
+
+  .pricing-credit-card.is-featured .pricing-secondary-button {
+    border: 0;
+    background: var(--color-primary);
+    color: #ffffff;
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.22);
+  }
+
+  .pricing-credit-card.is-featured .pricing-secondary-button:hover:not(:disabled) {
+    background: var(--color-primary-dark);
+  }
+
+  .pricing-account-signed-out p,
+  .pricing-inline-status,
+  .pricing-credit-note {
+    color: var(--color-gray-600);
+    font-size: 14px;
+    line-height: 1.65;
+  }
+
+  .pricing-account-signed-out,
+  .pricing-account-signed-in,
+  .pricing-credit-card,
+  .pricing-subscription-card {
+    display: grid;
+    gap: 10px;
+  }
+
+  .pricing-account-title {
+    color: var(--color-gray-900);
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1.35;
+  }
+
+  .pricing-product-section {
+    display: grid;
+    gap: 16px;
+  }
+
+  .pricing-account-balance-row,
+  .pricing-account-plan-row,
+  .pricing-account-plan-line {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .pricing-account-balance-row {
+    justify-content: flex-start;
+  }
+
+  .pricing-account-plan-row,
+  .pricing-account-plan-line {
+    flex-wrap: wrap;
+  }
+
+  .pricing-account-plan-line {
+    color: var(--color-gray-700);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.5;
+  }
+
+  .pricing-subscription-manage-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 0 10px;
+    border: 1px solid rgba(15, 23, 42, 0.14);
+    border-radius: 6px;
+    background: #ffffff;
+    color: var(--color-gray-700);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition:
+      color var(--transition-fast),
+      background var(--transition-fast),
+      border-color var(--transition-fast);
+  }
+
+  .pricing-subscription-manage-button[hidden] {
+    display: none;
+  }
+
+  .pricing-subscription-manage-button:hover {
+    border-color: rgba(15, 23, 42, 0.24);
+    background: rgba(15, 23, 42, 0.04);
+    color: var(--color-gray-900);
+  }
+
+  .pricing-subscription-manage-button:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+  }
+
+  .pricing-avatar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    overflow: hidden;
+    border-radius: 999px;
+    border: 0;
+    background:
+      radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.38), transparent 34%),
+      linear-gradient(135deg, #0f172a, #2563eb);
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 16px;
+    cursor: pointer;
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.2);
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  }
+
+  .pricing-avatar:hover {
+    transform: translateY(-1px);
+  }
+
+  .pricing-avatar:focus-visible,
+  .pricing-account-logout:focus-visible {
+    outline: 2px solid rgba(37, 99, 235, 0.34);
+    outline-offset: 3px;
+  }
+
+  .pricing-account-menu-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+  }
+
+  .pricing-account-menu[hidden],
+  .pricing-avatar-image[hidden],
+  .pricing-avatar-initial[hidden] {
+    display: none;
+  }
+
+  .pricing-account-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 30;
+    width: min(280px, calc(100vw - 36px));
+    padding: 8px;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 22px 56px rgba(15, 23, 42, 0.16);
+    backdrop-filter: blur(18px);
+  }
+
+  .pricing-account-email {
+    width: 100%;
+    min-width: 0;
+    padding: 8px 14px 12px;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    color: var(--color-gray-600);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.35;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    user-select: text;
+  }
+
+  .pricing-account-logout {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 44px;
+    margin-top: 6px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 12px;
+    color: var(--color-gray-900);
+    background: transparent;
+    font-size: 14px;
+    font-weight: 800;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .pricing-account-logout:hover {
+    background: rgba(15, 23, 42, 0.06);
+  }
+
+  .pricing-avatar-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .pricing-avatar-initial {
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  .pricing-credit-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 40px;
+    min-width: 0;
+    padding: 0 14px;
+    border: 1px solid rgba(245, 158, 11, 0.26);
+    border-radius: 999px;
+    color: var(--color-gray-900);
+    background:
+      linear-gradient(135deg, rgba(255, 247, 237, 0.98), rgba(239, 246, 255, 0.94)),
+      white;
+    box-shadow: 0 14px 30px rgba(245, 158, 11, 0.14);
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .pricing-credit-pill svg {
+    width: 18px;
+    height: 18px;
+    fill: #f59e0b;
+    stroke: #b45309;
+    stroke-linejoin: round;
+    stroke-width: 0.7;
+    flex: 0 0 auto;
+  }
+
+  /* 积分图标按主题分叉：modern 主题用硬币，其他主题保留星形。 */
+  .pricing-credit-pill .credits-icon-coin {
+    display: none;
+  }
+
+  html[data-ui-theme='modern'] .pricing-credit-pill .credits-icon-star {
+    display: none;
+  }
+
+  html[data-ui-theme='modern'] .pricing-credit-pill .credits-icon-coin {
+    display: inline;
+  }
+
+  .pricing-product-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+  }
+
+  .pricing-credit-list,
+  .pricing-subscription-list {
+    display: contents;
+  }
+
+  .pricing-product-card {
+    display: grid;
+    align-content: start;
+    gap: 12px;
+    padding: 24px;
+    background: #ffffff;
+  }
+
+  .pricing-credit-price {
+    color: var(--color-gray-700);
+    font-size: 16px;
+    font-weight: 800;
+  }
+
+  /* light 主题的 Credits 卡按「套餐名 → 额度行 → 大价格」重排；modern 主题保持自有结构。 */
+  html:not([data-ui-theme='modern']) .pricing-credit-meta-row {
+    order: -2;
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+
+  html:not([data-ui-theme='modern']) .pricing-credit-card .pricing-card-quota {
+    order: -1;
+  }
+
+  html:not([data-ui-theme='modern']) .pricing-credit-amount {
+    font-family: var(--font-display);
+    font-size: 18px;
+    color: var(--color-gray-900);
+  }
+
+  html:not([data-ui-theme='modern']) .pricing-credit-unit-price {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-gray-400);
+  }
+
+  html:not([data-ui-theme='modern']) .pricing-credit-price-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  html:not([data-ui-theme='modern']) .pricing-credit-price {
+    color: var(--color-gray-900);
+    font-family: var(--font-display);
+    font-size: 36px;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+
+  html:not([data-ui-theme='modern']) .pricing-credit-period {
+    color: var(--color-gray-500);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  html:not([data-ui-theme='modern']) .pricing-credit-note {
+    justify-self: start;
+    color: var(--color-gray-500);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .pricing-credit-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.03);
+  }
+
+  .pricing-credit-amount,
+  .pricing-credit-unit-price {
+    margin: 0;
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.35;
+  }
+
+  .pricing-credit-amount {
+    color: var(--color-gray-900);
+  }
+
+  .pricing-credit-unit-price {
+    color: var(--color-gray-600);
+    overflow-wrap: anywhere;
+    text-align: right;
+  }
+
+  .pricing-credit-note {
+    color: var(--color-primary);
+    font-size: 14px;
+    font-weight: 900;
+    line-height: 1.35;
+  }
+
+  .pricing-subscription-price-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .pricing-price {
+    color: var(--color-gray-900);
+    font-family: var(--font-display);
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+
+  .pricing-period {
+    color: var(--color-gray-500);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  /* 季卡价格下方的省钱标注；非季卡由 controller 保持 hidden。 */
+  .pricing-savings {
+    justify-self: start;
+    margin-top: -6px;
+    color: var(--color-primary);
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.35;
+  }
+
+  .pricing-savings[hidden] {
+    display: none;
+  }
+
+  .pricing-primary-button,
+  .pricing-secondary-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    padding: 0 18px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    transition:
+      color var(--transition-fast),
+      background var(--transition-fast),
+      border-color var(--transition-fast),
+      box-shadow var(--transition-fast),
+      transform var(--transition-fast);
+  }
+
+  .pricing-primary-button {
+    width: 100%;
+    border: 0;
+    color: #ffffff;
+    background: var(--color-primary);
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.22);
+  }
+
+  .pricing-secondary-button {
+    border: 1px solid var(--color-gray-300);
+    background: #ffffff;
+    color: var(--color-gray-900);
+  }
+
+  /* 订阅页用居中三卡布局（月 / 季 / 终生）；移动端由全局断点收回单列。 */
+  .pricing-page[data-pricing-mode='subscription'] .pricing-container {
+    max-width: 1140px;
+    margin-inline: auto;
+  }
+
+  .pricing-page[data-pricing-mode='subscription'] .pricing-account-stack,
+  .pricing-page[data-pricing-mode='subscription'] .pricing-account {
+    justify-self: stretch;
+    width: 100%;
+  }
+
+  /* light 主题订阅页的账户胶囊跟随内容宽度，好评横幅保持通栏。 */
+  html:not([data-ui-theme='modern']) .pricing-page[data-pricing-mode='subscription'] .pricing-account {
+    justify-self: center;
+    width: auto;
+    max-width: 100%;
+  }
+
+  .pricing-page[data-pricing-mode='subscription'] .pricing-product-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  /* 首张订阅卡（默认月卡）保持主推蓝描边与徽章。 */
+  .pricing-page[data-pricing-mode='subscription'] .pricing-subscription-card:first-child {
+    border: 2px solid var(--color-primary);
+  }
+
+  .pricing-page[data-pricing-mode='subscription'] .pricing-subscription-card:first-child > .pricing-card-badge {
+    display: block;
+  }
+
+  /* 订阅页在较矮的桌面视口需要减少区块间的空白，
+     确保完整订阅卡在无需滚动时即可被比较和确认。 */
+  @media (min-width: 961px) and (max-height: 900px) {
+    .pricing-page[data-pricing-mode='subscription'] {
+      padding-top: 24px;
+    }
+
+    .pricing-page[data-pricing-mode='subscription'] .pricing-container {
+      gap: 24px;
+    }
+
+    .pricing-page[data-pricing-mode='subscription'] .pricing-hero {
+      gap: 10px;
+    }
+
+    .pricing-page[data-pricing-mode='subscription'] .pricing-hero-title {
+      font-size: 40px;
+    }
+
+    .pricing-page[data-pricing-mode='subscription'] .pricing-hero-description {
+      line-height: 1.5;
+    }
+
+    .pricing-page[data-pricing-mode='subscription'] .pricing-subscription-card {
+      gap: 8px;
+      padding: 20px 24px;
+    }
+
+    .pricing-page[data-pricing-mode='subscription'] .pricing-subscription-card .pricing-primary-button {
+      min-height: 44px;
+    }
+  }
+
+  @media (min-width: 961px) and (max-height: 800px) {
+    .pricing-page[data-pricing-mode='subscription'] {
+      padding-top: 16px;
+    }
+
+    .pricing-page[data-pricing-mode='subscription'] .pricing-container {
+      gap: 16px;
+    }
+
+    .pricing-page[data-pricing-mode='subscription'] .pricing-hero-title {
+      font-size: 36px;
+    }
+
+    .pricing-page[data-pricing-mode='subscription'] .pricing-hero-description {
+      font-size: 15px;
+    }
+
+    .pricing-page[data-pricing-mode='subscription'] .pricing-subscription-card {
+      padding-block: 16px;
+    }
+  }
+
+  .pricing-primary-button:hover:not(:disabled):not(.is-soft-disabled) {
+    background: var(--color-primary-dark);
+    box-shadow: 0 10px 22px rgba(37, 99, 235, 0.26);
+  }
+
+  .pricing-secondary-button:hover:not(:disabled) {
+    border-color: var(--color-gray-400);
+    background: var(--color-gray-50);
+  }
+
+  .pricing-primary-button:disabled,
+  .pricing-secondary-button:disabled,
+  .pricing-primary-button.is-soft-disabled {
+    cursor: not-allowed;
+    color: var(--color-gray-500);
+    background: rgba(15, 23, 42, 0.05);
+    box-shadow: none;
+  }
+
+  .pricing-inline-error {
+    padding: 10px 12px;
+    border: 1px solid rgba(220, 38, 38, 0.18);
+    border-radius: 6px;
+    color: #991b1b;
+    background: rgba(254, 226, 226, 0.7);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.5;
+  }
+
+  /* ---------- 页底购买答疑（仅 copy.faq 配置时渲染，与 hero 同套居中排版） ---------- */
+  .pricing-faq-container {
+    margin-top: 72px;
+  }
+
+  .pricing-faq {
+    display: grid;
+    justify-items: center;
+    gap: 36px;
+    max-width: 720px;
+    margin-inline: auto;
+  }
+
+  .pricing-faq-header {
+    display: grid;
+    justify-items: center;
+    gap: 14px;
+    text-align: center;
+  }
+
+  .pricing-faq-eyebrow {
+    color: var(--color-gray-500);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
+
+  .pricing-faq-title {
+    color: var(--color-gray-900);
+    font-size: clamp(26px, 3.4vw, 34px);
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+
+  .pricing-faq-description {
+    max-width: 560px;
+    color: var(--color-gray-600);
+    font-size: 15px;
+    line-height: 1.7;
+  }
+
+  .pricing-faq-list {
+    display: grid;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .pricing-faq-item {
+    border: 1px solid var(--color-gray-200);
+    border-radius: 16px;
+    background: #ffffff;
+    transition:
+      border-color var(--transition-fast),
+      box-shadow var(--transition-fast);
+  }
+
+  .pricing-faq-item[open] {
+    border-color: rgba(37, 99, 235, 0.35);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  }
+
+  .pricing-faq-question {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 20px;
+    cursor: pointer;
+    color: var(--color-gray-900);
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.5;
+    list-style: none;
+  }
+
+  .pricing-faq-question::-webkit-details-marker {
+    display: none;
+  }
+
+  .pricing-faq-question svg {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    stroke: var(--color-gray-500);
+    stroke-width: 2;
+    transition: transform var(--transition-fast);
+  }
+
+  .pricing-faq-item[open] .pricing-faq-question svg {
+    transform: rotate(180deg);
+    stroke: var(--color-primary);
+  }
+
+  .pricing-faq-answer {
+    padding: 0 20px 18px;
+    color: var(--color-gray-600);
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  @media (max-width: 960px) {
+    .pricing-account-stack {
+      justify-self: stretch;
+      width: 100%;
+    }
+
+    .pricing-account {
+      justify-self: stretch;
+    }
+
+    .pricing-product-list {
+      grid-template-columns: 1fr;
+    }
+
+    /* 订阅三卡规则带更高优先级，需要在窄屏显式收回单列。 */
+    .pricing-page[data-pricing-mode='subscription'] .pricing-product-list {
+      grid-template-columns: 1fr;
+    }
+
+  }
+</style>

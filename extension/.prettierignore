@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+dist-ssr/
+dist.zip
+
+# Testing
+tests/
+
+# Documentation
+docs/
+
+# Backend (Python)
+backend/
+
+# Config files that shouldn't be formatted
+*.config.js
+*.config.ts
+vite.config.ts
+tsconfig.json
+pnpm-lock.yaml
+
+# Scripts
+scripts/
+
+# IDE
+.vscode/
+.idea/
+
+# Other
+.claude/
+*.log

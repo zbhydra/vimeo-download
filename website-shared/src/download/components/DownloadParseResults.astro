@@ -1,0 +1,255 @@
+---
+import type { DownloadWorkspaceContent } from '../schema'
+
+const {
+  copy,
+  installUrl,
+  headingLevel = 'h1',
+  showLargeFileExtensionGuideByDefault = false,
+  showParseSkeleton = false
+} = Astro.props as {
+  copy: DownloadWorkspaceContent
+  installUrl: string
+  headingLevel?: 'h1' | 'h2' | 'p'
+  showLargeFileExtensionGuideByDefault?: boolean
+  showParseSkeleton?: boolean
+}
+const HeadingTag = headingLevel
+const ContentHeadingTag = headingLevel === 'h2' ? 'h3' : 'h2'
+const titleClass = [
+  'download-panel-title',
+  'download-results-title',
+  headingLevel === 'p' ? 'download-results-caption' : ''
+]
+  .filter(Boolean)
+  .join(' ')
+const helperText = copy.parse.helperText
+const clearInputLabel = copy.parse.clearInput ?? 'Clear input'
+const largeFileExtensionInline = {
+  chromeTitle:
+    copy.parse.largeFileExtensionInlineChromeTitle ??
+    'Chrome Extension',
+  chromeDescription:
+    copy.parse.largeFileExtensionInlineChromeDescription ??
+    'Dedicated extension for Chrome to keep large Vimeo downloads running outside the tab.',
+  chromeCta:
+    copy.parse.largeFileExtensionInlineChromeCta ??
+    'Install Extension',
+  edgeTitle:
+    copy.parse.largeFileExtensionInlineEdgeTitle ??
+    'Edge Extension',
+  edgeDescription:
+    copy.parse.largeFileExtensionInlineEdgeDescription ??
+    'Dedicated extension for Microsoft Edge, ready for large Vimeo downloads.',
+  edgeCta:
+    copy.parse.largeFileExtensionInlineEdgeCta ??
+    'Install Extension'
+}
+---
+
+<div class="download-results-panel" data-download-results-panel data-panel="parse">
+  <div class="download-results-heading" data-download-results-heading>
+    <HeadingTag class={titleClass}>{copy.parse.title}</HeadingTag>
+    <div class="download-account-entry" data-download-account-entry hidden>
+      <div class="download-account-menu-wrap">
+        <button
+          type="button"
+          class="download-account-button"
+          data-download-account-button
+          aria-label={copy.checkin.accountButtonLabel}
+          aria-expanded="false"
+        >
+          <img
+            class="download-account-avatar"
+            data-download-account-avatar
+            alt=""
+            hidden
+          />
+          <span data-download-account-initial aria-hidden="true"></span>
+        </button>
+        <div
+          class="download-account-menu"
+          data-download-account-menu
+          role="menu"
+          aria-label={copy.checkin.accountMenuLabel}
+          hidden
+        >
+          <div
+            class="download-account-email"
+            data-download-account-email
+            role="presentation"
+          ></div>
+          <button type="button" class="download-account-logout" data-download-account-logout role="menuitem">
+            {copy.auth.logout}
+          </button>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="download-credits-pill"
+        data-download-credits-pill
+        aria-label={copy.checkin.creditsButtonLabel}
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" class="credits-icon-star">
+          <path d="M12 3.8 14.5 9l5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8L12 3.8Z" />
+        </svg>
+        <!-- 硬币/代币：实心圆盘 + 奶油色内环和中心点，对比自带不透底色（modern 主题显示） -->
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" class="credits-icon-coin">
+          <circle cx="12" cy="12" r="9.5" />
+          <circle cx="12" cy="12" r="5.5" fill="none" stroke="#fef3c7" />
+          <circle cx="12" cy="12" r="1.8" fill="#fef3c7" stroke="none" />
+        </svg>
+        <span data-download-credits-label>{copy.checkin.creditsLoading}</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="download-parse-form" data-download-parse-form>
+    <div class="download-field">
+      <div class="download-parse-row">
+        <div class="download-parse-input-shell">
+          <input
+            type="text"
+            class="download-input download-parse-input"
+            placeholder={copy.parse.linkPlaceholder}
+            data-download-parse-input
+          />
+          <button
+            type="button"
+            class="download-parse-clear-button"
+            data-download-parse-clear
+            aria-label={clearInputLabel}
+            title={clearInputLabel}
+            hidden
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6" />
+            </svg>
+          </button>
+        </div>
+        <button type="button" class="download-primary-button download-parse-submit" data-download-parse-submit>
+          {copy.parse.submit}
+        </button>
+      </div>
+      <div class="download-pending-resume-actions" data-download-pending-resume-actions hidden>
+        <p class="download-pending-resume-hint" data-download-pending-resume-hint>
+          {copy.parse.resumeNotice ?? 'Detected an unfinished download. Continue?'}
+        </p>
+        <div class="download-pending-resume-buttons">
+          <button
+            type="button"
+            class="download-primary-button download-pending-resume-button"
+            data-download-pending-resume-continue
+          >
+            {copy.parse.resumeAction ?? 'Continue'}
+          </button>
+          <button
+            type="button"
+            class="download-secondary-button download-pending-resume-button"
+            data-download-pending-resume-dismiss
+          >
+            {copy.parse.resumeDismiss ?? 'Ignore'}
+          </button>
+        </div>
+      </div>
+    </div>
+    <p class="download-inline-error" data-download-parse-error role="alert" hidden></p>
+  </div>
+
+  <div class="download-results-list" data-download-results></div>
+
+  {showParseSkeleton && (
+    <div
+      class="download-parse-skeleton"
+      data-download-parse-skeleton
+      role="status"
+      aria-live="polite"
+      hidden
+    >
+      <div class="download-skeleton-thumb" aria-hidden="true"></div>
+      <div class="download-skeleton-copy" aria-hidden="true">
+        <div class="download-skeleton-line"></div>
+        <div class="download-skeleton-line"></div>
+      </div>
+      <span class="sr-only">{copy.parse.submitting}</span>
+    </div>
+  )}
+
+  <div class="download-results-actions" data-download-results-actions hidden>
+    <button type="button" class="download-primary-button download-all-button" data-download-all-button>
+      {copy.parse.downloadAll ?? 'Download all'}
+    </button>
+  </div>
+
+  <section
+    class="download-large-file-extension-inline"
+    data-download-large-file-extension-inline
+    data-download-large-file-extension-default={showLargeFileExtensionGuideByDefault ? 'true' : 'false'}
+    hidden={!showLargeFileExtensionGuideByDefault}
+  >
+    <article class="download-large-file-extension-card">
+      <img
+        class="download-large-file-extension-logo download-large-file-extension-logo-chrome"
+        src="/googe-ext-logo-192px.svg"
+        alt=""
+        width="50"
+        height="50"
+        loading={showLargeFileExtensionGuideByDefault ? 'eager' : 'lazy'}
+        fetchpriority={showLargeFileExtensionGuideByDefault ? 'high' : undefined}
+        aria-hidden="true"
+      />
+      <ContentHeadingTag class="download-large-file-extension-title">
+        {largeFileExtensionInline.chromeTitle}
+      </ContentHeadingTag>
+      <p>{largeFileExtensionInline.chromeDescription}</p>
+      <a
+        href={installUrl}
+        target="_blank"
+        rel="noopener"
+        data-download-large-file-extension-inline-link
+        data-download-large-file-extension-inline-chrome-link
+        data-ga-event="extension_recommended_click"
+        data-ga-source="large_file_extension_inline_chrome"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M12 3v11m0 0 4-4m-4 4-4-4M5 19h14" />
+        </svg>
+        <span>{largeFileExtensionInline.chromeCta}</span>
+      </a>
+    </article>
+
+    <article class="download-large-file-extension-card">
+      <img
+        class="download-large-file-extension-logo download-large-file-extension-logo-edge"
+        src="/microsoftLogoHeader.svg"
+        alt=""
+        width="50"
+        height="50"
+        loading={showLargeFileExtensionGuideByDefault ? 'eager' : 'lazy'}
+        aria-hidden="true"
+      />
+      <ContentHeadingTag class="download-large-file-extension-title">
+        {largeFileExtensionInline.edgeTitle}
+      </ContentHeadingTag>
+      <p>{largeFileExtensionInline.edgeDescription}</p>
+      <a
+        href={installUrl}
+        target="_blank"
+        rel="noopener"
+        data-download-large-file-extension-inline-link
+        data-download-large-file-extension-inline-edge-link
+        data-ga-event="extension_recommended_click"
+        data-ga-source="large_file_extension_inline_edge"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M12 3v11m0 0 4-4m-4 4-4-4M5 19h14" />
+        </svg>
+        <span>{largeFileExtensionInline.edgeCta}</span>
+      </a>
+    </article>
+  </section>
+
+  {helperText && <p class="download-results-helper">{helperText}</p>}
+
+</div>

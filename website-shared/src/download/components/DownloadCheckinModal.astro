@@ -1,0 +1,69 @@
+---
+import type { DownloadWorkspaceContent } from '../schema'
+
+const { copy } = Astro.props as {
+  copy: DownloadWorkspaceContent
+}
+---
+
+<div class="download-checkin-modal" data-download-checkin-modal hidden>
+  <div class="download-checkin-backdrop" data-download-checkin-close></div>
+  <section
+    class="download-checkin-card"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="download-checkin-title"
+  >
+    <button
+      type="button"
+      class="download-checkin-close"
+      data-download-checkin-close
+      aria-label={copy.checkin.close}
+      title={copy.checkin.close}
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6" />
+      </svg>
+    </button>
+
+    <div class="download-checkin-hero" aria-hidden="true">
+      <svg viewBox="0 0 96 96" focusable="false">
+        <path class="download-checkin-hero-shadow" d="M18 64c0 12 11 20 30 20s30-8 30-20-11-20-30-20-30 8-30 20Z" />
+        <path class="download-checkin-hero-ticket" d="M24 35c0-7 6-13 13-13h22c7 0 13 6 13 13v28c0 7-6 13-13 13H37c-7 0-13-6-13-13V35Z" />
+        <g class="download-checkin-hero-star">
+          <path d="m48 32 4.4 8.9 9.8 1.4-7.1 6.9 1.7 9.8-8.8-4.6-8.8 4.6 1.7-9.8-7.1-6.9 9.8-1.4L48 32Z" />
+        </g>
+        <!-- 硬币/代币（modern 主题显示）：琥珀外圈 + 浅色内盘 -->
+        <g class="download-checkin-hero-coin">
+          <circle cx="48" cy="48" r="24" />
+          <circle cx="48" cy="48" r="15" fill="#fde68a" />
+        </g>
+      </svg>
+    </div>
+
+    <div class="download-checkin-copy">
+      <h2 id="download-checkin-title" data-download-checkin-title>
+        {copy.checkin.title}
+      </h2>
+      <p class="download-checkin-result" data-download-checkin-result hidden></p>
+    </div>
+
+    <p class="download-checkin-today-reward" data-download-checkin-today-reward></p>
+
+    <div class="download-checkin-next" data-download-checkin-next hidden>
+      <p data-download-checkin-countdown></p>
+      <p data-download-checkin-next-at></p>
+    </div>
+
+    <p class="download-checkin-error" data-download-checkin-error role="alert" hidden></p>
+
+    <div class="download-checkin-actions">
+      <button type="button" class="download-primary-button download-checkin-claim" data-download-checkin-claim>
+        {copy.checkin.claimButton}
+      </button>
+      <button type="button" class="download-secondary-button download-checkin-dismiss" data-download-checkin-dismiss>
+        {copy.checkin.notNow}
+      </button>
+    </div>
+  </section>
+</div>

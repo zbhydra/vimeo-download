@@ -1,0 +1,182 @@
+Vimeo Video Downloader — Save Vimeo Videos, Audio and Cover Images in Chrome
+
+A Chrome extension for Vimeo viewers who want a local copy of the video they are already watching, with an in-page panel for video, audio and cover image downloads.
+
+
+WHAT IT IS
+
+Vimeo Video Downloader is a Chrome extension for Vimeo pages (vimeo.com, www.vimeo.com and player.vimeo.com). It reads the playback information that the Vimeo player on the page has already loaded and turns it into download buttons for the video, its audio track and its cover image.
+
+It is not a Vimeo client, not a bot, and not a standalone downloader. It runs entirely inside the Vimeo page you already have open and only works on the video that page is currently playing.
+
+
+WHO THIS IS FOR
+
+You have probably landed on this page because you want one of the following:
+
+1. A local copy of a video you are watching
+   You can play the video in your browser but there is no save option on the page.
+
+2. A specific quality instead of the default
+   You want the 720p or 1080p file, or just the audio track, rather than whatever the player happens to stream.
+
+3. The cover image
+   You want the video's poster image as a separate file.
+
+4. Several files without repeating the same clicks
+   You want to pick several items from the popup list and queue them in one go.
+
+If none of these match, your browser's own save options may already be enough and you do not need this extension.
+
+
+CORE FEATURES
+
+### In-page download panel
+When a Vimeo video page loads, the extension adds a small panel next to the video's title area with three rows:
+
+- Video - one button per available video quality
+- Audio - one button per available audio track
+- Image - the cover image
+
+Each row shows a dash instead of a button when that kind of file is not available for the current video. The panel is rebuilt when you navigate to another video without reloading the page.
+
+### Video downloads
+Save the video as an MP4 file. Depending on what the Vimeo player exposes for that video, you may see:
+
+- Progressive MP4 entries labelled with their resolution, for example "720p MP4" or "1080p MP4"
+- Adaptive entries labelled "1080p HD", where the video and audio tracks are combined into a single MP4 before saving
+- A fallback entry labelled "1080p HLS" for videos that only offer that delivery
+- A "Best" button that picks the highest quality available for that video
+
+Only the qualities Vimeo actually serves for that video are listed. The extension does not invent, upscale or transcode anything.
+
+### Audio downloads
+Save the audio track on its own as an M4A file. Buttons are labelled with the audio bitrate (for example "128 kbps"), plus a "Best Audio" button that picks the highest available bitrate.
+
+### Cover image download
+Save the video's cover image as a JPEG file.
+
+### Popup resource list
+Click the extension icon to see every downloadable item the current tab has resolved:
+
+- Grouped by type, with counts for video, audio and image
+- Download a single item, a checked selection, or everything in the list
+- Live progress, transfer speed and per-item status
+- Clear the list and rescan the page
+
+### Batch downloads
+Downloads run through one queue, so you can queue several items at once without opening a new tab per file. Items are written to disk one after another.
+
+### Large files
+Files that Chrome can fetch by itself are handed to Chrome's own download manager, so the transfer keeps going independently of the page. Adaptive (segmented) videos have to be assembled inside the page, and that path has a memory budget: by default a segmented video larger than 768 MB is not offered for download, and a download is stopped if it grows past that budget while running.
+
+This budget is configurable from the extension's own remote configuration, so it can be raised or lowered without shipping a new version.
+
+### Built for Vimeo's page behaviour
+Vimeo is a single-page application. The extension watches for navigation between videos and rebuilds the panel for the video you are actually on, instead of showing stale entries from the previous one.
+
+### Independent of the player's own download button
+The extension does not click anything in the Vimeo player for you. It reads the playback configuration the player already loaded in your browser and offers its own save buttons.
+
+
+HOW IT WORKS
+
+1. Install the extension from the Chrome Web Store
+2. Pin the icon to your toolbar for quick access
+3. Open any video page on vimeo.com or player.vimeo.com and start playing the video
+4. A download panel appears next to the video title with the Video, Audio and Image rows
+5. Click the quality you want, or open the extension icon for the full list
+6. The file is written by your browser to your local disk
+
+Signing in is optional. It is only used for your daily download allowance and for your subscription status; it is not needed for the extension to read the page.
+
+
+WHAT IT WORKS FOR, AND WHAT IT DOES NOT DO
+
+Works for:
+- Videos that play in your own browser on vimeo.com, www.vimeo.com and player.vimeo.com
+- Choosing a specific quality or the audio track instead of the default stream
+- Saving the cover image
+- Queueing several items from the same page
+
+Does not do:
+- Download private, password-protected, paid or otherwise access-restricted Vimeo videos. These are Vimeo's own access controls and the extension cannot and does not bypass them - if the player cannot play the video in your browser, the extension cannot save it either
+- Remove or bypass DRM
+- Read information the page has not already loaded
+- Work on sites other than Vimeo
+- Work on the Vimeo desktop or mobile apps - this is a browser extension only
+- Run any background crawling or scraping
+
+
+FREQUENTLY ASKED QUESTIONS
+
+Q: Do I need an account to use the extension?
+A: No. You can download without signing in. Signing in is optional and only affects your daily download allowance and your subscription status.
+
+Q: Can it download private, password-protected or paid Vimeo videos?
+A: No. Those restrictions are enforced by Vimeo, not by this extension. The extension only sees the playback information that Vimeo has already delivered to your browser for a video you are able to play. It does not unlock, guess or bypass anything.
+
+Q: Which qualities can I get?
+A: Whatever Vimeo serves for that specific video. Typical pages offer several progressive MP4 resolutions and/or an adaptive stream, and the highest available option is always offered as "Best". If a higher resolution is not in the list, Vimeo is not serving it to your browser.
+
+Q: Why is there a size limit on some downloads?
+A: Files that Chrome can fetch directly have no limit added by the extension. Segmented (adaptive) videos have to be combined inside the page, which uses memory, so a budget is applied. It is configurable from the extension's remote configuration and defaults to 768 MB.
+
+Q: Does the extension upload my data anywhere?
+A: The media itself never passes through any server operated by the developers. Video, audio and image files go from Vimeo's servers to your own browser and then to your local disk. The extension talks to the developer's API only for sign-in, your daily download allowance, your subscription status and a small remote settings file.
+
+Q: What permissions does the extension need?
+A: storage (save your settings and sign-in state), identity (Google sign-in through Chrome's own authorization window), downloads (write files to your disk), and access to Vimeo pages and Vimeo's media CDN so the panel can be shown and the files can be fetched.
+
+Q: Is it free?
+A: There is a free daily download allowance, and a new account or device starts with an unlimited first day. A paid Unlimited plan is available for higher or unlimited daily downloads. The full list is on the pricing page of the extension's website.
+
+Q: Which browsers are supported?
+A: Chrome and other Chromium-based browsers such as Edge and Brave.
+
+Q: Does it work on every Vimeo page?
+A: It works on video pages on vimeo.com, www.vimeo.com and player.vimeo.com. Pages that do not play a single video - profiles, feeds, search results - have nothing for the extension to read.
+
+Q: What file formats are produced?
+A: MP4 for video, M4A for audio, JPEG for the cover image.
+
+
+TECHNICAL NOTES
+
+- Browser: Chrome, Edge, Brave and other Chromium-based browsers
+- Manifest V3
+- Host permissions: vimeo.com, www.vimeo.com, player.vimeo.com and Vimeo's media CDN hosts
+- Downloads: direct files go through Chrome's own download manager; segmented videos are assembled in the page
+- Adaptive video memory budget: 768 MB by default, configurable remotely
+- UI languages: 14 locales
+
+
+SUPPORTED UI LANGUAGES
+
+- English
+- Chinese (Simplified and Traditional)
+- Japanese
+- Korean
+- German
+- Spanish
+- French
+- Italian
+- Portuguese
+- Russian
+- Indonesian
+- Thai
+- Vietnamese
+
+
+INSTALL
+
+If you want a local copy of a Vimeo video you are already able to watch, install Vimeo Video Downloader from the Chrome Web Store. The extension only activates on Vimeo pages.
+
+
+LEGAL AND COMPLIANCE
+
+This extension is an independently developed third-party tool. It is not affiliated with, endorsed by, or connected to Vimeo, Inc. Vimeo is a trademark of Vimeo, Inc.
+
+The extension is intended for saving content you already have legitimate access to. You are responsible for complying with applicable copyright law, local regulation, and the terms of service of Vimeo and of the content's original author. Do not use this extension to redistribute copyrighted material, to circumvent access controls of content you are not entitled to, or for any unauthorised purpose.
+
+The extension runs locally inside your browser. The developers do not operate any server that receives, stores or relays the media you download, and the extension does not collect the videos, audio or images you save.

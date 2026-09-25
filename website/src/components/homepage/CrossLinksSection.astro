@@ -1,0 +1,111 @@
+---
+/**
+ * 平台互链区块
+ *
+ * 首页和平台落地页共用，展示指向其他平台下载工具的卡片网格。
+ */
+import type { PlatformCrossLinkMessage } from '../../i18n/schema'
+
+interface Props {
+  /** 区块标题 */
+  title: string
+  /** 互链卡片列表 */
+  items: PlatformCrossLinkMessage[]
+  /** 当前 locale 路径前缀，如 '/' 或 '/zh-cn/' */
+  localePath: string
+  /** GA 事件 source 标识 */
+  gaSource: string
+}
+
+const { title, items, localePath, gaSource } = Astro.props as Props
+---
+
+<section class="crosslinks">
+  <div class="container">
+    <h2>{title}</h2>
+    <div class="crosslinks-grid">
+      {items.map(item => (
+        <a
+          href={`${localePath}${item.href.replace(/^\//, '')}`}
+          class="crosslink-card"
+          data-ga-event="internal_workflow_click"
+          data-ga-source={gaSource}
+        >
+          <h3>{item.label}</h3>
+          <p>{item.description}</p>
+        </a>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .crosslinks {
+    padding: 24px 0 68px;
+  }
+
+  .crosslinks h2 {
+    font-size: clamp(1.75rem, 3vw, 2.5rem);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    text-align: center;
+    margin-bottom: 24px;
+  }
+
+  .crosslinks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 18px;
+  }
+
+  .crosslink-card {
+    display: block;
+    padding: 28px;
+    border-radius: 28px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.88)),
+      radial-gradient(circle at top right, rgba(37, 99, 235, 0.06), transparent 44%);
+    box-shadow: 0 20px 52px rgba(15, 23, 42, 0.07);
+    text-decoration: none;
+    color: inherit;
+    transition:
+      border-color var(--transition-normal),
+      box-shadow var(--transition-normal);
+  }
+
+  .crosslink-card:hover {
+    border-color: rgba(37, 99, 235, 0.18);
+    box-shadow: 0 24px 64px rgba(37, 99, 235, 0.12);
+  }
+
+  .crosslink-card h3 {
+    font-size: 20px;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+
+  .crosslink-card p {
+    margin-top: 10px;
+    color: var(--color-gray-600);
+    font-size: 15px;
+    line-height: 1.65;
+  }
+
+  @media (max-width: 960px) {
+    .crosslinks-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .crosslinks {
+      padding-bottom: 48px;
+    }
+
+    .crosslink-card {
+      padding: 22px;
+      border-radius: 22px;
+    }
+  }
+</style>

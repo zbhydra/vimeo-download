@@ -1,0 +1,99 @@
+/**
+ * Vimeo 页面下载面板样式。
+ *
+ * 面板保持轻量、跟随标题区宽度，不使用浮层，避免覆盖 Vimeo 原生控件。
+ */
+
+.vdl-vimeo-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin: 12px 0;
+  padding: 10px 0;
+  font-family: inherit;
+}
+
+.vdl-vimeo-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 32px;
+}
+
+.vdl-vimeo-row-label {
+  flex: 0 0 56px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.vdl-vimeo-option {
+  display: inline-grid;
+  place-items: center;
+  min-width: 72px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid rgba(15, 23, 42, 0.18);
+  border-radius: 6px;
+  background: #ffffff;
+  color: #111827;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 30px;
+  letter-spacing: 0;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+/* 隐形伪元素预留本地化忙碌文案宽度，百分比变化不会推动相邻按钮。 */
+.vdl-vimeo-option::after {
+  grid-area: 1 / 1;
+  visibility: hidden;
+  content: attr(data-vdl-busy-label);
+  pointer-events: none;
+}
+
+.vdl-vimeo-option-label {
+  grid-area: 1 / 1;
+}
+
+.vdl-vimeo-option:hover:not(:disabled) {
+  border-color: #00adef;
+  color: #0369a1;
+  background: #f0f9ff;
+}
+
+.vdl-vimeo-option.is-primary {
+  border-color: #00adef;
+  background: #00adef;
+  color: #ffffff;
+}
+
+.vdl-vimeo-option.is-primary:hover:not(:disabled) {
+  background: #0284c7;
+  color: #ffffff;
+}
+
+.vdl-vimeo-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.vdl-vimeo-option.is-downloading:disabled {
+  cursor: wait;
+  opacity: 1;
+}
+
+.vdl-vimeo-option:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px #ffffff,
+    0 0 0 4px #006bff;
+}

@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "Vimeo Video Downloader",
+    "description": "Nama ekstensi Chrome Web Store"
+  },
+  "extensionDescription": {
+    "message": "Unduh video, audio, dan gambar sampul dari vimeo.com dan player.vimeo.com dalam kualitas yang tersedia.",
+    "description": "Deskripsi ekstensi Chrome Web Store - maks 132 karakter"
+  },
+  "actionTitle": {
+    "message": "Buka Vimeo Downloader",
+    "description": "Browser action title"
+  }
+}

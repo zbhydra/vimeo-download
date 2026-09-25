@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "Vimeo Video Downloader",
+    "description": "Tên tiện ích mở rộng Chrome Web Store"
+  },
+  "extensionDescription": {
+    "message": "Tải video, âm thanh và ảnh bìa từ vimeo.com và player.vimeo.com với mọi chất lượng có sẵn.",
+    "description": "Mô tả tiện ích mở rộng Chrome Web Store - tối đa 132 ký tự"
+  },
+  "actionTitle": {
+    "message": "Mở Vimeo Downloader",
+    "description": "Browser action title"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "registers": [
+    "src/content/content-register.ts",
+    "src/injected/injected-register.ts",
+    "src/background/background-register.ts"
+  ],
+  "generatedFiles": [
+    "src/popup/rpc/content.rpc.ts",
+    "src/background/rpc/content.rpc.ts",
+    "src/content/rpc/injected.rpc.ts",
+    "src/content/rpc/background.rpc.ts",
+    "src/popup/rpc/background.rpc.ts"
+  ]
+}

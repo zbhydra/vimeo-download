@@ -1,0 +1,774 @@
+---
+/**
+ * 公共订单 checkout 弹窗 DOM 壳。
+ *
+ * 所有购买入口共用两个 dialog：
+ * - 支付方式选择：展示调用方传入的商品摘要和渠道
+ * - 订单等待：外部支付页打开后轮询订单状态
+ */
+import type { DownloadWorkspaceContent } from '../../download/schema'
+import type { OrderCheckoutCopy } from './order-checkout-types'
+
+const { copy, deferController = false } = Astro.props as {
+  copy: DownloadWorkspaceContent
+  /** 是否由下载工作区渐进加载入口统一加载 controller。 */
+  deferController?: boolean
+}
+const creditCopy = copy.creditPurchase
+const checkoutCopy: OrderCheckoutCopy = {
+  paymentMethodLabel: creditCopy.paymentMethodLabel ?? 'Choose payment method',
+  paymentTitle: creditCopy.paymentTitle ?? creditCopy.paymentMethodLabel ?? 'Choose payment method',
+  selectedPackageLabel: creditCopy.selectedPackageLabel ?? 'Selected package',
+  confirmPurchase: creditCopy.confirmPurchase ?? creditCopy.buyNow,
+  backToProducts: creditCopy.backToProducts ?? 'Back',
+  close: creditCopy.close,
+  agreementText: creditCopy.agreementText,
+  creatingOrder: creditCopy.creatingOrder,
+  pendingPayment: creditCopy.pendingPayment,
+  pendingPaymentTitle: creditCopy.pendingPaymentTitle ?? 'Waiting for payment',
+  cancelPayment: creditCopy.cancelPayment ?? creditCopy.close,
+  supportMailPrefix: creditCopy.supportMailPrefix ?? 'Report an issue: ',
+  successTitle: creditCopy.successTitle,
+  successDescription: creditCopy.successDescription,
+  failed: creditCopy.failed,
+  createFailed: creditCopy.createFailed,
+  invalidPaymentData: creditCopy.invalidPaymentData,
+  priceUpdated: creditCopy.priceUpdated,
+  gatewayFailed: creditCopy.gatewayFailed,
+  paymentCanceled: creditCopy.paymentCanceled ?? creditCopy.failed,
+  pollFailed: creditCopy.pollFailed,
+  pollTimeout: creditCopy.pollTimeout,
+  orderNotFound: creditCopy.orderNotFound,
+  orderExpired: creditCopy.orderExpired,
+  fulfillmentFailed: creditCopy.fulfillmentFailed,
+  authExpired: creditCopy.authExpired
+}
+---
+
+<div
+  class="order-checkout-modal"
+  data-order-checkout-modal
+  data-clink-methods={creditCopy.clinkMethods}
+  data-defer-controller={deferController ? 'true' : undefined}
+  hidden
+>
+  <script
+    is:inline
+    type="application/json"
+    data-order-checkout-copy
+    set:html={JSON.stringify(checkoutCopy)}
+  />
+
+  <div class="order-checkout-backdrop" aria-hidden="true"></div>
+
+  <section
+    class="order-checkout-payment-dialog"
+    data-order-checkout-payment-dialog
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="order-checkout-payment-title"
+    hidden
+  >
+    <header class="order-checkout-payment-header">
+      <div>
+        <p class="order-checkout-payment-kicker">{checkoutCopy.paymentMethodLabel}</p>
+        <h2 id="order-checkout-payment-title" data-order-checkout-payment-title>
+          {checkoutCopy.paymentTitle}
+        </h2>
+      </div>
+      <button
+        type="button"
+        class="order-checkout-close"
+        data-order-checkout-close
+        aria-label={checkoutCopy.close}
+      >
+        <span aria-hidden="true">×</span>
+      </button>
+    </header>
+
+    <main class="order-checkout-payment-middle">
+      <p class="order-checkout-error" data-order-checkout-payment-error role="alert" hidden></p>
+      <section class="order-checkout-selected-summary" data-order-checkout-selected-summary>
+        <p class="order-checkout-selected-label">{checkoutCopy.selectedPackageLabel}</p>
+        <div class="order-checkout-selected-values">
+          <p data-order-checkout-selected-title></p>
+          <p data-order-checkout-selected-price></p>
+        </div>
+        <p class="order-checkout-selected-usage" data-order-checkout-selected-usage hidden></p>
+      </section>
+      <div class="order-checkout-channel-list" data-order-checkout-channel-list></div>
+    </main>
+
+    <footer class="order-checkout-payment-footer">
+      <label class="order-checkout-agreement">
+        <input type="checkbox" data-order-checkout-agreement checked />
+        <span>
+          {checkoutCopy.agreementText}
+          {' '}
+          <a href="/terms" target="_blank" rel="noopener" data-order-checkout-terms>
+            {copy.auth.termsLink}
+          </a>
+          <span aria-hidden="true"> · </span>
+          <a href="/privacy" target="_blank" rel="noopener" data-order-checkout-privacy>
+            {copy.auth.privacyLink}
+          </a>
+        </span>
+      </label>
+      <div class="order-checkout-payment-actions">
+        <button type="button" class="order-checkout-back" data-order-checkout-back>
+          {checkoutCopy.backToProducts}
+        </button>
+        <button type="button" class="order-checkout-submit" data-order-checkout-submit>
+          {checkoutCopy.confirmPurchase}
+        </button>
+      </div>
+    </footer>
+  </section>
+
+  <section
+    class="order-checkout-order-dialog"
+    data-order-checkout-order-dialog
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="order-checkout-order-title"
+    hidden
+  >
+    <header class="order-checkout-order-header">
+      <h2 id="order-checkout-order-title" data-order-checkout-order-title>
+        {checkoutCopy.pendingPaymentTitle}
+      </h2>
+      <p data-order-checkout-order-message>
+        {checkoutCopy.pendingPayment}
+      </p>
+    </header>
+
+    <main class="order-checkout-order-middle" aria-live="polite">
+      <div class="order-checkout-order-spinner" data-order-checkout-order-spinner aria-hidden="true"></div>
+      <div class="order-checkout-success" data-order-checkout-success-panel aria-live="polite" hidden>
+        <div class="order-checkout-success-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M9.2 16.6 4.9 12.3l1.7-1.7 2.6 2.6 8.2-8.2 1.7 1.7-9.9 9.9Z"></path>
+          </svg>
+        </div>
+        <div class="order-checkout-success-copy">
+          <p class="order-checkout-success-primary" data-order-checkout-success-primary hidden></p>
+          <p class="order-checkout-success-secondary" data-order-checkout-success-secondary hidden></p>
+        </div>
+      </div>
+      <p class="order-checkout-order-error" data-order-checkout-order-error role="alert" hidden></p>
+      <p class="order-checkout-order-support" data-order-checkout-order-support hidden><span data-order-checkout-order-support-prefix></span><a data-order-checkout-order-support-mail href=""></a></p>
+    </main>
+
+    <footer class="order-checkout-order-footer">
+      <button
+        type="button"
+        class="order-checkout-order-cancel"
+        data-order-checkout-close
+        data-order-checkout-order-close
+      >
+        {checkoutCopy.cancelPayment}
+      </button>
+    </footer>
+  </section>
+</div>
+
+<script>
+  const modal = document.querySelector<HTMLElement>('[data-order-checkout-modal]')
+  if (modal?.dataset.deferController !== 'true') {
+    void import('./order-checkout-controller').catch(error => {
+      console.error(
+        new Error('[order-checkout-modal] Failed to load the checkout controller.', {
+          cause: error
+        })
+      )
+    })
+  }
+</script>
+
+<style is:global>
+  .order-checkout-modal[hidden],
+  .order-checkout-payment-dialog[hidden],
+  .order-checkout-order-dialog[hidden],
+  .order-checkout-success[hidden] {
+    display: none;
+  }
+
+  .order-checkout-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 145;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    color: var(--color-gray-900);
+  }
+
+  .order-checkout-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.46);
+    backdrop-filter: blur(14px);
+  }
+
+  .order-checkout-payment-dialog {
+    position: relative;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    width: min(620px, calc(100vw - 48px));
+    max-height: min(680px, calc(100vh - 48px));
+    overflow: hidden;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 26px;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 34px 90px rgba(15, 23, 42, 0.2);
+  }
+
+  .order-checkout-payment-header,
+  .order-checkout-payment-footer {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 0 28px;
+    border-color: rgba(15, 23, 42, 0.08);
+    background: rgba(255, 255, 255, 0.72);
+  }
+
+  .order-checkout-payment-header {
+    min-height: 92px;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  }
+
+  .order-checkout-payment-footer {
+    align-items: center;
+    min-height: 118px;
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
+  }
+
+  .order-checkout-payment-header h2 {
+    margin: 0;
+    color: var(--color-gray-900);
+    font-size: 32px;
+    line-height: 1;
+    letter-spacing: 0;
+  }
+
+  .order-checkout-payment-kicker {
+    margin: 0 0 6px;
+    color: var(--color-primary);
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 0;
+  }
+
+  .order-checkout-close {
+    display: inline-grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.04);
+    color: var(--color-gray-700);
+    cursor: pointer;
+    font-size: 26px;
+    line-height: 1;
+    transition:
+      background 160ms ease,
+      border-color 160ms ease,
+      color 160ms ease;
+  }
+
+  .order-checkout-close:hover {
+    border-color: rgba(37, 99, 235, 0.24);
+    background: rgba(37, 99, 235, 0.08);
+    color: var(--color-primary);
+  }
+
+  .order-checkout-payment-middle {
+    display: grid;
+    align-content: start;
+    gap: 16px;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 24px 28px;
+  }
+
+  .order-checkout-error,
+  .order-checkout-order-error,
+  .order-checkout-order-support {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.55;
+  }
+
+  .order-checkout-error,
+  .order-checkout-order-error {
+    padding: 12px 14px;
+    border: 1px solid rgba(220, 38, 38, 0.16);
+    border-radius: 16px;
+    background: rgba(254, 242, 242, 0.92);
+    color: #b91c1c;
+  }
+
+  .order-checkout-order-error {
+    width: min(520px, 100%);
+    text-align: center;
+  }
+
+  .order-checkout-selected-summary {
+    display: grid;
+    gap: 10px;
+    padding: 18px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.82);
+  }
+
+  .order-checkout-selected-label,
+  .order-checkout-selected-values p {
+    margin: 0;
+  }
+
+  .order-checkout-selected-label {
+    color: var(--color-gray-500);
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .order-checkout-selected-values {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 10px 14px;
+  }
+
+  .order-checkout-selected-values p:first-child {
+    color: var(--color-gray-900);
+    font-size: 24px;
+    font-weight: 950;
+    letter-spacing: 0;
+  }
+
+  .order-checkout-selected-values p:last-child {
+    color: var(--color-gray-700);
+    font-size: 18px;
+    font-weight: 900;
+  }
+
+  .order-checkout-selected-usage {
+    margin: 0;
+    color: var(--color-primary);
+    font-size: 14px;
+    font-weight: 900;
+    line-height: 1.35;
+  }
+
+  .order-checkout-channel-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .order-checkout-channel-button {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    min-height: 64px;
+    padding: 0 18px;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.72);
+    color: var(--color-gray-700);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 900;
+    transition:
+      border-color 160ms ease,
+      background 160ms ease,
+      color 160ms ease,
+      transform 160ms ease;
+  }
+
+  .order-checkout-channel-button.is-selected,
+  .order-checkout-channel-button:hover {
+    border-color: rgba(37, 99, 235, 0.34);
+    background: rgba(37, 99, 235, 0.08);
+    color: var(--color-primary);
+    transform: translateY(-1px);
+  }
+
+  .order-checkout-channel-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 auto;
+  }
+
+  .order-checkout-channel-icon img {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  .order-checkout-channel-label {
+    min-width: 0;
+  }
+
+  .order-checkout-channel-button:has(.order-checkout-channel-methods) {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 2px 12px;
+    align-content: center;
+    padding-block: 8px;
+    text-align: left;
+  }
+
+  .order-checkout-channel-button:has(.order-checkout-channel-methods) .order-checkout-channel-icon {
+    grid-row: 1 / 3;
+  }
+
+  .order-checkout-channel-button:has(.order-checkout-channel-methods) .order-checkout-channel-icon img {
+    width: 34px;
+    height: 34px;
+  }
+
+  .order-checkout-channel-methods {
+    grid-column: 2 / -1;
+    color: var(--color-gray-600);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  .order-checkout-agreement {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-width: 0;
+    color: var(--color-gray-600);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.45;
+  }
+
+  .order-checkout-agreement input {
+    width: 18px;
+    height: 18px;
+    margin-top: 1px;
+    accent-color: var(--color-primary);
+    flex: 0 0 auto;
+  }
+
+  .order-checkout-agreement a,
+  .order-checkout-order-support a {
+    color: var(--color-primary);
+    text-decoration: none;
+  }
+
+  .order-checkout-agreement a:hover,
+  .order-checkout-order-support a:hover {
+    text-decoration: underline;
+  }
+
+  .order-checkout-payment-actions {
+    display: flex;
+    gap: 10px;
+    flex: 0 0 auto;
+  }
+
+  .order-checkout-back,
+  .order-checkout-submit,
+  .order-checkout-order-cancel {
+    min-height: 52px;
+    border-radius: 16px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 900;
+    transition:
+      border-color 160ms ease,
+      background 160ms ease,
+      box-shadow 160ms ease,
+      opacity 160ms ease,
+      transform 160ms ease;
+  }
+
+  .order-checkout-back,
+  .order-checkout-order-cancel {
+    padding: 0 18px;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    background: rgba(255, 255, 255, 0.78);
+    color: var(--color-gray-900);
+  }
+
+  .order-checkout-back:hover,
+  .order-checkout-order-cancel:hover {
+    border-color: rgba(37, 99, 235, 0.24);
+    color: var(--color-primary);
+    transform: translateY(-1px);
+  }
+
+  .order-checkout-submit {
+    min-width: 180px;
+    padding: 0 22px;
+    border: 0;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #ffffff;
+    box-shadow: 0 18px 34px rgba(37, 99, 235, 0.24);
+  }
+
+  .order-checkout-submit:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 22px 44px rgba(37, 99, 235, 0.3);
+  }
+
+  .order-checkout-submit:disabled {
+    cursor: not-allowed;
+    opacity: 0.58;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .order-checkout-order-dialog {
+    position: relative;
+    display: grid;
+    grid-template-rows: auto minmax(150px, 1fr) auto;
+    width: min(700px, calc(100vw - 48px));
+    max-height: min(540px, calc(100vh - 48px));
+    overflow: hidden;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 34px 90px rgba(15, 23, 42, 0.2);
+  }
+
+  .order-checkout-order-header {
+    padding: 28px 32px 22px;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  }
+
+  .order-checkout-order-header h2 {
+    margin: 0;
+    color: var(--color-gray-900);
+    font-size: clamp(28px, 3.2vw, 36px);
+    line-height: 1.04;
+    letter-spacing: 0;
+  }
+
+  .order-checkout-order-header p {
+    max-width: 560px;
+    margin: 12px 0 0;
+    color: var(--color-gray-600);
+    font-size: clamp(14px, 1.7vw, 17px);
+    font-weight: 700;
+    line-height: 1.45;
+  }
+
+  .order-checkout-order-middle {
+    display: grid;
+    place-items: center;
+    gap: 16px;
+    min-height: 0;
+    padding: 28px 32px;
+  }
+
+  .order-checkout-order-spinner {
+    width: 64px;
+    height: 64px;
+    border: 6px solid rgba(37, 99, 235, 0.12);
+    border-top-color: var(--color-primary);
+    border-radius: 999px;
+    transform-origin: 50% 50%;
+    will-change: transform;
+    animation: orderCheckoutSpin 800ms linear infinite;
+  }
+
+  .order-checkout-success {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 14px;
+    width: min(430px, 100%);
+    padding: 16px 18px;
+    border: 1px solid rgba(22, 163, 74, 0.22);
+    border-radius: 22px;
+    background: linear-gradient(135deg, rgba(240, 253, 244, 0.98), rgba(255, 255, 255, 0.98));
+    box-shadow:
+      0 18px 42px rgba(22, 101, 52, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  }
+
+  .order-checkout-success-mark {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: #ffffff;
+    box-shadow: 0 12px 24px rgba(22, 163, 74, 0.24);
+  }
+
+  .order-checkout-success-mark svg {
+    width: 22px;
+    height: 22px;
+    fill: currentColor;
+  }
+
+  .order-checkout-success-copy {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .order-checkout-success p {
+    margin: 0;
+    color: #166534;
+    line-height: 1.25;
+  }
+
+  .order-checkout-success-primary {
+    font-size: 18px;
+    font-weight: 900;
+  }
+
+  .order-checkout-success-secondary {
+    font-size: 13px;
+    font-weight: 800;
+    opacity: 0.78;
+  }
+
+  .order-checkout-order-support {
+    width: min(520px, 100%);
+    color: var(--color-gray-600);
+    text-align: center;
+  }
+
+  .order-checkout-order-footer {
+    display: flex;
+    justify-content: center;
+    padding: 0 32px 30px;
+  }
+
+  .order-checkout-order-cancel {
+    width: min(100%, 260px);
+    padding: 0 20px;
+  }
+
+  .order-checkout-close:focus-visible,
+  .order-checkout-submit:focus-visible,
+  .order-checkout-channel-button:focus-visible,
+  .order-checkout-back:focus-visible,
+  .order-checkout-order-cancel:focus-visible,
+  .order-checkout-agreement input:focus-visible,
+  .order-checkout-agreement a:focus-visible,
+  .order-checkout-order-support a:focus-visible {
+    outline: 2px solid rgba(37, 99, 235, 0.34);
+    outline-offset: 3px;
+  }
+
+  @keyframes orderCheckoutSpin {
+    from {
+      transform: rotate(0deg);
+    }
+
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .order-checkout-submit,
+    .order-checkout-channel-button,
+    .order-checkout-back,
+    .order-checkout-order-cancel {
+      transition: none;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .order-checkout-modal {
+      padding: 12px;
+    }
+
+    .order-checkout-order-dialog,
+    .order-checkout-payment-dialog {
+      width: calc(100vw - 24px);
+      max-height: calc(100vh - 24px);
+      border-radius: 22px;
+    }
+
+    .order-checkout-payment-header,
+    .order-checkout-payment-footer {
+      padding: 0 18px;
+    }
+
+    .order-checkout-payment-header h2 {
+      font-size: 24px;
+    }
+
+    .order-checkout-channel-button,
+    .order-checkout-submit,
+    .order-checkout-back {
+      width: 100%;
+    }
+
+    .order-checkout-payment-middle {
+      padding: 22px 18px;
+    }
+
+    .order-checkout-payment-footer {
+      align-items: stretch;
+      flex-direction: column;
+      justify-content: center;
+      padding: 18px;
+    }
+
+    .order-checkout-payment-actions {
+      width: 100%;
+      flex-direction: column-reverse;
+    }
+
+    .order-checkout-order-header {
+      padding: 28px 22px 22px;
+    }
+
+    .order-checkout-order-middle {
+      min-height: 170px;
+      padding: 28px 22px;
+    }
+
+    .order-checkout-order-footer {
+      padding: 0 22px 24px;
+    }
+  }
+
+  /* 手机浏览器的 100vh 含工具栏后方区域，会把底部「继续支付」等按钮藏在工具栏后；支持动态视口单位时只占可视高度。 */
+  @supports (height: 100dvh) {
+    .order-checkout-modal {
+      height: 100dvh;
+    }
+
+    .order-checkout-payment-dialog {
+      max-height: min(680px, calc(100dvh - 48px));
+    }
+
+    .order-checkout-order-dialog {
+      max-height: min(540px, calc(100dvh - 48px));
+    }
+
+    @media (max-width: 760px) {
+      .order-checkout-order-dialog,
+      .order-checkout-payment-dialog {
+        max-height: calc(100dvh - 24px);
+      }
+    }
+  }
+</style>

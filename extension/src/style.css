@@ -1,0 +1,45 @@
+/* Popup shell and login component CSS variables */
+:root {
+  /*
+   * 单视频面板固定宽度：高度随内容生长到上限后由面板内部滚动。
+   *
+   * 宽度不足时被裁掉的部分不会出现滚动条，只能靠宽度本身解决，所以下限取固定区的
+   * 实际排版宽度（headless Chromium 按真实 locale 文案 + SF Pro 度量，最坏状态＝未登录
+   * + 额度可见 + 升级 CTA + 刷新按钮可见）：header 功能控件最宽 574.7px（fr-FR），
+   * footer 整句单行最宽 470.8px（ja-JP）。672px 在两者之上留有余量，距 Chrome 800px
+   * 上限仍有 128px。header 并排放不下时控件折到第二行（见 AppHeader.vue），文案不省略。
+   */
+  --popup-width: 672px;
+  --popup-min-height: 300px;
+  /* Chrome/Edge 对 popup 的硬上限是 800×600，高度不可超过 600，超出部分被浏览器裁掉。 */
+  --popup-max-height: 600px;
+  --login-primary: #2563eb;
+  --login-primary-dark: #1d4ed8;
+  --login-primary-darkest: #1e40af;
+  --login-gray-50: #f8fafc;
+  --login-gray-100: #f1f5f9;
+  --login-gray-200: #e2e8f0;
+  --login-gray-300: #cbd5e1;
+  --login-gray-400: #94a3b8;
+  --login-gray-500: #64748b;
+  --login-gray-600: #475569;
+  --login-gray-800: #1e293b;
+  --login-gray-900: #0f172a;
+  --login-error: #ef4444;
+  --login-error-bg: #fef2f2;
+  --login-success: #22c55e;
+  --login-success-bg: #f0fdf4;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  width: var(--popup-width);
+  min-height: var(--popup-min-height);
+  max-height: var(--popup-max-height);
+  overflow: hidden;
+}

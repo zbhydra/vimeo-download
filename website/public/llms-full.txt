@@ -1,0 +1,72 @@
+# Vimeo Video Downloader
+
+> Full content index for Vimeo Video Downloader. Use this file when `/llms.txt` is too compact and an AI agent needs the main product pages, language entrances, technical indexes, and update pages.
+
+## Core Product
+
+- [Vimeo Video Downloader Home](https://vimeo-video-downloader.example/): Main Vimeo download entry with link parsing, resolution selection, and troubleshooting.
+- [Vimeo Downloader](https://vimeo-video-downloader.example/vimeo-downloader/): Dedicated Vimeo downloader landing page with supported link formats and download steps.
+- [Pricing](https://vimeo-video-downloader.example/pricing/): Credits packages and Unlimited plan for the browser extension.
+- [About Vimeo Video Downloader](https://vimeo-video-downloader.example/about/): Product identity, website and extension responsibilities, privacy principles, and access boundaries.
+- [Contact Vimeo Video Downloader](https://vimeo-video-downloader.example/contact/): Public support channel for account, download, extension, billing, and privacy questions.
+- [Short LLMs index](https://vimeo-video-downloader.example/llms.txt): Compact AI-readable summary of the website and its highest-value pages.
+
+## Platform Downloader
+
+- [Vimeo Downloader](https://vimeo-video-downloader.example/vimeo-downloader/): Parse public Vimeo video links on vimeo.com, www.vimeo.com, and player.vimeo.com, then download the available renditions in the resolution you pick.
+
+## Language Entrances
+
+- [English](https://vimeo-video-downloader.example/): English homepage.
+- [Simplified Chinese](https://vimeo-video-downloader.example/zh-cn/): Simplified Chinese homepage.
+- [Traditional Chinese](https://vimeo-video-downloader.example/zh-tw/): Traditional Chinese homepage.
+- [Japanese](https://vimeo-video-downloader.example/ja/): Japanese homepage.
+- [Korean](https://vimeo-video-downloader.example/ko/): Korean homepage.
+- [Spanish](https://vimeo-video-downloader.example/es/): Spanish homepage.
+- [Portuguese](https://vimeo-video-downloader.example/pt/): Portuguese homepage.
+- [German](https://vimeo-video-downloader.example/de/): German homepage.
+- [French](https://vimeo-video-downloader.example/fr/): French homepage.
+- [Russian](https://vimeo-video-downloader.example/ru/): Russian homepage.
+- [Italian](https://vimeo-video-downloader.example/it/): Italian homepage.
+- [Vietnamese](https://vimeo-video-downloader.example/vi/): Vietnamese homepage.
+- [Thai](https://vimeo-video-downloader.example/th/): Thai homepage.
+- [Indonesian](https://vimeo-video-downloader.example/id/): Indonesian homepage.
+
+## Updates
+
+- [Changelog](https://vimeo-video-downloader.example/changelog/): Product release notes and Vimeo download workflow updates.
+
+## Technical Indexes
+
+- [Sitemap index](https://vimeo-video-downloader.example/sitemap.xml): Main XML sitemap index exposed through robots.txt.
+- [Sitemap index alias](https://vimeo-video-downloader.example/sitemap_index.xml): Alias with the same sitemap index content.
+- [Flat sitemap](https://vimeo-video-downloader.example/sitemap-0.xml): Flat XML sitemap containing all canonical website URLs.
+- [English sitemap](https://vimeo-video-downloader.example/en-sitemap.xml): English canonical pages.
+- [Simplified Chinese sitemap](https://vimeo-video-downloader.example/zh-cn-sitemap.xml): Simplified Chinese canonical pages.
+- [Traditional Chinese sitemap](https://vimeo-video-downloader.example/zh-tw-sitemap.xml): Traditional Chinese canonical pages.
+- [Japanese sitemap](https://vimeo-video-downloader.example/ja-sitemap.xml): Japanese canonical pages.
+- [Korean sitemap](https://vimeo-video-downloader.example/ko-sitemap.xml): Korean canonical pages.
+- [Spanish sitemap](https://vimeo-video-downloader.example/es-sitemap.xml): Spanish canonical pages.
+- [Portuguese sitemap](https://vimeo-video-downloader.example/pt-br-sitemap.xml): Portuguese canonical pages.
+- [German sitemap](https://vimeo-video-downloader.example/de-sitemap.xml): German canonical pages.
+- [French sitemap](https://vimeo-video-downloader.example/fr-sitemap.xml): French canonical pages.
+- [Russian sitemap](https://vimeo-video-downloader.example/ru-sitemap.xml): Russian canonical pages.
+- [Italian sitemap](https://vimeo-video-downloader.example/it-sitemap.xml): Italian canonical pages.
+- [Vietnamese sitemap](https://vimeo-video-downloader.example/vi-sitemap.xml): Vietnamese canonical pages.
+- [Thai sitemap](https://vimeo-video-downloader.example/th-sitemap.xml): Thai canonical pages.
+- [Indonesian sitemap](https://vimeo-video-downloader.example/id-sitemap.xml): Indonesian canonical pages.
+
+## Key Facts
+
+- Product name: Vimeo Video Downloader.
+- Site domain: `vimeo-video-downloader.example`.
+- Platform type: Browser website for public Vimeo links; the browser extension adds larger and queued downloads.
+- Supported source platform: Vimeo only.
+- Language coverage: 14 locales using per-language sitemap files.
+- Safety boundary: Vimeo Video Downloader never asks for Vimeo or Google passwords, verification codes, API credentials, or session files.
+
+## Contact
+
+- [About](https://vimeo-video-downloader.example/about/)
+- [Contact](https://vimeo-video-downloader.example/contact/)
+- [Changelog](https://vimeo-video-downloader.example/changelog/)
