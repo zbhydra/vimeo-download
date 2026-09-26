@@ -3,13 +3,12 @@
   /*
    * 单视频面板固定宽度：高度随内容生长到上限后由面板内部滚动。
    *
-   * 宽度不足时被裁掉的部分不会出现滚动条，只能靠宽度本身解决，所以下限取固定区的
-   * 实际排版宽度（headless Chromium 按真实 locale 文案 + SF Pro 度量，最坏状态＝未登录
-   * + 额度可见 + 升级 CTA + 刷新按钮可见）：header 功能控件最宽 574.7px（fr-FR），
-   * footer 整句单行最宽 470.8px（ja-JP）。672px 在两者之上留有余量，距 Chrome 800px
-   * 上限仍有 128px。header 并排放不下时控件折到第二行（见 AppHeader.vue），文案不省略。
+   * 宽度不足时被裁掉的部分不会出现滚动条，只能靠宽度本身解决：header 控件并排放不下时
+   * 折到第二行（flex-wrap，见 AppHeader.vue），footer 句子长于一行时换行（overflow-wrap）。
+   * 448px = 初版 672px 应用户要求缩小三分之一（2026-09-26）；窄宽下最宽 locale（fr-FR
+   * header 约 575px）折为两行属预期，文案不裁切。
    */
-  --popup-width: 672px;
+  --popup-width: 448px;
   --popup-min-height: 300px;
   /* Chrome/Edge 对 popup 的硬上限是 800×600，高度不可超过 600，超出部分被浏览器裁掉。 */
   --popup-max-height: 600px;

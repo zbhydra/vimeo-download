@@ -2,6 +2,15 @@
 
 > 记录本域(下载功能)每次文档修改:一行 why + 一行 from→to。
 
+## 2026-09-26 Popup 缩窄三分之一与封面下载兜底
+
+**Why**：用户反馈 Popup 过宽（672px）；聚合页捕获的视频 `video.thumbs` 字典常缺失，Image 行因无档位禁用，但信息卡封面（`video.thumbnail_url`）明明有——竞品正是用该字段提供封面下载。
+
+**From → To**：
+- Popup 宽度 672px→448px（`--popup-width`，缩小三分之一）；header 控件折行、footer 句子换行均为既有自适应行为，最宽 locale（fr-FR header 约 575px）折为两行属预期。
+- 封面兜底：`parseVimeoConfig` 在 `thumbs` 字典为空时用同域校验过的 `thumbnail_url` 兜底出唯一封面档（`withThumbnailUrlFallback`），Image 资源照常产出；`thumbs` 存在时不兜底。真实站点验证聚合页视频 Image 行下载按钮恢复可用。
+- Subtitle 行 Unavailable 为数据本身无字幕轨（config 无 `text_tracks`），非缺陷，与竞品一致。
+
 ## 2026-09-25 Popup 补齐竞品操作项：直接下载行与剪辑双滑杆
 
 **Why**：竞品 Popup 提供 progressive 直链独立入口、区间滑杆与下载子目录；本插件的保存位置早已落地，但 Video 行仍把 progressive 直链混在合流档位里（音轨开关与裁剪控件对直链无意义），裁剪也只有数字输入、缺「拖一下就掐头去尾」的操作路径。

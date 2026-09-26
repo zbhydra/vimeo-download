@@ -300,6 +300,12 @@ export function parseVimeoConfig(
   const timestamp = readPositiveInt(request.timestamp)
   const expiresInSeconds = readPositiveInt(request.expires)
   const owner = isJsonObject(video?.owner) ? video.owner : null
+  const thumbnailUrl =
+    readGroupThumbnailUrl(video?.thumbnail_url) ?? fallbackConfig?.groupMetadata?.thumbnailUrl
+  const thumbnails = withThumbnailUrlFallback(
+    video ? readThumbnails(video.thumbs) : (fallbackConfig?.thumbnails ?? []),
+    thumbnailUrl
+  )
 
   return {
     videoId,
@@ -320,13 +326,12 @@ export function parseVimeoConfig(
       author: readString(owner?.name) ?? fallbackConfig?.groupMetadata?.author,
       durationSeconds:
         readPositiveInt(video?.duration) ?? fallbackConfig?.groupMetadata?.durationSeconds,
-      thumbnailUrl:
-        readGroupThumbnailUrl(video?.thumbnail_url) ?? fallbackConfig?.groupMetadata?.thumbnailUrl
+      thumbnailUrl
     },
     progressive: readProgressiveFiles(files.progressive),
     dashPlaylistUrl: readDashPlaylistUrl(files.dash),
     hlsPlaylistUrl: readHlsPlaylistUrl(files.hls),
-    thumbnails: video ? readThumbnails(video.thumbs) : (fallbackConfig?.thumbnails ?? []),
+    thumbnails,
     textTracks: readTextTracks(request.text_tracks, configUrl) ?? fallbackConfig?.textTracks ?? []
   }
 }
@@ -829,6 +834,24 @@ function readThumbnails(value: JsonValue | undefined): VimeoThumbnail[] {
   }
 
   return thumbnails.sort((left, right) => (right.width ?? 0) - (left.width ?? 0))
+}
+
+/**
+ * `thumbs` 字典为空时用 `thumbnail_url` 兜底出唯一封面档。
+ *
+ * 聚合页等 surface 的 config 常不下发 `video.thumbs`（Image 行因此无档位、按钮禁用），
+ * 但 `video.thumbnail_url` 恒有且同为信息卡封面来源——两者都经 `isVimeoMediaCdnUrl` 校验，
+ * 兜底档与字典档同源同级别。
+ */
+function withThumbnailUrlFallback(
+  thumbnails: VimeoThumbnail[],
+  thumbnailUrl: string | undefined
+): VimeoThumbnail[] {
+  if (thumbnails.length > 0 || !thumbnailUrl) {
+    return thumbnails
+  }
+
+  return [{ url: thumbnailUrl, width: undefined }]
 }
 
 /**

@@ -203,8 +203,34 @@ describe('Vimeo media parsing', () => {
     }
   })
 
-  it('封面 URL 非 https 或不在 vimeocdn 域时省略，config 不带封面字段同样省略', () => {
-    const insecure = parseVimeoConfig(
+  it('thumbs 字典缺失时用 thumbnail_url 兜底出唯一封面档，Image 资源照常产出', () => {
+    const thumbnailUrl = 'https://i.vimeocdn.com/video/democover_640'
+    const config = parseVimeoConfig(
+      configFixture({ thumbnailUrl, thumbs: null }),
+      CONFIG_URL
+    )
+    expect(config.thumbnails).toEqual([{ url: thumbnailUrl, width: undefined }])
+
+    const imageResources = buildVimeoDownloadOptions(config, null)
+      .filter(option => option.kind === 'image')
+      .map((option, index) => createVimeoResource(option, index))
+    expect(imageResources).toHaveLength(1)
+    expect(imageResources[0]?.id).toBe('vimeo:1201819515:image:thumbnail')
+    expect(imageResources[0]?.url).toBe(thumbnailUrl)
+  })
+
+  it('thumbs 字典存在时不做 thumbnail_url 兜底', () => {
+    const config = parseVimeoConfig(
+      configFixture({ thumbnailUrl: 'https://i.vimeocdn.com/video/democover_640' }),
+      CONFIG_URL
+    )
+    expect(config.thumbnails.map(thumbnail => thumbnail.url)).toEqual([
+      'https://i.vimeocdn.com/video/high.jpg',
+      'https://i.vimeocdn.com/video/low.jpg'
+    ])
+  })
+
+  it('封面 URL 非 https 或不在 vimeocdn 域时省略，config 不带封面字段同样省略', () => {    const insecure = parseVimeoConfig(
       configFixture({ thumbnailUrl: 'http://i.vimeocdn.com/video/insecure' }),
       CONFIG_URL
     )
@@ -893,6 +919,8 @@ interface ConfigFixtureOptions {
   readonly title?: string | null
   /** `video.thumbnail_url`；不传表示 config 不带封面字段。 */
   readonly thumbnailUrl?: string
+  /** `video.thumbs` 字典；`null` 表示 config 不带该字段（聚合页等 surface 的形态）。 */
+  readonly thumbs?: Record<string, string> | null
 }
 
 function configFixture(options: ConfigFixtureOptions = {}) {
@@ -964,10 +992,15 @@ function configFixture(options: ConfigFixtureOptions = {}) {
       ...(options.ownerName === undefined ? {} : { owner: { name: options.ownerName } }),
       ...(options.duration === undefined ? {} : { duration: options.duration }),
       ...(options.thumbnailUrl === undefined ? {} : { thumbnail_url: options.thumbnailUrl }),
-      thumbs: {
-        640: 'https://i.vimeocdn.com/video/low.jpg',
-        1280: 'https://i.vimeocdn.com/video/high.jpg'
-      }
+      ...(options.thumbs === null
+        ? {}
+        : {
+            thumbs:
+              options.thumbs ?? {
+                640: 'https://i.vimeocdn.com/video/low.jpg',
+                1280: 'https://i.vimeocdn.com/video/high.jpg'
+              }
+          })
     }
   }
 }
