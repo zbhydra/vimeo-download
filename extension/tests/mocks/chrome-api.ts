@@ -83,7 +83,22 @@ const runtime = {
     manifest_version: 3,
     name: 'Test Extension',
     version: '1.0.0'
-  }))
+  })),
+
+  // offscreen document 预检；默认视为不存在，测试可覆写返回值。
+  getContexts: vi.fn(async (_filter: chrome.runtime.ContextFilter) => {
+    return [] as chrome.runtime.ExtensionContext[]
+  })
+}
+
+// ============================================================================
+// chrome.offscreen API
+// ============================================================================
+
+const offscreen = {
+  createDocument: vi.fn(async (_parameters: chrome.offscreen.CreateParameters) => undefined),
+  closeDocument: vi.fn(async () => undefined),
+  hasDocument: vi.fn(async () => false)
 }
 
 // ============================================================================
@@ -269,7 +284,8 @@ export const chrome = {
   tabs,
   storage,
   downloads,
-  identity
+  identity,
+  offscreen
 }
 
 // 添加类型导出

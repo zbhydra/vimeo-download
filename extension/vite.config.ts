@@ -260,6 +260,9 @@ export default defineConfig({
     webExtension({
       ...devWebExtensionConfig,
       skipManifestValidation: true, // 禁用schema验证 ,不然会卡主很多
+      // offscreen document 不在 manifest 里声明，由 background 在首个下载任务时惰性创建；
+      // 这里只需把入口 HTML 纳入构建。路径与 src/core/rpc/constants.ts 的 OFFSCREEN_ENTRY_PATH 同步。
+      additionalInputs: ['src/offscreen.html'],
       manifest: () => ({
         manifest_version: 3,
         name: '__MSG_extensionName__',
@@ -267,7 +270,8 @@ export default defineConfig({
         default_locale: 'en',
         description: '__MSG_extensionDescription__',
         // identity 只用于 Google 授权：background 用 launchWebAuthFlow 打开 Google 授权页。
-        permissions: ['storage', 'identity', 'downloads'],
+        // offscreen 用于 DASH/HLS 下载的 offscreen document（chrome.offscreen.createDocument）。
+        permissions: ['storage', 'identity', 'downloads', 'offscreen'],
         host_permissions: [...extensionBuildEnv.hostPermissions],
         action: {
           default_popup: 'src/popup.html',

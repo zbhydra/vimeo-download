@@ -62,17 +62,6 @@ export class InjectedChannel {
     )
   }
 
-  /** 调用 downloadMedia 能力。 */
-  downloadMedia(
-    params: RpcMethodParams<InjectedHandler, 'downloadMedia'>,
-    options?: RpcCallOptions
-  ): Promise<RpcMethodResult<InjectedHandler, 'downloadMedia'>> {
-    return this.transport.call<
-      RpcMethodResult<InjectedHandler, 'downloadMedia'>,
-      RpcMethodParams<InjectedHandler, 'downloadMedia'>
-    >('downloadMedia', params, options)
-  }
-
   /** 销毁 RPC transport。 */
   destroy(): void {
     this.transport.destroy()

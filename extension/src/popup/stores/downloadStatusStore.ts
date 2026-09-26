@@ -1,8 +1,10 @@
 /**
- * Popup 当前目标标签页的未完成下载状态 Store。
+ * Popup 底部下载队列 Store。
  *
- * 初始化先订阅实时快照，再通过固定 tab RPC 取得页面作用域；订阅期间收到的快照按作用域
- * 暂存，避免查询响应与进度事件竞态。后续只接收同一作用域且版本更新的状态。
+ * 下载统一由 background 编排器驱动，数据源是 background 编排快照（getDownloadQueue RPC +
+ * downloadQueueUpdated 事件）；取消与重试同样发 background，下载中任务由编排器按执行通道
+ * （Chrome downloads.cancel / offscreen cancelTask）转发取消。快照作用域恒为 background
+ * 全局队列，不区分页面。
  */
 
 import { computed, ref } from 'vue'
@@ -11,7 +13,7 @@ import type { DownloadQueueSnapshot, DownloadTaskSnapshot } from '@/core/types'
 import type { ExtensionEvents } from '@/core/events/types'
 import { ChromeEventSubscriber } from '@/core/rpc/ChromeEventBus'
 import { logger } from '@/core/utils/logger'
-import { ContentChannel } from '@/popup/rpc/content.rpc'
+import { BackgroundChannel } from '@/popup/rpc/background.rpc'
 
 /** 当前 Popup 的目标页面下载状态。 */
 export const useDownloadStatusStore = defineStore('downloadStatus', () => {
@@ -27,11 +29,8 @@ export const useDownloadStatusStore = defineStore('downloadStatus', () => {
   /** 正在等待取消 RPC 返回的任务 ID，只用于禁用重复点击。 */
   const cancelRequestIds = ref<string[]>([])
 
-  /** Popup 打开后固定使用的目标 tab。 */
-  let targetTabId: number | null = null
-
-  /** Popup 生命周期内的 content RPC 客户端。 */
-  let contentClient: ContentChannel | null = null
+  /** Popup 生命周期内的 background RPC 客户端。 */
+  let backgroundClient: BackgroundChannel | null = null
 
   /** Popup 生命周期内的下载状态事件订阅器。 */
   let eventSubscriber: ChromeEventSubscriber<ExtensionEvents> | null = null
@@ -39,8 +38,8 @@ export const useDownloadStatusStore = defineStore('downloadStatus', () => {
   /** 当前下载状态事件的取消订阅函数。 */
   let eventUnsubscribe: (() => void) | null = null
 
-  /** 初始化 RPC 期间按页面作用域暂存的最新事件。 */
-  const pendingSnapshots = new Map<string, DownloadQueueSnapshot>()
+  /** 初始化 RPC 期间暂存的最新事件快照；background 是唯一作用域，单槽足够。 */
+  let pendingSnapshot: DownloadQueueSnapshot | null = null
 
   /** 正在下载的任务。 */
   const activeTasks = computed(() => tasks.value.filter(task => task.status === 'downloading'))
@@ -85,23 +84,17 @@ export const useDownloadStatusStore = defineStore('downloadStatus', () => {
     return Math.floor(totalProgress / activeTasks.value.length)
   })
 
-  /** 订阅并查询 Popup 打开时固定的目标标签页。 */
-  async function initialize(tab: chrome.tabs.Tab | null): Promise<void> {
+  /** 订阅实时快照并查询 background 编排队列。 */
+  async function initialize(_tab: chrome.tabs.Tab | null): Promise<void> {
     destroy()
     resetSnapshot()
 
-    targetTabId = tab?.id ?? null
-    if (targetTabId === null) {
-      return
-    }
-
-    contentClient = new ContentChannel()
+    backgroundClient = new BackgroundChannel()
     eventSubscriber = new ChromeEventSubscriber<ExtensionEvents>()
     eventUnsubscribe = eventSubscriber.on('downloadQueueUpdated', snapshot => {
       if (scopeId.value === null) {
-        const pending = pendingSnapshots.get(snapshot.scopeId)
-        if (!pending || snapshot.revision > pending.revision) {
-          pendingSnapshots.set(snapshot.scopeId, snapshot)
+        if (pendingSnapshot === null || snapshot.revision > pendingSnapshot.revision) {
+          pendingSnapshot = snapshot
         }
         return
       }
@@ -109,65 +102,54 @@ export const useDownloadStatusStore = defineStore('downloadStatus', () => {
     })
 
     try {
-      const initialSnapshot = await contentClient.getDownloadQueue({ tabId: targetTabId })
+      const initialSnapshot = await backgroundClient.getDownloadQueue()
       scopeId.value = initialSnapshot.scopeId
       applySnapshot(initialSnapshot)
 
-      const pendingSnapshot = pendingSnapshots.get(initialSnapshot.scopeId)
       if (pendingSnapshot) {
         applySnapshot(pendingSnapshot)
       }
     } catch (error) {
-      logger.error(`[downloadStatusStore] 查询当前标签页下载任务失败: tabId=${targetTabId}`, error)
+      logger.error('[downloadStatusStore] 查询下载编排队列失败', error)
     } finally {
-      pendingSnapshots.clear()
+      pendingSnapshot = null
     }
   }
 
-  /** 转发 UI 已展示的取消操作；任务状态与能力由 DownloadManager 最终裁决。 */
+  /** 转发 UI 已展示的取消操作；任务状态与能力由 background 编排器最终裁决。 */
   async function cancelTask(taskId: string): Promise<void> {
-    if (targetTabId === null || cancelRequestIds.value.includes(taskId)) {
+    if (cancelRequestIds.value.includes(taskId)) {
       return
     }
 
     cancelRequestIds.value = [...cancelRequestIds.value, taskId]
     try {
-      const response = await contentClient?.cancelDownloadTask({ taskId }, { tabId: targetTabId })
+      const response = await backgroundClient?.cancelDownloadTask({ taskId })
       if (response && !response.accepted) {
-        const snapshot = await contentClient?.getDownloadQueue({ tabId: targetTabId })
+        const snapshot = await backgroundClient?.getDownloadQueue()
         if (snapshot) {
           applySnapshot(snapshot)
         }
       }
     } catch (error) {
-      logger.error(
-        `[downloadStatusStore] 取消当前标签页下载任务失败: tabId=${targetTabId}, taskId=${taskId}`,
-        error
-      )
+      logger.error(`[downloadStatusStore] 取消下载任务失败: taskId=${taskId}`, error)
     } finally {
       cancelRequestIds.value = cancelRequestIds.value.filter(id => id !== taskId)
     }
   }
 
-  /** 按共享任务 ID 重试当前固定目标页的失败项。 */
+  /** 按编排任务 ID 重试失败项。 */
   async function retryTask(taskId: string): Promise<void> {
-    if (targetTabId === null) {
-      return
-    }
-
     try {
-      const response = await contentClient?.retryDownloadTask({ taskId }, { tabId: targetTabId })
+      const response = await backgroundClient?.retryDownloadTask({ taskId })
       if (response && !response.accepted) {
-        const snapshot = await contentClient?.getDownloadQueue({ tabId: targetTabId })
+        const snapshot = await backgroundClient?.getDownloadQueue()
         if (snapshot) {
           applySnapshot(snapshot)
         }
       }
     } catch (error) {
-      logger.error(
-        `[downloadStatusStore] 重试当前标签页下载任务失败: tabId=${targetTabId}, taskId=${taskId}`,
-        error
-      )
+      logger.error(`[downloadStatusStore] 重试下载任务失败: taskId=${taskId}`, error)
     }
   }
 
@@ -186,9 +168,9 @@ export const useDownloadStatusStore = defineStore('downloadStatus', () => {
     eventUnsubscribe = null
     eventSubscriber?.destroy()
     eventSubscriber = null
-    contentClient?.destroy()
-    contentClient = null
-    pendingSnapshots.clear()
+    backgroundClient?.destroy()
+    backgroundClient = null
+    pendingSnapshot = null
   }
 
   /** 清空上一目标页面的快照身份。 */
@@ -197,7 +179,6 @@ export const useDownloadStatusStore = defineStore('downloadStatus', () => {
     scopeId.value = null
     revision.value = -1
     cancelRequestIds.value = []
-    targetTabId = null
   }
 
   return {

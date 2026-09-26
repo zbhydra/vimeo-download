@@ -4,6 +4,7 @@
 import { logger } from '@/core/utils/logger'
 import { BackgroundMessageRouter } from './services/BackgroundMessageRouter'
 import { ExtensionMarkReporter } from './services/ExtensionMarkReporter'
+import { downloadOrchestrator } from './services/DownloadOrchestrator'
 import { getInstallation } from './installation'
 import { initializeRuntimeLogger } from './runtimeConfig'
 
@@ -41,6 +42,11 @@ messageRouter.setupListener()
 // Popup 与 Content 的共享行为事件由 background 统一写入 SLS。
 const extensionMarkReporter = new ExtensionMarkReporter()
 extensionMarkReporter.setup()
+
+// SW 冷启动对账：offscreen 是下载执行真相源，唤醒后先接回仍在执行的编排任务。
+downloadOrchestrator.reconcile().catch(error => {
+  logger.error('[Background] SW 冷启动对账失败:', error)
+})
 
 // 监听扩展安装事件
 chrome.runtime.onInstalled.addListener(() => {

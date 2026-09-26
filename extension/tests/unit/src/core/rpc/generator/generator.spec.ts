@@ -25,11 +25,7 @@ describe('rpc-generate', () => {
 
     expect(register.channel).toBe('content')
     expect(register.methods.map((method: { name: string }) => method.name)).toEqual([
-      'getResources',
-      'getDownloadQueue',
-      'downloadBatch',
-      'cancelDownloadTask',
-      'retryDownloadTask'
+      'getResources'
     ])
     expect(outputs.map(output => output.path).sort()).toEqual([
       'src/background/rpc/content.rpc.ts',
@@ -168,8 +164,10 @@ export const METHOD_RESPONSE_LIMITS = { updateBadge: 1024 } as const
     expect(result.written).toEqual([])
     expect(result.checked.sort()).toEqual([
       'src/background/rpc/content.rpc.ts',
+      'src/background/rpc/offscreen.rpc.ts',
       'src/content/rpc/background.rpc.ts',
       'src/content/rpc/injected.rpc.ts',
+      'src/offscreen/rpc/background.rpc.ts',
       'src/popup/rpc/background.rpc.ts',
       'src/popup/rpc/content.rpc.ts'
     ])

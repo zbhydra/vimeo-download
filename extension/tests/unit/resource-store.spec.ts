@@ -18,7 +18,12 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/popup/rpc/content.rpc', () => ({
   ContentChannel: vi.fn(() => ({
-    getResources: mocks.getResources,
+    getResources: mocks.getResources
+  }))
+}))
+
+vi.mock('@/popup/rpc/background.rpc', () => ({
+  BackgroundChannel: vi.fn(() => ({
     downloadBatch: mocks.downloadBatch
   }))
 }))
@@ -80,17 +85,16 @@ describe('resourceStore', () => {
     await store.downloadResource(second)
     await store.downloadResource(second)
 
+    // U8 改道：下载统一发 background 编排，payload 携带完整 MediaResource。
     expect(mocks.downloadBatch).toHaveBeenCalledTimes(2)
-    expect(mocks.downloadBatch).toHaveBeenNthCalledWith(
-      1,
-      { resourceIds: [second.id] },
-      { tabId: 42 }
-    )
-    expect(mocks.downloadBatch).toHaveBeenNthCalledWith(
-      2,
-      { resourceIds: [second.id] },
-      { tabId: 42 }
-    )
+    expect(mocks.downloadBatch).toHaveBeenNthCalledWith(1, {
+      resources: [second],
+      tabId: 42
+    })
+    expect(mocks.downloadBatch).toHaveBeenNthCalledWith(2, {
+      resources: [second],
+      tabId: 42
+    })
   })
 
   it('面板传下来的片段资源原样作为下载身份发送', async () => {
@@ -101,7 +105,7 @@ describe('resourceStore', () => {
 
     await store.downloadResource(clip)
 
-    expect(mocks.downloadBatch).toHaveBeenCalledWith({ resourceIds: [clip.id] }, { tabId: 43 })
+    expect(mocks.downloadBatch).toHaveBeenCalledWith({ resources: [clip], tabId: 43 })
   })
 
   it('下载请求未被受理时给出反馈，不静默丢弃', async () => {

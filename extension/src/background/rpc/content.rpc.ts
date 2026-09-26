@@ -5,12 +5,7 @@
  */
 
 import { ChromeRpcTransport } from '@/core/rpc/transports/ChromeRpcTransport'
-import type {
-  RpcCallOptions,
-  RpcMethodParams,
-  RpcMethodResult,
-  RpcTransport
-} from '@/core/rpc/types'
+import type { RpcCallOptions, RpcMethodResult, RpcTransport } from '@/core/rpc/types'
 import type { ContentHandler } from '@/content/content-register'
 
 /** background 调用 content provider 的生成客户端。 */
@@ -30,28 +25,6 @@ export class ContentChannel {
       undefined,
       options
     )
-  }
-
-  /** 调用 getDownloadQueue 能力。 */
-  getDownloadQueue(
-    options?: RpcCallOptions
-  ): Promise<RpcMethodResult<ContentHandler, 'getDownloadQueue'>> {
-    return this.transport.call<RpcMethodResult<ContentHandler, 'getDownloadQueue'>>(
-      'getDownloadQueue',
-      undefined,
-      options
-    )
-  }
-
-  /** 调用 downloadBatch 能力。 */
-  downloadBatch(
-    params: RpcMethodParams<ContentHandler, 'downloadBatch'>,
-    options?: RpcCallOptions
-  ): Promise<RpcMethodResult<ContentHandler, 'downloadBatch'>> {
-    return this.transport.call<
-      RpcMethodResult<ContentHandler, 'downloadBatch'>,
-      RpcMethodParams<ContentHandler, 'downloadBatch'>
-    >('downloadBatch', params, options)
   }
 
   /** 销毁 RPC transport。 */

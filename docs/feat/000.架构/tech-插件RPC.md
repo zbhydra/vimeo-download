@@ -14,9 +14,8 @@ extension/src/core/rpc/
 ├── serve.ts                    # 服务端注册器(Chrome listener / 固定 Event listener)
 ├── injectedReady.ts            # MAIN provider 同步注册完成后的共享就绪信号
 ├── ChromeEventBus.ts           # chrome.runtime message 总线
-├── DomEventBus.ts              # DOM CustomEvent 总线
 ├── transports/
-│   ├── ChromeRpcTransport.ts   # popup/content/background 之间(chrome.runtime)
+│   ├── ChromeRpcTransport.ts   # popup/content/background/offscreen 之间(chrome.runtime)
 │   └── EventRpcTransport.ts    # content→injected(DOM CustomEvent)
 └── generator/
 │   ├── manifest.json           # registers + generatedFiles 清单(代码生成输入)
@@ -30,14 +29,17 @@ extension/src/core/rpc/
   "registers": [
     "src/content/content-register.ts",
     "src/injected/injected-register.ts",
-    "src/background/background-register.ts"
+    "src/background/background-register.ts",
+    "src/offscreen/offscreen-register.ts"
   ],
   "generatedFiles": [
     "src/popup/rpc/content.rpc.ts",
     "src/background/rpc/content.rpc.ts",
     "src/content/rpc/injected.rpc.ts",
     "src/content/rpc/background.rpc.ts",
-    "src/popup/rpc/background.rpc.ts"
+    "src/popup/rpc/background.rpc.ts",
+    "src/background/rpc/offscreen.rpc.ts",
+    "src/offscreen/rpc/background.rpc.ts"
   ]
 }
 ```
@@ -48,10 +50,12 @@ extension/src/core/rpc/
 
 | transport | 通道 | 适用方向 |
 | --- | --- | --- |
-| `ChromeRpcTransport` | `chrome.runtime` message | popup↔content、popup/background↔content、content/popup↔background |
+| `ChromeRpcTransport` | `chrome.runtime` message | popup↔content、popup/background↔content、content/popup↔background、background↔offscreen |
 | `EventRpcTransport` | DOM `CustomEvent` | content→injected |
 
-生成器内置**调用矩阵校验**(`transportMatrix`):popup→content、background→content 走 chrome;content→injected 走 event。方向与 transport 不匹配会在生成期报错,不允许手写错配。
+生成器内置**调用矩阵校验**(`transportMatrix`):popup→content、background→content、content/popup→background、background→offscreen、offscreen→background 走 chrome;content→injected 走 event。方向与 transport 不匹配会在生成期报错,不允许手写错配。
+
+**caller 识别**:chrome transport 的调用方身份由 serve 按 `sender` 推断——`sender.url` 路径等于 offscreen document 入口(`/src/offscreen.html`)归 `offscreen`,等于 SW 脚本入口归 `background`,其余扩展自有页归 `popup`;带 `sender.tab` 的归 `content`。
 
 ## 3. EventRpc 固定通道与信任边界(content ↔ injected)
 
@@ -61,22 +65,20 @@ content 与 injected 使用一个固定 DOM `CustomEvent` 通道传递 request-r
 
 1. EventRpc 只接受固定 frame 结构和明确 method allowlist。
 2. request/response 在 `JSON.parse` 前检查原始 UTF-8 字节上限,再校验基础 frame、方法专属 payload 上限和未知方法。
-3. 下载/解析 handler 继续校验 URL host、redirect、MIME 和允许的媒体类型。
+3. 解析 handler 继续校验 URL host、redirect、MIME 和允许的媒体类型(下载已不经 EventRpc,执行链边界见 §6)。
 4. Chrome API、storage、额度、后端 token 和本项目后端权限只存在于 content/background。
 5. 页面可以伪造 `caller` 对应的 DOM frame;EventRpc 的 caller 只表示路由元数据,不能作为授权依据。
 6. 站点 handler 抛出的普通内部错误只向 DOM 返回固定中性 `SERVER_ERROR`;详细错误留在本地日志。Chrome transport 继续返回原有可定位错误,不受 DOM 错误收敛影响。
 
 ## 4. 能力清单(feat.010 声明范围)
 
-**content**(popup/background 调 content):register 暴露资源查询、下载入队、队列快照、按任务取消/重试和缓存清理合同。站点 provider 只实现实际需要的方法，不暴露主动扫描。
+**content**(popup/background 调 content):只暴露资源查询(`getResources`)。下载发起、取消、重试与队列快照已全部移到 background 编排器,content 不再持有下载状态。
 
-**injected**(content 调 injected,走固定 EventRpc 通道):Vimeo 站点注册 `getCapturedVimeoConfig`（按 videoId 取 MAIN world 捕获的原生 config 快照）、`applyRuntimeConfig` / `applySiteConfig`（同步日志级别与站点运行参数）与一次完整的 `downloadMedia` request-response（只处理需要页面内分片读取与 remux 的 DASH/HLS）。Progressive/Thumbnail 已在 content 分流，不进入 EventRpc。MAIN world 的 config 捕获不主动推送，只由 content 主动查询。
+**injected**(content 调 injected,走固定 EventRpc 通道):只保留检测与配置能力——`getCapturedVimeoConfig`（按 videoId 取 MAIN world 捕获的原生 config 快照）、`listCapturedVimeoConfigs`（聚合页枚举概要）、`applyRuntimeConfig` / `applySiteConfig`（同步日志级别与站点运行参数）。页面内分片下载与 remux 已退役,MAIN world 不再承载下载;config 捕获不主动推送,只由 content 主动查询。
 
-Vimeo MAIN 下载器与 content 原生下载协调器共用一个固定的单向 DOM 进度事件，payload 为 `sourceId + progress`；`progress` 是 `0..100` 数值或表示不可计算的 `null`，展示时向下取整。Vimeo 页面存在时通过短 background RPC 查询 Chrome 下载字节；页面销毁后事件停止，但任务不取消。该事件不经过 EventRpc method，不携带业务终态，也不形成第二个权限通道；宿主页面伪造该事件最多造成当前按钮显示错误，不能扣额度、触发下载或改变 request-response 结果。Popup 不订阅该事件。
+**background**(content/popup/offscreen 调 background):连通性检查、状态/运行时/远端配置查询、徽标更新、打点、Google 登录、Vimeo 播放页 config 直连获取;下载编排能力——`downloadBatch`（入队，含发起 tab）、`getDownloadQueue`（快照）、`cancelDownloadTask` / `retryDownloadTask`（取消/重试）；offscreen 回传通道——`taskProgress` / `taskComplete` / `taskFailed` / `taskCancelled`（进度与终态）、`refreshSignatureRequest`（签名重签）、`keepAlive`（任务期心跳）。旧 `startBrowserDownload` / `getBrowserDownloadStatus` / `checkQuota` 已删除,统一并入编排器。
 
-**background**(content/popup 调 background):连通性检查、查询 background 状态、更新当前 tab 徽标；content 还可为受支持的 Vimeo 直连来源调用 `startBrowserDownload` 创建 Chrome 下载，并用 `getBrowserDownloadStatus` 查询单次轻量快照。background 不等待大文件完成。
-
-> RPC 框架仍按上下文生成 client,但站点实现只注册自己需要的方法。当前 injected 合同只包含 `applyRuntimeConfig` / `applySiteConfig` / `getCapturedVimeoConfig` / `downloadMedia` 四项，不存在未被实现的空 stub。
+**offscreen**(background 调 offscreen):`startTask`（下发完整 MediaResource 启动 DASH/HLS 任务）、`cancelTask`（中止执行中任务）、`listActiveTasks`（活跃任务清单,SW 冷启动对账的真相源）、`releaseTaskArtifact`（落盘确认后释放 blob）。
 
 ## 5. 安全要求
 
@@ -89,28 +91,27 @@ Vimeo MAIN 下载器与 content 原生下载协调器共用一个固定的单向
 | 调用方身份 | ChromeRpc 调用方身份由接收方按浏览器 `sender` 信息判断 |
 | 手写越权请求 | 必须被拒绝(如 popup 手写请求更新徽标) |
 
-## 6. 共享下载调用契约
+## 6. 下载编排调用契约
 
-### 6.1 单项下载
+### 6.1 入队与执行
 
-每次 `downloadOne(resource)` 都是一次独立用户操作:
+每次 `downloadBatch` 是一次独立用户操作,请求携带完整 MediaResource 与发起 tab:
 
-1. 调用 `checkAndConsume(1)` 检查并扣除一个资源额度。
-2. 服务明确返回额度不足时,记录结果并结束当前项。
-3. 额度调用超时、RPC 失败或服务异常时记录错误并继续,保持 fail-open。
-4. 如果来源是 Vimeo Progressive/Thumbnail，调用 `startBrowserDownload` 创建 Chrome 任务；页面存在时每 500ms 调用一次 `getBrowserDownloadStatus` 维持按钮进度和顺序批量。两个 RPC 都是短请求，background 不持有等待；导航只终止 content 轮询，Chrome 任务继续。
-5. 其他来源发起一次完整的 `downloadMedia(request) -> response`；该请求覆盖媒体读取、必要处理和浏览器下载触发。24 小时页面生命周期级超时不会中止真实传输，缩短只会让 FIFO 误启下一项；调用方 timeout 只约束页面存活期的长调用。
-6. 下载失败时记录详细错误并结束当前项。调用发出后不退款；仅 Vimeo 原生任务遇到可刷新服务端中断时允许刷新一次 signed config 后重建任务，其他失败不自动重试。
+1. background `DownloadOrchestrator` 按输入顺序入队,同资源已有未完成任务时去重合并。
+2. 任务出队执行时才检查配额:调用 `checkAndConsume(1)`;服务明确返回额度不足时任务以配额拒绝终态收敛,并向发起 tab 广播升级弹窗事件(content 不在场则跳过)。
+3. 配额 API 异常时 fail-open 放行,不阻断用户下载。
+4. 直连类(Progressive/封面/字幕)由 background 直接执行:校验来源合同后 `chrome.downloads.download`,轮询任务直到落盘回执;signed URL 过期时从原生 refresh config 恢复一次。
+5. DASH/HLS 交 offscreen document 执行(见 `@../002.下载功能/tech-扩展端Vimeo本地下载.md` §8):分片读取 + remux 在 offscreen 完成,产物以 blob URL 交 background `chrome.downloads` 落盘,`downloads.onChanged` 确认完成或中断后释放 blob 并收敛任务。
+6. 下载失败保留为失败投影并继续后续任务;人工重试重新入队且跳过配额(用户已见过的失败不重复扣额度)。调用发出后不退款。
 
 重复点击会再次执行上述流程,因此允许重复扣额和重复下载。
 
-### 6.2 批量下载
+### 6.2 快照与取消
 
-批量调用方把有序资源一次性交给页面单例 FIFO。页面内 `downloadMany` 等待该批全部任务终态，保持按钮/批量会话语义；Popup 的 `downloadBatch` 完成资源回查和入队后立即返回，后台继续观察每项 completion 并记录失败。两者不预先检查总额度，也不要求整批同时成功。
-
-批量不弹二次确认，直接进入同一循环。站点解析、扫描和面板行为不因共享下载函数改变。
-
-Popup 打开或刷新时只查询固定目标 tab 的资源；资源变化造成的旧显示由再次刷新或重新打开纠正，下载队列则单独订阅版本化快照。
+- 编排器维护跨 tab 全局未完成任务投影(单并发 FIFO),每次可见变化提升 revision 并经 `downloadQueueUpdated` 推送(runtime 送达 popup,tabs 广播送达 content 页面按钮);Popup 也可用 `getDownloadQueue` 主动查询,快照作用域恒为 background 全局队列。
+- 取消全生命周期可用:等待任务直接出队移除;下载中任务按执行通道转发取消(Chrome `downloads.cancel` / offscreen `cancelTask`)。取消受理即从投影移除,不显示为失败。
+- 取消转发偶发失败时记**取消墓碑**后本地终止:该 taskId 的后续交付与冷启动对账一律拒绝,防转发失败后任务复活、迟到产物照常落盘。
+- SW 冷启动(或收到未知任务消息)时向 offscreen 对账,以 `listActiveTasks` 为真相源重建执行中任务;SW 内存中的等待队列不持久化,不恢复。
 
 ## 7. 异常分类(`core/rpc/errors.ts`)
 
@@ -142,7 +143,7 @@ Event transport 的“服务端执行错误”对页面只暴露固定中性文�
 
 ## 10. 站点实现边界
 
-- `downloadMedia` 使用一份站点无关的 request-response 形状,handler 只负责需要页面内媒体处理的来源；可直接保存的 Vimeo Progressive/Thumbnail 使用声明式 background RPC 和 Chrome 下载管理器。
+- 下载执行合同集中在 background 编排器与 offscreen 执行器;站点只负责解析建模,把带 descriptor 的 MediaResource 投递给 `downloadBatch`,不自行实现下载执行。
 - injected 只注册站点真正需要的方法，不生成或实现占位方法。
 - 站点入口直接组合具体 handler,不通过新增依赖注入传递 RPC client。
 - 修改任一 register 后必须重新生成 client,并通过 `pnpm rpc-generate:check` 校验声明、调用矩阵和生成产物一致。

@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { EventDefinition } from '@/core/events/types'
 import { ChromeEventEmitter, ChromeEventSubscriber } from '@/core/rpc/ChromeEventBus'
-import { DomEventEmitter, DomEventSubscriber } from '@/core/rpc/DomEventBus'
 
 interface TestEvents extends EventDefinition {
   changed: { value: number }
@@ -79,39 +78,6 @@ describe('ChromeEventBus', () => {
   })
 })
 
-describe('DomEventBus', () => {
-  beforeEach(() => {
-    vi.mocked(console.error).mockClear()
-  })
-
-  it('发布普通/后缀事件，支持取消订阅和 handler 异常隔离', () => {
-    const emitter = new DomEventEmitter<TestEvents>('test_')
-    const subscriber = new DomEventSubscriber<TestEvents>('test_')
-    const handler = vi.fn()
-    const suffixHandler = vi.fn()
-    const unsubscribe = subscriber.on('changed', handler)
-    subscriber.onWithSuffix('changed', 'resource-1', suffixHandler)
-    subscriber.on('empty', () => {
-      throw new Error('controlled DOM handler failure')
-    })
-
-    emitter.emit('changed', { value: 1 })
-    emitter.emitWithSuffix('changed', 'resource-1', { value: 2 })
-    emitter.emit('empty', undefined)
-
-    expect(handler).toHaveBeenCalledWith({ value: 1 })
-    expect(suffixHandler).toHaveBeenCalledWith({ value: 2 })
-    expect(console.error).toHaveBeenCalled()
-
-    unsubscribe()
-    emitter.emit('changed', { value: 3 })
-    expect(handler).toHaveBeenCalledTimes(1)
-
-    subscriber.destroy()
-    emitter.emitWithSuffix('changed', 'resource-1', { value: 4 })
-    expect(suffixHandler).toHaveBeenCalledTimes(1)
-  })
-})
 
 function getLatestRuntimeListener(): RuntimeListener {
   const call = vi.mocked(chrome.runtime.onMessage.addListener).mock.calls.at(-1)

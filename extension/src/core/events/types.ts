@@ -5,7 +5,6 @@
  */
 
 import type { DownloadQueueSnapshot } from '@/core/types'
-import type { DownloadProgressDetail } from '@/core/protocol/injected'
 
 /** EventBus 可传递的事件 payload。 */
 export type EventPayload = object | string | number | boolean | null | void
@@ -62,12 +61,4 @@ export interface ExtensionEvents extends EventDefinition {
   loginModalOpened: void
   /** 当前页面未完成下载任务发生变化。 */
   downloadQueueUpdated: DownloadQueueSnapshot
-}
-
-/** content 内部 DOM 单向事件。 */
-export interface ContentEvents extends EventDefinition {
-  /** 页面下载按钮使用的非可信瞬时下载进度。 */
-  downloadProgress: DownloadProgressDetail
-  /** injected script 就绪。 */
-  injectedReady: void
 }

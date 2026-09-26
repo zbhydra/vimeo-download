@@ -21,27 +21,23 @@ import {
   METHOD_TRANSPORTS
 } from '@/background/background-register'
 import { BadgeManager } from './BadgeManager'
-import { quotaApi } from '@/core/api/quota'
-import type { QuotaCheckResponse } from '@/core/api/quota/types'
 import { remoteConfigApi } from '@/core/api/remote-config'
 import type { RemoteConfig } from '@/core/api/remote-config/types'
 import { recordBackgroundMark } from './ExtensionMarkReporter'
 import { LOGIN_SOURCES, MARK_TYPE, type LoginSource, type MarkType } from '@/core/api/mark/types'
-import {
-  RESOURCE_SOURCE_KINDS,
-  RESOURCE_TYPES,
-  type BrowserManagedSourceKind,
-  type ResourceType
-} from '@/core/constants/resource'
 import type {
-  BackgroundGetBrowserDownloadStatusRequest,
-  BackgroundStartBrowserDownloadRequest,
-  BackgroundStartGoogleLoginRequest
+  BackgroundStartGoogleLoginRequest,
+  BackgroundTaskCompleteRequest,
+  BackgroundTaskFailedRequest,
+  BackgroundTaskProgressRequest,
+  BackgroundRefreshSignatureRequest
 } from '@/background/types'
-import { browserDownloadService } from './BrowserDownloadService'
 import { googleLoginService } from './GoogleLoginService'
+import { downloadOrchestrator } from './DownloadOrchestrator'
+import { refreshVimeoTaskResource } from './vimeoSignatureRefresh'
+import { parseMediaResource } from '@/core/utils/mediaResource'
 import { loadVimeoCapturedConfigFromPlayerPage } from '@/sites/vimeo/config'
-import { isVimeoHostname } from '@/sites/vimeo/shared'
+import { isVimeoHostname, type VimeoSourceDescriptor } from '@/sites/vimeo/shared'
 import { getRuntimeConfig } from '../runtimeConfig'
 
 const MARK_TYPE_VALUES: readonly string[] = Object.values(MARK_TYPE)
@@ -79,15 +75,35 @@ export class BackgroundMessageRouter {
           pageUrl: context.origin
         })
       },
-      checkQuota: params => {
-        const request = parseCheckQuotaRequest(params)
-        return this.checkQuota(request.count)
+      startGoogleLogin: params => googleLoginService.start(parseStartGoogleLoginRequest(params)),
+      taskProgress: params =>
+        downloadOrchestrator.handleTaskProgress(parseTaskProgressRequest(params)),
+      taskComplete: params =>
+        downloadOrchestrator.handleTaskComplete(parseTaskCompleteRequest(params)),
+      taskFailed: params => downloadOrchestrator.handleTaskFailed(parseTaskFailedRequest(params)),
+      taskCancelled: params =>
+        downloadOrchestrator.handleTaskCancelled(parseTaskCancelledRequest(params)),
+      refreshSignatureRequest: params =>
+        refreshVimeoTaskResource(parseRefreshSignatureRequest(params).descriptor),
+      keepAlive: () => Promise.resolve({ alive: true }),
+      downloadBatch: (params, context) => {
+        const request = parseDownloadBatchRequest(params)
+        // 页面按钮发起时不携带 tabId（content 侧拿不到自身 tab），回退到 sender 推导的
+        // context.tabId，配额不足时才能通知发起 tab 的 content 弹升级窗。
+        return downloadOrchestrator.enqueueBatch(
+          request.resources,
+          request.tabId ?? context.tabId ?? null
+        )
       },
-      startBrowserDownload: (params, context) =>
-        browserDownloadService.start(parseStartBrowserDownloadRequest(params), context),
-      getBrowserDownloadStatus: (params, context) =>
-        browserDownloadService.getStatus(parseGetBrowserDownloadStatusRequest(params), context),
-      startGoogleLogin: params => googleLoginService.start(parseStartGoogleLoginRequest(params))
+      cancelDownloadTask: async params => {
+        const { taskId } = parseTaskScopedRequest(params, 'cancelDownloadTask')
+        return { accepted: await downloadOrchestrator.cancelTask(taskId) }
+      },
+      retryDownloadTask: params => {
+        const { taskId } = parseTaskScopedRequest(params, 'retryDownloadTask')
+        return Promise.resolve({ accepted: downloadOrchestrator.retryTask(taskId) })
+      },
+      getDownloadQueue: () => Promise.resolve(downloadOrchestrator.getSnapshot())
     }
   }
 
@@ -114,13 +130,6 @@ export class BackgroundMessageRouter {
     logger.info('[BackgroundMessageRouter] 更新徽章', { count })
     BadgeManager.updateBadge(count)
     return { updated: true }
-  }
-
-  /**
-   * 由 background 代 content script 检查并消耗配额。
-   */
-  private async checkQuota(count: number): Promise<QuotaCheckResponse> {
-    return quotaApi.checkAndConsume({ count })
   }
 
   /** 由 background 代 content script 读取远端顶层分组稀疏覆盖。 */
@@ -181,53 +190,6 @@ function parseRecordMarkRequest(params: JsonValue | undefined): {
   return { mark_type: params.mark_type, mark_msg: params.mark_msg ?? '' }
 }
 
-/**
- * 解析 checkQuota 请求参数。
- */
-export function parseCheckQuotaRequest(params: JsonValue | undefined): { count: number } {
-  if (
-    !isJsonObject(params) ||
-    typeof params.count !== 'number' ||
-    !Number.isInteger(params.count)
-  ) {
-    throw new Error('[BackgroundMessageRouter] checkQuota 请求缺少整数 count')
-  }
-
-  if (params.count <= 0) {
-    throw new Error('[BackgroundMessageRouter] checkQuota 请求 count 必须大于 0')
-  }
-
-  return { count: params.count }
-}
-
-/** 解析创建浏览器原生下载请求。 */
-function parseStartBrowserDownloadRequest(
-  params: JsonValue | undefined
-): BackgroundStartBrowserDownloadRequest {
-  if (!isJsonObject(params) || !isJsonObject(params.source)) {
-    throw new Error('[BackgroundMessageRouter] startBrowserDownload 请求缺少 source')
-  }
-  if (typeof params.refresh_source !== 'boolean') {
-    throw new Error('[BackgroundMessageRouter] startBrowserDownload 请求缺少 refresh_source')
-  }
-
-  const source = params.source
-  const sourceKind = parseBrowserManagedSourceKind(source.source_kind)
-  const resourceType = parseResourceType(source.type)
-  return {
-    source: {
-      source_id: requireString(source, 'source_id', 'startBrowserDownload.source'),
-      url: requireString(source, 'url', 'startBrowserDownload.source'),
-      type: resourceType,
-      source_kind: sourceKind,
-      filename: requireString(source, 'filename', 'startBrowserDownload.source'),
-      mime_type: requireString(source, 'mime_type', 'startBrowserDownload.source'),
-      document_id: requireString(source, 'document_id', 'startBrowserDownload.source')
-    },
-    refresh_source: params.refresh_source
-  }
-}
-
 /** 解析直连 Vimeo 播放页取回原生 config 的请求。 */
 function parseGetVimeoPlayerConfigRequest(params: JsonValue | undefined): { videoId: string } {
   if (!isJsonObject(params)) {
@@ -276,23 +238,194 @@ function isLoginSource(value: JsonValue | undefined): value is LoginSource {
   return typeof value === 'string' && LOGIN_SOURCE_VALUES.includes(value)
 }
 
-/** 解析浏览器原生下载状态请求。 */
-function parseGetBrowserDownloadStatusRequest(
-  params: JsonValue | undefined
-): BackgroundGetBrowserDownloadStatusRequest {
+/** 解析 offscreen 进度回传请求。 */
+function parseTaskProgressRequest(params: JsonValue | undefined): BackgroundTaskProgressRequest {
+  if (!isJsonObject(params)) {
+    throw new Error('[BackgroundMessageRouter] taskProgress 请求体必须是对象')
+  }
+
+  const progress = params.progress
+  const receivedBytes = params.receivedBytes
+  const totalBytes = params.totalBytes
   if (
-    !isJsonObject(params) ||
-    typeof params.download_id !== 'number' ||
-    !Number.isInteger(params.download_id) ||
-    params.download_id < 0
+    !isNullableNumber(progress) ||
+    !isNullableNumber(receivedBytes) ||
+    !isNullableNumber(totalBytes)
   ) {
-    throw new Error('[BackgroundMessageRouter] getBrowserDownloadStatus 请求缺少合法 download_id')
+    throw new Error('[BackgroundMessageRouter] taskProgress 进度字段必须是数字或 null')
   }
 
   return {
-    download_id: params.download_id,
-    source_kind: parseBrowserManagedSourceKind(params.source_kind)
+    taskId: requireString(params, 'taskId', 'taskProgress'),
+    sourceId: requireString(params, 'sourceId', 'taskProgress'),
+    progress,
+    receivedBytes,
+    totalBytes
   }
+}
+
+/** 解析 offscreen 产物交付请求。 */
+function parseTaskCompleteRequest(params: JsonValue | undefined): BackgroundTaskCompleteRequest {
+  if (!isJsonObject(params)) {
+    throw new Error('[BackgroundMessageRouter] taskComplete 请求体必须是对象')
+  }
+
+  return {
+    taskId: requireString(params, 'taskId', 'taskComplete'),
+    blobUrl: requireString(params, 'blobUrl', 'taskComplete'),
+    filename: requireString(params, 'filename', 'taskComplete'),
+    mimeType: requireString(params, 'mimeType', 'taskComplete')
+  }
+}
+
+/** 解析 offscreen 失败回传请求。 */
+function parseTaskFailedRequest(params: JsonValue | undefined): BackgroundTaskFailedRequest {
+  if (!isJsonObject(params)) {
+    throw new Error('[BackgroundMessageRouter] taskFailed 请求体必须是对象')
+  }
+
+  return {
+    taskId: requireString(params, 'taskId', 'taskFailed'),
+    message: requireString(params, 'message', 'taskFailed')
+  }
+}
+
+/** 解析 offscreen 取消确认请求。 */
+function parseTaskCancelledRequest(params: JsonValue | undefined): { taskId: string } {
+  if (!isJsonObject(params)) {
+    throw new Error('[BackgroundMessageRouter] taskCancelled 请求体必须是对象')
+  }
+
+  return { taskId: requireString(params, 'taskId', 'taskCancelled') }
+}
+
+/** 解析 offscreen 重签请求。 */
+function parseRefreshSignatureRequest(
+  params: JsonValue | undefined
+): BackgroundRefreshSignatureRequest {
+  if (!isJsonObject(params)) {
+    throw new Error('[BackgroundMessageRouter] refreshSignatureRequest 请求体必须是对象')
+  }
+
+  return {
+    taskId: requireString(params, 'taskId', 'refreshSignatureRequest'),
+    descriptor: parseVimeoDescriptorIdentity(
+      params.descriptor,
+      'refreshSignatureRequest.descriptor'
+    )
+  }
+}
+
+/**
+ * 校验重签请求携带的下载描述符身份字段。
+ *
+ * 重签只消费身份、守卫与展示字段（videoId/sourceId/optionId/kind/delivery/track/区间/
+ * labelKey/labelParams），不消费 playlist URL，因此这里不套用 decodeVimeoSourceDescriptor
+ * 的完整结构规则。
+ */
+function parseVimeoDescriptorIdentity(
+  value: JsonValue | undefined,
+  label: string
+): VimeoSourceDescriptor {
+  if (!isJsonObject(value) || value.version !== 2) {
+    throw new Error(`[BackgroundMessageRouter] ${label} 必须是 version=2 的描述符对象`)
+  }
+
+  const kind = value.kind
+  const delivery = value.delivery
+  if (kind !== 'video' && kind !== 'audio' && kind !== 'image' && kind !== 'subtitle') {
+    throw new Error(`[BackgroundMessageRouter] ${label}.kind 不受支持: ${String(kind)}`)
+  }
+  if (
+    delivery !== 'progressive' &&
+    delivery !== 'dash' &&
+    delivery !== 'hls' &&
+    delivery !== 'thumbnail' &&
+    delivery !== 'subtitle'
+  ) {
+    throw new Error(`[BackgroundMessageRouter] ${label}.delivery 不受支持: ${String(delivery)}`)
+  }
+
+  const descriptor: VimeoSourceDescriptor = {
+    version: 2,
+    videoId: requireString(value, 'videoId', label),
+    sourceId: requireString(value, 'sourceId', label),
+    optionId: requireString(value, 'optionId', label),
+    kind,
+    delivery,
+    label: requireString(value, 'label', label),
+    configUrl: requireString(value, 'configUrl', label)
+  }
+
+  if (typeof value.videoTrackId === 'string' && value.videoTrackId.length > 0) {
+    descriptor.videoTrackId = value.videoTrackId
+  }
+  if (typeof value.audioTrackId === 'string' && value.audioTrackId.length > 0) {
+    descriptor.audioTrackId = value.audioTrackId
+  }
+  if (typeof value.labelKey === 'string' && value.labelKey.length > 0) {
+    descriptor.labelKey = value.labelKey
+  }
+  const labelParams = value.labelParams
+  if (isJsonObject(labelParams)) {
+    const params: Record<string, string> = {}
+    for (const [key, entry] of Object.entries(labelParams)) {
+      if (typeof entry === 'string') {
+        params[key] = entry
+      }
+    }
+    // 与 shared 的 readStringRecord 同语义：空 record 视为未提供。
+    if (Object.keys(params).length > 0) {
+      descriptor.labelParams = params
+    }
+  }
+  const startSeconds = value.startSeconds
+  const endSeconds = value.endSeconds
+  if (startSeconds !== undefined || endSeconds !== undefined) {
+    if (typeof startSeconds !== 'number' || typeof endSeconds !== 'number') {
+      throw new Error(`[BackgroundMessageRouter] ${label}.startSeconds/endSeconds 必须同时是数字`)
+    }
+    descriptor.startSeconds = startSeconds
+    descriptor.endSeconds = endSeconds
+  }
+
+  return descriptor
+}
+
+/** 要求字段为数字或 null。 */
+function isNullableNumber(value: JsonValue | undefined): value is number | null {
+  return value === null || (typeof value === 'number' && Number.isFinite(value))
+}
+
+/** 解析批量下载请求：完整资源列表 + 可选发起 tab。 */
+function parseDownloadBatchRequest(params: JsonValue | undefined): {
+  resources: ReturnType<typeof parseMediaResource>[]
+  tabId: number | null
+} {
+  if (!isJsonObject(params) || !Array.isArray(params.resources)) {
+    throw new Error('[BackgroundMessageRouter] downloadBatch 请求缺少 resources 数组')
+  }
+
+  const tabId = params.tabId
+  if (tabId !== undefined && (typeof tabId !== 'number' || !Number.isInteger(tabId) || tabId < 0)) {
+    throw new Error('[BackgroundMessageRouter] downloadBatch.tabId 必须是非负整数')
+  }
+
+  return {
+    resources: params.resources.map(resource =>
+      parseMediaResource(resource, 'downloadBatch.resources')
+    ),
+    tabId: typeof tabId === 'number' ? tabId : null
+  }
+}
+
+/** 解析只携带任务 ID 的编排请求。 */
+function parseTaskScopedRequest(params: JsonValue | undefined, method: string): { taskId: string } {
+  if (!isJsonObject(params)) {
+    throw new Error(`[BackgroundMessageRouter] ${method} 请求体必须是对象`)
+  }
+
+  return { taskId: requireString(params, 'taskId', method) }
 }
 
 /** 要求 JSON 对象字段为非空字符串。 */
@@ -302,31 +435,6 @@ function requireString(body: JsonObject, field: string, label: string): string {
     return value
   }
   throw new Error(`[BackgroundMessageRouter] ${label}.${field} 必须是非空字符串`)
-}
-
-/** 解析 background 当前支持的浏览器原生下载来源。 */
-function parseBrowserManagedSourceKind(value: JsonValue | undefined): BrowserManagedSourceKind {
-  if (
-    value === RESOURCE_SOURCE_KINDS.VIMEO_PROGRESSIVE_MP4 ||
-    value === RESOURCE_SOURCE_KINDS.VIMEO_THUMBNAIL_URL ||
-    value === RESOURCE_SOURCE_KINDS.VIMEO_SUBTITLE_URL
-  ) {
-    return value
-  }
-  throw new Error('[BackgroundMessageRouter] 浏览器原生下载 source_kind 不受支持')
-}
-
-/** 解析资源语义类型。 */
-function parseResourceType(value: JsonValue | undefined): ResourceType {
-  if (
-    value === RESOURCE_TYPES.IMAGE ||
-    value === RESOURCE_TYPES.VIDEO ||
-    value === RESOURCE_TYPES.AUDIO ||
-    value === RESOURCE_TYPES.SUBTITLE
-  ) {
-    return value
-  }
-  throw new Error('[BackgroundMessageRouter] 浏览器原生下载 type 不受支持')
 }
 
 /**

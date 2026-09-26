@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Vimeo Downloader Offscreen</title>
+  </head>
+  <body>
+    <!--
+      offscreen document 入口：承载 DASH/HLS 分片下载与 remux，脱离 Vimeo 页面生命周期执行。
+      页面无可见 UI；路径与 src/core/rpc/constants.ts 的 OFFSCREEN_ENTRY_PATH 同步。
+    -->
+    <script type="module" src="/src/offscreen/index.ts"></script>
+  </body>
+</html>

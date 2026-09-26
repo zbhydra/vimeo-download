@@ -1,4 +1,4 @@
-/** Popup 下载状态 Store 的初始查询、事件竞态与页面作用域隔离。 */
+/** Popup 下载状态 Store 的初始查询与事件竞态（background 是唯一快照作用域）。 */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
@@ -19,8 +19,8 @@ const mocks = vi.hoisted(() => ({
   }
 }))
 
-vi.mock('@/popup/rpc/content.rpc', () => ({
-  ContentChannel: class {
+vi.mock('@/popup/rpc/background.rpc', () => ({
+  BackgroundChannel: class {
     getDownloadQueue = mocks.getDownloadQueue
     cancelDownloadTask = mocks.cancelDownloadTask
     retryDownloadTask = mocks.retryDownloadTask
@@ -52,7 +52,7 @@ describe('downloadStatusStore', () => {
     mocks.retryDownloadTask.mockResolvedValue({ accepted: true })
   })
 
-  it('保留查询期间的新事件，并拒绝其他页面和旧版本快照', async () => {
+  it('保留查询期间的新事件（同作用域最新者胜），并拒绝旧版本快照', async () => {
     let resolveInitial!: ((snapshot: DownloadQueueSnapshot) => void)
     mocks.getDownloadQueue.mockReturnValue(
       new Promise<DownloadQueueSnapshot>(resolve => {
@@ -64,25 +64,26 @@ describe('downloadStatusStore', () => {
     const initializePromise = store.initialize(tabFixture(72))
     await vi.waitFor(() => expect(mocks.handler.value).not.toBeNull())
 
-    const initial = snapshotFixture('target-scope', 3, 30, true)
-    const duringQuery = snapshotFixture('target-scope', 4, 40, true)
-    mocks.handler.value?.(duringQuery)
-    mocks.handler.value?.(snapshotFixture('other-scope', 20, 90, false))
+    const initial = snapshotFixture('background', 3, 30, true)
+    // 查询返回前到达的事件进单槽暂存，revision 更高者覆盖。
+    mocks.handler.value?.(snapshotFixture('background', 4, 40, true))
+    mocks.handler.value?.(snapshotFixture('background', 5, 50, true))
     resolveInitial?.(initial)
     await initializePromise
 
-    expect(mocks.getDownloadQueue).toHaveBeenCalledWith({ tabId: 72 })
-    expect(store.scopeId).toBe('target-scope')
-    expect(store.revision).toBe(4)
+    // 数据源为 background 编排队列，查询不再携带 tabId。
+    expect(mocks.getDownloadQueue).toHaveBeenCalledWith()
+    expect(store.scopeId).toBe('background')
+    expect(store.revision).toBe(5)
     expect(store.activeCount).toBe(1)
     expect(store.waitingCount).toBe(1)
 
-    mocks.handler.value?.(snapshotFixture('target-scope', 2, 10, false))
-    expect(store.revision).toBe(4)
+    mocks.handler.value?.(snapshotFixture('background', 2, 10, false))
+    expect(store.revision).toBe(5)
 
     mocks.handler.value?.({
-      scopeId: 'target-scope',
-      revision: 5,
+      scopeId: 'background',
+      revision: 6,
       tasks: [
         activeTask('active-a', 20),
         activeTask('active-b', null)
@@ -91,23 +92,17 @@ describe('downloadStatusStore', () => {
     expect(store.activeCount).toBe(2)
 
     await store.cancelTask('active-a')
-    expect(mocks.cancelDownloadTask).toHaveBeenCalledWith(
-      { taskId: 'active-a' },
-      { tabId: 72 }
-    )
+    expect(mocks.cancelDownloadTask).toHaveBeenCalledWith({ taskId: 'active-a' })
 
     mocks.handler.value?.({
-      scopeId: 'target-scope',
-      revision: 6,
+      scopeId: 'background',
+      revision: 7,
       tasks: [failedTask('failed-a')]
     })
     expect(store.failedCount).toBe(1)
     expect(store.totalCount).toBe(1)
     await store.retryTask('failed-a')
-    expect(mocks.retryDownloadTask).toHaveBeenCalledWith(
-      { taskId: 'failed-a' },
-      { tabId: 72 }
-    )
+    expect(mocks.retryDownloadTask).toHaveBeenCalledWith({ taskId: 'failed-a' })
 
     store.destroy()
     expect(mocks.unsubscribe).toHaveBeenCalledOnce()

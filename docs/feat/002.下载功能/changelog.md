@@ -2,6 +2,22 @@
 
 > 记录本域(下载功能)每次文档修改:一行 why + 一行 from→to。
 
+## 2026-09-26 DASH/HLS 下载迁移 offscreen 后台执行
+
+**Why**：DASH/HLS 分片与 mux 在 Vimeo 页面 MAIN world 执行，切换视频、刷新或关闭页面即中断下载，与竞品「下载独立于页面存活」的形态不符；且页面内 `a.click()` 交付没有落盘回执，触发即算完成。
+
+**From → To**：
+- 新增 offscreen document 上下文（manifest `offscreen` 权限、`BLOBS` reason、getContexts 预检 + creating promise 惰性创建、常驻不自动关闭）：DASH/HLS 分片 fetch + Mediabunny remux 在此执行，切换/刷新/关闭来源页面不再中断。
+- background 新增 `DownloadOrchestrator` 全局编排：跨 tab 单并发 FIFO、出队配额检查（API 异常 fail-open，额度不足向发起 tab 弹升级窗）、打点、SW 冷启动对账（以 offscreen `listActiveTasks` 为真相源）、取消墓碑（转发失败后迟到的交付不落盘、对账不复活任务）。
+- 交付改造：offscreen 产物以 blob 交 background `chrome.downloads.download` + `onChanged` 落盘回执后释放；直连类（progressive/封面/字幕）仍走 `chrome.downloads`。保存位置子目录因此对全部档位生效（DASH/HLS 不再落浏览器默认目录根）。
+- 签名失效（403/404/410）不再刷新页面 config，由 background 直连播放页重签：track 一致按分片游标续跑，不一致（Best 回落换 track）整任务重跑，每任务限一次。
+- 取消全生命周期可用：等待任务直接出队、下载中任务转发取消（Chrome `downloads.cancel` / offscreen abort）；Popup 底部队列下载中行新增取消按钮，「全部停止」范围扩为等待 + 下载中。
+- RPC 框架扩展 offscreen 通道（background↔offscreen chrome transport、serve 按 sender 路径识别 offscreen/SW caller）。
+- 退役：injected 下载与 mux、`DownloadManager`、`QuotaService`/`ContentMarkReporter`、`core/protocol`、`DomEventBus`、EventRpc `downloadMedia`、content 侧下载 RPC、background `startBrowserDownload`/`getBrowserDownloadStatus`/`checkQuota`；`BrowserDownloadService` 改名 `directSource.ts`（仅直连校验/刷新共享）。
+- 已知限制：offscreen 常驻占内存；SW/浏览器重启任务丢失（不持久化）；等待队列不持久化。
+- 验收：单元 424 通过；真实站点验收关标签页续下落盘、刷新继续、下载中取消（含 tombstone 复验）、直链、检测元数据无回归全部通过。
+- 文档：同步 `tech-扩展端Vimeo本地下载.md`（§1/§3/§6.2/§8 重写/§10/§12.1/§12.7/§12.8/§13/§14）、`feat.md`（任务管理分支、队列节、保存位置、验收标准）、`../000.架构/tech-extension.md`（五上下文/RPC 矩阵/构建产物）、`../000.架构/tech-插件RPC.md`（能力清单/编排契约）、`../005.计数器系统/tech-额度查询与前端.md`（扣减调用点迁移）。
+
 ## 2026-09-26 Popup 下载管理移至底部任务队列
 
 **Why**：下载状态挤在 header 徽标 + 下拉浮层里，与竞品「底部常驻任务队列」形态不一致；且无可批量停止入口。

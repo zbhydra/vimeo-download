@@ -96,37 +96,15 @@ export class BackgroundChannel {
     >('recordMark', params, options)
   }
 
-  /** 调用 checkQuota 能力。 */
-  checkQuota(
-    params: RpcMethodParams<BackgroundHandler, 'checkQuota'>,
+  /** 调用 downloadBatch 能力。 */
+  downloadBatch(
+    params: RpcMethodParams<BackgroundHandler, 'downloadBatch'>,
     options?: RpcCallOptions
-  ): Promise<RpcMethodResult<BackgroundHandler, 'checkQuota'>> {
+  ): Promise<RpcMethodResult<BackgroundHandler, 'downloadBatch'>> {
     return this.transport.call<
-      RpcMethodResult<BackgroundHandler, 'checkQuota'>,
-      RpcMethodParams<BackgroundHandler, 'checkQuota'>
-    >('checkQuota', params, options)
-  }
-
-  /** 调用 startBrowserDownload 能力。 */
-  startBrowserDownload(
-    params: RpcMethodParams<BackgroundHandler, 'startBrowserDownload'>,
-    options?: RpcCallOptions
-  ): Promise<RpcMethodResult<BackgroundHandler, 'startBrowserDownload'>> {
-    return this.transport.call<
-      RpcMethodResult<BackgroundHandler, 'startBrowserDownload'>,
-      RpcMethodParams<BackgroundHandler, 'startBrowserDownload'>
-    >('startBrowserDownload', params, options)
-  }
-
-  /** 调用 getBrowserDownloadStatus 能力。 */
-  getBrowserDownloadStatus(
-    params: RpcMethodParams<BackgroundHandler, 'getBrowserDownloadStatus'>,
-    options?: RpcCallOptions
-  ): Promise<RpcMethodResult<BackgroundHandler, 'getBrowserDownloadStatus'>> {
-    return this.transport.call<
-      RpcMethodResult<BackgroundHandler, 'getBrowserDownloadStatus'>,
-      RpcMethodParams<BackgroundHandler, 'getBrowserDownloadStatus'>
-    >('getBrowserDownloadStatus', params, options)
+      RpcMethodResult<BackgroundHandler, 'downloadBatch'>,
+      RpcMethodParams<BackgroundHandler, 'downloadBatch'>
+    >('downloadBatch', params, options)
   }
 
   /** 销毁 RPC transport。 */

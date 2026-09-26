@@ -29,8 +29,7 @@ const VIMEO_INJECTED_HANDLERS = [
   'applyRuntimeConfig',
   'applySiteConfig',
   'getCapturedVimeoConfig',
-  'listCapturedVimeoConfigs',
-  'downloadMedia'
+  'listCapturedVimeoConfigs'
 ]
 
 afterEach(() => {
@@ -72,11 +71,11 @@ describe('site injected capabilities', () => {
     expect(Object.keys(METHOD_RESPONSE_LIMITS)).toEqual(VIMEO_INJECTED_HANDLERS)
   })
 
-  it('Vimeo provider 下载终态只包含成功标记', () => {
+  it('Vimeo provider 不再承载下载协议', () => {
     const sourcePath = path.join(extensionRoot, 'src/sites/vimeo/injected/index.ts')
     const sourceText = fs.readFileSync(sourcePath, 'utf8')
-    expect(sourceText).toContain('return { success: true }')
-    expect(sourceText).not.toContain('cancelled')
+    expect(sourceText).not.toContain('downloadMedia')
+    expect(sourceText).not.toContain('vimeoDownloadService')
   })
 })
 

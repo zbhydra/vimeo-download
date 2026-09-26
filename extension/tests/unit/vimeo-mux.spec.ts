@@ -12,7 +12,7 @@ import {
   muxVimeoVideoToMp4,
   remuxVimeoAudioToM4a,
   remuxVimeoMuxedMp4ToMp4
-} from '@/sites/vimeo/injected/mux'
+} from '@/offscreen/mux'
 
 describe('Vimeo mux 单轨与区间裁剪', () => {
   it('没有音轨时输出纯视频 MP4，时间线与输入一致', async () => {

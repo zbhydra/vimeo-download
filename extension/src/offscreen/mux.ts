@@ -1,9 +1,10 @@
 /**
- * Vimeo DASH/HLS 片段 remux 与区间裁剪。
+ * Vimeo DASH/HLS 片段 remux 与区间裁剪（offscreen document 执行版）。
  *
- * 使用 Mediabunny 复制 encoded packets 到新的 MP4/M4A 容器，不做转码。裁剪按 packet 边界
- * 完成：视频起点前移到不晚于请求起点的关键帧（否则首帧无法解码），终点取第一个不早于请求
- * 终点的 packet；音频沿用视频的时间基准，保证裁剪后不出现音画错位。
+ * 使用 Mediabunny 复制 encoded packets 到新的
+ * MP4/M4A 容器，不做转码。裁剪按 packet 边界完成：视频起点前移到不晚于请求起点的关键帧
+ * （否则首帧无法解码），终点取第一个不早于请求终点的 packet；音频沿用视频的时间基准，
+ * 保证裁剪后不出现音画错位。
  */
 
 import {

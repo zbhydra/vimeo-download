@@ -115,7 +115,7 @@ https://{project}.{host}/logstores/{logstore}/track?APIVersion=0.6.0&__topic__=m
 | website | `website-shared/src/download/scripts/media-api.ts` 连接解析/下载节点失败/超时 |
 | extension | `extension/src/popup/App.vue` 弹窗打开 |
 | extension | `extension/src/sites/vimeo/content/index.ts` content 初始化 |
-| extension | `extension/src/core/content/download/downloadManager.ts` 所有已发布站点及 Popup 的单资源下载点击、成功、失败 |
+| extension | `extension/src/background/services/DownloadOrchestrator.ts` 下载入队(点击)、成功、失败、配额拒绝；页面按钮与 Popup 的下载统一经 background 编排器记录 |
 | extension | `extension/src/core/content/components/UpgradeModal.vue` 广播升级弹窗打开事件,background 统一写 SLS |
 
 ## 9. 业务流程要点

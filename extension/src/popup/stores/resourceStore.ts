@@ -13,9 +13,13 @@ import { logger } from '@/core/utils/logger'
 import { I18N_KEYS } from '@/core/constants/i18n'
 import type { MediaResource, VideoGroupSummary } from '@/core/types'
 import { ContentChannel } from '@/popup/rpc/content.rpc'
+import { BackgroundChannel } from '@/popup/rpc/background.rpc'
 
 /** Popup 调用当前 tab content provider 的 RPC 客户端。 */
 const contentClient = new ContentChannel()
+
+/** Popup 发起下载的 RPC 客户端；下载统一由 background 编排，不依赖页面存活。 */
+const backgroundClient = new BackgroundChannel()
 
 /** 当前 Popup 的资源状态。 */
 export const useResourceStore = defineStore('resource', () => {
@@ -114,27 +118,23 @@ export const useResourceStore = defineStore('resource', () => {
   /**
    * 下载面板选中的单个资源；片段区间已由面板并入资源身份。
    *
-   * `accepted: false` 表示 content 侧一个资源都没回查到（页面已切换视频等），此时队列里不会
-   * 出现任何任务，必须在这里给出反馈，否则用户看到的是「点了没反应」。
+   * 下载统一发 background 编排（携带完整 MediaResource），不依赖页面 content 存活；
+   * `accepted: false` 表示该资源已在编排队列中去重合并或没有资源被受理。
    */
   async function downloadResource(resource: MediaResource): Promise<void> {
     error.value = null
     try {
-      const response = await contentClient.downloadBatch(
-        { resourceIds: [resource.id] },
-        { tabId: requireTargetTabId() }
-      )
+      const response = await backgroundClient.downloadBatch({
+        resources: [resource],
+        tabId: requireTargetTabId()
+      })
       if (!response.accepted) {
         error.value = I18nService.t(I18N_KEYS.STORE_ERROR.DOWNLOAD_FAILED)
         logger.error(`[resourceStore] 下载请求未被受理: resourceId=${resource.id}`)
       }
     } catch (caughtError) {
-      error.value =
-        caughtError instanceof Error &&
-        caughtError.message.includes('Could not establish connection')
-          ? I18nService.t(I18N_KEYS.STORE_ERROR.CONTENT_SCRIPT_NOT_CONNECTED)
-          : I18nService.t(I18N_KEYS.STORE_ERROR.DOWNLOAD_FAILED)
-      logger.error('[resourceStore] 当前标签页下载请求失败:', caughtError)
+      error.value = I18nService.t(I18N_KEYS.STORE_ERROR.DOWNLOAD_FAILED)
+      logger.error('[resourceStore] 发起 background 下载失败:', caughtError)
     }
   }
 

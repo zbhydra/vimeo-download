@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { RESOURCE_SOURCE_KINDS, RESOURCE_TYPES } from '@/core/constants/resource'
-import type { IMediaSource } from '@/core/protocol/injected'
+import { RESOURCE_SOURCE_KINDS } from '@/core/constants/resource'
 import type { MediaResource } from '@/core/types'
 import {
   loadVimeoResourcesFromCapturedConfig,
@@ -9,7 +8,6 @@ import {
   refreshVimeoDirectResourcesFromConfigUrl
 } from '@/sites/vimeo/config'
 import { VimeoButtonPanel } from '@/sites/vimeo/content/buttons'
-import { VimeoDownloadService } from '@/sites/vimeo/injected/download'
 import { I18nService } from '@/locales'
 import zhCN from '@/locales/zh-CN.json'
 import { I18N_KEYS } from '@/core/constants/i18n'
@@ -853,50 +851,6 @@ describe('Vimeo media parsing', () => {
 
     expect(jsonSpy).not.toHaveBeenCalled()
   })
-
-  it('rejects a non-HLS playlist response before reading its text', async () => {
-    const service = new VimeoDownloadService()
-    const response = responseWithUrl('{"login":true}', 200, HLS_MEDIA_URL, 'application/json')
-    const textSpy = vi.spyOn(response, 'text')
-    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(response)))
-
-    await expect(
-      service.handleSingleDownload('vimeo-hls-mime-task', hlsMediaSource())
-    ).rejects.toThrow(
-      '响应 MIME 与资源不匹配'
-    )
-
-    expect(textSpy).not.toHaveBeenCalled()
-  })
-
-  it('rejects an HTML HLS segment before reading its bytes', async () => {
-    const service = new VimeoDownloadService()
-    const playlistResponse = responseWithUrl(
-      hlsMediaPlaylistFixture(),
-      200,
-      HLS_MEDIA_URL,
-      'application/vnd.apple.mpegurl'
-    )
-    const segmentResponse = responseWithUrl(
-      '<html>login</html>',
-      200,
-      'https://vod-adaptive-ak.vimeocdn.com/hls/1080/init.mp4',
-      'text/html'
-    )
-    const arrayBufferSpy = vi.spyOn(segmentResponse, 'arrayBuffer')
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValueOnce(playlistResponse).mockResolvedValueOnce(segmentResponse)
-    )
-
-    await expect(
-      service.handleSingleDownload('vimeo-hls-segment-task', hlsMediaSource())
-    ).rejects.toThrow(
-      '响应 MIME 与资源不匹配'
-    )
-
-    expect(arrayBufferSpy).not.toHaveBeenCalled()
-  })
 })
 
 interface ConfigFixtureOptions {
@@ -1097,33 +1051,6 @@ function hlsMediaPlaylistFixture(): string {
     '#EXTINF:2.000,',
     'seg-2.m4s'
   ].join('\n')
-}
-
-/** 构造 Vimeo HLS injected 下载源。 */
-function hlsMediaSource(): IMediaSource {
-  const descriptor = {
-    version: 2,
-    videoId: '1201819515',
-    sourceId: 'vimeo:1201819515:video:hls:1080p:2500',
-    optionId: 'hls:1080p:2500',
-    kind: 'video',
-    delivery: 'hls',
-    label: '1080p HLS',
-    configUrl: CONFIG_URL,
-    hlsPlaylistUrl: HLS_MEDIA_URL
-  } as const
-
-  return {
-    url: HLS_MEDIA_URL,
-    id: descriptor.sourceId,
-    type: RESOURCE_TYPES.VIDEO,
-    sourceKind: RESOURCE_SOURCE_KINDS.VIMEO_HLS_VIDEO,
-    page: 'content',
-    messageId: descriptor.videoId,
-    filename: 'demo-hls.mp4',
-    mimeType: 'video/mp4',
-    documentId: encodeVimeoSourceDescriptor(descriptor)
-  }
 }
 
 function responseWithUrl(

@@ -149,16 +149,16 @@ except AppCommonException as exc:
 
 ### 3.3 下载拦截(下载链路在 `@../002.下载功能/feat.md`)
 
-插件端在下载发起前调用 `QuotaService.checkAndConsume(count)`:
+插件端下载统一由 background 下载编排器驱动,任务出队执行时调用 `quotaApi.checkAndConsume(1)` 扣减:
 
-- 返回 `status=0`(次数不足):未登录时弹登录引导，已登录时弹升级引导；本次下载不发起，下载按钮回到可重试状态。
-- 返回 `status=1`(允许):插件继续完成本地落盘。
+- 返回 `status=0`(次数不足):该任务以配额拒绝收敛(不计为下载失败),background 向发起 tab 广播升级弹窗事件(未登录弹登录引导，已登录弹升级引导)；其余任务不受影响。
+- 返回 `status=1`(允许):插件继续完成下载落盘。
 - 抛异常(网络 / 服务异常):插件端 **fail-open 放行**,允许下载,不打断用户。这与后端 API 层的 fail-open 呼应,双保险。
 
 调用点(由下载链路触发,口径归本域):
 
-- 单条下载:扣减 `1`。
-- 批量下载:一次性扣减全部条数;次数不足时整批不扣减、不发起,直接弹升级引导。
+- 每个任务出队时扣减 `1`,不预扣整批;额度不足只收敛当前任务,队列继续。
+- 人工重试的任务跳过配额(用户已见过的失败不重复扣额度)。
 
 ### 3.4 展示元素
 
@@ -198,10 +198,9 @@ Popup 未登录时仍显示升级入口；点击升级按钮或耗尽计数器�
 - 请求 / 响应模型:`@backend/src/app/schemas/quota_schema.py`
 - 订阅状态回带额度与镜像字段(含首日展示降级):`@backend/src/app/api/client/subscription_client.py` `@backend/src/app/services/subscription_status_service.py`
 - 插件端额度 store:`@extension/src/core/stores/quotaStore.ts`
-- 插件端下载前扣减封装:`@extension/src/core/content/services/QuotaService.ts`
 - 插件端额度 API 调用:`@extension/src/core/api/quota/api.ts`
-- 插件端下载链路对扣减的调用点:`@extension/src/core/content/download/downloadManager.ts`（页面唯一 FIFO 在执行真实下载前调用一次）
-- 插件端升级弹窗:`@extension/src/core/content/components/UpgradeModal.vue`
+- 插件端下载链路对扣减的调用点:`@extension/src/background/services/DownloadOrchestrator.ts`（全局下载队列在任务出队执行前扣减一次）
+- 插件端升级弹窗:`@extension/src/core/content/components/UpgradeModal.vue`（配额拒绝由 background 向发起 tab 广播 `showUpgradeModal` 事件触发）
 - 官网 Pricing 页:`@../011.Pricing页/feat.md`
 
 ## 6. 测试覆盖要点

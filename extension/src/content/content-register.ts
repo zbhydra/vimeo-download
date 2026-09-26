@@ -2,18 +2,10 @@
  * Content RPC v2 register。
  *
  * register 只声明上下文级能力、调用方、传输方式和大小限制，业务由各站点 provider 实现。
+ * 下载发起、取消与队列快照统一走 background 编排器；content 只暴露资源查询。
  */
 
-import type {
-  ContentCancelDownloadTaskRequest,
-  ContentCancelDownloadTaskResponse,
-  ContentDownloadBatchRequest,
-  ContentDownloadBatchResponse,
-  ContentGetDownloadQueueResponse,
-  ContentGetResourcesResponse,
-  ContentRetryDownloadTaskRequest,
-  ContentRetryDownloadTaskResponse
-} from './types'
+import type { ContentGetResourcesResponse } from './types'
 
 /** content provider channel。 */
 export const CHANNEL = 'content' as const
@@ -26,30 +18,6 @@ export const Handler = {
   /** 获取当前缓存资源。 */
   getResources(): Promise<ContentGetResourcesResponse> {
     return declarationOnly('content.getResources')
-  },
-
-  /** 查询当前页面未完成下载任务。 */
-  getDownloadQueue(): Promise<ContentGetDownloadQueueResponse> {
-    return declarationOnly('content.getDownloadQueue')
-  },
-
-  /** 启动批量下载。 */
-  downloadBatch(_params: ContentDownloadBatchRequest): Promise<ContentDownloadBatchResponse> {
-    return declarationOnly('content.downloadBatch')
-  },
-
-  /** 按唯一任务 ID 取消当前页面下载。 */
-  cancelDownloadTask(
-    _params: ContentCancelDownloadTaskRequest
-  ): Promise<ContentCancelDownloadTaskResponse> {
-    return declarationOnly('content.cancelDownloadTask')
-  },
-
-  /** 按唯一任务 ID 人工重试失败下载。 */
-  retryDownloadTask(
-    _params: ContentRetryDownloadTaskRequest
-  ): Promise<ContentRetryDownloadTaskResponse> {
-    return declarationOnly('content.retryDownloadTask')
   }
 }
 
@@ -59,43 +27,19 @@ export type ContentHandler = typeof Handler
 /** content 方法允许调用方。 */
 export const METHOD_TARGETS = {
   /** popup/background 可读取资源。 */
-  getResources: ['popup', 'background'],
-  /** popup/background 可读取当前页面下载任务。 */
-  getDownloadQueue: ['popup', 'background'],
-  /** popup/background 可启动下载。 */
-  downloadBatch: ['popup', 'background'],
-  /** 取消入口只由 Popup 调用；页面入口在 content 内直接调用 manager。 */
-  cancelDownloadTask: ['popup'],
-  /** 重试入口只由 Popup 调用；页面入口在 content 内直接调用 manager。 */
-  retryDownloadTask: ['popup']
+  getResources: ['popup', 'background']
 } as const satisfies Record<keyof ContentHandler, readonly ('popup' | 'background')[]>
 
 /** content 方法允许传输。 */
 export const METHOD_TRANSPORTS = {
   /** getResources 使用 Chrome message。 */
-  getResources: ['chrome'],
-  /** getDownloadQueue 使用 Chrome message。 */
-  getDownloadQueue: ['chrome'],
-  /** downloadBatch 使用 Chrome message。 */
-  downloadBatch: ['chrome'],
-  /** cancelDownloadTask 使用 Chrome message。 */
-  cancelDownloadTask: ['chrome'],
-  /** retryDownloadTask 使用 Chrome message。 */
-  retryDownloadTask: ['chrome']
+  getResources: ['chrome']
 } as const satisfies Record<keyof ContentHandler, readonly ['chrome']>
 
 /** content 方法请求体限制，单位字节。 */
 export const METHOD_REQUEST_LIMITS = {
   /** getResources 无业务参数。 */
-  getResources: 1024,
-  /** getDownloadQueue 无业务参数。 */
-  getDownloadQueue: 1024,
-  /** downloadBatch 携带有序资源 ID 列表。 */
-  downloadBatch: 16384,
-  /** cancelDownloadTask 只携带唯一任务 ID。 */
-  cancelDownloadTask: 4096,
-  /** retryDownloadTask 只携带唯一任务 ID。 */
-  retryDownloadTask: 4096
+  getResources: 1024
 } as const satisfies Record<keyof ContentHandler, number>
 
 /** content 方法响应体限制，单位字节。 */
@@ -109,15 +53,7 @@ export const METHOD_RESPONSE_LIMITS = {
    * 组元数据随每条资源多带 groupMetadata（标题/作者/时长/封面约 0.25KB/条）：最坏组合
    * 再加 16 × 30 × 0.25KB ≈ 120KB → 约 1.42MB，videoGroups 本身仅 16 组约 3KB，上限不调。
    */
-  getResources: 1572864,
-  /** getDownloadQueue 只返回未完成任务的轻量展示字段。 */
-  getDownloadQueue: 65536,
-  /** downloadBatch 返回资源回查与入队受理结果。 */
-  downloadBatch: 16384,
-  /** cancelDownloadTask 返回是否接受。 */
-  cancelDownloadTask: 4096,
-  /** retryDownloadTask 返回是否接受。 */
-  retryDownloadTask: 4096
+  getResources: 1572864
 } as const satisfies Record<keyof ContentHandler, number>
 
 /** register 占位函数，避免声明被业务代码误调用。 */

@@ -9,11 +9,11 @@
 - **Vue 3.5 + Pinia 3 + vue-i18n 11 + Vite 7**（`extension/package.json`）。`tailwindcss` 与 `@tailwindcss/vite` 仍是 devDependency 但零使用，属僵尸依赖；新代码继续用 scoped CSS，不要引入 Tailwind。
 - 构建：`vite-plugin-web-extension`。
 - 本地调试：`pnpm dev` 使用 `vite build --watch --mode development` 构建 `dist`，并通过当前 Microsoft Edge 的 CDP `DevToolsActivePort` 执行 `Extensions.loadUnpacked` 重新加载本地 unpacked extension；不创建新 profile，不接管浏览器启动。
-- **Chrome Manifest V3**（`manifest_version: 3`）：站点静态数据以 `extension/src/platforms/registry.ts` 的 `SITE_REGISTRATION` 为唯一事实源，权限与入口的最终组装以 `extension/vite.config.ts` 的 `webExtension({ manifest })` 配置为准。`permissions` 当前为 `storage` / `identity` / `downloads`，`host_permissions` 只含 Vimeo 页面与 Vimeo 媒体 CDN。标签页 URL 只通过已限定的 host_permissions 读取，不申请 `activeTab` 或 `tabs`。API 与 SLS 走标准 CORS，Google 登录走 `identity` 权限 + `chrome.identity.launchWebAuthFlow` 交互窗口（不注入 content script、不授予官网 host access、不申请 host_permissions），两者均不重复进入 host_permissions。
+- **Chrome Manifest V3**（`manifest_version: 3`）：站点静态数据以 `extension/src/platforms/registry.ts` 的 `SITE_REGISTRATION` 为唯一事实源，权限与入口的最终组装以 `extension/vite.config.ts` 的 `webExtension({ manifest })` 配置为准。`permissions` 当前为 `storage` / `identity` / `downloads` / `offscreen`（offscreen 用于 DASH/HLS 下载的 offscreen document），`host_permissions` 只含 Vimeo 页面与 Vimeo 媒体 CDN。标签页 URL 只通过已限定的 host_permissions 读取，不申请 `activeTab` 或 `tabs`。API 与 SLS 走标准 CORS，Google 登录走 `identity` 权限 + `chrome.identity.launchWebAuthFlow` 交互窗口（不注入 content script、不授予官网 host access、不申请 host_permissions），两者均不重复进入 host_permissions。
 - e2e：Playwright。
 - 入口页：`popup`（`src/popup.html`）。旧 `options_page` 已删除,购买与订阅管理统一跳官网 Pricing。
 
-### A2. 目录结构（三上下文 + 共享核心）
+### A2. 目录结构（五上下文 + 共享核心）
 
 ```
 extension/src/
@@ -21,15 +21,20 @@ extension/src/
 │   ├── index.ts          # SW 入口（device_id 初始化）
 │   ├── background-register.ts
 │   ├── installation.ts / runtimeConfig.ts / types.ts
-│   ├── rpc/content.rpc.ts
-│   └── services/         # BackgroundMessageRouter / BrowserDownloadService / BadgeManager
-│                         #   ExtensionMarkReporter / GoogleLoginService
+│   ├── rpc/              # content / offscreen 生成客户端
+│   └── services/         # BackgroundMessageRouter / DownloadOrchestrator / BadgeManager
+│                         #   directSource / downloadFilename / offscreenDocument /
+│                         #   vimeoSignatureRefresh / ExtensionMarkReporter / GoogleLoginService
 ├── content/              # Content Script 上下文
 │   ├── content-register.ts
 │   ├── MessageHandler.ts / runtimeConfig.ts / types.ts
 │   └── rpc/              # background / injected / 唯一 injectedClient
 ├── injected/             # MAIN world 注入上下文
 │   └── injected-register.ts
+├── offscreen/            # offscreen document 上下文（DASH/HLS 下载执行）
+│   ├── index.ts / offscreen-register.ts / OffscreenTaskRunner.ts / mux.ts
+│   ├── rpc/              # background 生成客户端（进度/交付/取消/重签/心跳回传）
+│   └── types.ts
 ├── core/                 # 跨上下文共享核心（插件内部共享层）
 │   ├── api/              # config.ts / client/(HttpClient,interceptors) / auth/ mark/ quota/ subscription/ order/
 │   ├── rpc/              # 自研 RPC 框架（见 A4）
@@ -39,7 +44,7 @@ extension/src/
 │   │   └── generator/    # manifest.json + templates（代码生成）
 │   ├── remoteConfig/     # createRemoteConfigStore.ts（远端稀疏覆盖）
 │   ├── stores/           # authStore.ts / quotaStore.ts（Pinia）
-│   ├── protocol/ services/ events/ storage/ composables/ constants/ utils/
+│   ├── services/ events/ storage/ composables/ constants/ utils/
 │   └── components/ content/ injected/
 ├── popup/                # 工具栏弹窗 UI（popup.html）
 │   ├── App.vue / main.ts / components/ / rpc/ / utils/
@@ -50,24 +55,33 @@ extension/src/
 ```
 
 **上下文划分**：
-- `background/`（Service Worker）、`content/`（Content Script）、`injected/`（MAIN world 注入页上下文）各有独立入口与 `*-register.ts`。
-- 旧 `options/` 设置页已删除；`popup/`（弹窗 UI）承载单视频操作面板、登录状态、额度/升级入口，底部固定显示可点击、可复制的支持邮箱，复制结果通过全局 Toast 反馈。Popup 固定 672px 宽、最小 300px、最大 600px 高；header 与 footer 固定，主区（视频信息 / 四行档位 / 时间裁剪 / 保存位置）超出上限时内部滚动；四行档位的 Video 行另带「带音轨 / 无音轨」独立开关，它是该行的行内控件、不是主区独立区块（见 `@../002.下载功能/tech-扩展端Vimeo本地下载.md` §12.5、§12.7）。宽度以 header 控件与 footer 整句能完整显示为准，header 一行放不下时功能控件折到第二行（文案不省略）。未登录按钮经真实 background RPC 发起 Google 登录：background 用 `chrome.identity.launchWebAuthFlow` 打开后端 `/api/client/auth/google/oauth/authorize`，用户完成授权后由后端 303 回 `https://<扩展 ID>.chromiumapp.org/google-login`，background 解析回跳并用一次性 code 换取登录态后写入 storage；Popup 被授权窗口抢焦点关闭也不影响登录完成，重开 Popup 由 auth store 从 storage 恢复账号。邮箱验证码登录仍由 Popup 内的登录弹窗承担。
-- `core/` 是**跨上下文共享核心**——API 客户端、RPC 框架、Pinia store、协议、存储和 `core/content/download/` 的共享单项下载编排。Vimeo content 负责页面内解析与三行面板；progressive/thumbnail 由 content 分流到 background 的 Chrome 下载管理器，DASH/HLS 交给 `sites/vimeo/injected/` 做分片读取与页面内 mux。
+- `background/`（Service Worker）、`content/`（Content Script）、`injected/`（MAIN world 注入页上下文）、`offscreen/`（offscreen document）各有独立入口；offscreen 不在 manifest 声明入口，由 background 在首个下载任务时用 `chrome.offscreen.createDocument` 惰性创建（见 A2.1）。
+- 旧 `options/` 设置页已删除；`popup/`（弹窗 UI）承载单视频操作面板、登录状态、额度/升级入口，底部固定显示可点击、可复制的支持邮箱，复制结果通过全局 Toast 反馈。Popup 固定 448px 宽、最小 300px、最大 600px 高；header 与 footer 固定，主区（视频信息 / 四行档位 / 时间裁剪 / 保存位置）超出上限时内部滚动；四行档位的 Video 行另带「带音轨 / 无音轨」独立开关，它是该行的行内控件、不是主区独立区块（见 `@../002.下载功能/tech-扩展端Vimeo本地下载.md` §12.5、§12.7）。宽度以 header 控件与 footer 整句能完整显示为准，header 一行放不下时功能控件折到第二行（文案不省略）。未登录按钮经真实 background RPC 发起 Google 登录：background 用 `chrome.identity.launchWebAuthFlow` 打开后端 `/api/client/auth/google/oauth/authorize`，用户完成授权后由后端 303 回 `https://<扩展 ID>.chromiumapp.org/google-login`，background 解析回跳并用一次性 code 换取登录态后写入 storage；Popup 被授权窗口抢焦点关闭也不影响登录完成，重开 Popup 由 auth store 从 storage 恢复账号。邮箱验证码登录仍由 Popup 内的登录弹窗承担。
+- `core/` 是**跨上下文共享核心**——API 客户端、RPC 框架、Pinia store、事件、存储与共享组件。Vimeo content 负责页面内解析与按钮面板；全部下载统一入队 background 的 `DownloadOrchestrator`（页面按钮与 Popup 都只投递完整 MediaResource），DASH/HLS 分片读取与 remux 在 offscreen document 执行（见 `@../002.下载功能/tech-扩展端Vimeo本地下载.md` §8），injected 只保留原生 config 捕获。
+
+### A2.1 offscreen document 上下文
+
+DASH/HLS 下载需要长生命周期执行环境且只用 blob API：页面（content/injected）随导航销毁、SW 随 idle 退出，只有 offscreen document 两者兼得。
+
+- **创建**：manifest 声明 `offscreen` permission；background 首个下载任务触发惰性创建——`chrome.runtime.getContexts` 预检 + 模块级 creating promise 串行化并发创建，`reasons: ['BLOBS']`。入口 `src/offscreen.html`（vite `additionalInputs` 纳入构建，路径与 `core/rpc/constants.ts` 的 `OFFSCREEN_ENTRY_PATH` 同步）。
+- **生命周期**：常驻不自动关闭——交付中的 blob URL 依赖文档存活，重复冷启动也有成本；无任务时的内存占用是已知限制。
+- **通信**：offscreen 无 DOM 可达性差异，只经 `chrome.runtime` message（RPC chrome transport）与 background 双向通信，不与 content/popup 直接通信。
 
 ### A3. RPC 系统（自研 v2，声明式 + 代码生成）
 
 目录：`extension/src/core/rpc/`。
 
 - **两种 transport**：
-  - `ChromeRpcTransport`：走 `chrome.runtime` message（popup ↔ content ↔ background）。
-  - `EventRpcTransport`：走固定 DOM `CustomEvent` 通道（content ↔ injected）。
-- **EventRpc 信任边界**：DOM transport 对宿主页面可观察、可伪造、可干扰，这一风险被明确接受。入口只做 method allowlist、请求结构和 payload 大小校验；Event handler 的内部异常只向 DOM 返回固定中性错误，Chrome transport 仍保留可定位错误。Chrome API、storage、token、额度和后端权限操作只留在 content/background，站点下载与解析仍校验 host、redirect、MIME 和媒体类型。
+  - `ChromeRpcTransport`：走 `chrome.runtime` message（popup/content/offscreen/background 之间）。
+  - `EventRpcTransport`：走固定 DOM `CustomEvent` 通道（content ↔ injected，仅 config 捕获与配置同步）。
+- **EventRpc 信任边界**：DOM transport 对宿主页面可观察、可伪造、可干扰，这一风险被明确接受。入口只做 method allowlist、请求结构和 payload 大小校验；Event handler 的内部异常只向 DOM 返回固定中性错误，Chrome transport 仍保留可定位错误。Chrome API、storage、token、额度和后端权限操作只留在 content/background，站点解析仍校验 host、redirect、MIME 和媒体类型。
 - **运行时日志配置**：扩展不访问宿主页面 Web Storage。生产 DEBUG 开关只存于扩展自有 `chrome.storage.local`，由 background 读取；popup / content 通过 Chrome RPC 获取。Popup 每次打开时异步请求，不等待日志配置返回即可挂载界面；content 在 injected ready 后再经非可信 EventRpc 把已收窄的布尔配置同步到 MAIN world。EventRpc 不获得存储读取能力，配置读取或同步失败时各上下文保持生产默认 ERROR 级别，页面业务继续初始化。
-- **共享下载契约**：上层批量使用顺序 `for...of`，每项独立进入 `downloadOne(resource)`；该调用先执行一次 `checkAndConsume(1)`，再按来源二选一：完整文件 URL 通过短 background RPC 创建 Chrome 下载并查询轻量状态，其他来源执行覆盖媒体读取与处理的完整 `downloadMedia` EventRpc。明确额度不足只跳过当前项，额度服务异常记录后 fail-open，单项错误记录后继续后续项；重复点击允许重复扣额和重复下载。
-- **页面瞬时进度**：Vimeo MAIN 下载器与 content 原生下载协调器通过同一个固定、非可信的 DOM 事件报告 `sourceId + progress`，其中 `progress` 为 `0..100` 数值或不可计算的 `null`，展示时向下取整。Vimeo 只在页面存活时按 Chrome 的 `bytesReceived/totalBytes` 更新按钮，导航后停止查询但原生任务继续。该事件不是 RPC 或业务状态，不进入 Popup，不参与额度、去重、完成判定或权限操作；页面内完整下载 RPC 使用 24 小时页面生命周期级超时，卡住时刷新，Scheduler/Queue/DownloadStateManager 不存在。
-- **Popup 与站点边界**：Popup 打开或刷新时只查询当前 tab，不订阅跨生命周期状态；面板过时由刷新或重开纠正。当前页不是 Vimeo 且窗口内没有已打开的 Vimeo 标签页时，面板呈现引导态（提示 + 「打开 Vimeo」按钮，见 `@../002.下载功能/tech-扩展端Vimeo本地下载.md` §12.2），而不是错误条；跳转只在用户点击时发生，不自动新建标签页。Popup 面板每次只下载用户在四行档位里选中的那一个资源（时间裁剪已由面板并入资源身份），批量下载与勾选模型已删除。injected 只注册 Vimeo 真正需要的方法，不生成或实现占位 handler。
+- **下载编排契约**：下载统一由 background `DownloadOrchestrator` 编排（页面按钮与 Popup 都经 `downloadBatch` RPC 投递完整 MediaResource，content 不再持有下载队列）。编排队列跨 tab 全局单并发 FIFO；配额在任务出队时检查（`quotaApi.checkAndConsume`，API 失败 fail-open），不足时向发起 tab 广播既有升级弹窗事件；打点由 background 统一记录；直连类（progressive/封面/字幕）由 background 直接 `chrome.downloads` 执行，DASH/HLS 交 offscreen document 执行（合同详见 `@../002.下载功能/tech-扩展端Vimeo本地下载.md` §8）。快照经 `downloadQueueUpdated` 事件推送、`getDownloadQueue` RPC 查询，取消与重试同样是 background RPC。
+- **下载进度投影**：执行侧（offscreen / background 直连）向 background 回传进度，编排器合并进版本化快照后统一推送；页面按钮与 Popup 底部队列消费同一份快照，不再存在页面 DOM 进度事件。
+- **Popup 与站点边界**：Popup 打开或刷新时只查询当前 tab 的资源，不订阅跨生命周期资源状态；面板过时由刷新或重开纠正。当前页不是 Vimeo 且窗口内没有已打开的 Vimeo 标签页时，面板呈现引导态（提示 + 「打开 Vimeo」按钮，见 `@../002.下载功能/tech-扩展端Vimeo本地下载.md` §12.2），而不是错误条；跳转只在用户点击时发生，不自动新建标签页。Popup 面板每次只下载用户在四行档位里选中的那一个资源（时间裁剪已由面板并入资源身份），批量下载与勾选模型已删除。injected 只注册站点真正需要的方法，不生成或实现占位 handler。
 - **声明式注册 + 代码生成**：每个上下文写 `*-register.ts`，只声明方法签名（`Handler` 对象返回 `declarationOnly(...)`），不含实现。
-- 生成器 `scripts/rpc-generate.mjs` 读取 `core/rpc/generator/manifest.json` 列出的 register 文件 → 校验**调用矩阵**（`transportMatrix`：popup→content、background→content、content/popup→background 用 chrome；content→injected 用 event）→ 生成 typed client 到 `popup/rpc/`、`content/rpc/`、`background/rpc/`。
+- 生成器 `scripts/rpc-generate.mjs` 读取 `core/rpc/generator/manifest.json` 列出的 register 文件 → 校验**调用矩阵**（`transportMatrix`：popup→content、background→content、content/popup→background、background→offscreen、offscreen→background 用 chrome；content→injected 用 event）→ 生成 typed client 到 `popup/rpc/`、`content/rpc/`、`background/rpc/`、`offscreen/rpc/`。
+- **caller 识别**：serve 按 `sender.url` 路径区分扩展自有上下文——offscreen document 入口路径归 `offscreen`，SW 脚本入口路径归 `background`，其余扩展页归 `popup`；带 `sender.tab` 的归 `content`。
 - **一致性保证**：`pnpm rpc-generate:check` 挂在 `pretype-check` / `prebuild`，生成产物与声明不一致则构建失败。
 
 详见 `@tech-插件RPC.md`。
@@ -99,6 +113,7 @@ extension/src/
   | `pnpm build:dev` | 本地开发包，不压 zip、不压缩、带 sourcemap | `http://localhost:7900` / `http://localhost:7910` | 关 | 无 |
 
   两者 manifest 与权限完全一致（`host_permissions` / `content_scripts.matches` 由 `SITE_REGISTRATION` 派生，与 `NODE_ENV` 无关），差异只在注入的 base URL、SLS 开关与压缩 / sourcemap。
+- **offscreen 入口产物**：`src/offscreen.html` 经 `vite-plugin-web-extension` 的 `additionalInputs` 进入两套构建的 `dist/`（offscreen document 不在 manifest 声明，加载 dist 后该文件必须存在，否则首个下载任务创建文档失败）。
 - **`pnpm test:unit:run` 跑完时 `dist/` 是生产包**：`tests/unit/manifest-build.spec.ts` 自身执行 `pnpm build`（`NODE_ENV=production`）来断言 manifest 组装结果。所以「跑完测试直接加载 `dist/`」拿到的是连生产域名的包，要开发包必须重新跑 `pnpm build:dev`。
 - 商店安装的 ID 由商店维持，本地加载的 ID 由浏览器分配；登录回调通过 `chrome.identity.getRedirectURL()` 获取当前安装的地址。
 - manifest `host_permissions` / 站点 `content_scripts.matches` / `web_accessible_resources` 按 dev/prod 与 `src/platforms/registry.ts` 的 `SITE_REGISTRATION` 生成，`vite.config.ts` 只消费该注册表：host_permissions 只含 Vimeo 页面与 Vimeo 媒体 CDN，API 域依赖后端通配 CORS，Google 登录走 manifest 声明的 `identity` 权限（`launchWebAuthFlow` 回调 `*.chromiumapp.org` 不需要 host access）。prod 包不包含 `localhost:7900` / `localhost:7910`；dev 包不默认请求线上官网。

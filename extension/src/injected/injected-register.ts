@@ -10,8 +10,6 @@ import type {
   InjectedApplyRuntimeConfigResponse,
   InjectedApplySiteConfigRequest,
   InjectedApplySiteConfigResponse,
-  InjectedDownloadMediaRequest,
-  InjectedDownloadMediaResponse,
   InjectedGetCapturedVimeoConfigRequest,
   InjectedGetCapturedVimeoConfigResponse,
   InjectedListCapturedVimeoConfigsResponse
@@ -49,11 +47,6 @@ export const Handler = {
   /** 枚举当前已捕获 config 的概要；聚合页无页面身份时的发现通道。 */
   listCapturedVimeoConfigs(): Promise<InjectedListCapturedVimeoConfigsResponse> {
     return declarationOnly('injected.listCapturedVimeoConfigs')
-  },
-
-  /** 下载单个媒体。 */
-  downloadMedia(_params: InjectedDownloadMediaRequest): Promise<InjectedDownloadMediaResponse> {
-    return declarationOnly('injected.downloadMedia')
   }
 }
 
@@ -69,9 +62,7 @@ export const METHOD_TARGETS = {
   /** getCapturedVimeoConfig 只允许 content 调用。 */
   getCapturedVimeoConfig: ['content'],
   /** listCapturedVimeoConfigs 只允许 content 调用。 */
-  listCapturedVimeoConfigs: ['content'],
-  /** downloadMedia 只允许 content 调用。 */
-  downloadMedia: ['content']
+  listCapturedVimeoConfigs: ['content']
 } as const satisfies Record<keyof InjectedHandler, readonly ['content']>
 
 /** injected 方法允许传输。 */
@@ -83,9 +74,7 @@ export const METHOD_TRANSPORTS = {
   /** getCapturedVimeoConfig 使用 EventRpc。 */
   getCapturedVimeoConfig: ['event'],
   /** listCapturedVimeoConfigs 使用 EventRpc。 */
-  listCapturedVimeoConfigs: ['event'],
-  /** downloadMedia 使用 EventRpc。 */
-  downloadMedia: ['event']
+  listCapturedVimeoConfigs: ['event']
 } as const satisfies Record<keyof InjectedHandler, readonly ['event']>
 
 /** injected 方法请求体限制，单位字节。 */
@@ -97,9 +86,7 @@ export const METHOD_REQUEST_LIMITS = {
   /** getCapturedVimeoConfig 只携带 videoId。 */
   getCapturedVimeoConfig: 1024,
   /** listCapturedVimeoConfigs 无业务参数。 */
-  listCapturedVimeoConfigs: 1024,
-  /** downloadMedia 携带单个媒体源。 */
-  downloadMedia: 16384
+  listCapturedVimeoConfigs: 1024
 } as const satisfies Record<keyof InjectedHandler, number>
 
 /** injected 方法响应体限制，单位字节。 */
@@ -117,9 +104,7 @@ export const METHOD_RESPONSE_LIMITS = {
    * CJK 约 0.8KB + 封面 URL 约 0.15KB，单条约 1KB），16 条约 16KB 已贴近下限，故按
    * 原先 8 条时代的 2KB/条预算同步翻倍到 32KB，远低于 EventRpc 响应 frame 上限 1MB。
    */
-  listCapturedVimeoConfigs: 32768,
-  /** downloadMedia 返回下载结果。 */
-  downloadMedia: 4096
+  listCapturedVimeoConfigs: 32768
 } as const satisfies Record<keyof InjectedHandler, number>
 
 /** register 占位函数，避免声明被业务代码误调用。 */

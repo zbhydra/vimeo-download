@@ -8,7 +8,7 @@ import { logger } from '../utils/logger'
  * 默认保存子目录。
  *
  * 下载文件落在浏览器下载目录下的这一层，用户可以改成别的子目录；空值或非法值同样回退到这里
- * （见 `BrowserDownloadService` 的路径归一化）。
+ * （见 background `downloadFilename.ts` 的路径归一化）。
  */
 export const DEFAULT_DOWNLOAD_PATH = 'vimeo-video-downloader'
 

@@ -114,6 +114,101 @@ describe('ChromeRpc v2', () => {
     }
   })
 
+  it('serve 按入口路径把 offscreen document sender 识别为 offscreen caller', async () => {
+    const callers: RpcCaller[] = []
+    const handlers: RpcServeHandlers = {
+      ping: (_params, context) => {
+        callers.push(context.caller)
+        return { pong: true, from: 'background' }
+      }
+    }
+    // caller 推导与鉴权是两个环节：这里放开 methodTargets，只验证 sender → caller 的推导。
+    const registration = serve(CHANNEL, handlers, {
+      transports: ['chrome'],
+      methodTargets: { ping: ['offscreen', 'popup'] },
+      methodTransports: METHOD_TRANSPORTS,
+      requestLimits: METHOD_REQUEST_LIMITS,
+      responseLimits: METHOD_RESPONSE_LIMITS
+    })
+
+    try {
+      const listener = getLatestRuntimeListener()
+      listener(createRequest('background', 'ping'), createOffscreenSender(), () => {})
+      // 同为扩展页 sender，但入口不是 offscreen.html 时仍是 popup。
+      listener(createRequest('background', 'ping'), createPopupSender(), () => {})
+      await vi.waitFor(() => {
+        expect(callers).toEqual(['offscreen', 'popup'])
+      })
+    } finally {
+      registration.stop()
+    }
+  })
+
+  it('serve 把 background service worker sender 识别为 background caller', async () => {
+    const callers: RpcCaller[] = []
+    const handlers: RpcServeHandlers = {
+      ping: (_params, context) => {
+        callers.push(context.caller)
+        return { pong: true, from: 'background' }
+      }
+    }
+    const registration = serve(CHANNEL, handlers, {
+      transports: ['chrome'],
+      methodTargets: { ping: ['background', 'popup'] },
+      methodTransports: METHOD_TRANSPORTS,
+      requestLimits: METHOD_REQUEST_LIMITS,
+      responseLimits: METHOD_RESPONSE_LIMITS
+    })
+
+    try {
+      const listener = getLatestRuntimeListener()
+      listener(createRequest('background', 'ping'), createServiceWorkerSender(), () => {})
+      await vi.waitFor(() => {
+        expect(callers).toEqual(['background'])
+      })
+    } finally {
+      registration.stop()
+    }
+  })
+
+  it('serve 拒绝 popup 调用 offscreen-only 方法', async () => {
+    const handlers: RpcServeHandlers = {
+      keepAlive: () => ({ alive: true })
+    }
+    const methodTargets = {
+      ...METHOD_TARGETS,
+      keepAlive: ['offscreen'] as const
+    }
+    const registration = serve(CHANNEL, handlers, {
+      transports: ['chrome'],
+      methodTargets,
+      methodTransports: METHOD_TRANSPORTS,
+      requestLimits: METHOD_REQUEST_LIMITS,
+      responseLimits: METHOD_RESPONSE_LIMITS
+    })
+
+    try {
+      const listener = getLatestRuntimeListener()
+      const responses: Array<RpcResponse<JsonValue>> = []
+      listener(
+        createRequest('background', 'keepAlive'),
+        createPopupSender(),
+        response => responses.push(response as RpcResponse<JsonValue>)
+      )
+
+      await vi.waitFor(() => {
+        expect(responses).toHaveLength(1)
+      })
+      expect(responses[0]).toMatchObject({
+        id: 'rpc-test-id',
+        success: false,
+        code: 'UNAUTHORIZED'
+      })
+    } finally {
+      registration.stop()
+    }
+  })
+
   it('ChromeRpcTransport 在 content 目标不存在时返回 TARGET_NOT_FOUND', async () => {
     vi.mocked(chrome.tabs.sendMessage).mockRejectedValueOnce(
       new Error('Could not establish connection. Receiving end does not exist.')
@@ -201,6 +296,24 @@ function createPopupTabSender(): chrome.runtime.MessageSender {
       id: 9,
       url: `chrome-extension://${chrome.runtime.id}/src/popup.html`
     } as chrome.tabs.Tab
+  }
+}
+
+/** offscreen document sender：扩展页 origin + offscreen 入口路径。 */
+function createOffscreenSender(): chrome.runtime.MessageSender {
+  return {
+    id: chrome.runtime.id,
+    url: `chrome-extension://${chrome.runtime.id}/src/offscreen.html`,
+    origin: `chrome-extension://${chrome.runtime.id}`
+  }
+}
+
+/** background service worker sender：无 tab，url 指向 SW 脚本入口。 */
+function createServiceWorkerSender(): chrome.runtime.MessageSender {
+  return {
+    id: chrome.runtime.id,
+    url: `chrome-extension://${chrome.runtime.id}/src/background/index.js`,
+    origin: `chrome-extension://${chrome.runtime.id}`
   }
 }
 

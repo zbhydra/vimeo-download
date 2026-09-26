@@ -5,8 +5,10 @@
  */
 
 import {
+  BACKGROUND_ENTRY_PATH,
   DEFAULT_RPC_REQUEST_LIMIT,
   DEFAULT_RPC_RESPONSE_LIMIT,
+  OFFSCREEN_ENTRY_PATH,
   RPC_EVENT_FRAME_OVERHEAD_LIMIT,
   RPC_PROTOCOL_VERSION,
   createRpcRequestEventName,
@@ -272,7 +274,13 @@ function inferChromeCaller(channel: RpcChannel, sender: chrome.runtime.MessageSe
   const fromExtensionPage = extensionPrefix.length > 0 && senderUrl.startsWith(extensionPrefix)
 
   if (fromExtensionPage) {
-    return 'popup'
+    // 扩展自有上下文分三类：offscreen document 承载下载执行，SW 脚本的 sender.url 指向
+    // 自身入口（无 sender.tab），其余扩展页（popup 等）一律按 popup 路由，与既有 caller
+    // 语义保持不变。
+    if (isOffscreenEntrySender(senderUrl)) {
+      return 'offscreen'
+    }
+    return isBackgroundEntrySender(senderUrl) ? 'background' : 'popup'
   }
 
   if (channel === 'background' && sender.tab?.id !== undefined) {
@@ -284,6 +292,24 @@ function inferChromeCaller(channel: RpcChannel, sender: chrome.runtime.MessageSe
   }
 
   return 'content'
+}
+
+/** 判断扩展页 sender 是否来自 offscreen document 入口。 */
+function isOffscreenEntrySender(senderUrl: string): boolean {
+  try {
+    return new URL(senderUrl).pathname === OFFSCREEN_ENTRY_PATH
+  } catch (_error) {
+    return false
+  }
+}
+
+/** 判断 sender 是否为 background service worker（sender.url 指向 SW 脚本入口）。 */
+function isBackgroundEntrySender(senderUrl: string): boolean {
+  try {
+    return new URL(senderUrl).pathname === BACKGROUND_ENTRY_PATH
+  } catch (_error) {
+    return false
+  }
 }
 
 /** 解析 Chrome message 请求。 */

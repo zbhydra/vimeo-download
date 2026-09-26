@@ -31,7 +31,7 @@ interface BuiltManifest {
 
 describe('manifest build artifacts', () => {
   it(
-    'declares only storage, identity and downloads, and never grants the website domain host access',
+    'declares only storage, identity, downloads and offscreen, and never grants the website domain host access',
     () => {
       // 测试自身触发生产构建，不依赖残留 dist/，确保断言的是当前 vite.config 组装结果。
       execFileSync('pnpm', ['build'], {
@@ -43,8 +43,9 @@ describe('manifest build artifacts', () => {
       const manifest = JSON.parse(readFileSync(distManifestPath, 'utf8')) as BuiltManifest
 
       expect(manifest.key).toBeUndefined()
-      // Google 登录由 background 用 launchWebAuthFlow 发起，因此保留 identity。
-      expect(manifest.permissions).toEqual(['storage', 'identity', 'downloads'])
+      // Google 登录由 background 用 launchWebAuthFlow 发起，因此保留 identity；
+      // offscreen 由 background 用 createDocument 承载 DASH/HLS 下载执行。
+      expect(manifest.permissions).toEqual(['storage', 'identity', 'downloads', 'offscreen'])
       // v3 browser identity 回调取代了 externally_connectable 旧接收端。
       expect(manifest.externally_connectable).toBeUndefined()
       // content_scripts 不得注入官网域。

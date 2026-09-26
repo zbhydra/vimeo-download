@@ -16,6 +16,23 @@ export const DEFAULT_RPC_REQUEST_LIMIT = 65536
 /** 默认响应体大小限制，单位字节。 */
 export const DEFAULT_RPC_RESPONSE_LIMIT = 262144
 
+/**
+ * offscreen document 入口的扩展内路径（带前导斜杠）。
+ *
+ * serve 用它把 chrome-extension sender 区分为 offscreen caller；构建侧入口写在
+ * `vite.config.ts` 的 `additionalInputs` 与 `src/offscreen.html`，两处必须同步修改。
+ */
+export const OFFSCREEN_ENTRY_PATH = '/src/offscreen.html'
+
+/**
+ * background service worker 脚本的扩展内路径（带前导斜杠）。
+ *
+ * SW 发出的 chrome message 没有 sender.tab，sender.url 指向 SW 脚本本身；serve 用它把
+ * 这类 sender 归为 background caller（否则会被误判成 popup）。路径与 `vite.config.ts`
+ * manifest 的 `background.service_worker` 构建产物路径同步。
+ */
+export const BACKGROUND_ENTRY_PATH = '/src/background/index.js'
+
 /** 固定 EventRpc 请求事件前缀。 */
 export const RPC_EVENT_REQUEST_PREFIX = '__vdl_rpc_request__'
 

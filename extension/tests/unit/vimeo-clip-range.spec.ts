@@ -1,4 +1,9 @@
-/** Vimeo 片段/剪辑下载：区间选项模型、下载分派与 signed URL 刷新后的区间保持。 */
+/**
+ * Vimeo 片段/剪辑下载：区间选项模型。
+ *
+ * 下载分派（区间透传给 mux）已随 injected 下载链退役，等价合同由
+ * offscreen-download-dispatch.spec 以 offscreen 执行器覆盖。
+ */
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -13,7 +18,6 @@ import {
   parseVimeoDashPlaylist
 } from '@/sites/vimeo/media'
 import { vimeoResourceBuffer } from '@/sites/vimeo/content/resourceBuffer'
-import { VimeoDownloadService } from '@/sites/vimeo/injected/download'
 import {
   decodeVimeoSourceDescriptor,
   encodeVimeoSourceDescriptor,
@@ -21,23 +25,13 @@ import {
   parseVimeoClipIdRange,
   parseVimeoTimeRange,
   stripVimeoClipSuffix,
-  type VimeoTimeRange
 } from '@/sites/vimeo/shared'
-
-vi.mock('@/sites/vimeo/injected/mux', () => ({
-  muxVimeoVideoToMp4: vi.fn(() => Promise.resolve(new Blob(['muxed'], { type: 'video/mp4' }))),
-  remuxVimeoAudioToM4a: vi.fn(() => Promise.resolve(new Blob(['audio'], { type: 'audio/mp4' }))),
-  remuxVimeoMuxedMp4ToMp4: vi.fn(() => Promise.resolve(new Blob(['hls'], { type: 'video/mp4' })))
-}))
-
-const mux = await import('@/sites/vimeo/injected/mux')
 
 const VIDEO_ID = '1196869805'
 const CONFIG_URL = `https://player.vimeo.com/video/${VIDEO_ID}/config/request?expires=2100000000&signature=controlled`
 const PLAYLIST_URL = 'https://vod-adaptive-ak.vimeocdn.com/controlled/master.json'
 const VIDEO_SEGMENT_URL = 'https://vod-adaptive-ak.vimeocdn.com/controlled/video-1.m4s'
 const AUDIO_SEGMENT_URL = 'https://vod-adaptive-ak.vimeocdn.com/controlled/audio-1.m4s'
-const HLS_MEDIA_URL = 'https://vod-adaptive-ak.vimeocdn.com/hls/1080/prog.m3u8'
 const CLIP = { startSeconds: 12.5, endSeconds: 30 }
 
 describe('Vimeo 片段区间选项模型', () => {
@@ -200,94 +194,6 @@ describe('Vimeo 片段区间选项模型', () => {
   })
 })
 
-describe('Vimeo 片段下载分派', () => {
-  afterEach(() => {
-    vi.restoreAllMocks()
-    vi.unstubAllGlobals()
-    vi.mocked(mux.muxVimeoVideoToMp4).mockClear()
-    vi.mocked(mux.remuxVimeoAudioToM4a).mockClear()
-    vi.mocked(mux.remuxVimeoMuxedMp4ToMp4).mockClear()
-  })
-
-  it('DASH video 把区间透传给 mux', async () => {
-    stubDashFetch()
-    stubSave()
-
-    await new VimeoDownloadService().handleSingleDownload(
-      'vimeo-clip-video',
-      dashVideoSource(CLIP)
-    )
-
-    expect(mux.muxVimeoVideoToMp4).toHaveBeenCalledTimes(1)
-    expect(vi.mocked(mux.muxVimeoVideoToMp4).mock.calls[0][2]).toEqual(CLIP)
-  })
-
-  it('DASH audio 把区间透传给 audio remux', async () => {
-    stubDashFetch()
-    stubSave()
-
-    await new VimeoDownloadService().handleSingleDownload('vimeo-clip-audio', dashAudioSource(CLIP))
-
-    expect(mux.remuxVimeoAudioToM4a).toHaveBeenCalledTimes(1)
-    expect(vi.mocked(mux.remuxVimeoAudioToM4a).mock.calls[0][1]).toEqual(CLIP)
-  })
-
-  it('HLS 把区间透传给 muxed remux', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(hlsMediaResponse())
-      .mockResolvedValueOnce(segmentResponse('https://vod-adaptive-ak.vimeocdn.com/hls/1080/init.mp4', 'video/mp4'))
-      .mockResolvedValueOnce(segmentResponse('https://vod-adaptive-ak.vimeocdn.com/hls/1080/seg-1.m4s', 'video/mp4'))
-      .mockResolvedValueOnce(segmentResponse('https://vod-adaptive-ak.vimeocdn.com/hls/1080/seg-2.m4s', 'video/mp4'))
-    vi.stubGlobal('fetch', fetchMock)
-    stubSave()
-
-    await new VimeoDownloadService().handleSingleDownload('vimeo-clip-hls', hlsSource(CLIP))
-
-    expect(fetchMock.mock.calls.map(call => call[0])).toEqual([
-      HLS_MEDIA_URL,
-      'https://vod-adaptive-ak.vimeocdn.com/hls/1080/init.mp4',
-      'https://vod-adaptive-ak.vimeocdn.com/hls/1080/seg-1.m4s',
-      'https://vod-adaptive-ak.vimeocdn.com/hls/1080/seg-2.m4s'
-    ])
-    expect(mux.remuxVimeoMuxedMp4ToMp4).toHaveBeenCalledTimes(1)
-    expect(vi.mocked(mux.remuxVimeoMuxedMp4ToMp4).mock.calls[0][1]).toEqual(CLIP)
-  })
-
-  it('没有区间时保持既有调用形态，不传裁剪参数', async () => {
-    stubDashFetch()
-    stubSave()
-
-    await new VimeoDownloadService().handleSingleDownload('vimeo-full-video', dashVideoSource())
-
-    expect(vi.mocked(mux.muxVimeoVideoToMp4).mock.calls[0][2]).toBeUndefined()
-  })
-
-  it('signed playlist 过期刷新后仍保持同一画质与区间', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(statusResponse(403, PLAYLIST_URL))
-      .mockResolvedValueOnce(jsonResponse(configRequestFixture(), CONFIG_URL))
-      .mockResolvedValueOnce(jsonResponse(playlistFixture(), PLAYLIST_URL))
-      .mockResolvedValueOnce(segmentResponse(VIDEO_SEGMENT_URL, 'video/mp4'))
-      .mockResolvedValueOnce(segmentResponse(AUDIO_SEGMENT_URL, 'audio/mp4'))
-    vi.stubGlobal('fetch', fetchMock)
-    stubSave()
-
-    await new VimeoDownloadService().handleSingleDownload('vimeo-clip-refresh', dashVideoSource(CLIP))
-
-    expect(fetchMock.mock.calls.map(call => call[0])).toEqual([
-      PLAYLIST_URL,
-      CONFIG_URL,
-      PLAYLIST_URL,
-      VIDEO_SEGMENT_URL,
-      AUDIO_SEGMENT_URL
-    ])
-    expect(mux.muxVimeoVideoToMp4).toHaveBeenCalledTimes(1)
-    expect(vi.mocked(mux.muxVimeoVideoToMp4).mock.calls[0][2]).toEqual(CLIP)
-  })
-})
-
 /** 构造全部资源，用于验证哪些交付可以裁剪。 */
 function allResources(): MediaResource[] {
   const config = parseVimeoConfig(
@@ -314,65 +220,6 @@ function noAudioVideoResource(): MediaResource {
   return allResources().find(
     resource => resource.id === `vimeo:${VIDEO_ID}:video:dash:video-track:no-audio`
   ) as MediaResource
-}
-
-/** 构造 DASH video 下载源；不传区间时表示整片。 */
-function dashVideoSource(range?: VimeoTimeRange) {
-  const resource = dashVideoResource()
-  return toSource(
-    range ? applyVimeoTimeRange(resource, range) : resource,
-    'controlled-dash.mp4'
-  )
-}
-
-/** 构造 DASH audio 下载源。 */
-function dashAudioSource(range?: VimeoTimeRange) {
-  const resource = allResources().find(
-    resource => resource.id === `vimeo:${VIDEO_ID}:audio:dash:audio-track`
-  ) as MediaResource
-  return toSource(range ? applyVimeoTimeRange(resource, range) : resource, 'controlled-audio.m4a')
-}
-
-/** 构造 HLS fallback 下载源。 */
-function hlsSource(range?: VimeoTimeRange) {
-  const config = parseVimeoConfig(configFixture(), CONFIG_URL)
-  const variant = {
-    url: HLS_MEDIA_URL,
-    bandwidth: 2_500_000,
-    width: 1920,
-    height: 1080,
-    fps: 30,
-    codecs: 'avc1.640028,mp4a.40.2'
-  }
-  const mediaPlaylist = {
-    playlistUrl: HLS_MEDIA_URL,
-    initSegmentUrl: 'https://vod-adaptive-ak.vimeocdn.com/hls/1080/init.mp4',
-    segments: [{ url: VIDEO_SEGMENT_URL }],
-    bandwidth: variant.bandwidth,
-    width: variant.width,
-    height: variant.height,
-    fps: variant.fps,
-    codecs: variant.codecs
-  }
-  const resource = buildVimeoDownloadOptions(config, null, [mediaPlaylist])
-    .map((option, index) => createVimeoResource(option, index))
-    .find(candidate => candidate.sourceKind === RESOURCE_SOURCE_KINDS.VIMEO_HLS_VIDEO) as MediaResource
-  return toSource(range ? applyVimeoTimeRange(resource, range) : resource, 'controlled-hls.mp4')
-}
-
-/** 把页面资源收敛成 injected 下载源。 */
-function toSource(resource: MediaResource, filename: string) {
-  return {
-    url: resource.url,
-    id: resource.id,
-    type: resource.type,
-    sourceKind: resource.sourceKind,
-    page: 'content' as const,
-    messageId: resource.messageId,
-    filename,
-    mimeType: resource.mimeType,
-    documentId: resource.documentId
-  }
 }
 
 /** 构造 Vimeo config；传入 textTracks 时附带字幕轨。 */
@@ -412,11 +259,6 @@ function filesFixture(): JsonValue {
   }
 }
 
-/** `/config/request` 刷新片段：与完整 config 共用 request 字段。 */
-function configRequestFixture(): JsonValue {
-  return requestFixture()
-}
-
 /** 构造 DASH playlist。 */
 function playlistFixture(): JsonValue {
   return {
@@ -446,73 +288,4 @@ function playlistFixture(): JsonValue {
       }
     ]
   }
-}
-
-/** 让保存动作在 happy-dom 中静默成功。 */
-function stubSave(): void {
-  vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:https://vimeo.com/controlled')
-  vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
-  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
-}
-
-/** DASH 链路固定响应：playlist、视频分片、音频分片。 */
-function stubDashFetch(): void {
-  vi.stubGlobal(
-    'fetch',
-    vi
-      .fn()
-      .mockResolvedValueOnce(jsonResponse(playlistFixture(), PLAYLIST_URL))
-      .mockResolvedValueOnce(segmentResponse(VIDEO_SEGMENT_URL, 'video/mp4'))
-      .mockResolvedValueOnce(segmentResponse(AUDIO_SEGMENT_URL, 'audio/mp4'))
-  )
-}
-
-/** HLS media playlist 响应。 */
-function hlsMediaResponse(): Response {
-  return responseWithUrl(
-    [
-      '#EXTM3U',
-      '#EXT-X-VERSION:7',
-      '#EXT-X-MAP:URI="init.mp4"',
-      '#EXTINF:2.000,',
-      'seg-1.m4s',
-      '#EXTINF:2.000,',
-      'seg-2.m4s'
-    ].join('\n'),
-    200,
-    HLS_MEDIA_URL,
-    'application/vnd.apple.mpegurl'
-  )
-}
-
-/** JSON 响应并保留生产 URL 校验需要的 final URL。 */
-function jsonResponse(body: JsonValue, url: string): Response {
-  return responseWithUrl(JSON.stringify(body), 200, url, 'application/json')
-}
-
-/** 构造媒体分片响应。 */
-function segmentResponse(url: string, contentType: string): Response {
-  return responseWithUrl(new Uint8Array([1, 2, 3, 4]), 200, url, contentType)
-}
-
-/** 构造无响应体的状态响应。 */
-function statusResponse(status: number, url: string): Response {
-  const response = new Response(null, { status })
-  Object.defineProperty(response, 'url', { value: url })
-  return response
-}
-
-/** 构造带 final URL 的响应。 */
-function responseWithUrl(
-  body: BodyInit,
-  status: number,
-  url: string,
-  contentType: string
-): Response {
-  const response = new Response(body, {
-    status,
-    headers: { 'Content-Type': contentType }
-  })
-  Object.defineProperty(response, 'url', { value: url })
-  return response
 }

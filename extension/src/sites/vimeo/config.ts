@@ -76,13 +76,6 @@ export async function loadVimeoResourcesFromConfigUrl(
   return loadVimeoResourcesFromConfigUrlOnce(configUrl, true)
 }
 
-/** 下载 URL 过期后刷新一次资源，不允许刷新过程再次递归请求 config。 */
-export async function refreshVimeoResourcesFromConfigUrl(
-  configUrl: string
-): Promise<VimeoResourceSnapshot> {
-  return loadVimeoResourcesFromConfigUrlOnce(configUrl, false)
-}
-
 /**
  * 下载中断后只刷新 Vimeo 完整文件来源。
  *

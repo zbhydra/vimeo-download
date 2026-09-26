@@ -17,7 +17,7 @@ describe('injectedClient', () => {
   })
 
   it('模块加载时只创建一个不带固定超时的 InjectedChannel', async () => {
-    const client = { downloadMedia: vi.fn() }
+    const client = { getCapturedVimeoConfig: vi.fn() }
     mocks.constructor.mockReturnValue(client)
 
     const first = await import('@/content/rpc/injectedClient')

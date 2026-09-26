@@ -4,7 +4,6 @@
  * 这些类型描述 injected 能力请求与响应，新的 register 只负责统一通信边界。
  */
 
-import type { IMediaSource } from '@/core/protocol/injected'
 import type { VimeoCapturedConfigSnapshot } from '@/sites/vimeo/shared'
 import type { VimeoConfig } from '@/sites/vimeo/runtimeConfig'
 import type { RuntimeConfig } from '@/core/runtimeConfig'
@@ -55,18 +54,4 @@ export interface InjectedCapturedVimeoConfigSummary {
 export interface InjectedListCapturedVimeoConfigsResponse {
   /** 已捕获概要，按捕获先后排序；条数受 MAIN world 捕获上限约束。 */
   videos: InjectedCapturedVimeoConfigSummary[]
-}
-
-/** 下载单个媒体请求。 */
-export interface InjectedDownloadMediaRequest {
-  /** 当前页面下载管理器分配的唯一任务 ID。 */
-  taskId: string
-  /** 待下载媒体源。 */
-  source: IMediaSource
-}
-
-/** downloadMedia 响应。 */
-export interface InjectedDownloadMediaResponse {
-  /** MAIN world 已结束本次长调用。 */
-  success: true
 }

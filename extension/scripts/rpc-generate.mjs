@@ -15,16 +15,18 @@ import { fileURLToPath } from 'node:url'
 const scriptDir = path.dirname(fileURLToPath(import.meta.url))
 const projectRoot = path.resolve(scriptDir, '..')
 
-const validChannels = ['content', 'injected', 'background']
-const validCallers = ['content', 'injected', 'background', 'popup']
+const validChannels = ['content', 'injected', 'background', 'offscreen']
+const validCallers = ['content', 'injected', 'background', 'offscreen', 'popup']
 const validTransports = ['chrome', 'event']
-const generatedOutputDirs = ['src/popup/rpc', 'src/content/rpc', 'src/background/rpc']
+const generatedOutputDirs = ['src/popup/rpc', 'src/content/rpc', 'src/background/rpc', 'src/offscreen/rpc']
 const transportMatrix = new Map([
   ['popup->content', ['chrome']],
   ['background->content', ['chrome']],
   ['content->background', ['chrome']],
   ['popup->background', ['chrome']],
-  ['content->injected', ['event']]
+  ['content->injected', ['event']],
+  ['background->offscreen', ['chrome']],
+  ['offscreen->background', ['chrome']]
 ])
 
 /** 读取生成器 manifest。 */
@@ -504,6 +506,10 @@ function getOutputPath(caller, channel) {
 
   if (caller === 'content') {
     return `src/content/rpc/${channel}.rpc.ts`
+  }
+
+  if (caller === 'offscreen') {
+    return `src/offscreen/rpc/${channel}.rpc.ts`
   }
 
   return null

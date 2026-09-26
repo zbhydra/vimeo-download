@@ -1,16 +1,14 @@
-/** Vimeo 字幕资源建模、Chrome 原生下载分派与边界测试。 */
+/**
+ * Vimeo 字幕资源建模与面板渲染。
+ *
+ * 直连下载分派/边界已随 content 下载链退役：URL/MIME/刷新合同由 direct-source.spec 覆盖，
+ * 真实落盘由 download-orchestrator.spec 与 e2e 覆盖。
+ */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { BrowserDownloadService } from '@/background/services/BrowserDownloadService'
-import type {
-  BackgroundBrowserDownloadSource,
-  BackgroundStartBrowserDownloadRequest
-} from '@/background/types'
 import { RESOURCE_SOURCE_KINDS, RESOURCE_TYPES, isBrowserManagedSourceKind } from '@/core/constants/resource'
 import { I18N_KEYS } from '@/core/constants/i18n'
-import { downloadWithBrowserManager } from '@/core/content/download/browserDownload'
-import type { RpcContext } from '@/core/rpc/types'
 import { I18nService } from '@/locales'
 import type { MediaResource } from '@/core/types'
 import { VimeoButtonPanel } from '@/sites/vimeo/content/buttons'
@@ -22,36 +20,8 @@ import {
 } from '@/sites/vimeo/media'
 import {
   decodeVimeoSourceDescriptor,
-  encodeVimeoSourceDescriptor,
   isVimeoSubtitleUrl
 } from '@/sites/vimeo/shared'
-
-const mocks = vi.hoisted(() => ({
-  startBrowserDownload: vi.fn(),
-  getBrowserDownloadStatus: vi.fn(),
-  loggerError: vi.fn(),
-  refreshVimeoDirectResourcesFromConfigUrl: vi.fn()
-}))
-
-vi.mock('@/content/rpc/background.rpc', () => ({
-  BackgroundChannel: class {
-    startBrowserDownload = mocks.startBrowserDownload
-    getBrowserDownloadStatus = mocks.getBrowserDownloadStatus
-  }
-}))
-
-vi.mock('@/core/utils/logger', () => ({
-  logger: {
-    error: mocks.loggerError,
-    info: vi.fn(),
-    warn: vi.fn(),
-    debug: vi.fn()
-  }
-}))
-
-vi.mock('@/sites/vimeo/config', () => ({
-  refreshVimeoDirectResourcesFromConfigUrl: mocks.refreshVimeoDirectResourcesFromConfigUrl
-}))
 
 const VIDEO_ID = '1201819515'
 const CONFIG_URL = `https://player.vimeo.com/video/${VIDEO_ID}/config?h=dc93ef4923&s=native_signature`
@@ -258,157 +228,6 @@ describe('Vimeo 字幕资源建模', () => {
   })
 })
 
-describe('Vimeo 字幕 Chrome 原生下载', () => {
-  beforeEach(() => {
-    vi.restoreAllMocks()
-    mocks.startBrowserDownload.mockReset()
-    mocks.getBrowserDownloadStatus.mockReset()
-    mocks.loggerError.mockReset()
-    mocks.refreshVimeoDirectResourcesFromConfigUrl.mockReset()
-  })
-
-  it('content 侧把字幕资源交给 background 创建原生下载', async () => {
-    mocks.startBrowserDownload.mockResolvedValue({ download_id: 51 })
-    mocks.getBrowserDownloadStatus.mockResolvedValue({
-      state: 'complete',
-      bytes_received: 1024,
-      total_bytes: 1024
-    })
-
-    await downloadWithBrowserManager('subtitle-task-1', subtitleResource(), 'Demo-English.vtt')
-
-    expect(mocks.startBrowserDownload).toHaveBeenCalledWith({
-      source: expect.objectContaining({
-        source_id: `vimeo:${VIDEO_ID}:subtitle:en`,
-        url: ENGLISH_SUBTITLE_URL,
-        type: RESOURCE_TYPES.SUBTITLE,
-        source_kind: RESOURCE_SOURCE_KINDS.VIMEO_SUBTITLE_URL,
-        mime_type: 'text/vtt',
-        filename: 'Demo-English.vtt'
-      }),
-      refresh_source: false
-    })
-  })
-
-  it('background 校验字幕来源后交给 Chrome 下载管理器，并拒绝越界 URL 与 MIME', async () => {
-    vi.spyOn(chrome.downloads, 'download').mockImplementation(() => Promise.resolve(61))
-    const service = new BrowserDownloadService()
-
-    await expect(service.start(subtitleRequest(), vimeoContext())).resolves.toEqual({
-      download_id: 61
-    })
-    expect(chrome.downloads.download).toHaveBeenCalledWith({
-      url: ENGLISH_SUBTITLE_URL,
-      // 保存位置默认子目录由 background 拼在文件名前，路径始终相对下载目录。
-      filename: 'vimeo-video-downloader/Demo-English.vtt',
-      conflictAction: 'uniquify',
-      saveAs: false
-    })
-
-    await expect(
-      service.start(
-        subtitleRequest({ url: `https://player.vimeo.com/video/${VIDEO_ID}/config` }),
-        vimeoContext()
-      )
-    ).rejects.toThrow('URL 不在允许的白名单')
-    await expect(
-      service.start(subtitleRequest({ url: 'https://attacker.example/evil.vtt' }), vimeoContext())
-    ).rejects.toThrow('URL 不在允许的白名单')
-    await expect(
-      service.start(subtitleRequest({ mime_type: 'video/mp4' }), vimeoContext())
-    ).rejects.toThrow('直连来源合同不匹配')
-    await expect(
-      service.start(subtitleRequest({ type: RESOURCE_TYPES.AUDIO }), vimeoContext())
-    ).rejects.toThrow('直连来源合同不匹配')
-  })
-
-  it('状态查询接受 text/* 响应，阻断被换成视频的最终响应', async () => {
-    const service = new BrowserDownloadService()
-    vi.spyOn(chrome.downloads, 'search')
-      .mockImplementationOnce(() => Promise.resolve([subtitleDownloadItem()]))
-      .mockImplementationOnce(() => Promise.resolve([subtitleDownloadItem({ mime: 'video/mp4' })]))
-      .mockImplementationOnce(() =>
-        Promise.resolve([subtitleDownloadItem({ finalUrl: 'https://attacker.example/evil.vtt' })])
-      )
-    vi.spyOn(chrome.downloads, 'cancel').mockResolvedValue()
-
-    await expect(
-      service.getStatus(
-        { download_id: 61, source_kind: RESOURCE_SOURCE_KINDS.VIMEO_SUBTITLE_URL },
-        vimeoContext()
-      )
-    ).resolves.toEqual({ state: 'in_progress', bytes_received: 128, total_bytes: 256 })
-    await expect(
-      service.getStatus(
-        { download_id: 61, source_kind: RESOURCE_SOURCE_KINDS.VIMEO_SUBTITLE_URL },
-        vimeoContext()
-      )
-    ).rejects.toThrow('原生下载响应越界')
-    await expect(
-      service.getStatus(
-        { download_id: 61, source_kind: RESOURCE_SOURCE_KINDS.VIMEO_SUBTITLE_URL },
-        vimeoContext()
-      )
-    ).rejects.toThrow('原生下载响应越界')
-    expect(chrome.downloads.cancel).toHaveBeenCalledTimes(2)
-  })
-
-  it('字幕响应为 octet-stream 时放行，不取消下载', async () => {
-    const service = new BrowserDownloadService()
-    vi.spyOn(chrome.downloads, 'search')
-      .mockImplementationOnce(() =>
-        Promise.resolve([subtitleDownloadItem({ mime: 'application/octet-stream' })])
-      )
-      .mockImplementationOnce(() =>
-        Promise.resolve([subtitleDownloadItem({ mime: 'binary/octet-stream' })])
-      )
-    const cancel = vi.spyOn(chrome.downloads, 'cancel').mockResolvedValue()
-
-    // Vimeo CDN 对同一批直连文件会返回 octet-stream（DASH media segment 已按此放行）：
-    // 拒绝对纯文本字幕不增加安全价值，却会产生一条取消后不可恢复的失败路径。
-    await expect(
-      service.getStatus(
-        { download_id: 61, source_kind: RESOURCE_SOURCE_KINDS.VIMEO_SUBTITLE_URL },
-        vimeoContext()
-      )
-    ).resolves.toEqual({ state: 'in_progress', bytes_received: 128, total_bytes: 256 })
-    await expect(
-      service.getStatus(
-        { download_id: 61, source_kind: RESOURCE_SOURCE_KINDS.VIMEO_SUBTITLE_URL },
-        vimeoContext()
-      )
-    ).resolves.toEqual({ state: 'in_progress', bytes_received: 128, total_bytes: 256 })
-    expect(cancel).not.toHaveBeenCalled()
-  })
-
-  it('直连中断刷新 config 后恢复同一语言的字幕', async () => {
-    vi.spyOn(chrome.downloads, 'download').mockImplementation(() => Promise.resolve(62))
-    mocks.refreshVimeoDirectResourcesFromConfigUrl.mockResolvedValue([
-      { ...subtitleResource(), url: `${CHINESE_SUBTITLE_URL}` }
-    ])
-
-    const result = await new BrowserDownloadService().start(
-      { ...subtitleRequest(), refresh_source: true },
-      vimeoContext()
-    )
-
-    expect(result).toEqual({ download_id: 62 })
-    expect(mocks.refreshVimeoDirectResourcesFromConfigUrl).toHaveBeenCalledWith(REFRESH_CONFIG_URL)
-    expect(chrome.downloads.download).toHaveBeenCalledWith(
-      expect.objectContaining({ url: CHINESE_SUBTITLE_URL })
-    )
-  })
-
-  it('刷新后缺少同语言字幕时明确失败', async () => {
-    mocks.refreshVimeoDirectResourcesFromConfigUrl.mockResolvedValue([])
-
-    await expect(
-      new BrowserDownloadService().start({ ...subtitleRequest(), refresh_source: true }, vimeoContext())
-    ).rejects.toThrow('刷新 Vimeo config 后找不到直连资源')
-    expect(chrome.downloads.download).not.toHaveBeenCalled()
-  })
-})
-
 interface ConfigFixtureOptions {
   readonly textTracks?: readonly Record<string, string>[]
 }
@@ -442,85 +261,3 @@ function configFixture(options: ConfigFixtureOptions = {}) {
   }
 }
 
-/** 构造字幕页面资源。 */
-function subtitleResource(): MediaResource {
-  const sourceId = `vimeo:${VIDEO_ID}:subtitle:en`
-  return {
-    id: sourceId,
-    messageId: VIDEO_ID,
-    index: 3,
-    url: ENGLISH_SUBTITLE_URL,
-    type: RESOURCE_TYPES.SUBTITLE,
-    sourceKind: RESOURCE_SOURCE_KINDS.VIMEO_SUBTITLE_URL,
-    filename: 'Demo-English.vtt',
-    mimeType: 'text/vtt',
-    documentId: encodeVimeoSourceDescriptor({
-      version: 2,
-      videoId: VIDEO_ID,
-      sourceId,
-      optionId: 'subtitle:en',
-      kind: 'subtitle',
-      delivery: 'subtitle',
-      label: 'English',
-      configUrl: CONFIG_URL,
-      refreshConfigUrl: REFRESH_CONFIG_URL
-    }),
-    metadata: { messageId: VIDEO_ID }
-  }
-}
-
-/** 构造 background 启动请求。 */
-function subtitleRequest(
-  overrides: Partial<BackgroundBrowserDownloadSource> = {}
-): BackgroundStartBrowserDownloadRequest {
-  return {
-    source: {
-      source_id: `vimeo:${VIDEO_ID}:subtitle:en`,
-      url: ENGLISH_SUBTITLE_URL,
-      type: RESOURCE_TYPES.SUBTITLE,
-      source_kind: RESOURCE_SOURCE_KINDS.VIMEO_SUBTITLE_URL,
-      filename: 'Demo-English.vtt',
-      mime_type: 'text/vtt',
-      document_id: subtitleResource().documentId ?? '',
-      ...overrides
-    },
-    refresh_source: false
-  }
-}
-
-/** 构造合法 Vimeo content RPC 上下文。 */
-function vimeoContext(): RpcContext {
-  return {
-    transport: 'chrome',
-    caller: 'content',
-    tabId: 8,
-    frameId: 0,
-    origin: `https://vimeo.com/${VIDEO_ID}`
-  }
-}
-
-/** 构造 Chrome 下载项。 */
-function subtitleDownloadItem(
-  overrides: Partial<chrome.downloads.DownloadItem> = {}
-): chrome.downloads.DownloadItem {
-  return {
-    id: 61,
-    url: ENGLISH_SUBTITLE_URL,
-    finalUrl: ENGLISH_SUBTITLE_URL,
-    filename: '/tmp/Demo-English.vtt',
-    danger: 'safe',
-    mime: 'text/vtt',
-    startTime: new Date(0).toISOString(),
-    state: 'in_progress',
-    paused: false,
-    canResume: false,
-    bytesReceived: 128,
-    totalBytes: 256,
-    fileSize: -1,
-    exists: true,
-    incognito: false,
-    referrer: '',
-    byExtensionId: chrome.runtime.id,
-    ...overrides
-  }
-}

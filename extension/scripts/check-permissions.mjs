@@ -41,6 +41,7 @@ function extractManifestPermissions() {
 const PERMISSION_PATTERNS = {
   storage: 'chrome\\.storage\\.',
   downloads: 'chrome\\.downloads\\.',
+  offscreen: 'chrome\\.offscreen\\.',
   alarms: 'chrome\\.alarms\\.',
   bookmarks: 'chrome\\.bookmarks\\.',
   browserAction: 'chrome\\.action\\.|chrome\\.browserAction\\.',

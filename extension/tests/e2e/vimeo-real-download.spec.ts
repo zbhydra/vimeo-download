@@ -1,8 +1,15 @@
 /**
  * 固定公网 Vimeo 样本的真实下载 smoke。
  *
- * 面板选项由样本当前 config 决定，用例不预设 delivery：取样本实际提供的 DASH/HLS 选项，
- * 覆盖本单元真正拥有的 injected mux 路径；样本不再提供该交付时带原因 skip。
+ * U8 起下载统一由 background 编排：offscreen document 执行 DASH/HLS 分片与 remux，产物
+ * blob 由 background 经 `chrome.downloads` 落盘——页面不再派发 download 事件，断言改走
+ * 落盘产物：background 只会把文件写进下载目录的 `vimeo-video-downloader/` 子目录，等待
+ * 该子目录出现新的可播放 MP4 即是 background 链路的端到端证据。注：共享 profile 下
+ * Playwright 对扩展 SW 的 `worker.evaluate` 会无限挂起（干净 profile 正常），因此不采用
+ * `chrome.downloads.search` 断言。
+ *
+ * 面板选项由样本当前 config 决定，用例不预设 delivery：取样本实际提供的 DASH/HLS 选项；
+ * 样本不再提供该交付时带原因 skip。
  *
  * Cloudflare 拦截页按次随机下发、出网偶发导航超时，两者都由 openVimeoPanel 重开页面重试，
  * 预算用尽才带证据 skip。面板缺失或始终给不出选项都是真实回归，按失败处理，不做跳过。
@@ -11,12 +18,11 @@
 import fs from 'fs'
 import path from 'path'
 
-import type { Download, Locator, Page } from '@playwright/test'
+import type { BrowserContext, Locator, Page } from '@playwright/test'
 
-import { getExtensionServiceWorker } from '../../scripts/setup-test-profile-runtime.mjs'
 import { test, expect } from '../fixtures'
 
-/** 只提供 DASH 交付的固定样本，覆盖 injected mux。 */
+/** 只提供 DASH 交付的固定样本，覆盖 offscreen 分片 + remux 链路。 */
 const DASH_SAMPLE_URL = 'https://vimeo.com/1196869805?fl=ip&fe=ec'
 const DASH_SAMPLE_VIDEO_ID = '1196869805'
 
@@ -40,8 +46,14 @@ const CHALLENGE_TEXT_MARKERS = [
 /** 拦截页的 DOM 标记，不受页面语言影响。 */
 const CHALLENGE_DOM_SELECTOR = '#challenge-running, #challenge-stage, .cf-challenge, .ctp-checkbox-label'
 
-/** 真实媒体落盘上限；injected mux 需要先下载全部分段。 */
+/** 真实媒体落盘上限；offscreen 需要先下载全部分段再等 background 落盘回执。 */
 const MEDIA_TIMEOUT_MS = 180_000
+
+/** 落盘产物的文件系统轮询间隔。 */
+const DOWNLOAD_POLL_INTERVAL_MS = 1_000
+
+/** background 落盘子目录（settings.downloadPath 默认值，见 core/storage/settings.ts）。 */
+const DOWNLOAD_SUBDIR = 'vimeo-video-downloader'
 
 /** 单次样本页导航超时。 */
 const NAVIGATION_TIMEOUT_MS = 30_000
@@ -86,11 +98,18 @@ interface PanelOption {
 }
 
 test.describe('真实 Vimeo 固定样本', () => {
-  test('DASH 视频经 injected mux 合成 MP4 并真实落盘', async ({ context, downloadDir }) => {
-    // 拦截页重试 + injected mux 下载串行发生，超时必须覆盖两者之和。
+  test('DASH 视频经 offscreen + background 编排合成 MP4 并真实落盘', async ({
+    context: _context,
+    downloadDir
+  }) => {
+    // 拦截页重试 + 分片下载 + 落盘回执串行发生，超时必须覆盖三者之和。
     test.setTimeout(420_000)
+
+    // 点击前先记录既有落盘文件：profile 是复用的，下载目录可能残留历史产物，只认新出现的文件。
+    const baselineFiles = new Set(listMediaFiles(downloadDir))
+
     const { page, panel, state, options, evidence } = await openVimeoPanel(
-      context,
+      _context,
       DASH_SAMPLE_URL,
       DASH_SAMPLE_VIDEO_ID
     )
@@ -115,7 +134,7 @@ test.describe('真实 Vimeo 固定样本', () => {
     if (!selected) {
       test.skip(
         true,
-        `样本当前不含 DASH/HLS 交付，injected mux 无法覆盖: ${JSON.stringify(videoOptions)}`
+        `样本当前不含 DASH/HLS 交付，offscreen mux 无法覆盖: ${JSON.stringify(videoOptions)}`
       )
       return
     }
@@ -123,20 +142,19 @@ test.describe('真实 Vimeo 固定样本', () => {
     await dismissVimeoUpsell(page)
 
     const button = optionButton(panel, selected.choice)
-    const downloadPromise = page.waitForEvent('download', { timeout: MEDIA_TIMEOUT_MS })
     await button.click({ timeout: OPTION_CLICK_TIMEOUT_MS })
     await expect(button).toHaveAttribute('aria-busy', 'true')
     await expect(button).toHaveText(/^(Downloading\.\.\.|\d+%)$/)
 
-    const download = await downloadPromise
-    const savedPath = await savePageDownload(download, downloadDir)
+    // 下载在 background/offscreen 进行：轮询下载目录等待 background 落盘的新 MP4。
+    const savedPath = await waitForNewCompletedVideoDownload(downloadDir, baselineFiles)
 
-    // mux 结果必须是可播放的 MP4：文件名、ISO BMFF 头与真实字节三者都要成立。
-    expect(download.suggestedFilename()).toMatch(/\.mp4$/i)
+    // 产物必须是落盘后的可播放 MP4：保存位置子目录、真实字节与 ISO BMFF 头三者都要成立。
+    expect(savedPath).toContain(`${path.resolve(downloadDir)}${path.sep}${DOWNLOAD_SUBDIR}`)
     expect(fs.statSync(savedPath).size).toBeGreaterThan(0)
     expect(readIsoBmffHeader(savedPath)).toBe('ftyp')
-    expect(path.resolve(savedPath)).toContain(`${path.resolve(downloadDir)}${path.sep}`)
-    await expect(button).not.toHaveAttribute('aria-busy', 'true')
+    // 落盘回执收敛后任务移除，页面按钮退出下载态。
+    await expect(button).not.toHaveAttribute('aria-busy', 'true', { timeout: 30_000 })
   })
 })
 
@@ -160,6 +178,65 @@ function isRetryableState(state: PanelState): boolean {
   return state === 'challenge' || state === 'navigation-failed'
 }
 
+/** 递归收集目录下全部 MP4 文件的绝对路径。 */
+function listMediaFiles(rootDir: string): string[] {
+  const found: string[] = []
+  const visit = (dir: string): void => {
+    let entries: fs.Dirent[]
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true })
+    } catch {
+      return
+    }
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name)
+      if (entry.isDirectory()) {
+        visit(fullPath)
+      } else if (entry.isFile() && /\.mp4$/i.test(entry.name)) {
+        found.push(fullPath)
+      }
+    }
+  }
+  visit(rootDir)
+  return found
+}
+
+/**
+ * 轮询等待 background 落盘的新 MP4 产物。
+ *
+ * 只认点击后新出现（不在基线集合里）的非空文件；`.crdownload` 中间态天然不满足 `.mp4`
+ * 后缀，写完整前 Chrome 不会暴露最终名，等价于等到落盘完成。
+ */
+async function waitForNewCompletedVideoDownload(
+  downloadDir: string,
+  baselineFiles: ReadonlySet<string>
+): Promise<string> {
+  const deadline = Date.now() + MEDIA_TIMEOUT_MS
+  let lastSeen: string[] = []
+
+  while (Date.now() < deadline) {
+    lastSeen = listMediaFiles(downloadDir)
+    const candidate = lastSeen.find(
+      filePath => !baselineFiles.has(filePath) && fs.statSync(filePath).size > 0
+    )
+    if (candidate) {
+      return candidate
+    }
+    await sleep(DOWNLOAD_POLL_INTERVAL_MS)
+  }
+
+  throw new Error(
+    `[VIMEO_REAL_DOWNLOAD_TIMEOUT] ${MEDIA_TIMEOUT_MS}ms 内未等到新 MP4 落盘: ${JSON.stringify(lastSeen)}`
+  )
+}
+
+/** 等待指定毫秒。 */
+async function sleep(ms: number): Promise<void> {
+  await new Promise<void>(resolve => {
+    setTimeout(resolve, ms)
+  })
+}
+
 /**
  * 打开固定样本，等到面板给出可用选项为止。
  *
@@ -167,7 +244,7 @@ function isRetryableState(state: PanelState): boolean {
  * 返回当前状态交给用例带证据 skip，不伪装成通过。
  */
 async function openVimeoPanel(
-  context: Parameters<typeof getExtensionServiceWorker>[0],
+  context: BrowserContext,
   url: string,
   videoId: string
 ): Promise<PanelProbe> {
@@ -201,7 +278,7 @@ async function openVimeoPanel(
  * 导航自身抛错（出网抖动）同样返回可重试状态，由 openVimeoPanel 统一重试。
  */
 async function openSamplePage(
-  context: Parameters<typeof getExtensionServiceWorker>[0],
+  context: BrowserContext,
   url: string,
   videoId: string
 ): Promise<PanelProbe> {
@@ -230,13 +307,6 @@ async function openSamplePage(
   }
 
   return { page, panel, state: 'unavailable', options: [], evidence: '' }
-}
-
-/** 等待指定毫秒。 */
-async function sleep(ms: number): Promise<void> {
-  await new Promise<void>(resolve => {
-    setTimeout(resolve, ms)
-  })
 }
 
 /** 返回当前页面命中 Cloudflare 拦截页的依据；不是拦截页时返回空串。 */
@@ -269,15 +339,6 @@ async function dismissVimeoUpsell(page: Page): Promise<void> {
 
   await dismissButton.first().click()
   await dismissButton.first().waitFor({ state: 'hidden', timeout: UPSELL_TIMEOUT_MS })
-}
-
-/** 保存页面下载到测试目录并返回绝对路径。 */
-async function savePageDownload(download: Download, downloadDir: string): Promise<string> {
-  fs.mkdirSync(downloadDir, { recursive: true })
-  const safeFilename = download.suggestedFilename().replace(/[^\w.-]+/g, '_') || 'download.bin'
-  const targetPath = path.join(downloadDir, safeFilename)
-  await download.saveAs(targetPath)
-  return targetPath
 }
 
 /** 读取面板当前全部可用选项。 */

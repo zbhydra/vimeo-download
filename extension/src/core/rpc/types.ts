@@ -25,10 +25,10 @@ export type JsonValue = JsonPrimitive | JsonObject | JsonArray
 export type RpcTransportName = 'chrome' | 'event'
 
 /** RPC provider 所在上下文。 */
-export type RpcChannel = 'content' | 'injected' | 'background'
+export type RpcChannel = 'content' | 'injected' | 'background' | 'offscreen'
 
 /** RPC 调用方上下文。 */
-export type RpcCaller = 'content' | 'injected' | 'background' | 'popup'
+export type RpcCaller = 'content' | 'injected' | 'background' | 'offscreen' | 'popup'
 
 /** RPC 统一错误码。 */
 export type RpcErrorCode =

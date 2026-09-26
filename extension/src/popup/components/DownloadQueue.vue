@@ -5,19 +5,15 @@
   布局取舍：App.vue 的 app-container 是 max-height 600px 的纵向 flex，VideoPanel 主内容
   flex:1 内部滚动，本组件 flex-shrink:0 固定可见；任务列表自身再限制 max-height 内部滚动，
   任务很多时挤压主内容而不是把 footer 顶出 popup。
-  可取消能力由 content 的 DownloadManager 裁决：已开始的传输没有取消协议，只有等待任务
-  可取消，因此「全部停止」遍历的是等待任务，下载中与失败行分别只有取消/重试之外的原能力。
+  下载统一由 background 编排器驱动：下载中任务经 background 取消执行通道（Chrome
+  downloads.cancel / offscreen cancelTask）可中途停止，等待任务直接出队；「全部停止」
+  遍历等待 + 下载中全部可停任务，失败行只有重试能力。
 -->
 <template>
   <section v-if="store.hasTasks" class="download-queue" role="region" :aria-label="queueTitle">
     <header class="queue-header">
       <h2 class="queue-title">{{ queueTitle }}</h2>
-      <button
-        v-if="store.waitingCount > 0"
-        type="button"
-        class="stop-all-button"
-        @click="stopAllTasks"
-      >
+      <button v-if="hasStoppableTasks" type="button" class="stop-all-button" @click="stopAllTasks">
         {{ t(I18N_KEYS.DOWNLOAD_STATUS.STOP_ALL) }}
       </button>
     </header>
@@ -57,6 +53,16 @@
                 {{ taskSizeText(task) }} · {{ taskSpeedText(task) }}
               </span>
             </div>
+            <button
+              type="button"
+              class="task-action"
+              :aria-label="cancelLabel(task)"
+              :title="cancelLabel(task)"
+              :disabled="isCancelDisabled(task)"
+              @click="store.cancelTask(task.taskId)"
+            >
+              <Icon :name="IconName.X_MARK" :size="IconSize.XS" />
+            </button>
           </li>
         </ul>
       </section>
@@ -160,9 +166,12 @@ const { t } = useI18n()
 /** 底部队列标题与区域可访问名称共用同一个「队列 (N)」文案。 */
 const queueTitle = computed(() => t(I18N_KEYS.DOWNLOAD_STATUS.TITLE, { count: store.totalCount }))
 
-/** 全部停止：逐个取消全部等待任务；cancelTask 内部自带去重与失败日志。 */
+/** 存在等待或下载中任务时才提供「全部停止」。 */
+const hasStoppableTasks = computed(() => store.waitingCount + store.activeCount > 0)
+
+/** 全部停止：逐个取消全部等待与下载中任务；cancelTask 内部自带去重与失败日志。 */
 function stopAllTasks(): void {
-  for (const task of store.waitingTasks) {
+  for (const task of [...store.waitingTasks, ...store.activeTasks]) {
     void store.cancelTask(task.taskId)
   }
 }

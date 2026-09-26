@@ -62,4 +62,3 @@ export { EventRpcTransport } from './transports/EventRpcTransport'
 export { ChromeEventEmitter, ChromeEventSubscriber } from './ChromeEventBus'
 
 // DOM CustomEvent 事件
-export { DomEventEmitter, DomEventSubscriber } from './DomEventBus'

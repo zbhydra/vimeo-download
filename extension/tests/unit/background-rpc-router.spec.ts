@@ -148,18 +148,6 @@ describe('background rpc router', () => {
     }
   })
 
-  it('parseCheckQuotaRequest 只接受正整数 count', async () => {
-    const { parseCheckQuotaRequest } = await import(
-      '../../src/background/services/BackgroundMessageRouter'
-    )
-    expect(parseCheckQuotaRequest({ count: 1 })).toEqual({ count: 1 })
-    // 遗留的 tg_user_id 字段不再进入配额请求。
-    expect(parseCheckQuotaRequest({ count: 1, tg_user_id: 123 })).toEqual({ count: 1 })
-    for (const count of [null, true, '1', 0, -1, 1.5]) {
-      expect(() => parseCheckQuotaRequest({ count })).toThrow()
-    }
-  })
-
   it('通过独立 background API client 读取远端分组配置', async () => {
     const config = { vimeo: { muxMaxBytes: 1024 } }
     mocks.getRemoteConfig.mockResolvedValue(config)

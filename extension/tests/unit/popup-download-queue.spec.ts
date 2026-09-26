@@ -72,34 +72,42 @@ describe('DownloadQueue', () => {
     expect(region.text()).toContain('Failed')
   })
 
-  it('存在等待任务时显示全部停止，并逐个取消等待任务', async () => {
+  it('存在等待或下载中任务时显示全部停止，并逐个取消全部可停任务', async () => {
     wrapper = mountDownloadQueue()
 
     const stopAll = wrapper.get('.stop-all-button')
     expect(stopAll.text()).toBe('Stop All')
     await stopAll.trigger('click')
-    expect(statusStore.cancelTask).toHaveBeenCalledTimes(1)
+    // background 编排语义：下载中 + 等待全部可停，失败行不在「停止」范围。
+    expect(statusStore.cancelTask).toHaveBeenCalledTimes(2)
     expect(statusStore.cancelTask).toHaveBeenCalledWith('scope:waiting')
+    expect(statusStore.cancelTask).toHaveBeenCalledWith('scope:active')
+    expect(statusStore.cancelTask).not.toHaveBeenCalledWith('scope:failed')
   })
 
-  it('没有可取消任务时不显示全部停止', () => {
+  it('只剩失败任务时不显示全部停止', () => {
+    statusStore.activeTasks = []
+    statusStore.activeCount = 0
+    statusStore.currentCount = 0
     statusStore.waitingTasks = []
     statusStore.waitingCount = 0
-    statusStore.totalCount = 2
+    statusStore.totalCount = 1
 
     wrapper = mountDownloadQueue()
 
     expect(wrapper.find('.stop-all-button').exists()).toBe(false)
   })
 
-  it('已开始的传输没有取消协议：活动行无取消入口，等待行可取消、失败行可重试', async () => {
+  it('下载中行有取消入口，等待行可取消、失败行可重试', async () => {
     wrapper = mountDownloadQueue()
 
-    expect(wrapper.findAll('.task-action')).toHaveLength(2)
+    expect(wrapper.findAll('.task-action')).toHaveLength(3)
     const actions = wrapper.findAll('.task-action')
     await actions[0].trigger('click')
-    expect(statusStore.cancelTask).toHaveBeenCalledWith('scope:waiting')
+    expect(statusStore.cancelTask).toHaveBeenCalledWith('scope:active')
     await actions[1].trigger('click')
+    expect(statusStore.cancelTask).toHaveBeenCalledWith('scope:waiting')
+    await actions[2].trigger('click')
     expect(statusStore.retryTask).toHaveBeenCalledWith('scope:failed')
   })
 
@@ -107,7 +115,7 @@ describe('DownloadQueue', () => {
     statusStore.activeTasks = [
       {
         ...activeTask(),
-        taskId: 'scope:unsupported',
+        taskId: 'scope:active',
         receivedBytes: null,
         totalBytes: null,
         bytesPerSecond: null
@@ -127,7 +135,11 @@ describe('DownloadQueue', () => {
 
     expect(wrapper.findAll('.task-metrics')).toHaveLength(1)
     expect(wrapper.get('.task-metrics').text()).toBe('4.0 KB')
-    expect(wrapper.get('.task-action').attributes('disabled')).toBeDefined()
+    // 下载中行可点，等待行的取消在 RPC 返回前禁用。
+    const actions = wrapper.findAll('.task-action')
+    expect(actions).toHaveLength(2)
+    expect(actions[0].attributes('disabled')).toBeUndefined()
+    expect(actions[1].attributes('disabled')).toBeDefined()
   })
 
   it('无任务时不渲染任何节点', () => {

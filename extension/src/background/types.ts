@@ -5,11 +5,11 @@
  */
 
 import type { LoginSource, MarkType } from '@/core/api/mark/types'
-import type { QuotaCheckResponse } from '@/core/api/quota/types'
 import type { RemoteConfig } from '@/core/api/remote-config/types'
 import type { BrowserManagedSourceKind, ResourceType } from '@/core/constants/resource'
 import type { RuntimeConfig } from '@/core/runtimeConfig'
-import type { VimeoCapturedConfigSnapshot } from '@/sites/vimeo/shared'
+import type { DownloadQueueSnapshot, MediaResource } from '@/core/types'
+import type { VimeoCapturedConfigSnapshot, VimeoSourceDescriptor } from '@/sites/vimeo/shared'
 
 /** background ping 响应。 */
 export interface BackgroundPingResponse {
@@ -53,15 +53,6 @@ export interface BackgroundRecordMarkResponse {
   /** 是否已成功记录打点。 */
   recorded: boolean
 }
-
-/** background 配额检查请求。 */
-export interface BackgroundCheckQuotaRequest {
-  /** 需要消耗的配额数量。 */
-  count: number
-}
-
-/** background 配额检查响应。 */
-export type BackgroundCheckQuotaResponse = QuotaCheckResponse
 
 /** Background 读取远端顶层分组稀疏覆盖的响应。 */
 export type BackgroundGetRemoteConfigResponse = RemoteConfig
@@ -120,39 +111,144 @@ export interface BackgroundBrowserDownloadSource {
   document_id: string
 }
 
-/** 创建浏览器原生下载请求。 */
-export interface BackgroundStartBrowserDownloadRequest {
-  /** 待下载的完整直连来源。 */
-  source: BackgroundBrowserDownloadSource
-  /** 是否先从 Vimeo 原生 refresh config 恢复一次新 signed URL。 */
-  refresh_source: boolean
+// ============================================================================
+// offscreen 下载任务回传（offscreen → background）
+// ============================================================================
+
+/** offscreen 上报下载进度请求。 */
+export interface BackgroundTaskProgressRequest {
+  /** 编排任务 ID。 */
+  taskId: string
+  /** 原始媒体资源 ID。 */
+  sourceId: string
+  /** 当前下载百分比；总大小未知时为 null。 */
+  progress: number | null
+  /** 已接收字节。 */
+  receivedBytes: number | null
+  /** 估算总字节；未知时为 null。 */
+  totalBytes: number | null
 }
 
-/** 创建浏览器原生下载响应。 */
-export interface BackgroundStartBrowserDownloadResponse {
-  /** Chrome 下载管理器分配的持久下载 ID。 */
-  download_id: number
+/** offscreen 上报进度响应。 */
+export interface BackgroundTaskProgressResponse {
+  /** 进度是否已写入编排投影。 */
+  recorded: boolean
 }
 
-/** 查询浏览器原生下载状态请求。 */
-export interface BackgroundGetBrowserDownloadStatusRequest {
-  /** Chrome 下载管理器分配的下载 ID。 */
-  download_id: number
-  /** 初始来源类型，用于校验最终重定向和 MIME。 */
-  source_kind: BrowserManagedSourceKind
+/** offscreen 交付 remux 产物请求；落盘由 background 用 chrome.downloads 完成。 */
+export interface BackgroundTaskCompleteRequest {
+  /** 编排任务 ID。 */
+  taskId: string
+  /** offscreen document 创建的 blob URL；确认落盘前必须保持有效。 */
+  blobUrl: string
+  /** 产物文件名。 */
+  filename: string
+  /** 产物 MIME 类型。 */
+  mimeType: string
 }
 
-/** 浏览器原生下载状态。 */
-export type BackgroundBrowserDownloadState = 'in_progress' | 'complete' | 'interrupted'
-
-/** 查询浏览器原生下载状态响应。 */
-export interface BackgroundGetBrowserDownloadStatusResponse {
-  /** Chrome 当前下载状态。 */
-  state: BackgroundBrowserDownloadState
-  /** 已写入下载任务的字节数。 */
-  bytes_received: number
-  /** 总字节数；Chrome 尚未获知时为 null。 */
-  total_bytes: number | null
-  /** 中断原因；未中断时省略。 */
-  error?: string
+/** offscreen 交付产物响应。 */
+export interface BackgroundTaskCompleteResponse {
+  /** background 是否已接手落盘。 */
+  accepted: boolean
 }
+
+/** offscreen 上报任务失败请求。 */
+export interface BackgroundTaskFailedRequest {
+  /** 编排任务 ID。 */
+  taskId: string
+  /** 已脱敏的失败原因。 */
+  message: string
+}
+
+/** offscreen 上报失败响应。 */
+export interface BackgroundTaskFailedResponse {
+  /** 失败是否已写入编排投影。 */
+  accepted: boolean
+}
+
+/** offscreen 确认任务已取消请求。 */
+export interface BackgroundTaskCancelledRequest {
+  /** 编排任务 ID。 */
+  taskId: string
+}
+
+/** offscreen 确认取消响应。 */
+export interface BackgroundTaskCancelledResponse {
+  /** 取消是否已写入编排投影。 */
+  accepted: boolean
+}
+
+/** offscreen 请求重签 Vimeo 签名 URL。 */
+export interface BackgroundRefreshSignatureRequest {
+  /** 编排任务 ID。 */
+  taskId: string
+  /** 当前任务携带的下载描述符；重签与 track 一致性守卫都以它为基准。 */
+  descriptor: VimeoSourceDescriptor
+}
+
+/**
+ * 重签响应。
+ *
+ * `continue` 表示新快照与原任务 track 一致，offscreen 按分片游标续跑；`restart` 表示
+ * best 回落换 track，offscreen 以新快照整任务重跑。
+ */
+export interface BackgroundRefreshSignatureResponse {
+  /** 续跑或重跑。 */
+  mode: 'continue' | 'restart'
+  /** 刷新后的完整资源（含新签名 playlist URL 的描述符）。 */
+  resource: MediaResource
+}
+
+/** offscreen 心跳响应。 */
+export interface BackgroundKeepAliveResponse {
+  /** background 存活确认。 */
+  alive: boolean
+}
+
+// ============================================================================
+// background 下载编排（popup/content → background）
+// ============================================================================
+
+/** popup/content 委托 background 发起批量下载请求。 */
+export interface BackgroundDownloadBatchRequest {
+  /** 待下载的完整资源列表，顺序即执行顺序。 */
+  resources: MediaResource[]
+  /** 发起下载的站点标签页；配额不足时用于让该页 content 显示升级弹窗。 */
+  tabId?: number
+}
+
+/** background 批量下载受理响应。 */
+export interface BackgroundDownloadBatchResponse {
+  /** 是否至少受理了一个资源（含已入队去重合并）。 */
+  accepted: boolean
+  /** 受理的资源数量。 */
+  count: number
+}
+
+/** popup 取消编排任务请求。 */
+export interface BackgroundCancelDownloadTaskRequest {
+  /** 编排任务 ID。 */
+  taskId: string
+}
+
+/** 取消受理响应。 */
+export interface BackgroundCancelDownloadTaskResponse {
+  /** 任务是否存在且已请求取消。 */
+  accepted: boolean
+}
+
+/** popup 重试编排任务请求。 */
+export interface BackgroundRetryDownloadTaskRequest {
+  /** 编排任务 ID。 */
+  taskId: string
+}
+
+/** 重试受理响应。 */
+export interface BackgroundRetryDownloadTaskResponse {
+  /** 失败任务是否已重新入队。 */
+  accepted: boolean
+}
+
+/** background 下载编排队列快照响应。 */
+export type BackgroundGetDownloadQueueResponse = DownloadQueueSnapshot

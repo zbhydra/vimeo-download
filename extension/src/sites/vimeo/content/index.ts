@@ -6,10 +6,10 @@
  * 可见的 ResourceBuffer。
  */
 
-import { downloadOne } from '@/core/content/download'
-import type { ContentEvents } from '@/core/events/types'
-import { DOWNLOAD_EVENT_PREFIX } from '@/core/protocol/injected'
-import { DomEventSubscriber } from '@/core/rpc/DomEventBus'
+import { upgradeModalManager } from '@/core/content/services/UpgradeModalManager'
+import type { ExtensionEvents } from '@/core/events/types'
+import { BackgroundChannel } from '@/content/rpc/background.rpc'
+import { ChromeEventSubscriber } from '@/core/rpc/ChromeEventBus'
 import { waitForInjectedReady } from '@/core/rpc/injectedReady'
 import { synchronizeRuntimeConfig } from '@/content/runtimeConfig'
 import { logger } from '@/core/utils/logger'
@@ -54,8 +54,14 @@ class VimeoContentController {
   /** 页面按钮面板。 */
   private readonly buttonPanel = new VimeoButtonPanel()
 
-  /** MAIN world 下载器的瞬时进度订阅器。 */
-  private readonly domEventSubscriber = new DomEventSubscriber<ContentEvents>(DOWNLOAD_EVENT_PREFIX)
+  /** background 下载编排快照订阅器：驱动页面按钮进度并在终态复位。 */
+  private readonly queueEventSubscriber = new ChromeEventSubscriber<ExtensionEvents>()
+
+  /** background RPC 客户端：下载发起统一改道 background 编排（U8）。 */
+  private readonly backgroundClient = new BackgroundChannel()
+
+  /** 页面按钮在途下载会话：videoId → 触发下载的资源 ID。 */
+  private readonly activeButtonDownloads = new Map<string, { sourceId: string }>()
 
   /** 当前 URL。 */
   private currentHref = window.location.href
@@ -107,12 +113,46 @@ class VimeoContentController {
 
     vimeoResourceBuffer.start()
     vimeoMessageHandler.start()
+    this.installQueueSnapshotListener()
+    this.installUpgradeModalListener()
     this.installFrameIdentityListener()
     this.installMutationObserver()
     this.installRouteWatcher()
     this.scanAndRender()
 
     logger.info('[VimeoContent] 初始化完成')
+  }
+
+  /**
+   * 订阅 background 下载编排快照，驱动页面按钮进度。
+   *
+   * 下载执行在 background/offscreen，页面按钮只消费投影：仍在队列的任务更新进度，
+   * 消失（完成/取消）或失败的任务复位按钮。
+   */
+  private installQueueSnapshotListener(): void {
+    this.queueEventSubscriber.on('downloadQueueUpdated', snapshot => {
+      for (const [videoId, session] of this.activeButtonDownloads) {
+        const task = snapshot.tasks.find(entry => entry.resourceId === session.sourceId)
+        if (task && task.status !== 'failed') {
+          this.buttonPanel.updateProgress(videoId, session.sourceId, task.progress)
+          continue
+        }
+        this.activeButtonDownloads.delete(videoId)
+        this.buttonPanel.endDownload(videoId)
+      }
+    })
+  }
+
+  /** background 配额不足时会让发起 tab 的 content 显示既有升级弹窗。 */
+  private installUpgradeModalListener(): void {
+    this.queueEventSubscriber.on('showUpgradeModal', ({ resetAt }) => {
+      // 直接 show 而不走 showWithFallback：后者失败时会向 runtime 广播，可能让其它
+      // Vimeo 标签页的订阅器收到并重复弹窗。
+      const shown = upgradeModalManager.show(resetAt)
+      if (!shown) {
+        logger.warn('[VimeoContent] 升级弹窗显示失败: stage=quota-rejected')
+      }
+    })
   }
 
   /** 注入面板样式。 */
@@ -195,6 +235,7 @@ class VimeoContentController {
       vimeoResourceBuffer.resetForPageChange()
       this.fallbackLoadedVideoIds.clear()
       resetVimeoConfigFallback()
+      this.activeButtonDownloads.clear()
       this.buttonPanel.clear()
       this.scheduleScan()
     }, 0)
@@ -225,6 +266,7 @@ class VimeoContentController {
       this.currentSnapshot = null
       vimeoResourceBuffer.resetForPageChange()
       this.fallbackLoadedVideoIds.clear()
+      this.activeButtonDownloads.clear()
       this.buttonPanel.clear()
       this.buttonPanel.renderEmpty(identity.videoId)
     }
@@ -374,34 +416,22 @@ class VimeoContentController {
     if (!this.buttonPanel.beginDownload(videoId, resource.id)) {
       return
     }
+    this.activeButtonDownloads.set(videoId, { sourceId: resource.id })
 
-    const removeProgressListener = this.observeDownloadProgress(videoId, resource.id)
     try {
-      await downloadOne(resource)
-    } finally {
-      removeProgressListener()
+      // U8 改道：页面按钮下载统一发 background 编排（带完整 resource），执行与页面
+      // 生命周期解耦；按钮进度由 installQueueSnapshotListener 消费 background 快照驱动。
+      const response = await this.backgroundClient.downloadBatch({ resources: [resource] })
+      if (!response.accepted) {
+        logger.warn(
+          `[VimeoContent] 下载请求未被编排器受理: resourceId=${resource.id}, count=${response.count}`
+        )
+      }
+    } catch (error) {
+      logger.error(`[VimeoContent] 发起 background 下载失败: resourceId=${resource.id}`, error)
+      this.activeButtonDownloads.delete(videoId)
       this.buttonPanel.endDownload(videoId)
     }
-  }
-
-  /**
-   * 监听当前 Vimeo 下载资源的进度。
-   *
-   * 页面可伪造 DOM 事件，因此事件只更新已由点击建立的同 ID 瞬时 UI，不参与下载控制。
-   */
-  private observeDownloadProgress(videoId: string, sourceId: string): () => void {
-    return this.domEventSubscriber.on('downloadProgress', detail => {
-      const progress = detail?.progress
-      if (
-        !detail ||
-        detail.sourceId !== sourceId ||
-        (progress !== null && (typeof progress !== 'number' || !Number.isFinite(progress)))
-      ) {
-        return
-      }
-
-      this.buttonPanel.updateProgress(videoId, sourceId, progress)
-    })
   }
 
   /** 只在 frame identity 仍匹配当前页面 iframe 时使用兜底。 */

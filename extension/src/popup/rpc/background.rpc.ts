@@ -74,6 +74,50 @@ export class BackgroundChannel {
     >('startGoogleLogin', params, options)
   }
 
+  /** 调用 downloadBatch 能力。 */
+  downloadBatch(
+    params: RpcMethodParams<BackgroundHandler, 'downloadBatch'>,
+    options?: RpcCallOptions
+  ): Promise<RpcMethodResult<BackgroundHandler, 'downloadBatch'>> {
+    return this.transport.call<
+      RpcMethodResult<BackgroundHandler, 'downloadBatch'>,
+      RpcMethodParams<BackgroundHandler, 'downloadBatch'>
+    >('downloadBatch', params, options)
+  }
+
+  /** 调用 cancelDownloadTask 能力。 */
+  cancelDownloadTask(
+    params: RpcMethodParams<BackgroundHandler, 'cancelDownloadTask'>,
+    options?: RpcCallOptions
+  ): Promise<RpcMethodResult<BackgroundHandler, 'cancelDownloadTask'>> {
+    return this.transport.call<
+      RpcMethodResult<BackgroundHandler, 'cancelDownloadTask'>,
+      RpcMethodParams<BackgroundHandler, 'cancelDownloadTask'>
+    >('cancelDownloadTask', params, options)
+  }
+
+  /** 调用 retryDownloadTask 能力。 */
+  retryDownloadTask(
+    params: RpcMethodParams<BackgroundHandler, 'retryDownloadTask'>,
+    options?: RpcCallOptions
+  ): Promise<RpcMethodResult<BackgroundHandler, 'retryDownloadTask'>> {
+    return this.transport.call<
+      RpcMethodResult<BackgroundHandler, 'retryDownloadTask'>,
+      RpcMethodParams<BackgroundHandler, 'retryDownloadTask'>
+    >('retryDownloadTask', params, options)
+  }
+
+  /** 调用 getDownloadQueue 能力。 */
+  getDownloadQueue(
+    options?: RpcCallOptions
+  ): Promise<RpcMethodResult<BackgroundHandler, 'getDownloadQueue'>> {
+    return this.transport.call<RpcMethodResult<BackgroundHandler, 'getDownloadQueue'>>(
+      'getDownloadQueue',
+      undefined,
+      options
+    )
+  }
+
   /** 销毁 RPC transport。 */
   destroy(): void {
     this.transport.destroy()
