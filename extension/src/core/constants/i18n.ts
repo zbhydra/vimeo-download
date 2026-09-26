@@ -111,10 +111,10 @@ export const I18N_KEYS = {
 
   /** Popup 下载状态相关 */
   DOWNLOAD_STATUS: {
-    /** 下载任务浮层标题 */
+    /** 底部任务队列标题，参数 `count` 为未完成任务总数 */
     TITLE: 'downloadStatus.title',
-    /** 顶部入口的完整状态说明 */
-    SUMMARY: 'downloadStatus.summary',
+    /** 全部停止按钮：取消所有等待中的任务 */
+    STOP_ALL: 'downloadStatus.stopAll',
     /** 下载中分组标题 */
     DOWNLOADING_COUNT: 'downloadStatus.downloadingCount',
     /** 等待中分组标题 */

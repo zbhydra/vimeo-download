@@ -1,13 +1,13 @@
-/** Popup 顶部下载状态入口和任务浮层交互。 */
+/** Popup 底部下载管理区：任务分组平铺、单任务取消/重试与「全部停止」。 */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount, type VueWrapper } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
-import { defineComponent, nextTick } from 'vue'
+import { defineComponent } from 'vue'
 
 import { RESOURCE_TYPES } from '@/core/constants/resource'
 import type { DownloadTaskSnapshot } from '@/core/types'
-import DownloadStatus from '@/popup/components/DownloadStatus.vue'
+import DownloadQueue from '@/popup/components/DownloadQueue.vue'
 
 const statusStore = {
   activeTasks: [] as DownloadTaskSnapshot[],
@@ -35,7 +35,7 @@ const IconStub = defineComponent({
 
 let wrapper: VueWrapper | null = null
 
-describe('DownloadStatus', () => {
+describe('DownloadQueue', () => {
   beforeEach(() => {
     statusStore.activeTasks = [activeTask()]
     statusStore.waitingTasks = [waitingTask()]
@@ -56,54 +56,54 @@ describe('DownloadStatus', () => {
     wrapper = null
   })
 
-  it('显示数量和进度，点击分组展示任务并可用 Escape 关闭', async () => {
-    wrapper = mount(DownloadStatus, {
-      attachTo: document.body,
-      global: {
-        plugins: [createTestI18n()],
-        stubs: { Icon: IconStub }
-      }
-    })
+  it('有任务时常驻平铺队列标题、分组与任务卡片', () => {
+    wrapper = mountDownloadQueue()
 
-    const trigger = wrapper.get('.status-trigger')
-    expect(trigger.text()).toContain('2·48%')
-    expect(trigger.attributes('aria-label')).toBe(
-      '1 downloading, 1 waiting, 1 failed, 48%'
-    )
-    expect(trigger.attributes('aria-expanded')).toBe('false')
-
-    await trigger.trigger('click')
-    expect(trigger.attributes('aria-expanded')).toBe('true')
-    expect(wrapper.get('[role="region"]').isVisible()).toBe(true)
-    expect(wrapper.get('.task-scroll-area').text()).toContain('Downloading (1)')
-    expect(wrapper.get('.task-scroll-area').text()).toContain('Waiting (1)')
-    expect(wrapper.get('.task-scroll-area').text()).toContain('active-video.mp4')
-    expect(wrapper.get('.task-scroll-area').text()).toContain('1.0 KB / 2.0 KB · ≈512 B/s')
-    expect(wrapper.get('.task-scroll-area').text()).toContain('Getting filename…')
-    expect(wrapper.get('.task-scroll-area').text()).toContain('Failed (1)')
-    expect(wrapper.get('.task-scroll-area').text()).toContain('Failed')
-
-    // 已开始的传输没有取消协议，活动行不提供取消入口，只有等待行可以本地移除。
-    expect(wrapper.findAll('.cancel-button')).toHaveLength(1)
-    await wrapper.findAll('.cancel-button')[0].trigger('click')
-    expect(statusStore.cancelTask).toHaveBeenCalledWith('scope:waiting')
-    await wrapper.get('.retry-button').trigger('click')
-    expect(statusStore.retryTask).toHaveBeenCalledWith('scope:failed')
-
-    await trigger.trigger('keydown', { key: 'Escape' })
-    await nextTick()
-    expect(wrapper.find('[role="region"]').exists()).toBe(false)
-    expect(trigger.attributes('aria-expanded')).toBe('false')
-    expect(document.activeElement).toBe(trigger.element)
-
-    await trigger.trigger('click')
-    document.dispatchEvent(new CustomEvent('pointerdown'))
-    await nextTick()
-    expect(wrapper.find('[role="region"]').exists()).toBe(false)
-
+    const region = wrapper.get('[role="region"]')
+    expect(region.attributes('aria-label')).toBe('Queue (3)')
+    expect(wrapper.get('.queue-title').text()).toBe('Queue (3)')
+    expect(region.text()).toContain('Downloading (1)')
+    expect(region.text()).toContain('Waiting (1)')
+    expect(region.text()).toContain('Failed (1)')
+    expect(region.text()).toContain('active-video.mp4')
+    expect(region.text()).toContain('42%')
+    expect(region.text()).toContain('1.0 KB / 2.0 KB · ≈512 B/s')
+    expect(region.text()).toContain('Getting filename…')
+    expect(region.text()).toContain('Failed')
   })
 
-  it('只给等待任务显示取消入口，并按快照数据决定指标行', async () => {
+  it('存在等待任务时显示全部停止，并逐个取消等待任务', async () => {
+    wrapper = mountDownloadQueue()
+
+    const stopAll = wrapper.get('.stop-all-button')
+    expect(stopAll.text()).toBe('Stop All')
+    await stopAll.trigger('click')
+    expect(statusStore.cancelTask).toHaveBeenCalledTimes(1)
+    expect(statusStore.cancelTask).toHaveBeenCalledWith('scope:waiting')
+  })
+
+  it('没有可取消任务时不显示全部停止', () => {
+    statusStore.waitingTasks = []
+    statusStore.waitingCount = 0
+    statusStore.totalCount = 2
+
+    wrapper = mountDownloadQueue()
+
+    expect(wrapper.find('.stop-all-button').exists()).toBe(false)
+  })
+
+  it('已开始的传输没有取消协议：活动行无取消入口，等待行可取消、失败行可重试', async () => {
+    wrapper = mountDownloadQueue()
+
+    expect(wrapper.findAll('.task-action')).toHaveLength(2)
+    const actions = wrapper.findAll('.task-action')
+    await actions[0].trigger('click')
+    expect(statusStore.cancelTask).toHaveBeenCalledWith('scope:waiting')
+    await actions[1].trigger('click')
+    expect(statusStore.retryTask).toHaveBeenCalledWith('scope:failed')
+  })
+
+  it('按快照数据决定下载行指标行与取消禁用态', () => {
     statusStore.activeTasks = [
       {
         ...activeTask(),
@@ -121,21 +121,45 @@ describe('DownloadStatus', () => {
     statusStore.failedCount = 0
     statusStore.totalCount = 2
     statusStore.currentProgress = 42
+    statusStore.cancelRequestIds = ['scope:waiting']
 
-    wrapper = mount(DownloadStatus, {
-      global: {
-        plugins: [createTestI18n()],
-        stubs: { Icon: IconStub }
-      }
-    })
-    await wrapper.get('.status-trigger').trigger('click')
+    wrapper = mountDownloadQueue()
 
-    expect(wrapper.findAll('.cancel-button')).toHaveLength(1)
-    expect(wrapper.get('.cancel-button').attributes('aria-label')).toContain('Getting filename')
     expect(wrapper.findAll('.task-metrics')).toHaveLength(1)
     expect(wrapper.get('.task-metrics').text()).toBe('4.0 KB')
+    expect(wrapper.get('.task-action').attributes('disabled')).toBeDefined()
+  })
+
+  it('无任务时不渲染任何节点', () => {
+    statusStore.activeTasks = []
+    statusStore.waitingTasks = []
+    statusStore.failedTasks = []
+    statusStore.activeCount = 0
+    statusStore.currentCount = 0
+    statusStore.waitingCount = 0
+    statusStore.failedCount = 0
+    statusStore.totalCount = 0
+    statusStore.hasTasks = false
+    statusStore.currentProgress = null
+
+    wrapper = mountDownloadQueue()
+
+    // 根节点 v-if 为假时 Vue 只留一个注释占位节点，不渲染底部区
+    expect(wrapper.find('[role="region"]').exists()).toBe(false)
+    expect(wrapper.find('.download-queue').exists()).toBe(false)
+    expect(wrapper.element.nodeType).toBe(Node.COMMENT_NODE)
   })
 })
+
+/** 以统一 stub 挂载底部下载管理区。 */
+function mountDownloadQueue(): VueWrapper {
+  return mount(DownloadQueue, {
+    global: {
+      plugins: [createTestI18n()],
+      stubs: { Icon: IconStub }
+    }
+  })
+}
 
 /** 构造已知进度的下载中任务。 */
 function activeTask(): DownloadTaskSnapshot {
@@ -188,9 +212,8 @@ function createTestI18n() {
     locale: 'en-US',
     messages: {
       'en-US': {
-        'downloadStatus.title': 'Downloads',
-        'downloadStatus.summary':
-          '{downloading} downloading, {waiting} waiting, {failed} failed, {progress}',
+        'downloadStatus.title': 'Queue ({count})',
+        'downloadStatus.stopAll': 'Stop All',
         'downloadStatus.downloadingCount': 'Downloading ({count})',
         'downloadStatus.waitingCount': 'Waiting ({count})',
         'downloadStatus.failedCount': 'Failed ({count})',

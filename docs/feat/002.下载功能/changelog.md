@@ -2,6 +2,17 @@
 
 > 记录本域(下载功能)每次文档修改:一行 why + 一行 from→to。
 
+## 2026-09-26 Popup 下载管理移至底部任务队列
+
+**Why**：下载状态挤在 header 徽标 + 下拉浮层里，与竞品「底部常驻任务队列」形态不一致；且无可批量停止入口。
+
+**From → To**：
+- 删除 header 的 `DownloadStatus.vue`（徽标 + 下拉浮层），新建底部常驻 `DownloadQueue.vue`（VideoPanel 之后、AppFooter 之前）：任务队列 (N) 标题 + 红色「全部停止」（仅存在等待任务时显示，遍历逐个取消，跟随竞品直接执行）+ Downloading/Waiting/Failed 三组平铺任务卡；无任务时整区不占位。队列列表自身 180px 内滚动，不把 footer 顶出 popup。
+- 全部停止只取消等待任务——「已开始的传输没有取消协议」（`DownloadManager.cancel` 仅接受 waiting）是既有协议约束，下载中任务继续。
+- i18n：`downloadStatus.title` 改带 `{count}`、新增 `downloadStatus.stopAll`、删除废弃 `summary`，14 locale 同步；design.ts 备案补 `RED_800`（design.md button-error 实底色）。
+- 测试：删除 `download-status.spec.ts`，新建 `popup-download-queue.spec.ts`（6 用例）；全量 448 通过。
+- 文档：同步 `feat.md` 任务队列节（顺带修正该节遗留的 672px 旧尺寸）。
+
 ## 2026-09-26 Popup 缩窄三分之一与封面下载兜底
 
 **Why**：用户反馈 Popup 过宽（672px）；聚合页捕获的视频 `video.thumbs` 字典常缺失，Image 行因无档位禁用，但信息卡封面（`video.thumbnail_url`）明明有——竞品正是用该字段提供封面下载。

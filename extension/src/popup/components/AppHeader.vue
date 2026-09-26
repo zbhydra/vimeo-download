@@ -15,9 +15,6 @@
     </h1>
 
     <div class="header-actions">
-      <!-- 当前页面下载状态 -->
-      <DownloadStatus />
-
       <!-- 配额计数器 -->
       <QuotaCounter />
 
@@ -52,7 +49,6 @@ import { COMMON_COLORS } from '@/core/constants/style'
 import { Icon, IconName, IconSize } from '@/core/components/icons'
 import { QuotaCounter } from '@/core/components/quota'
 import LoginButton from '@/core/components/auth/LoginButton.vue'
-import DownloadStatus from './DownloadStatus.vue'
 import LanguageSwitcher from './LanguageSwitcher.vue'
 import { buildHomeUrl, openExternalPage } from '@/core/utils/navigation'
 import { openLoginModal } from '@/core/composables/loginModal'

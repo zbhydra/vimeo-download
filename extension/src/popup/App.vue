@@ -6,6 +6,9 @@
     <!-- 单视频操作面板 -->
     <VideoPanel @download="handleDownload" @refresh="handleRefresh" @open-site="handleOpenSite" />
 
+    <!-- 底部下载管理区：有任务时常驻，无任务不渲染 -->
+    <DownloadQueue />
+
     <!-- 底部联系入口 -->
     <AppFooter />
 
@@ -37,6 +40,7 @@ import { BackgroundChannel } from '@/popup/rpc/background.rpc'
 import { logger } from '@/core/utils/logger'
 import VideoPanel from './components/VideoPanel.vue'
 import AppHeader from './components/AppHeader.vue'
+import DownloadQueue from './components/DownloadQueue.vue'
 import AppFooter from './components/AppFooter.vue'
 import UpgradeModal from '@/core/content/components/UpgradeModal.vue'
 import LoginModal from './components/LoginModal.vue'

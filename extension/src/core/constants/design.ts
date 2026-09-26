@@ -44,7 +44,9 @@ export const DESIGN_TOKENS = {
 
   /** red-100：错误条底色。 */
   RED_100: '#ffeeef',
-  /** red-900：错误条文本。 */
+  /** red-800：破坏性按钮实底（design.md button-error），hover 沿色阶走到 red-900。 */
+  RED_800: '#ea001d',
+  /** red-900：错误条文本与破坏性按钮 hover。 */
   RED_900: '#d8001b',
 
   /** rounded.sm：控件、输入框、缩略图。 */

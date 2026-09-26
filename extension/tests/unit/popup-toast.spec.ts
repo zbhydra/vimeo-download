@@ -143,6 +143,7 @@ async function mountPopup(): Promise<VueWrapper> {
         AppHeader: true,
         AppFooter: true,
         VideoPanel: true,
+        DownloadQueue: true,
         UpgradeModal: true,
         LoginModal: true
       }
