@@ -45,9 +45,19 @@ export const API = {
     /** 获取顶层分组稀疏覆盖 */
     REMOTE_CONFIG: '/api/client/remote-config/config',
 
-    // ========== 订阅兼容状态 ==========
+    // ========== 订阅 ==========
     /** 获取订阅状态 */
-    SUBSCRIPTION_STATUS: '/api/client/subscription/status'
+    SUBSCRIPTION_STATUS: '/api/client/subscription/status',
+    /** 获取可购买订阅套餐配置（匿名可访问） */
+    SUBSCRIPTION_CHECKOUT_CONFIGS: '/api/client/subscription/checkout-configs',
+    /** 创建当前账号订阅渠道的管理入口 */
+    SUBSCRIPTION_MANAGEMENT: '/api/client/subscription/management',
+
+    // ========== 订单 ==========
+    /** 创建订单并发起支付 */
+    ORDER_CREATE: '/api/client/order/create',
+    /** 查询订单状态（客户端轮询），路径需拼接订单号 */
+    ORDER_STATUS: '/api/client/order/status'
   }
 } as const
 
@@ -115,5 +125,9 @@ export const STORAGE_KEYS = {
   /** 首次观测到 background 启动的毫秒时间戳 */
   FIRST_OPENED_AT: 'first_opened_at',
   /** 生产构建 DEBUG 日志开关 */
-  DEBUG_LOGGING: 'debug_logging'
+  DEBUG_LOGGING: 'debug_logging',
+  /** 评分引导是否已完成（已评分或已永久关闭），不再展示 */
+  HAS_RATED: 'has_rated',
+  /** 下载成功累计次数，用于首次成功触发评分引导 */
+  DOWNLOAD_SUCCESS_COUNT: 'download_success_count'
 } as const

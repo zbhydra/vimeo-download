@@ -24,7 +24,10 @@ const mocks = vi.hoisted(() => ({
   addInstalledListener: vi.fn(),
   addStartupListener: vi.fn(),
   addSuspendListener: vi.fn(),
-  initializeRuntimeLogger: vi.fn()
+  initializeRuntimeLogger: vi.fn(),
+  createNotification: vi.fn(),
+  addNotificationClickedListener: vi.fn(),
+  addNotificationClosedListener: vi.fn()
 }))
 
 let installedListener: InstalledListener | null = null
@@ -104,6 +107,12 @@ describe('background uninstall url', () => {
       },
       tabs: {
         create: mocks.createTab
+      },
+      // 下载终态通知挂钩在 background/index 导入链上注册点击/关闭监听。
+      notifications: {
+        create: mocks.createNotification,
+        onClicked: { addListener: mocks.addNotificationClickedListener },
+        onClosed: { addListener: mocks.addNotificationClosedListener }
       }
     })
   })

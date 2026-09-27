@@ -166,9 +166,9 @@ except AppCommonException as exc:
 | --- | --- | --- |
 | 剩余次数 / 已用次数文本 | `extension_download.use / remaining`,或最近一次扣减返回 | 实时反映当天用量 |
 | 计数器显隐 | `showCounter`(`daily_limit === -1` 时隐藏) | 无限额度时不展示 |
-| 限额引导 modal | 次数不足拦截时触发 | 未登录展示登录提示，主按钮调用 `openExtensionLogin`，通过 browser identity 回调兑换插件凭据；已登录展示升级提示并打开官网 Pricing 页。两种状态都显示服务端提供的刷新时间 |
+| 限额引导 modal | 次数不足拦截时触发 | 未登录展示登录提示，主按钮调用 `openExtensionLogin`，通过 browser identity 回调兑换插件凭据；已登录展示升级提示，popup 场景打开插件内购买视图、页面注入场景打开官网 Pricing 页。两种状态都显示服务端提供的刷新时间 |
 
-Popup 未登录时仍显示升级入口；点击升级按钮或耗尽计数器先发起插件登录，已登录时进入官网订阅页。登录完成后重新打开 Popup 会恢复登录态并刷新账号额度，页面下载重试使用后台保存的凭据。登录成功不代表获得额外免费次数，也不自动发起支付。
+Popup 未登录时仍显示升级入口；点击升级按钮或耗尽计数器先发起插件登录，已登录时进入 popup 内嵌购买视图（见 `@../006.订阅系统/tech-订阅商品与状态.md`）。登录完成后重新打开 Popup 会恢复登录态并刷新账号额度，页面下载重试使用后台保存的凭据。登录成功不代表获得额外免费次数，也不自动发起支付。
 
 是否允许下载只读取本次额度扣减响应的 `status`。`reset_at` 是可选展示数据：存在时显示刷新提示，不存在时仍显示升级弹窗但隐藏刷新时间块；字段缺失、非法或弹窗渲染失败均不得改变 `status=0` 的拒绝结果。刷新提示不根据插件打开时间自行推测服务端日切；倒计时每 30 秒更新，到达刷新时刻后切换为“正在刷新下载次数”，不显示负数。
 
@@ -180,10 +180,10 @@ Popup 未登录时仍显示升级入口；点击升级按钮或耗尽计数器�
 
 升级跳转:
 
-- 已登录用户的 modal 主按钮打开官网 Pricing URL；游客主按钮发起插件登录。
+- 已登录用户的 modal 主按钮按宿主分流:popup 场景（组件非 Teleport 挂载）打开 popup 内嵌购买视图,不再出站;页面注入场景（content 宿主）打开官网 Pricing URL。游客主按钮一律发起插件登录。
 - Pricing URL 使用网站当前公开 pricing 路径;可附带来源参数用于埋点,但购买逻辑不依赖该参数。
 - 打开官网后,website Pricing 按自身登录态处理:有 token 调 `auth/me`,无 token 展示登录入口。
-- 不再调用 `navigateToOptions()` 打开 extension options 订阅页;旧 QuotaCounter 中的 options 跳转已替换为官网 Pricing 跳转。
+- 不再调用 `navigateToOptions()` 打开 extension options 订阅页;旧 QuotaCounter 中的 options 跳转已替换为官网 Pricing 跳转（popup 场景现为内嵌购买视图）。
 
 ## 4. 与 website 下载额度的边界
 
@@ -201,6 +201,7 @@ Popup 未登录时仍显示升级入口；点击升级按钮或耗尽计数器�
 - 插件端额度 API 调用:`@extension/src/core/api/quota/api.ts`
 - 插件端下载链路对扣减的调用点:`@extension/src/background/services/DownloadOrchestrator.ts`（全局下载队列在任务出队执行前扣减一次）
 - 插件端升级弹窗:`@extension/src/core/content/components/UpgradeModal.vue`（配额拒绝由 background 向发起 tab 广播 `showUpgradeModal` 事件触发）
+- 插件内购买视图(popup 场景升级落点):`@extension/src/popup/components/PremiumView.vue`
 - 官网 Pricing 页:`@../011.Pricing页/feat.md`
 
 ## 6. 测试覆盖要点
@@ -208,7 +209,7 @@ Popup 未登录时仍显示升级入口；点击升级按钮或耗尽计数器�
 - `/api/client/quota/check` 直接调用计数 service 并扣 `EXTENSION_DOWNLOAD`,不调用其他额度消耗方法。
 - 已登录按 user_id 计数;匿名按 device_id 计数。
 - 次数不足时返回 `status=0` 且不增加已用。
-- 次数不足时响应携带与额度 key 过期时刻一致的 `reset_at`；插件升级 modal 在说明文字和按钮之间展示相对倒计时及本地绝对时间，点击后打开官网 Pricing 页。
+- 次数不足时响应携带与额度 key 过期时刻一致的 `reset_at`；插件升级 modal 在说明文字和按钮之间展示相对倒计时及本地绝对时间，点击后 popup 场景打开插件内购买视图、页面注入场景打开官网 Pricing 页。
 - 升级 modal 初次显示和关闭后重开分别记录一次 `upgrade_modal_open`;已显示时重复打开不重复记录。
 - 底层异常时 fail-open 放行(`status=1, remaining=-1`),且日志可定位。
 - 插件本地文件下载不调用后端下载执行入口(下载链路本身见 `@../002.下载功能/feat.md`)。

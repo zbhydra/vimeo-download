@@ -414,7 +414,7 @@ describe('VideoPanel', () => {
     expect(wrapper.get('.video-meta').text()).toBe('Best · 5.0 GB')
   })
 
-  it('保存位置预填设置里的子目录，改动后写回设置', async () => {
+  it('保存位置不再出现在面板里，已收进设置弹层', async () => {
     vi.spyOn(chrome.storage.local, 'get').mockResolvedValue({
       settings: { language: 'en-US', downloadPath: 'my-videos' }
     } as never)
@@ -422,30 +422,8 @@ describe('VideoPanel', () => {
     wrapper = await mountPanel(defaultResources())
     await flushPromises()
 
-    const input = wrapper.get<HTMLInputElement>('.save-path-input')
-    expect(input.element.value).toBe('my-videos')
-    expect(wrapper.get('.save-path-section .row-label').text()).toBe(
-      enUS['videoPanel.savePath.label']
-    )
-    expect(input.attributes('placeholder')).toBe(enUS['videoPanel.savePath.placeholder'])
-
-    await input.setValue('  videos/2026  ')
-    await input.trigger('change')
-    await flushPromises()
-
-    expect(chrome.storage.local.set).toHaveBeenCalledWith({
-      settings: expect.objectContaining({ downloadPath: 'videos/2026' })
-    })
-
-    // 清空后回填默认子目录：输入框显示的始终是实际生效的目录
-    await input.setValue('   ')
-    await input.trigger('change')
-    await flushPromises()
-
-    expect(input.element.value).toBe('vimeo-video-downloader')
-    expect(chrome.storage.local.set).toHaveBeenCalledWith({
-      settings: expect.objectContaining({ downloadPath: 'vimeo-video-downloader' })
-    })
+    expect(wrapper.find('.save-path-section').exists()).toBe(false)
+    expect(wrapper.find('.save-path-input').exists()).toBe(false)
   })
 
   it('视频行下拉只列画质档位，音轨改由独立开关切换，封面行没有下拉', async () => {

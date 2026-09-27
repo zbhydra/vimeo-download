@@ -1,12 +1,8 @@
-/** 订阅页 URL 合同，供页面导航与 background 登录后跳转共用。 */
+/** 订阅页 URL 合同，供 content 页面入口在无法打开 popup 购买视图时回退官网使用。 */
 import { WEBSITE } from '@/core/api/config'
 
-/** Pricing 来源，用于官网埋点区分插件入口。 */
-export type PricingSource =
-  | 'quota_counter'
-  | 'quota_upgrade_button'
-  | 'quota_unlimited_button'
-  | 'upgrade_modal'
+/** Pricing 来源，用于官网埋点区分插件入口；popup 内入口已改走内嵌购买视图。 */
+export type PricingSource = 'upgrade_modal'
 
 /**
  * 构建官网 Pricing URL。

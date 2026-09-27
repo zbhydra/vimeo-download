@@ -2,6 +2,17 @@
 
 > 记录本域(下载功能)每次文档修改:一行 why + 一行 from→to。
 
+## 2026-09-26 mux 改 OPFS 流式写盘；插件内购买页、设置弹层与运营三件套
+
+**Why**：mux 产物经 BufferTarget 整份驻留内存，大视频（4K 长片）合成会 OOM；购买跳官网、语言与保存位置入口分散、缺下载终态感知与运营触点，与竞品插件形态不符。
+
+**From → To**：
+- UA（OPFS 流式写盘）：offscreen 合成产物改 Mediabunny `StreamTarget` 流式写 OPFS `vdl-mux/` 临时文件（`Mp4OutputFormat` `fastStart:false`，moov 尾部，本地播放无影响）；交付用 OPFS File 引用的 blob URL（无整文件 Blob 尖峰）；落盘回执后 revoke 并删临时文件，offscreen 启动递归清扫残留，写盘失败走 `taskFailed`。大文件 OOM 风险消除（实测 446MB / 830s 关页续下）。
+- UB（插件内购买页）：popup 内嵌购买视图（`checkout-configs` 商品配置 → `order/create` → payment_data 域名白名单提取收银台 URL → 外跳 → 2s/10min 轮询 `order/status`，合同与 website-shared 同源）；登录门控复用 LoginModal；用户菜单新增管理订阅入口（`subscription/management`）。popup 侧 Pro / 升级入口全部改内嵌视图，content 宿主分支保留官网跳转（`pricingUrl.ts` 收缩保留）；官网 pricing 页双端并存；金额原样传递前端不计算。
+- UC（设置弹层 + 运营三件套）：header 齿轮打开设置弹层（界面语言 14 locale + Auto 跟随浏览器，`settings.language` 新增 `'auto'`；保存位置从 VideoPanel 收纳进弹层成为唯一编辑入口）；`LanguageSwitcher` 组件删除（语言入口唯一化）；系统通知（新增 `notifications` 权限，编排器 complete / failed 终态挂钩，文案走 I18nService 跟随界面语言）；评分引导（登录用户首次下载成功后展示一次，1-3 星致谢 / 4-5 星跳商店 URL 占位，`has_rated` 持久）；公告跑马灯（remote-config 新 `announcement` 分组 `{text,url?,enabled}`，url 仅 http(s)，`getRemoteConfig` 目标放开 popup，× 只关会话）。
+- 文档：同步 `tech-扩展端Vimeo本地下载.md`（§3 权限、§8.2 产物存储、§8.8 通知、§12.1/§12.7/§12.10、§13、§14）、`feat.md`（设置入口、popup 购买页、通知/评分/公告）、`../000.架构/tech-extension.md`（permissions 全集、popup 结构、远端配置读取方）、`../006.订阅系统/feat.md` 与 `tech-订阅商品与状态.md`（购买入口双端并存、插件内购买视图合同、管理订阅入口）、`../004.订单系统/feat.md`、`../005.计数器系统/feat.md` 与 `tech-额度查询与前端.md`、`../011.Pricing页/feat.md`（购买入口表述同步）。
+- 验收：单元 483 通过；真实站点终验组合 UI、购买链路、大文件 OPFS 落盘全部通过。
+
 ## 2026-09-26 DASH/HLS 下载迁移 offscreen 后台执行
 
 **Why**：DASH/HLS 分片与 mux 在 Vimeo 页面 MAIN world 执行，切换视频、刷新或关闭页面即中断下载，与竞品「下载独立于页面存活」的形态不符；且页面内 `a.click()` 交付没有落盘回执，触发即算完成。

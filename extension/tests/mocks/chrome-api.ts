@@ -235,6 +235,12 @@ const storage = {
     set: vi.fn(),
     remove: vi.fn(),
     clear: vi.fn()
+  },
+
+  onChanged: {
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    hasListener: vi.fn()
   }
 }
 
@@ -275,6 +281,36 @@ const identity = {
 }
 
 // ============================================================================
+// chrome.notifications API
+// ============================================================================
+
+const notifications = {
+  create: vi.fn(
+    async (_options: chrome.notifications.NotificationCreateOptions): Promise<string> =>
+      'notification-1'
+  ),
+  onClicked: {
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    hasListener: vi.fn()
+  },
+  onClosed: {
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    hasListener: vi.fn()
+  }
+}
+
+// ============================================================================
+// chrome.i18n API
+// ============================================================================
+
+const i18n = {
+  getAcceptLanguages: vi.fn(async (): Promise<string[]> => ['en-US', 'en']),
+  getMessage: vi.fn((messageName: string) => messageName)
+}
+
+// ============================================================================
 // 导出 Chrome API
 // ============================================================================
 
@@ -285,7 +321,9 @@ export const chrome = {
   storage,
   downloads,
   identity,
-  offscreen
+  offscreen,
+  notifications,
+  i18n
 }
 
 // 添加类型导出

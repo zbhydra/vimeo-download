@@ -52,6 +52,17 @@ export class BackgroundChannel {
     )
   }
 
+  /** 调用 getRemoteConfig 能力。 */
+  getRemoteConfig(
+    options?: RpcCallOptions
+  ): Promise<RpcMethodResult<BackgroundHandler, 'getRemoteConfig'>> {
+    return this.transport.call<RpcMethodResult<BackgroundHandler, 'getRemoteConfig'>>(
+      'getRemoteConfig',
+      undefined,
+      options
+    )
+  }
+
   /** 调用 recordMark 能力。 */
   recordMark(
     params: RpcMethodParams<BackgroundHandler, 'recordMark'>,

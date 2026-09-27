@@ -18,8 +18,16 @@
       <!-- 配额计数器 -->
       <QuotaCounter />
 
-      <!-- 语言切换器 -->
-      <LanguageSwitcher />
+      <!-- 设置：语言与保存位置集中在此弹层 -->
+      <button
+        type="button"
+        class="icon-button"
+        :title="t(I18N_KEYS.SETTINGS.TITLE)"
+        :aria-label="t(I18N_KEYS.SETTINGS.TITLE)"
+        @click="openSettingsModal"
+      >
+        <Icon :name="IconName.COG_6_TOOTH" :size="IconSize.MD" />
+      </button>
 
       <!-- 刷新按钮 -->
       <button
@@ -34,7 +42,11 @@
       </button>
 
       <!-- 登录按钮/用户菜单 -->
-      <LoginButton @click="handleOpenLogin" @logout="handleLogout" />
+      <LoginButton
+        @click="handleOpenLogin"
+        @logout="handleLogout"
+        @manage="handleManageSubscription"
+      />
     </div>
   </header>
 </template>
@@ -49,9 +61,11 @@ import { COMMON_COLORS } from '@/core/constants/style'
 import { Icon, IconName, IconSize } from '@/core/components/icons'
 import { QuotaCounter } from '@/core/components/quota'
 import LoginButton from '@/core/components/auth/LoginButton.vue'
-import LanguageSwitcher from './LanguageSwitcher.vue'
 import { buildHomeUrl, openExternalPage } from '@/core/utils/navigation'
 import { openLoginModal } from '@/core/composables/loginModal'
+import { openSettingsModal } from '@/core/composables/settingsModal'
+import { subscriptionApi } from '@/core/api/subscription'
+import { useToast } from '@/core/composables/useToast'
 
 // Emits
 defineEmits<{
@@ -64,6 +78,7 @@ const { t } = useI18n()
 // Stores
 const resourceStore = useResourceStore()
 const authStore = useAuthStore()
+const { showSuccess } = useToast()
 
 /** 头部品牌入口打开官网首页；打开失败已由 openExternalPage 记录日志。 */
 async function handleOpenOfficialWebsite(): Promise<void> {
@@ -84,6 +99,23 @@ async function handleLogout(): Promise<void> {
     logger.info('[AppHeader] Logout successful')
   } catch (error) {
     logger.error('[AppHeader] Logout failed:', error)
+  }
+}
+
+/**
+ * 请求订阅渠道管理入口并在新标签页打开；请求失败已由 HTTP 拦截器统一提示。
+ */
+async function handleManageSubscription(): Promise<void> {
+  try {
+    const { url } = await subscriptionApi.createManagement()
+    if (!url) {
+      // 一次性买断等非自动续费订阅没有渠道管理页，明确告知而非静默失败。
+      showSuccess(t(I18N_KEYS.SUBSCRIPTION.MANAGE_UNAVAILABLE))
+      return
+    }
+    await openExternalPage(url, 'subscription_management')
+  } catch (error) {
+    logger.error('[AppHeader] 打开订阅管理入口失败:', error)
   }
 }
 </script>

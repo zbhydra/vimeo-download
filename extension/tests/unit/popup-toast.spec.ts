@@ -144,8 +144,12 @@ async function mountPopup(): Promise<VueWrapper> {
         AppFooter: true,
         VideoPanel: true,
         DownloadQueue: true,
+        AnnouncementBar: true,
+        RatingPrompt: true,
+        SettingsModal: true,
         UpgradeModal: true,
-        LoginModal: true
+        LoginModal: true,
+        PremiumView: true
       }
     }
   })

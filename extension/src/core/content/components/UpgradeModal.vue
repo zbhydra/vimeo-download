@@ -59,6 +59,7 @@ import { Icon, IconName, IconSize } from '@/core/components/icons'
 import { logger } from '@/core/utils/logger'
 import { I18N_KEYS } from '@/core/constants/i18n'
 import { openPricingPage } from '@/core/utils/navigation'
+import { openPremiumView } from '@/core/composables/premiumView'
 import { openLoginModal } from '@/core/composables/loginModal'
 import { authApi } from '@/core/api/auth/api'
 import { ChromeEventEmitter } from '@/core/rpc/ChromeEventBus'
@@ -180,14 +181,21 @@ function handleClose(): void {
 }
 
 /**
- * 游客先完成插件登录，已登录用户进入订阅页。
+ * 游客先完成插件登录，已登录用户进入购买流程。
  *
- * popup 是唯一的登录面：弹窗宿主不在时 openLoginModal 会自行退回订阅页，
- * 因此宿主页面（content）里的这个入口不会变成死按钮。
+ * popup 内购买已收进 popup 的 Premium 视图（useTeleport=false 是 popup 的挂载方式）；
+ * 弹窗宿主页面（content）没有 popup 可承载，退回官网订阅页，保证入口仍有一条可用路径。
+ * 未登录时 popup 是唯一的登录面：弹窗宿主不在时 openLoginModal 会自行退回订阅页。
  */
 async function handleUpgrade(): Promise<void> {
   if (!(await authApi.isAuthenticated())) {
     openLoginModal('upgrade_modal')
+    handleClose()
+    return
+  }
+  if (!props.useTeleport) {
+    logger.info('[UpgradeModal] Open popup premium view')
+    openPremiumView('upgrade_modal')
     handleClose()
     return
   }

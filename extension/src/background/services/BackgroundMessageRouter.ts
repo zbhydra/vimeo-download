@@ -132,7 +132,7 @@ export class BackgroundMessageRouter {
     return { updated: true }
   }
 
-  /** 由 background 代 content script 读取远端顶层分组稀疏覆盖。 */
+  /** 由 background 代 content/popup 读取远端顶层分组稀疏覆盖。 */
   private async getRemoteConfig(): Promise<RemoteConfig> {
     return remoteConfigApi.getConfig()
   }

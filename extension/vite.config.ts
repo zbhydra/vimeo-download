@@ -271,7 +271,8 @@ export default defineConfig({
         description: '__MSG_extensionDescription__',
         // identity 只用于 Google 授权：background 用 launchWebAuthFlow 打开 Google 授权页。
         // offscreen 用于 DASH/HLS 下载的 offscreen document（chrome.offscreen.createDocument）。
-        permissions: ['storage', 'identity', 'downloads', 'offscreen'],
+        // notifications 用于下载任务终态（完成/失败）的系统通知（chrome.notifications.create）。
+        permissions: ['storage', 'identity', 'downloads', 'offscreen', 'notifications'],
         host_permissions: [...extensionBuildEnv.hostPermissions],
         action: {
           default_popup: 'src/popup.html',

@@ -5,11 +5,13 @@
  * MP4/M4A 容器，不做转码。裁剪按 packet 边界完成：视频起点前移到不晚于请求起点的关键帧
  * （否则首帧无法解码），终点取第一个不早于请求终点的 packet；音频沿用视频的时间基准，
  * 保证裁剪后不出现音画错位。
+ *
+ * 产物不落内存：经 StreamTarget 流式写入 OPFS 临时文件（生命周期见 muxArtifactStore），
+ * 返回 OPFS File 引用供交付，消除大视频合成期间的整份内存驻留。
  */
 
 import {
   BlobSource,
-  BufferTarget,
   EncodedAudioPacketSource,
   EncodedPacketSink,
   EncodedVideoPacketSource,
@@ -23,6 +25,8 @@ import {
   type VideoCodec
 } from 'mediabunny'
 
+import type { MuxArtifactWriter, MuxOutputArtifact } from './muxArtifactStore'
+import { openMuxArtifactWriter } from './muxArtifactStore'
 import type { VimeoTimeRange } from '@/sites/vimeo/shared'
 
 /** Vimeo mux 失败。 */
@@ -53,12 +57,14 @@ interface VimeoPacketWindow {
  * @param videoBlob 已下载的 video fragmented MP4
  * @param audioBlob 已下载的 audio fragmented MP4；传 null 时输出纯视频文件
  * @param range 片段区间；不传表示整片
+ * @param taskId 任务 ID，用作 OPFS 临时文件名（全局唯一）
  */
 export async function muxVimeoVideoToMp4(
   videoBlob: Blob,
   audioBlob: Blob | null,
-  range?: VimeoTimeRange
-): Promise<Blob> {
+  range: VimeoTimeRange | undefined,
+  taskId: string
+): Promise<MuxOutputArtifact> {
   const videoInput = new Input({
     formats: [MP4],
     source: new BlobSource(videoBlob)
@@ -70,6 +76,8 @@ export async function muxVimeoVideoToMp4(
       })
     : null
 
+  // writer 在 try 内打开：打开前的失败（track/codec 校验）无需清理，打开后的失败由 catch 收尾。
+  let writer: MuxArtifactWriter | null = null
   try {
     const videoTrack = await videoInput.getPrimaryVideoTrack()
     if (!videoTrack) {
@@ -95,11 +103,8 @@ export async function muxVimeoVideoToMp4(
     const window = range ? await resolvePacketWindow(videoTrack, range, true) : null
     const audioWindow = window && audioTrack ? await createAudioWindow(audioTrack, window) : null
 
-    const target = new BufferTarget()
-    const output = new Output({
-      format: new Mp4OutputFormat({ fastStart: 'in-memory' }),
-      target
-    })
+    writer = await openMuxArtifactWriter(taskId, 'mp4')
+    const output = new Output({ format: createStreamedMp4Format(), target: writer.target })
     const videoSource = new EncodedVideoPacketSource(videoCodec as VideoCodec)
     output.addVideoTrack(videoSource, {
       rotation: await videoTrack.getRotation()
@@ -119,11 +124,13 @@ export async function muxVimeoVideoToMp4(
     await Promise.all(tasks)
     await output.finalize()
 
-    if (!target.buffer) {
-      throw new VimeoMuxError('输出 buffer 为空')
+    return {
+      file: await writer.finalize(),
+      mimeType: VIDEO_MIME_TYPE,
+      tempFileName: writer.fileName
     }
-    return new Blob([target.buffer], { type: 'video/mp4' })
   } catch (error) {
+    await writer?.dispose()
     if (error instanceof VimeoMuxError) {
       throw error
     }
@@ -135,13 +142,24 @@ export async function muxVimeoVideoToMp4(
   }
 }
 
-/** 重封装 audio fragmented MP4 为 M4A。 */
-export async function remuxVimeoAudioToM4a(audioBlob: Blob, range?: VimeoTimeRange): Promise<Blob> {
+/**
+ * 重封装 audio fragmented MP4 为 M4A。
+ *
+ * @param audioBlob 已下载的 audio fragmented MP4
+ * @param range 片段区间；不传表示整片
+ * @param taskId 任务 ID，用作 OPFS 临时文件名（全局唯一）
+ */
+export async function remuxVimeoAudioToM4a(
+  audioBlob: Blob,
+  range: VimeoTimeRange | undefined,
+  taskId: string
+): Promise<MuxOutputArtifact> {
   const audioInput = new Input({
     formats: [MP4],
     source: new BlobSource(audioBlob)
   })
 
+  let writer: MuxArtifactWriter | null = null
   try {
     const audioTrack = await audioInput.getPrimaryAudioTrack()
     if (!audioTrack) {
@@ -156,22 +174,21 @@ export async function remuxVimeoAudioToM4a(audioBlob: Blob, range?: VimeoTimeRan
     // 纯音频没有关键帧概念，窗口起点取覆盖请求起点的 packet。
     const window = range ? await resolvePacketWindow(audioTrack, range, false) : null
 
-    const target = new BufferTarget()
-    const output = new Output({
-      format: new Mp4OutputFormat({ fastStart: 'in-memory' }),
-      target
-    })
+    writer = await openMuxArtifactWriter(taskId, 'm4a')
+    const output = new Output({ format: createStreamedMp4Format(), target: writer.target })
     const audioSource = new EncodedAudioPacketSource(audioCodec as AudioCodec)
     output.addAudioTrack(audioSource)
     await output.start()
     await addAudioPackets(audioInput, audioSource, window)
     await output.finalize()
 
-    if (!target.buffer) {
-      throw new VimeoMuxError('audio 输出 buffer 为空', 'audio')
+    return {
+      file: await writer.finalize(),
+      mimeType: AUDIO_MIME_TYPE,
+      tempFileName: writer.fileName
     }
-    return new Blob([target.buffer], { type: 'audio/mp4' })
   } catch (error) {
+    await writer?.dispose()
     if (error instanceof VimeoMuxError) {
       throw error
     }
@@ -182,11 +199,18 @@ export async function remuxVimeoAudioToM4a(audioBlob: Blob, range?: VimeoTimeRan
   }
 }
 
-/** 重封装单条 muxed fMP4 HLS 为 MP4；要求至少包含 video track，audio 可选。 */
+/**
+ * 重封装单条 muxed fMP4 HLS 为 MP4；要求至少包含 video track，audio 可选。
+ *
+ * @param inputBlob 已下载的 muxed fragmented MP4
+ * @param range 片段区间；不传表示整片
+ * @param taskId 任务 ID，用作 OPFS 临时文件名（全局唯一）
+ */
 export async function remuxVimeoMuxedMp4ToMp4(
   inputBlob: Blob,
-  range?: VimeoTimeRange
-): Promise<Blob> {
+  range: VimeoTimeRange | undefined,
+  taskId: string
+): Promise<MuxOutputArtifact> {
   const videoInput = new Input({
     formats: [MP4],
     source: new BlobSource(inputBlob)
@@ -196,6 +220,7 @@ export async function remuxVimeoMuxedMp4ToMp4(
     source: new BlobSource(inputBlob)
   })
 
+  let writer: MuxArtifactWriter | null = null
   try {
     const videoTrack = await videoInput.getPrimaryVideoTrack()
     if (!videoTrack) {
@@ -212,11 +237,8 @@ export async function remuxVimeoMuxedMp4ToMp4(
     const window = range ? await resolvePacketWindow(videoTrack, range, true) : null
     const audioWindow = window && audioTrack ? await createAudioWindow(audioTrack, window) : null
 
-    const target = new BufferTarget()
-    const output = new Output({
-      format: new Mp4OutputFormat({ fastStart: 'in-memory' }),
-      target
-    })
+    writer = await openMuxArtifactWriter(taskId, 'mp4')
+    const output = new Output({ format: createStreamedMp4Format(), target: writer.target })
     const videoSource = new EncodedVideoPacketSource(videoCodec as VideoCodec)
     const audioSource =
       audioTrack && audioCodec ? new EncodedAudioPacketSource(audioCodec as AudioCodec) : null
@@ -235,11 +257,13 @@ export async function remuxVimeoMuxedMp4ToMp4(
     await Promise.all(tasks)
     await output.finalize()
 
-    if (!target.buffer) {
-      throw new VimeoMuxError('HLS fMP4 输出 buffer 为空')
+    return {
+      file: await writer.finalize(),
+      mimeType: VIDEO_MIME_TYPE,
+      tempFileName: writer.fileName
     }
-    return new Blob([target.buffer], { type: 'video/mp4' })
   } catch (error) {
+    await writer?.dispose()
     if (error instanceof VimeoMuxError) {
       throw error
     }
@@ -369,4 +393,20 @@ async function addAudioPackets(
     })
   }
   source.close()
+}
+
+/** 视频产物 MIME；OPFS File.type 恒为空，交付时须显式携带。 */
+const VIDEO_MIME_TYPE = 'video/mp4'
+
+/** 音频产物 MIME。 */
+const AUDIO_MIME_TYPE = 'audio/mp4'
+
+/**
+ * 流式写盘的 MP4 输出格式。
+ *
+ * fastStart 必须为 false：'in-memory' 会把全部 mdat 聚合在内存直到 finalize，流式写盘就失去
+ * 意义。false 时 moov 写在文件尾，mediabunny 以定位写回补尺寸，StreamTarget 原生支持。
+ */
+function createStreamedMp4Format(): Mp4OutputFormat {
+  return new Mp4OutputFormat({ fastStart: false })
 }

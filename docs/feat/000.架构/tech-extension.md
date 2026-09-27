@@ -9,9 +9,9 @@
 - **Vue 3.5 + Pinia 3 + vue-i18n 11 + Vite 7**（`extension/package.json`）。`tailwindcss` 与 `@tailwindcss/vite` 仍是 devDependency 但零使用，属僵尸依赖；新代码继续用 scoped CSS，不要引入 Tailwind。
 - 构建：`vite-plugin-web-extension`。
 - 本地调试：`pnpm dev` 使用 `vite build --watch --mode development` 构建 `dist`，并通过当前 Microsoft Edge 的 CDP `DevToolsActivePort` 执行 `Extensions.loadUnpacked` 重新加载本地 unpacked extension；不创建新 profile，不接管浏览器启动。
-- **Chrome Manifest V3**（`manifest_version: 3`）：站点静态数据以 `extension/src/platforms/registry.ts` 的 `SITE_REGISTRATION` 为唯一事实源，权限与入口的最终组装以 `extension/vite.config.ts` 的 `webExtension({ manifest })` 配置为准。`permissions` 当前为 `storage` / `identity` / `downloads` / `offscreen`（offscreen 用于 DASH/HLS 下载的 offscreen document），`host_permissions` 只含 Vimeo 页面与 Vimeo 媒体 CDN。标签页 URL 只通过已限定的 host_permissions 读取，不申请 `activeTab` 或 `tabs`。API 与 SLS 走标准 CORS，Google 登录走 `identity` 权限 + `chrome.identity.launchWebAuthFlow` 交互窗口（不注入 content script、不授予官网 host access、不申请 host_permissions），两者均不重复进入 host_permissions。
+- **Chrome Manifest V3**（`manifest_version: 3`）：站点静态数据以 `extension/src/platforms/registry.ts` 的 `SITE_REGISTRATION` 为唯一事实源，权限与入口的最终组装以 `extension/vite.config.ts` 的 `webExtension({ manifest })` 配置为准。`permissions` 当前为 `storage` / `identity` / `downloads` / `offscreen` / `notifications`（offscreen 用于 DASH/HLS 下载的 offscreen document；notifications 用于下载终态系统通知），`host_permissions` 只含 Vimeo 页面与 Vimeo 媒体 CDN。标签页 URL 只通过已限定的 host_permissions 读取，不申请 `activeTab` 或 `tabs`。API 与 SLS 走标准 CORS，Google 登录走 `identity` 权限 + `chrome.identity.launchWebAuthFlow` 交互窗口（不注入 content script、不授予官网 host access、不申请 host_permissions），两者均不重复进入 host_permissions。
 - e2e：Playwright。
-- 入口页：`popup`（`src/popup.html`）。旧 `options_page` 已删除,购买与订阅管理统一跳官网 Pricing。
+- 入口页：`popup`（`src/popup.html`）。旧 `options_page` 已删除；购买收进 popup 内嵌购买视图（页面注入场景回退官网 Pricing），订阅管理入口在用户菜单（见 `@../006.订阅系统/tech-订阅商品与状态.md`）。
 
 ### A2. 目录结构（五上下文 + 共享核心）
 
@@ -32,7 +32,7 @@ extension/src/
 ├── injected/             # MAIN world 注入上下文
 │   └── injected-register.ts
 ├── offscreen/            # offscreen document 上下文（DASH/HLS 下载执行）
-│   ├── index.ts / offscreen-register.ts / OffscreenTaskRunner.ts / mux.ts
+│   ├── index.ts / offscreen-register.ts / OffscreenTaskRunner.ts / mux.ts / muxArtifactStore.ts
 │   ├── rpc/              # background 生成客户端（进度/交付/取消/重签/心跳回传）
 │   └── types.ts
 ├── core/                 # 跨上下文共享核心（插件内部共享层）
@@ -56,12 +56,12 @@ extension/src/
 
 **上下文划分**：
 - `background/`（Service Worker）、`content/`（Content Script）、`injected/`（MAIN world 注入页上下文）、`offscreen/`（offscreen document）各有独立入口；offscreen 不在 manifest 声明入口，由 background 在首个下载任务时用 `chrome.offscreen.createDocument` 惰性创建（见 A2.1）。
-- 旧 `options/` 设置页已删除；`popup/`（弹窗 UI）承载单视频操作面板、登录状态、额度/升级入口，底部固定显示可点击、可复制的支持邮箱，复制结果通过全局 Toast 反馈。Popup 固定 448px 宽、最小 300px、最大 600px 高；header 与 footer 固定，主区（视频信息 / 四行档位 / 时间裁剪 / 保存位置）超出上限时内部滚动；四行档位的 Video 行另带「带音轨 / 无音轨」独立开关，它是该行的行内控件、不是主区独立区块（见 `@../002.下载功能/tech-扩展端Vimeo本地下载.md` §12.5、§12.7）。宽度以 header 控件与 footer 整句能完整显示为准，header 一行放不下时功能控件折到第二行（文案不省略）。未登录按钮经真实 background RPC 发起 Google 登录：background 用 `chrome.identity.launchWebAuthFlow` 打开后端 `/api/client/auth/google/oauth/authorize`，用户完成授权后由后端 303 回 `https://<扩展 ID>.chromiumapp.org/google-login`，background 解析回跳并用一次性 code 换取登录态后写入 storage；Popup 被授权窗口抢焦点关闭也不影响登录完成，重开 Popup 由 auth store 从 storage 恢复账号。邮箱验证码登录仍由 Popup 内的登录弹窗承担。
+- 旧 `options/` 设置页已删除；`popup/`（弹窗 UI）承载单视频操作面板、登录状态、额度/升级入口，底部固定显示可点击、可复制的支持邮箱，复制结果通过全局 Toast 反馈。Popup 固定 448px 宽、最小 300px、最大 600px 高；header 与 footer 固定，主区（视频信息 / 四行档位 / 时间裁剪）超出上限时内部滚动；四行档位的 Video 行另带「带音轨 / 无音轨」独立开关，它是该行的行内控件、不是主区独立区块（见 `@../002.下载功能/tech-扩展端Vimeo本地下载.md` §12.5）。宽度以 header 控件与 footer 整句能完整显示为准，header 一行放不下时功能控件折到第二行（文案不省略）。header 的设置齿轮打开设置弹层（界面语言 + 保存位置，唯一编辑入口）；额度与升级入口打开 popup 内嵌购买视图；主区之下、footer 之间是任务队列与运营条（公告跑马灯 / 评分引导）。未登录按钮经真实 background RPC 发起 Google 登录：background 用 `chrome.identity.launchWebAuthFlow` 打开后端 `/api/client/auth/google/oauth/authorize`，用户完成授权后由后端 303 回 `https://<扩展 ID>.chromiumapp.org/google-login`，background 解析回跳并用一次性 code 换取登录态后写入 storage；Popup 被授权窗口抢焦点关闭也不影响登录完成，重开 Popup 由 auth store 从 storage 恢复账号。邮箱验证码登录仍由 Popup 内的登录弹窗承担。
 - `core/` 是**跨上下文共享核心**——API 客户端、RPC 框架、Pinia store、事件、存储与共享组件。Vimeo content 负责页面内解析与按钮面板；全部下载统一入队 background 的 `DownloadOrchestrator`（页面按钮与 Popup 都只投递完整 MediaResource），DASH/HLS 分片读取与 remux 在 offscreen document 执行（见 `@../002.下载功能/tech-扩展端Vimeo本地下载.md` §8），injected 只保留原生 config 捕获。
 
 ### A2.1 offscreen document 上下文
 
-DASH/HLS 下载需要长生命周期执行环境且只用 blob API：页面（content/injected）随导航销毁、SW 随 idle 退出，只有 offscreen document 两者兼得。
+DASH/HLS 下载需要长生命周期执行环境且只用 blob API 与 OPFS（合成产物流式写 OPFS 临时文件，生命周期见 `@../002.下载功能/tech-扩展端Vimeo本地下载.md` §8.2）：页面（content/injected）随导航销毁、SW 随 idle 退出，只有 offscreen document 两者兼得。
 
 - **创建**：manifest 声明 `offscreen` permission；background 首个下载任务触发惰性创建——`chrome.runtime.getContexts` 预检 + 模块级 creating promise 串行化并发创建，`reasons: ['BLOBS']`。入口 `src/offscreen.html`（vite `additionalInputs` 纳入构建，路径与 `core/rpc/constants.ts` 的 `OFFSCREEN_ENTRY_PATH` 同步）。
 - **生命周期**：常驻不自动关闭——交付中的 blob URL 依赖文档存活，重复冷启动也有成本；无任务时的内存占用是已知限制。
@@ -97,7 +97,7 @@ DASH/HLS 下载需要长生命周期执行环境且只用 blob API：页面（co
 
 `core/stores/quotaStore.ts` 另通过 `subscriptionApi.getStatus()` 调用 `/api/client/subscription/status`，读取并派生额度展示状态（`remaining` / `dailyLimit` / `isPaidUser`，`daily_limit === -1` 表示不限次）。Popup Footer 固定为一行：联系邮箱与复制按钮，点击邮箱交给系统默认邮件客户端，复制结果通过全局 Toast 反馈。该接口不承担计数或额度消耗。
 
-**远端配置**：content 是远端配置的读取方，经 background RPC 调 `/api/client/remote-config/config` 取顶层稀疏覆盖，再用 `core/remoteConfig/createRemoteConfigStore.ts` 按顶层分组浅覆盖到包内默认值：缺项保留本地值、分组类型不符时整组跳过、读取失败保留默认值，且不写 `chrome.storage`。站点级参数（如 Vimeo 的 `muxMaxBytes`）先按已知字段过滤（`pickVimeoConfig` 只接受有限正整数，写错类型的字段丢弃并保留默认值），再经 `applySiteConfig` 同步给 MAIN world；MAIN world 因 EventRpc 通道可被页面伪造而再校验一次，两侧用同一套规则。服务端只存稀疏覆盖，配置改动在客户端重新加载页面后生效，不做推送、轮询或版本号。
+**远端配置**：content 与 popup 都是远端配置的读取方（popup 供公告跑马灯消费 `announcement` 分组，见 `@../002.下载功能/tech-扩展端Vimeo本地下载.md` §12.10），经 background RPC 调 `/api/client/remote-config/config` 取顶层稀疏覆盖，再用 `core/remoteConfig/createRemoteConfigStore.ts` 按顶层分组浅覆盖到包内默认值：缺项保留本地值、分组类型不符时整组跳过、读取失败保留默认值，且不写 `chrome.storage`。站点级参数（如 Vimeo 的 `muxMaxBytes`）先按已知字段过滤（`pickVimeoConfig` 只接受有限正整数，写错类型的字段丢弃并保留默认值），再经 `applySiteConfig` 同步给 MAIN world；MAIN world 因 EventRpc 通道可被页面伪造而再校验一次，两侧用同一套规则。服务端只存稀疏覆盖，配置改动在客户端重新加载页面后生效，不做推送、轮询或版本号。
 
 **设备识别**：`background/index.ts` 启动时用 `crypto.randomUUID()` 生成 `device_id` 存 `chrome.storage`（`STORAGE_KEYS.DEVICE_ID = 'counter_device_id'`），HttpClient 拦截器在每次请求注入 `X-Device-Id` 头。对应 `feat.044.统一每日额度服务` 与 `@../005.计数器系统/tech-device_id与匿名下载.md`。
 

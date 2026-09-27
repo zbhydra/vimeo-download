@@ -31,8 +31,9 @@ import { useAuthStore } from '@/core/stores/authStore'
 import { I18N_KEYS } from '@/core/constants/i18n'
 import { COMMON_COLORS } from '@/core/constants/style'
 import { logger } from '@/core/utils/logger'
-import { openPricingPage, type PricingSource } from '@/core/utils/navigation'
+import { openPremiumView } from '@/core/composables/premiumView'
 import { openLoginModal } from '@/core/composables/loginModal'
+import type { PremiumSource } from '@/core/composables/premiumView'
 
 // Props
 interface Props {
@@ -68,7 +69,7 @@ const titleText = computed(() => {
   })
 })
 
-// 已订阅用户仍保留跳转入口，但文案展示为 Unlimited，避免误导继续升级。
+// 已订阅用户仍保留入口，但文案展示为 Unlimited，避免误导继续升级。
 const actionButtonText = computed(() => {
   if (quotaStore.hasActiveSubscription) {
     return t(I18N_KEYS.SUBSCRIPTION.UNLIMITED)
@@ -77,13 +78,13 @@ const actionButtonText = computed(() => {
   return t(I18N_KEYS.QUOTA.UPGRADE_BUTTON)
 })
 
-// 区分免费升级按钮和已订阅 Unlimited 按钮，官网后续可按 source 做不同处理。
-const actionButtonSource = computed<PricingSource>(() => {
+// 区分免费升级按钮和已订阅 Unlimited 按钮，归因上保持两个入口可分辨。
+const actionButtonSource = computed<PremiumSource>(() => {
   if (quotaStore.hasActiveSubscription) {
-    return 'quota_unlimited_button'
+    return 'popup_upgrade_now'
   }
 
-  return 'quota_upgrade_button'
+  return 'popup_quota_counter'
 })
 
 /**
@@ -99,8 +100,8 @@ async function handleClick(): Promise<void> {
       openLoginModal('popup_quota_counter')
       return
     }
-    logger.info('[QuotaCounter] Quota exhausted, opening pricing page')
-    await openPricingPage('quota_counter')
+    logger.info('[QuotaCounter] Quota exhausted, opening premium view')
+    openPremiumView('popup_quota_counter')
   }
 }
 
@@ -112,10 +113,10 @@ async function handleUpgrade(): Promise<void> {
     openLoginModal('popup_upgrade_now')
     return
   }
-  logger.info('[QuotaCounter] Subscription action clicked, opening pricing page', {
+  logger.info('[QuotaCounter] Subscription action clicked, opening premium view', {
     source: actionButtonSource.value
   })
-  await openPricingPage(actionButtonSource.value)
+  openPremiumView(actionButtonSource.value)
 }
 </script>
 

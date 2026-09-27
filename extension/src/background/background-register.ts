@@ -66,7 +66,7 @@ export const Handler = {
     return declarationOnly('background.updateBadge')
   },
 
-  /** 由 background 代 content script 读取远端顶层分组稀疏覆盖。 */
+  /** 由 background 代 content/popup 读取远端顶层分组稀疏覆盖。 */
   getRemoteConfig(): Promise<BackgroundGetRemoteConfigResponse> {
     return declarationOnly('background.getRemoteConfig')
   },
@@ -160,8 +160,8 @@ export const METHOD_TARGETS = {
   getRuntimeConfig: ['content', 'popup'],
   /** updateBadge 只允许 content 调用。 */
   updateBadge: ['content'],
-  /** getRemoteConfig 只允许 content 调用，沿用既有 Background API 请求边界。 */
-  getRemoteConfig: ['content'],
+  /** getRemoteConfig 允许 content/popup 调用：background 统一代读远端配置再分发。 */
+  getRemoteConfig: ['content', 'popup'],
   /** getVimeoPlayerConfig 只允许 Vimeo content 调用，兜底只服务页面本身的视频。 */
   getVimeoPlayerConfig: ['content'],
   /** Popup 与 content 共用 background 安装身份和 SLS 写入。 */

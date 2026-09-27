@@ -1,6 +1,12 @@
 import { createI18n } from 'vue-i18n'
 import { SettingsManager } from '@/core/storage/settings'
-import { SUPPORTED_LANGUAGES, type SupportedLanguage } from '@/core/constants/i18n'
+import { LanguageService } from '@/core/services/languageService'
+import {
+  LANGUAGE_AUTO,
+  SUPPORTED_LANGUAGES,
+  type LanguageSetting,
+  type SupportedLanguage
+} from '@/core/constants/i18n'
 import { logger } from '@/core/utils/logger'
 import TRANSLATIONS from './messages'
 
@@ -42,18 +48,33 @@ export class I18nService {
   static async initialize(): Promise<void> {
     // 初始化内部 i18n 实例的语言
     const settings = await SettingsManager.getSettings()
-    if (settings?.language) {
-      I18nService.currentLanguage = settings.language as SupportedLanguage
-      getInternalI18n().global.locale.value = I18nService.currentLanguage
-    }
+    await I18nService.applySettingLanguage(settings?.language)
 
     SettingsManager.onSettingsChanged(settings => {
-      if (settings.language && settings.language !== I18nService.currentLanguage) {
-        I18nService.currentLanguage = settings.language as SupportedLanguage
-        getInternalI18n().global.locale.value = I18nService.currentLanguage
-        I18nService.notifyLanguageChange()
-      }
+      void I18nService.applySettingLanguage(settings.language)
     })
+  }
+
+  /**
+   * 把语言设置落到当前生效 locale。
+   *
+   * `auto` 表示跟随浏览器，这里即时解析成具体 locale（不回写设置）；解析失败保持当前语言。
+   */
+  private static async applySettingLanguage(setting: LanguageSetting | undefined): Promise<void> {
+    let next: SupportedLanguage
+    try {
+      next =
+        setting === LANGUAGE_AUTO || !setting ? await LanguageService.detectLanguage() : setting
+    } catch (error) {
+      logger.error('[I18nService] 解析语言设置失败，保持当前语言:', error)
+      return
+    }
+
+    if (next !== I18nService.currentLanguage) {
+      I18nService.currentLanguage = next
+      getInternalI18n().global.locale.value = next
+      I18nService.notifyLanguageChange()
+    }
   }
 
   static t(key: string, params?: I18nParams, lang?: SupportedLanguage): string {
@@ -75,7 +96,7 @@ export class I18nService {
     return this.currentLanguage
   }
 
-  static async setLanguage(language: SupportedLanguage): Promise<void> {
+  static async setLanguage(language: LanguageSetting): Promise<void> {
     await SettingsManager.updateSettings({ language })
   }
 

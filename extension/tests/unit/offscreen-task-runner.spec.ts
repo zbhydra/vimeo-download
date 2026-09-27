@@ -4,7 +4,10 @@
  * F1 回归防护：mock 的 BackgroundChannel.taskComplete 在应答前调用 runner.releaseTaskArtifact，
  * 精确复现 background「应答前先发起释放」的时序——修复前登记未就位恒返回 false（blob 永不
  * revoke），修复后必须穿透到 deliveredArtifacts 返回 true 并 revoke。另覆盖交付失败路径的
- * 登记撤销与 blob 自回收。
+ * 登记撤销与 blob/OPFS 临时文件自回收。
+ *
+ * mux 产物走 OPFS（MuxOutputArtifact）：muxArtifactStore 整体 mock，断言 release 与交付失败
+ * 两个回收点都会按 tempFileName 删除 OPFS 临时文件。
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -16,7 +19,9 @@ const mocks = vi.hoisted(() => ({
   taskCancelled: vi.fn(),
   refreshSignatureRequest: vi.fn(),
   keepAlive: vi.fn(),
-  remuxAudio: vi.fn()
+  remuxAudio: vi.fn(),
+  removeMuxArtifact: vi.fn(),
+  sweepMuxArtifacts: vi.fn()
 }))
 
 vi.mock('@/offscreen/rpc/background.rpc', () => ({
@@ -35,6 +40,11 @@ vi.mock('@/offscreen/mux', async importOriginal => ({
   remuxVimeoAudioToM4a: mocks.remuxAudio
 }))
 
+vi.mock('@/offscreen/muxArtifactStore', () => ({
+  sweepMuxArtifacts: mocks.sweepMuxArtifacts,
+  removeMuxArtifact: mocks.removeMuxArtifact
+}))
+
 import { RESOURCE_SOURCE_KINDS, RESOURCE_TYPES } from '@/core/constants/resource'
 import type { MediaResource } from '@/core/types'
 import {
@@ -45,6 +55,7 @@ import { offscreenTaskRunner } from '@/offscreen/OffscreenTaskRunner'
 
 const PLAYLIST_URL = 'https://playlist.vimeocdn.com/p/playlist.json?sig=1'
 const SEGMENT_URLS = ['https://seg.vimeocdn.com/seg-1.m4s', 'https://seg.vimeocdn.com/seg-2.m4s']
+const TEMP_FILE_NAME = 'mock-task.m4a'
 
 /** 构造 DASH 纯音频资源；descriptor 经真实编码器生成，保证 assertSourceDescriptorMatch 通过。 */
 function audioResourceFixture(resourceId: string): MediaResource {
@@ -121,15 +132,24 @@ const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
 const createObjectUrlMock = vi.fn((blob: Blob) => `blob:mock-${(blob as Blob).size}`)
 const revokeObjectUrlMock = vi.fn()
 const originalCreateObjectUrl = URL.createObjectURL
-const originalRevokeObjectUrl = URL.revokeObjectURL
+const originalRevokeObjectURL = URL.revokeObjectURL
 
 describe('OffscreenTaskRunner 交付闭环', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.remuxAudio.mockImplementation(async (blob: Blob) => blob)
+    mocks.remuxAudio.mockImplementation(
+      async (blob: Blob, _range: undefined, _taskId: string) => ({
+        file: new File([blob], TEMP_FILE_NAME, { type: 'audio/mp4' }),
+        mimeType: 'audio/mp4',
+        tempFileName: TEMP_FILE_NAME
+      })
+    )
     mocks.taskProgress.mockResolvedValue({ recorded: true })
     mocks.taskFailed.mockResolvedValue({ accepted: true })
+    mocks.taskCancelled.mockResolvedValue({ accepted: true })
     mocks.keepAlive.mockResolvedValue({ alive: true })
+    mocks.removeMuxArtifact.mockResolvedValue(undefined)
+    mocks.sweepMuxArtifacts.mockResolvedValue(undefined)
     vi.stubGlobal('fetch', fetchMock)
     URL.createObjectURL = createObjectUrlMock
     URL.revokeObjectURL = revokeObjectUrlMock
@@ -137,11 +157,11 @@ describe('OffscreenTaskRunner 交付闭环', () => {
 
   afterEach(() => {
     URL.createObjectURL = originalCreateObjectUrl
-    URL.revokeObjectURL = originalRevokeObjectUrl
+    URL.revokeObjectURL = originalRevokeObjectURL
     vi.unstubAllGlobals()
   })
 
-  it('taskComplete 应答前的释放请求命中已登记产物：release 返回 true 并 revoke', async () => {
+  it('taskComplete 应答前的释放请求命中已登记产物：release 返回 true，revoke 并删除 OPFS 临时文件', async () => {
     let releasedDuringComplete: boolean | null = null
     mocks.taskComplete.mockImplementation(async (params: { taskId: string; blobUrl: string }) => {
       // 复现 background handleTaskComplete：应答前先发起 releaseTaskArtifact
@@ -162,13 +182,15 @@ describe('OffscreenTaskRunner 交付闭环', () => {
     const delivered = mocks.taskComplete.mock.calls[0][0] as { taskId: string; blobUrl: string }
     expect(releasedDuringComplete).toBe(true)
     expect(revokeObjectUrlMock).toHaveBeenCalledWith(delivered.blobUrl)
-    // 登记已随释放移除：重复释放与未知产物都拒绝
+    expect(mocks.removeMuxArtifact).toHaveBeenCalledWith(TEMP_FILE_NAME)
+    // 登记已随释放移除：重复释放与未知产物都拒绝，且不会二次删除
     expect(offscreenTaskRunner.releaseTaskArtifact('t1', delivered.blobUrl)).toBe(false)
     expect(offscreenTaskRunner.releaseTaskArtifact('t-unknown', delivered.blobUrl)).toBe(false)
+    expect(mocks.removeMuxArtifact).toHaveBeenCalledTimes(1)
     expect(offscreenTaskRunner.listActiveTasks()).toHaveLength(0)
   })
 
-  it('taskComplete RPC 失败时撤销登记并自行回收 blob，任务转失败回传', async () => {
+  it('taskComplete RPC 失败时撤销登记并自行回收 blob 与 OPFS 临时文件，任务转失败回传', async () => {
     mocks.taskComplete.mockRejectedValue(new Error('[mock] rpc down'))
 
     expect(offscreenTaskRunner.startTask('t2', audioResourceFixture('vimeo:1196869805:audio:a2'))).toBe(
@@ -180,8 +202,10 @@ describe('OffscreenTaskRunner 交付闭环', () => {
 
     const attempted = mocks.taskComplete.mock.calls[0][0] as { taskId: string; blobUrl: string }
     expect(revokeObjectUrlMock).toHaveBeenCalledWith(attempted.blobUrl)
-    // 登记已撤销：迟到的释放请求不再命中
+    expect(mocks.removeMuxArtifact).toHaveBeenCalledWith(TEMP_FILE_NAME)
+    // 登记已撤销：迟到的释放请求不再命中，也不会二次删除
     expect(offscreenTaskRunner.releaseTaskArtifact('t2', attempted.blobUrl)).toBe(false)
+    expect(mocks.removeMuxArtifact).toHaveBeenCalledTimes(1)
     expect(offscreenTaskRunner.listActiveTasks()).toHaveLength(0)
   })
 })

@@ -51,9 +51,40 @@ export { authApi } from './auth/api'
 export { subscriptionApi } from './subscription/api'
 export { quotaApi } from './quota/api'
 export { remoteConfigApi } from './remote-config/api'
+export {
+  createOrder,
+  getOrderStatus,
+  buildCreateOrderRequest,
+  getDefaultOrderPaymentChannel,
+  readPaymentUrl,
+  classifyOrderStatus,
+  hasOrderPollingTimedOut,
+  isRecoverableOrderStatusError,
+  isPaymentPriceUpdatedError,
+  isPaymentGatewayError,
+  ORDER_POLL_INTERVAL_MS,
+  ORDER_POLL_TIMEOUT_MS
+} from './order/api'
 
 // 导出 subscription 类型
-export type { SubscriptionPeriod, SubscriptionStatus } from './subscription/types'
+export type {
+  DailyQuotaStatus,
+  SubscriptionCheckoutPlan,
+  SubscriptionPaymentChannel,
+  SubscriptionPeriod,
+  SubscriptionStatus,
+  SubscriptionManagementResult
+} from './subscription/types'
+
+// 导出 order 类型
+export type {
+  CreateOrderRequest,
+  CreateOrderResponse,
+  OrderPaymentChannel,
+  OrderPeriod,
+  OrderStatusOutcome,
+  OrderStatusResponse
+} from './order/types'
 
 // 导出 quota 类型
 export type { QuotaPeriod, QuotaStatus, QuotaCheckRequest, QuotaCheckResponse } from './quota/types'

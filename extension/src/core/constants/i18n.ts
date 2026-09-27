@@ -83,10 +83,6 @@ export const I18N_KEYS = {
     UNAVAILABLE: 'videoPanel.unavailable',
     /** 直接下载行：progressive 直链单文件档位，独立于 Video 行的 DASH/HLS 合流档位 */
     DIRECT_ROW_LABEL: 'videoPanel.directRow.label',
-    /** 保存位置标题 */
-    SAVE_PATH_LABEL: 'videoPanel.savePath.label',
-    /** 保存位置输入占位，说明填的是下载目录下的子目录 */
-    SAVE_PATH_PLACEHOLDER: 'videoPanel.savePath.placeholder',
     /** 时间裁剪标题 */
     CLIP_TITLE: 'videoPanel.clip.title',
     /** 时间裁剪起点 */
@@ -135,6 +131,42 @@ export const I18N_KEYS = {
     CANCEL_TASK: 'downloadStatus.cancelTask',
     /** 重试单个失败任务的可访问名称 */
     RETRY_TASK: 'downloadStatus.retryTask'
+  },
+
+  /** 设置弹层相关 */
+  SETTINGS: {
+    /** 弹层标题 */
+    TITLE: 'settings.title',
+    /** 界面语言标签 */
+    LANGUAGE_LABEL: 'settings.language.label',
+    /** 语言选项：跟随浏览器 */
+    LANGUAGE_AUTO: 'settings.language.auto',
+    /** 保存位置标题 */
+    SAVE_PATH_LABEL: 'settings.savePath.label',
+    /** 保存位置输入占位，说明填的是下载目录下的子目录 */
+    SAVE_PATH_PLACEHOLDER: 'settings.savePath.placeholder'
+  },
+
+  /** 系统通知（background 侧经 I18nService 取文案） */
+  NOTIFICATION: {
+    /** 下载完成标题 */
+    COMPLETE_TITLE: 'notification.downloadCompleteTitle',
+    /** 下载完成消息，参数 `filename` 为已保存文件名 */
+    COMPLETE_MESSAGE: 'notification.downloadCompleteMessage',
+    /** 下载失败标题 */
+    FAILED_TITLE: 'notification.downloadFailedTitle',
+    /** 下载失败消息，参数 `filename` 为目标文件名 */
+    FAILED_MESSAGE: 'notification.downloadFailedMessage'
+  },
+
+  /** 评分引导（popup footer） */
+  RATING: {
+    /** 引导文案 */
+    PROMPT: 'rating.prompt',
+    /** 低分致谢文案 */
+    THANKS: 'rating.thanks',
+    /** 单星按钮可访问名，参数 `stars` 为星数（1-5） */
+    STAR_ARIA: 'rating.starAria'
   },
 
   /** 应用错误相关 */
@@ -194,7 +226,81 @@ export const I18N_KEYS = {
   /** 订阅相关 */
   SUBSCRIPTION: {
     /** 无限制 */
-    UNLIMITED: 'subscription.unlimited'
+    UNLIMITED: 'subscription.unlimited',
+    /** 用户菜单：管理订阅 */
+    MANAGE: 'subscription.manage',
+    /** 订阅没有可用的渠道管理页时的提示 */
+    MANAGE_UNAVAILABLE: 'subscription.manageUnavailable'
+  },
+
+  /** 内嵌购买视图相关 */
+  PREMIUM: {
+    /** 视图标题 */
+    TITLE: 'premium.title',
+    /** 登录门控文案 */
+    GATE_MESSAGE: 'premium.gateMessage',
+    /** 卖点：无限下载 */
+    SELLING_UNLIMITED: 'premium.selling.unlimited',
+    /** 卖点：全画质与音轨字幕 */
+    SELLING_QUALITY: 'premium.selling.quality',
+    /** 卖点：片段裁剪 */
+    SELLING_TRIMMING: 'premium.selling.trimming',
+    /** 周期：月付 */
+    PERIOD_MONTH: 'premium.period.month',
+    /** 周期：季付 */
+    PERIOD_QUARTER: 'premium.period.quarter',
+    /** 周期：年付 */
+    PERIOD_YEAR: 'premium.period.year',
+    /** 周期：终生 */
+    PERIOD_LIFETIME: 'premium.period.lifetime',
+    /** 套餐标记：渠道自动续费 */
+    AUTO_RENEW: 'premium.plan.autoRenew',
+    /** 套餐标记：一次性购买 */
+    ONE_TIME: 'premium.plan.oneTime',
+    /** 套餐额度：无限 */
+    QUOTA_UNLIMITED: 'premium.plan.quotaUnlimited',
+    /** 套餐额度：每日限量，参数 `limit` 为次数 */
+    QUOTA_PER_DAY: 'premium.plan.quotaPerDay',
+    /** 支付方式选择标题 */
+    PAYMENT_METHOD: 'premium.paymentMethod',
+    /** 发起支付按钮 */
+    BUY: 'premium.buy',
+    /** 订单创建中按钮文案 */
+    CREATING: 'premium.creating',
+    /** 等待支付标题 */
+    PENDING_TITLE: 'premium.pending.title',
+    /** 等待支付说明 */
+    PENDING_MESSAGE: 'premium.pending.message',
+    /** 取消等待按钮 */
+    PENDING_CANCEL: 'premium.pending.cancel',
+    /** 支付成功标题 */
+    SUCCESS_TITLE: 'premium.success.title',
+    /** 支付成功说明 */
+    SUCCESS_MESSAGE: 'premium.success.message',
+    /** 支付成功完成按钮 */
+    SUCCESS_DONE: 'premium.success.done',
+    /** 支付未完成标题 */
+    FAILED_TITLE: 'premium.failed.title',
+    /** 重试按钮 */
+    RETRY: 'premium.retry',
+    /** 失败态支持联系方式，参数 `email` 为支持邮箱 */
+    SUPPORT: 'premium.support',
+    /** 套餐配置加载失败 */
+    ERROR_LOAD: 'premium.error.load',
+    /** 无可购买套餐 */
+    ERROR_EMPTY: 'premium.error.empty',
+    /** 通用失败 */
+    ERROR_GENERIC: 'premium.error.generic',
+    /** 支付网关失败 */
+    ERROR_GATEWAY: 'premium.error.gateway',
+    /** 订单不存在或已过期 */
+    ERROR_ORDER_GONE: 'premium.error.orderGone',
+    /** 支付已取消 */
+    ERROR_CANCELLED: 'premium.error.cancelled',
+    /** 已支付但履约失败 */
+    ERROR_FULFILLMENT: 'premium.error.fulfillment',
+    /** 等待支付确认超时 */
+    ERROR_TIMEOUT: 'premium.error.timeout'
   },
 
   /** 配额相关 */
@@ -267,3 +373,9 @@ export const SUPPORTED_LANGUAGES = {
  * 支持的语言类型
  */
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[keyof typeof SUPPORTED_LANGUAGES]
+
+/** 设置里的「跟随浏览器」语言值；读取时即时按浏览器语言解析，不固化成具体 locale。 */
+export const LANGUAGE_AUTO = 'auto'
+
+/** 语言设置的持久化取值：具体 locale 或 Auto。 */
+export type LanguageSetting = SupportedLanguage | typeof LANGUAGE_AUTO

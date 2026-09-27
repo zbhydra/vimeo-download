@@ -3,7 +3,7 @@
   主区四态互斥：扫描中 → 未连接引导（当前页不是 Vimeo 且无已打开的站点标签页）→ 空状态
   （页面没有可下载视频）→ [多视频选择器（仅聚合页检测到多个视频时）] + 视频信息卡 + 档位行
   （Video [DASH/HLS 合流] / 直接下载 [progressive，仅有该档位时渲染] / Audio / Subtitle /
-  Image）+ 时间裁剪（双滑杆 + 数字输入）+ 保存位置。
+  Image）+ 时间裁剪（双滑杆 + 数字输入）。保存位置已收进设置弹层（SettingsModal）。
   视觉走 design.md（Geist 亮色）token（见 `core/constants/design.ts`）：卡片化布局 + 浮层
   选择器，交互逻辑与重构前一致。
 -->
@@ -198,35 +198,17 @@
           }}
         </p>
       </section>
-
-      <!-- 保存位置：只存用户填写的相对子目录，归一化与路径拼接由 background 在下载边界完成 -->
-      <section class="panel-card save-path-section">
-        <label class="save-path-field">
-          <span class="row-label">{{ t(I18N_KEYS.VIDEO_PANEL.SAVE_PATH_LABEL) }}</span>
-          <input
-            v-model="savePath"
-            class="save-path-input"
-            type="text"
-            spellcheck="false"
-            autocomplete="off"
-            :placeholder="t(I18N_KEYS.VIDEO_PANEL.SAVE_PATH_PLACEHOLDER)"
-            @change="persistSavePath"
-          />
-        </label>
-      </section>
     </div>
   </main>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { I18N_KEYS } from '@/core/constants/i18n'
 import { DESIGN_TOKENS } from '@/core/constants/design'
-import { DEFAULT_DOWNLOAD_PATH, SettingsManager } from '@/core/storage/settings'
 import type { MediaResource } from '@/core/types'
 import { formatMediaDuration } from '@/core/utils/downloadStatus'
-import { logger } from '@/core/utils/logger'
 import { Icon, IconName, IconSize } from '@/core/components/icons'
 import { applyVimeoTimeRange, supportsVimeoTimeRange } from '@/sites/vimeo/media'
 import { parseVimeoTimeRange, type VimeoTimeRange } from '@/sites/vimeo/shared'
@@ -323,39 +305,6 @@ const videoDurationText = computed(() => {
   const duration = selectedVideo.value?.durationSeconds
   return duration === undefined ? '' : formatMediaDuration(duration)
 })
-
-/**
- * 保存位置输入框的当前值。
- *
- * 存的是下载目录下的相对子目录；设置里没有值时用默认子目录预填，让输入框显示的与实际生效
- * 的一致。合法性判定不在这里做——用户输入进入 `chrome.downloads` 的唯一入口是 background。
- */
-const savePath = ref(DEFAULT_DOWNLOAD_PATH)
-
-onMounted(async () => {
-  try {
-    const settings = await SettingsManager.getSettings()
-    savePath.value = settings.downloadPath ?? DEFAULT_DOWNLOAD_PATH
-  } catch (error) {
-    logger.error('[VideoPanel] 读取保存位置失败，沿用默认子目录:', error)
-  }
-})
-
-/**
- * 输入变化后写入设置；`change` 只在值真的变了时触发，不会每次按键都写存储。
- *
- * 这里只把空值回填成默认子目录（与 background 兜底同源、共用常量），非法段（`..`、`C:\x`、
- * `~/x`）的判定与丢弃全在 background 侧，输入框会原样保留用户填的这类值。
- */
-async function persistSavePath(): Promise<void> {
-  const downloadPath = savePath.value.trim() || DEFAULT_DOWNLOAD_PATH
-  savePath.value = downloadPath
-  try {
-    await SettingsManager.updateSettings({ downloadPath })
-  } catch (error) {
-    logger.error(`[VideoPanel] 保存位置写入失败: downloadPath=${downloadPath}`, error)
-  }
-}
 
 /**
  * 每行的下拉选中值；资源刷新后保留仍存在的选择，否则回到该行第一项。
@@ -945,44 +894,11 @@ function downloadTitle(row: VideoPanelRow): string {
   color: v-bind('DESIGN_TOKENS.GRAY_900');
 }
 
-/* 保存位置 */
-.save-path-section {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 12px;
-}
-
-.save-path-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.save-path-input {
-  box-sizing: border-box;
-  width: 100%;
-  min-width: 0;
-  height: 32px;
-  padding: 0 8px;
-  border: 1px solid v-bind('DESIGN_TOKENS.GRAY_ALPHA_400');
-  border-radius: v-bind('DESIGN_TOKENS.RADIUS_SM');
-  background: v-bind('DESIGN_TOKENS.BG_100');
-  color: v-bind('DESIGN_TOKENS.GRAY_1000');
-  font-size: v-bind('DESIGN_TOKENS.FS_13');
-  line-height: v-bind('DESIGN_TOKENS.LH_16');
-}
-
-.save-path-input:hover {
-  border-color: v-bind('DESIGN_TOKENS.GRAY_ALPHA_500');
-}
-
 .state-button:focus-visible,
 .row-download:focus-visible,
 .row-select:focus-visible,
 .audio-switch:focus-visible,
-.clip-input:focus-visible,
-.save-path-input:focus-visible {
+.clip-input:focus-visible {
   outline: none;
   box-shadow: v-bind('DESIGN_TOKENS.FOCUS_RING');
 }

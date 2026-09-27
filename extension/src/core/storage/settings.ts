@@ -1,7 +1,6 @@
 import { storageManager } from './index'
-import { LanguageService } from '../services/languageService'
-import type { SupportedLanguage } from '../constants/i18n'
-import { SUPPORTED_LANGUAGES } from '../constants/i18n'
+import type { LanguageSetting } from '../constants/i18n'
+import { LANGUAGE_AUTO } from '../constants/i18n'
 import { logger } from '../utils/logger'
 
 /**
@@ -14,7 +13,8 @@ export const DEFAULT_DOWNLOAD_PATH = 'vimeo-video-downloader'
 
 // 内部类型定义
 interface AppSettings {
-  language: SupportedLanguage
+  /** 界面语言；`auto` 表示跟随浏览器语言（读取时即时解析，不落具体值）。 */
+  language: LanguageSetting
   /** 保存子目录，相对浏览器下载目录；不存绝对路径。 */
   downloadPath?: string
   maxConcurrent?: number
@@ -22,7 +22,7 @@ interface AppSettings {
 
 // 默认设置
 const DEFAULT_SETTINGS: AppSettings = {
-  language: SUPPORTED_LANGUAGES.EN_US,
+  language: LANGUAGE_AUTO,
   downloadPath: DEFAULT_DOWNLOAD_PATH
 }
 
@@ -34,15 +34,10 @@ export class SettingsManager {
 
   static async initialize(): Promise<void> {
     // 初始化默认设置
-    let currentSettings = await this.getSettings()
-    if (!currentSettings) {
-      currentSettings = { ...DEFAULT_SETTINGS }
-      currentSettings.language = await LanguageService.detectLanguage()
-      await this.updateSettings(currentSettings)
-    }
-    if (currentSettings && !currentSettings.language) {
-      currentSettings.language = await LanguageService.detectLanguage()
-      await this.updateSettings(currentSettings)
+    const currentSettings = await this.getSettings()
+    if (!currentSettings.language) {
+      // 旧版本留下的无语言设置统一归一为 Auto，交给 LanguageService 按浏览器解析。
+      await this.updateSettings({ language: LANGUAGE_AUTO })
     }
 
     logger.info('initialize', currentSettings)

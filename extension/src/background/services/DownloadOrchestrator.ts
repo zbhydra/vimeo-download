@@ -43,6 +43,7 @@ import { SettingsManager } from '@/core/storage/settings'
 import { logger } from '@/core/utils/logger'
 import { recordBackgroundMark } from './ExtensionMarkReporter'
 import { buildDownloadFilename } from './downloadFilename'
+import { notifyDownloadFinished } from './downloadNotifications'
 import { ensureOffscreenDocument, hasOffscreenDocument } from './offscreenDocument'
 import { resolveVerifiedDirectSource } from './directSource'
 
@@ -563,6 +564,7 @@ export class DownloadOrchestrator {
         if (outcome.kind === 'result') {
           if (outcome.result === 'completed') {
             this.recordTaskMark(task, MARK_TYPE.DOWNLOAD_SUCCESS)
+            this.notifyTaskFinished(task, true)
           } else if (outcome.result === 'quota_rejected') {
             this.recordTaskMark(task, MARK_TYPE.DOWNLOAD_QUOTA_INSUFFICIENT)
           }
@@ -578,6 +580,7 @@ export class DownloadOrchestrator {
             outcome.error
           )
           this.recordTaskMark(task, MARK_TYPE.DOWNLOAD_FAILED, outcome.error)
+          this.notifyTaskFinished(task, false)
           task.snapshot.status = 'failed'
         }
 
@@ -697,7 +700,12 @@ export class DownloadOrchestrator {
         settle.error
       )
       this.recordTaskMark(task, MARK_TYPE.DOWNLOAD_FAILED, settle.error)
+      this.notifyTaskFinished(task, false)
       task.snapshot.status = 'failed'
+    } else if (settle.kind === 'completed') {
+      this.recordTaskMark(task, MARK_TYPE.DOWNLOAD_SUCCESS)
+      this.notifyTaskFinished(task, true)
+      this.removeTask(task.snapshot.taskId)
     } else {
       this.removeTask(task.snapshot.taskId)
     }
@@ -909,6 +917,24 @@ export class DownloadOrchestrator {
   /** 统一打点；上报失败由 reporter 自行记录，不影响任务状态。 */
   private recordTaskMark(task: OrchestratorTask, markType: MarkType, error?: Error): void {
     void recordBackgroundMark(markType, buildDownloadMarkMessage(task.resource, error))
+  }
+
+  /**
+   * 任务终态挂钩：发系统通知，成功时向扩展页（popup）广播成功事件供评分引导计数。
+   * 挂钩失败（通知 API 异常、无接收方）不影响编排循环本身。
+   */
+  private notifyTaskFinished(task: OrchestratorTask, succeeded: boolean): void {
+    void notifyDownloadFinished({
+      filename: resolveResourceFilename(task.resource),
+      succeeded
+    })
+
+    if (succeeded) {
+      this.eventEmitter.emit('downloadTaskSucceeded', {
+        taskId: task.snapshot.taskId,
+        resourceId: task.snapshot.resourceId
+      })
+    }
   }
 }
 

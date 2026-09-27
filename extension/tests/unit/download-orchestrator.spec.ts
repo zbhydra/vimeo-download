@@ -16,7 +16,8 @@ const mocks = vi.hoisted(() => ({
   hasOffscreenDocument: vi.fn(),
   checkAndConsume: vi.fn(),
   recordMark: vi.fn(),
-  getSettings: vi.fn()
+  getSettings: vi.fn(),
+  onSettingsChanged: vi.fn()
 }))
 
 vi.mock('@/background/rpc/offscreen.rpc', () => ({
@@ -45,7 +46,8 @@ vi.mock('@/background/services/ExtensionMarkReporter', () => ({
 
 vi.mock('@/core/storage/settings', () => ({
   SettingsManager: {
-    getSettings: mocks.getSettings
+    getSettings: mocks.getSettings,
+    onSettingsChanged: mocks.onSettingsChanged
   },
   DEFAULT_DOWNLOAD_PATH: 'VimeoDownloader'
 }))

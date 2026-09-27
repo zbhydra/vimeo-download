@@ -9,6 +9,10 @@
     <!-- 底部下载管理区：有任务时常驻，无任务不渲染 -->
     <DownloadQueue />
 
+    <!-- 运营条：远端公告跑马灯 + 评分引导（footer 上方） -->
+    <AnnouncementBar />
+    <RatingPrompt />
+
     <!-- 底部联系入口 -->
     <AppFooter />
 
@@ -22,6 +26,12 @@
 
     <!-- 插件本地登录弹窗 -->
     <LoginModal @success="handleLoginSuccess" />
+
+    <!-- 设置弹层 -->
+    <SettingsModal />
+
+    <!-- 内嵌购买视图 -->
+    <PremiumView />
 
     <Toast :show="toastState.show" :message="toastState.message" :type="toastState.type" />
   </div>
@@ -42,10 +52,15 @@ import VideoPanel from './components/VideoPanel.vue'
 import AppHeader from './components/AppHeader.vue'
 import DownloadQueue from './components/DownloadQueue.vue'
 import AppFooter from './components/AppFooter.vue'
+import AnnouncementBar from './components/AnnouncementBar.vue'
+import RatingPrompt from './components/RatingPrompt.vue'
+import SettingsModal from './components/SettingsModal.vue'
 import UpgradeModal from '@/core/content/components/UpgradeModal.vue'
 import LoginModal from './components/LoginModal.vue'
+import PremiumView from './components/PremiumView.vue'
 import Toast from '@/core/components/Toast.vue'
 import { useToast } from '@/core/composables/useToast'
+import { registerDownloadSuccess } from '@/core/composables/ratingPrompt'
 import type { MediaResource } from '@/core/types'
 
 // Stores
@@ -62,6 +77,7 @@ const upgradeModalResetAt = ref<number>()
 // 事件订阅器
 const eventSubscriber = new ChromeEventSubscriber<ExtensionEvents>()
 let upgradeModalUnsubscribe: (() => void) | null = null
+let downloadSuccessUnsubscribe: (() => void) | null = null
 
 // 记录打点（异步，不阻塞业务）
 function recordMark(markType: MarkType): void {
@@ -90,6 +106,11 @@ onMounted(async () => {
     upgradeModalResetAt.value = payload.resetAt
     showUpgradeModal.value = true
   })
+
+  // 订阅下载成功事件：评分引导按成功次数与登录态决定是否展开
+  downloadSuccessUnsubscribe = eventSubscriber.on('downloadTaskSucceeded', () => {
+    void registerDownloadSuccess(authStore.isAuthenticated)
+  })
 })
 
 onUnmounted(() => {
@@ -97,6 +118,10 @@ onUnmounted(() => {
   if (upgradeModalUnsubscribe) {
     upgradeModalUnsubscribe()
     upgradeModalUnsubscribe = null
+  }
+  if (downloadSuccessUnsubscribe) {
+    downloadSuccessUnsubscribe()
+    downloadSuccessUnsubscribe = null
   }
   eventSubscriber.destroy()
   downloadStatusStore.destroy()

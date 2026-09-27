@@ -3,4 +3,11 @@
  */
 
 export { subscriptionApi } from './api'
-export type { SubscriptionPeriod, SubscriptionStatus } from './types'
+export type {
+  DailyQuotaStatus,
+  SubscriptionCheckoutPlan,
+  SubscriptionPaymentChannel,
+  SubscriptionPeriod,
+  SubscriptionStatus,
+  SubscriptionManagementResult
+} from './types'

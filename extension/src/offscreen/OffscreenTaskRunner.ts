@@ -6,8 +6,8 @@
  * 视频/刷新/关闭 Vimeo 页面不再中断下载。与旧页面内实现的差异：
  *
  * - 进度经 background 通道回传（下载中 250ms 节流），不再派发页面 DOM 事件；
- * - 产物以 blob URL 交 background 落盘（chrome.downloads），落盘回执由 downloads.onChanged
- *   确认后再释放 blob；
+ * - 合成产物流式写入 OPFS（避免整份驻留内存），以 File 引用创建 blob URL 交 background
+ *   落盘（chrome.downloads），落盘回执由 downloads.onChanged 确认后再 revoke 并删除临时文件；
  * - 签名 URL 失效不再直接刷新页面 config，而是请求 background 重签，并按 track 一致性
  *   守卫续跑（分片游标按索引续）或以新快照整任务重跑；
  * - 任务全程持有 AbortController，下载阶段取消即时生效；remux 阶段的取消在交付边界生效。
@@ -40,6 +40,8 @@ import {
   type VimeoTimeRange
 } from '@/sites/vimeo/shared'
 import { muxVimeoVideoToMp4, remuxVimeoAudioToM4a, remuxVimeoMuxedMp4ToMp4 } from './mux'
+import type { MuxOutputArtifact } from './muxArtifactStore'
+import { removeMuxArtifact, sweepMuxArtifacts } from './muxArtifactStore'
 
 const RETRYABLE_STATUS_CODES = new Set([403, 404, 410])
 const VALID_MEDIA_STATUS_CODES = new Set([200, 206])
@@ -133,6 +135,14 @@ interface ByteBudget {
   lastReportedProgress: number | null
 }
 
+/** 已交付、等待 background 落盘回执后释放的产物。 */
+interface DeliveredArtifact {
+  /** 产物 blob URL；release 时 revoke。 */
+  blobUrl: string
+  /** 产物所在的 OPFS 临时文件名；release 时删除。 */
+  tempFileName: string
+}
+
 /** offscreen 下载任务执行器。 */
 export class OffscreenTaskRunner {
   /** background 通道客户端；进度/交付/取消/重签/心跳都走这里。 */
@@ -142,7 +152,12 @@ export class OffscreenTaskRunner {
   private readonly tasks = new Map<string, RunnerTask>()
 
   /** 已交付、等待 background 确认落盘后释放的产物。 */
-  private readonly deliveredArtifacts = new Map<string, string>()
+  private readonly deliveredArtifacts = new Map<string, DeliveredArtifact>()
+
+  constructor() {
+    // 启动清扫：清掉上次会话泄漏在 OPFS 的未交付产物（崩溃、浏览器异常退出等场景）。
+    void sweepMuxArtifacts()
+  }
 
   /** 保活心跳定时器；仅在存在执行中任务时保持。 */
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null
@@ -210,10 +225,10 @@ export class OffscreenTaskRunner {
     }))
   }
 
-  /** 释放 background 已确认落盘的 blob 产物。 */
+  /** 释放 background 已确认落盘的产物：revoke blob URL 并删除 OPFS 临时文件。 */
   releaseTaskArtifact(taskId: string, blobUrl: string): boolean {
     const held = this.deliveredArtifacts.get(taskId)
-    if (held === undefined || held !== blobUrl) {
+    if (held === undefined || held.blobUrl !== blobUrl) {
       logger.warn(
         `[OffscreenTaskRunner] 释放请求与持有产物不匹配: taskId=${taskId}, held=${held ? 'present' : 'missing'}`
       )
@@ -222,6 +237,9 @@ export class OffscreenTaskRunner {
 
     this.deliveredArtifacts.delete(taskId)
     URL.revokeObjectURL(blobUrl)
+    // 走到这里落盘已被 downloads.onChanged 确认，OPFS 临时文件可以安全删除；
+    // 删除是尽力而为，失败由下次启动清扫兜底。
+    void removeMuxArtifact(held.tempFileName)
     return true
   }
 
@@ -307,7 +325,11 @@ export class OffscreenTaskRunner {
     this.assertKnownMuxSize(task, totalBytes, 'DASH audio')
     const budget = this.createByteBudget(task, totalBytes)
     const audioBlob = await this.downloadDashTrackBlob(task, playlist, audioTrack, 'audio', budget)
-    const remuxed = await remuxVimeoAudioToM4a(audioBlob, readDescriptorTimeRange(task.descriptor))
+    const remuxed = await remuxVimeoAudioToM4a(
+      audioBlob,
+      readDescriptorTimeRange(task.descriptor),
+      task.taskId
+    )
     await this.deliver(task, remuxed, this.resolveArtifactFilename(task, 'm4a'))
   }
 
@@ -331,7 +353,8 @@ export class OffscreenTaskRunner {
     const muxed = await muxVimeoVideoToMp4(
       videoBlob,
       audioBlob,
-      readDescriptorTimeRange(task.descriptor)
+      readDescriptorTimeRange(task.descriptor),
+      task.taskId
     )
     await this.deliver(task, muxed, this.resolveArtifactFilename(task, 'mp4'))
   }
@@ -368,7 +391,8 @@ export class OffscreenTaskRunner {
     const inputBlob = new Blob(buffers, { type: 'video/mp4' })
     const remuxed = await remuxVimeoMuxedMp4ToMp4(
       inputBlob,
-      readDescriptorTimeRange(task.descriptor)
+      readDescriptorTimeRange(task.descriptor),
+      task.taskId
     )
     await this.deliver(task, remuxed, this.resolveArtifactFilename(task, 'mp4'))
   }
@@ -675,15 +699,23 @@ export class OffscreenTaskRunner {
   }
 
   /** 交付 remux 产物：blob URL 交 background 落盘，落盘确认后由 background 通知释放。 */
-  private async deliver(task: RunnerTask, blob: Blob, filename: string): Promise<void> {
-    this.assertNotCancelled(task)
-    const blobUrl = URL.createObjectURL(blob)
-    // 先登记后交付：background 在应答 taskComplete 之前就会（落盘回执确认后）发起
-    // releaseTaskArtifact，释放请求到达时登记必须已就位，否则按 mismatch 拒绝、blob 永不 revoke。
-    this.tasks.delete(task.taskId)
-    this.deliveredArtifacts.set(task.taskId, blobUrl)
-    this.syncHeartbeat()
+  private async deliver(
+    task: RunnerTask,
+    artifact: MuxOutputArtifact,
+    filename: string
+  ): Promise<void> {
+    const blobUrl = URL.createObjectURL(artifact.file)
+    let handedOff = false
     try {
+      this.assertNotCancelled(task)
+      // 先登记后交付：background 在应答 taskComplete 之前就会（落盘回执确认后）发起
+      // releaseTaskArtifact，释放请求到达时登记必须已就位，否则按 mismatch 拒绝、blob 永不 revoke。
+      this.tasks.delete(task.taskId)
+      this.deliveredArtifacts.set(task.taskId, {
+        blobUrl,
+        tempFileName: artifact.tempFileName
+      })
+      this.syncHeartbeat()
       // remux 完成、blob 交给 Chrome 下载后，执行侧进度已经到顶；落盘进度由 background 投影接管。
       this.sendProgress(task, 100, true)
       await this.client.taskComplete(
@@ -691,18 +723,22 @@ export class OffscreenTaskRunner {
           taskId: task.taskId,
           blobUrl,
           filename,
-          mimeType: blob.type
+          mimeType: artifact.mimeType
         },
         { timeout: TASK_COMPLETE_TIMEOUT_MS }
       )
+      handedOff = true
       logger.info(
         `[OffscreenTaskRunner] 产物已交付 background 落盘: taskId=${task.taskId}, resourceId=${task.resource.id}, filename=${filename}`
       )
-    } catch (error) {
-      // 交付失败（RPC 失败/超时）：撤销登记并自行回收，此后不再有 background 持有方。
-      this.deliveredArtifacts.delete(task.taskId)
-      URL.revokeObjectURL(blobUrl)
-      throw error
+    } finally {
+      if (!handedOff) {
+        // 交付失败（取消边界/RPC 失败或超时）：撤销登记并自行回收 blob 与 OPFS 临时文件，
+        // 此后不再有 background 持有方。
+        this.deliveredArtifacts.delete(task.taskId)
+        URL.revokeObjectURL(blobUrl)
+        void removeMuxArtifact(artifact.tempFileName)
+      }
     }
   }
 

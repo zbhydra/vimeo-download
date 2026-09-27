@@ -10,7 +10,8 @@ const mocks = vi.hoisted(() => ({
   emit: vi.fn(),
   isAuthenticated: vi.fn(),
   openLoginModal: vi.fn(),
-  openPricingPage: vi.fn()
+  openPricingPage: vi.fn(),
+  openPremiumView: vi.fn()
 }))
 
 vi.mock('@/core/api/auth/api', () => ({
@@ -25,6 +26,10 @@ vi.mock('@/core/composables/loginModal', () => ({
   openLoginModal: mocks.openLoginModal
 }))
 
+vi.mock('@/core/composables/premiumView', () => ({
+  openPremiumView: mocks.openPremiumView
+}))
+
 vi.mock('@/core/rpc/ChromeEventBus', () => ({
   ChromeEventEmitter: class {
     emit = mocks.emit
@@ -32,7 +37,7 @@ vi.mock('@/core/rpc/ChromeEventBus', () => ({
 }))
 
 /** 创建带最小翻译上下文的升级弹窗。 */
-function mountUpgradeModal(show: boolean, resetAt = 0): VueWrapper {
+function mountUpgradeModal(show: boolean, resetAt = 0, useTeleport = false): VueWrapper {
   const i18n = createI18n({
     legacy: false,
     locale: 'en-US',
@@ -55,7 +60,7 @@ function mountUpgradeModal(show: boolean, resetAt = 0): VueWrapper {
   })
 
   return mount(UpgradeModal, {
-    props: { show, resetAt, useTeleport: false },
+    props: { show, resetAt, useTeleport },
     global: {
       plugins: [i18n],
       stubs: { Icon: true }
@@ -73,6 +78,7 @@ describe('UpgradeModal SLS event', () => {
     mocks.isAuthenticated.mockResolvedValue(true)
     mocks.openLoginModal.mockReset()
     mocks.openPricingPage.mockReset().mockResolvedValue(true)
+    mocks.openPremiumView.mockReset()
   })
 
   afterEach(() => {
@@ -154,7 +160,7 @@ describe('UpgradeModal SLS event', () => {
     )
   })
 
-  it('游客提示登录，不显示升级或记录升级曝光，登录用户进入价格页', async () => {
+  it('游客提示登录，不显示升级或记录升级曝光，登录用户进入 popup 购买视图', async () => {
     mocks.isAuthenticated.mockResolvedValue(false)
     wrapper = mountUpgradeModal(true)
     await flushPromises()
@@ -165,7 +171,7 @@ describe('UpgradeModal SLS event', () => {
     await flushPromises()
     expect(mocks.openLoginModal).toHaveBeenCalledOnce()
     expect(mocks.openLoginModal).toHaveBeenCalledWith('upgrade_modal')
-    expect(mocks.openPricingPage).not.toHaveBeenCalled()
+    expect(mocks.openPremiumView).not.toHaveBeenCalled()
 
     await wrapper.setProps({ show: false })
     mocks.isAuthenticated.mockResolvedValue(true)
@@ -174,6 +180,20 @@ describe('UpgradeModal SLS event', () => {
     expect(wrapper.get('.vdl-upgrade-modal-title').text()).toBe('Upgrade')
     await wrapper.get('.vdl-upgrade-modal-btn').trigger('click')
     await flushPromises()
+    // popup 挂载（useTeleport=false）购买收进 popup 内嵌购买视图
+    expect(mocks.openPremiumView).toHaveBeenCalledWith('upgrade_modal')
+    expect(mocks.openPricingPage).not.toHaveBeenCalled()
+  })
+
+  it('content 页面宿主（Teleport 挂载）退回官网订阅页', async () => {
+    wrapper = mountUpgradeModal(true, 0, true)
+    await flushPromises()
+    // Teleport 渲染到 document.body，不在 wrapper 树内
+    const button = document.body.querySelector<HTMLButtonElement>('.vdl-upgrade-modal-btn')
+    expect(button).not.toBeNull()
+    button!.click()
+    await flushPromises()
     expect(mocks.openPricingPage).toHaveBeenCalledWith('upgrade_modal')
+    expect(mocks.openPremiumView).not.toHaveBeenCalled()
   })
 })

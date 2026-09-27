@@ -71,7 +71,6 @@ function mountHeader() {
       plugins: [i18n],
       stubs: {
         Icon: true,
-        LanguageSwitcher: true,
         LoginButton: LoginButtonStub,
         QuotaCounter: true
       }

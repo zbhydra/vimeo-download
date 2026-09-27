@@ -28,6 +28,10 @@
           </div>
         </div>
         <div class="dropdown-divider"></div>
+        <button v-if="quotaStore.hasActiveSubscription" class="dropdown-item" @click="handleManage">
+          <Icon :name="IconName.CROWN" :size="IconSize.MD" />
+          <span>{{ t(I18N_KEYS.SUBSCRIPTION.MANAGE) }}</span>
+        </button>
         <button class="dropdown-item logout" @click="handleLogout">
           <Icon :name="IconName.ARROW_RIGHT_ON_RECTANGLE" :size="IconSize.MD" />
           <span>{{ t(I18N_KEYS.AUTH.LOGOUT) }}</span>
@@ -41,6 +45,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/core/stores/authStore'
+import { useQuotaStore } from '@/core/stores/quotaStore'
 import { I18N_KEYS } from '@/core/constants/i18n'
 import { Icon, IconName, IconSize } from '@/core/components/icons'
 
@@ -48,6 +53,7 @@ import { Icon, IconName, IconSize } from '@/core/components/icons'
 const emit = defineEmits<{
   click: []
   logout: []
+  manage: []
 }>()
 
 // I18n
@@ -55,6 +61,7 @@ const { t } = useI18n()
 
 // Store
 const authStore = useAuthStore()
+const quotaStore = useQuotaStore()
 
 // 下拉菜单显示状态
 const showMenu = ref(false)
@@ -81,6 +88,16 @@ function handleLogout(): void {
   // 使用 nextTick 确保在 emit 前菜单已关闭
   setTimeout(() => {
     emit('logout')
+  }, 0)
+}
+
+/**
+ * 处理管理订阅：关闭菜单后由宿主（AppHeader）请求管理入口并打开
+ */
+function handleManage(): void {
+  closeMenu()
+  setTimeout(() => {
+    emit('manage')
   }, 0)
 }
 

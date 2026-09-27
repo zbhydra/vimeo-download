@@ -4,6 +4,7 @@
  * injected 下载链退役后，区间透传、音轨分派、聚合字节进度与 MIME 边界的合同改由 offscreen
  * 执行器承接（原 vimeo-clip-range / vimeo-audio-toggle / vimeo-download-progress /
  * vimeo-media 的分派用例迁移至此）。签名失效重签由 vimeo-signature-refresh.spec 覆盖。
+ * mux 层 mock 返回 MuxOutputArtifact（OPFS 产物引用），muxArtifactStore 一并 mock。
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -17,7 +18,9 @@ const mocks = vi.hoisted(() => ({
   keepAlive: vi.fn(),
   muxVideo: vi.fn(),
   remuxAudio: vi.fn(),
-  remuxMuxed: vi.fn()
+  remuxMuxed: vi.fn(),
+  removeMuxArtifact: vi.fn(),
+  sweepMuxArtifacts: vi.fn()
 }))
 
 vi.mock('@/offscreen/rpc/background.rpc', () => ({
@@ -35,6 +38,11 @@ vi.mock('@/offscreen/mux', () => ({
   muxVimeoVideoToMp4: mocks.muxVideo,
   remuxVimeoAudioToM4a: mocks.remuxAudio,
   remuxVimeoMuxedMp4ToMp4: mocks.remuxMuxed
+}))
+
+vi.mock('@/offscreen/muxArtifactStore', () => ({
+  sweepMuxArtifacts: mocks.sweepMuxArtifacts,
+  removeMuxArtifact: mocks.removeMuxArtifact
 }))
 
 import { RESOURCE_SOURCE_KINDS, RESOURCE_TYPES } from '@/core/constants/resource'
@@ -228,9 +236,21 @@ describe('OffscreenTaskRunner 下载分派', () => {
     mocks.taskComplete.mockResolvedValue({ accepted: true })
     mocks.taskFailed.mockResolvedValue({ accepted: true })
     mocks.keepAlive.mockResolvedValue({ alive: true })
-    mocks.muxVideo.mockImplementation(async () => new Blob(['muxed'], { type: 'video/mp4' }))
-    mocks.remuxAudio.mockImplementation(async () => new Blob(['audio'], { type: 'audio/mp4' }))
-    mocks.remuxMuxed.mockImplementation(async () => new Blob(['hls'], { type: 'video/mp4' }))
+    mocks.removeMuxArtifact.mockResolvedValue(undefined)
+    mocks.sweepMuxArtifacts.mockResolvedValue(undefined)
+    // 产物契约：MuxOutputArtifact（OPFS File 引用 + 显式 MIME + 临时文件名）
+    mocks.muxVideo.mockImplementation(
+      async (_video: Blob, _audio: Blob | null, _range: VimeoTimeRange | undefined, taskId: string) =>
+        artifactMock(taskId, 'mp4', 'video/mp4')
+    )
+    mocks.remuxAudio.mockImplementation(
+      async (_blob: Blob, _range: VimeoTimeRange | undefined, taskId: string) =>
+        artifactMock(taskId, 'm4a', 'audio/mp4')
+    )
+    mocks.remuxMuxed.mockImplementation(
+      async (_blob: Blob, _range: VimeoTimeRange | undefined, taskId: string) =>
+        artifactMock(taskId, 'mp4', 'video/mp4')
+    )
     URL.createObjectURL = createObjectUrlMock
     URL.revokeObjectURL = revokeObjectUrlMock
   })
@@ -464,4 +484,14 @@ function hlsMediaPlaylistText(): string {
     '#EXTINF:2.000,',
     'seg-2.m4s'
   ].join('\n')
+}
+
+/** 构造 MuxOutputArtifact 形状的产物桩。 */
+function artifactMock(taskId: string, extension: string, mimeType: string) {
+  const tempFileName = `${taskId}.${extension}`
+  return {
+    file: new File([tempFileName], tempFileName, { type: mimeType }),
+    mimeType,
+    tempFileName
+  }
 }

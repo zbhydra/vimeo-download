@@ -1,5 +1,6 @@
 import { SettingsManager } from '../storage/settings'
 import { logger } from '../utils/logger'
+import { LANGUAGE_AUTO } from '../constants/i18n'
 import type { SupportedLanguage } from '../constants/i18n'
 
 // 语言配置接口
@@ -104,12 +105,15 @@ export type Language = SupportedLanguage
 
 export class LanguageService {
   static async getLanguage(): Promise<Language> {
-    let language: Language | '' = ''
-    //先获取设置里面的语言
+    // 设置里是具体 locale 就直接用；`auto` 表示跟随浏览器，每次读取即时解析，不固化为具体值。
     const settings = await SettingsManager.getSettings()
-    language = settings.language || ''
+    if (settings.language === LANGUAGE_AUTO) {
+      return this.detectLanguage()
+    }
 
-    //如果设置没有 ， 获取浏览器语言
+    let language: Language | '' = settings.language || ''
+
+    //设置没有（旧数据为空）时按浏览器语言解析并固化为具体 locale
     if (!language) {
       language = await this.detectLanguage()
       //保存
