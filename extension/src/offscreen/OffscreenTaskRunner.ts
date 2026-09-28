@@ -15,7 +15,11 @@
 
 import { readResponseArrayBufferByChunk } from '@/core/injected/responseBody'
 import { assertDownloadContentType } from '@/core/injected/downloadValidation'
-import { RESOURCE_SOURCE_KINDS, RESOURCE_TYPES } from '@/core/constants/resource'
+import {
+  AUDIO_TARGET_FORMATS,
+  RESOURCE_SOURCE_KINDS,
+  RESOURCE_TYPES
+} from '@/core/constants/resource'
 import { BackgroundChannel } from '@/offscreen/rpc/background.rpc'
 import type { MediaResource } from '@/core/types'
 import type { JsonValue } from '@/core/rpc/types'
@@ -34,12 +38,15 @@ import {
 import { vimeoConfig } from '@/sites/vimeo/runtimeConfig'
 import {
   decodeVimeoSourceDescriptor,
+  isAllowedVimeoFetchUrl,
   isVimeoMediaCdnUrl,
   parseVimeoTimeRange,
   type VimeoSourceDescriptor,
   type VimeoTimeRange
 } from '@/sites/vimeo/shared'
 import { muxVimeoVideoToMp4, remuxVimeoAudioToM4a, remuxVimeoMuxedMp4ToMp4 } from './mux'
+import { transcodeMuxArtifactToMp3 } from './mp3'
+import { AES_128_KEY_LENGTH, decryptAes128Segment } from './decrypt'
 import type { MuxOutputArtifact } from './muxArtifactStore'
 import { removeMuxArtifact, sweepMuxArtifacts } from './muxArtifactStore'
 
@@ -317,7 +324,7 @@ export class OffscreenTaskRunner {
     )
   }
 
-  /** DASH audio-only 下载。 */
+  /** DASH audio-only 下载；MP3 目标格式在 m4a remux 产物上继续转码，m4a 走透传零改动。 */
   private async downloadDashAudio(task: RunnerTask): Promise<void> {
     const playlist = await this.loadDashPlaylistWithRefresh(task)
     const audioTrack = this.requireDashTrack(task, playlist, 'audio')
@@ -330,6 +337,11 @@ export class OffscreenTaskRunner {
       readDescriptorTimeRange(task.descriptor),
       task.taskId
     )
+    if (task.resource.targetFormat === AUDIO_TARGET_FORMATS.MP3) {
+      const mp3 = await transcodeMuxArtifactToMp3(remuxed, task.taskId)
+      await this.deliver(task, mp3, this.resolveArtifactFilename(task, 'mp3'))
+      return
+    }
     await this.deliver(task, remuxed, this.resolveArtifactFilename(task, 'm4a'))
   }
 
@@ -359,19 +371,38 @@ export class OffscreenTaskRunner {
     await this.deliver(task, muxed, this.resolveArtifactFilename(task, 'mp4'))
   }
 
-  /** HLS fMP4 fallback 下载。 */
+  /**
+   * HLS fMP4 fallback 下载。
+   *
+   * 加密分片在 fetch 后、入队前解密；init segment 不解密——RFC 8216 §4.3.2.4 虽允许 init
+   * 加密，但现实交付（Vimeo 与竞品口径一致）均为明文 init，遇加密 init 会在 remux 期
+   * 无可解 video track 而大声失败，不做静默兜底。解密与 key fetch 的失败共用分片 fetch 的
+   * 重试链——签名过期走重签续跑，其余直接失败。AES key 按任务缓存，避免每分片重复请求同一 key URL。
+   */
   private async downloadHlsVideo(task: RunnerTask): Promise<void> {
     const budget = this.createByteBudget(task)
     const buffers: ArrayBuffer[] = []
+    const aesKeys = new Map<string, ArrayBuffer>()
     let playlist = await this.loadHlsMediaPlaylistWithRefresh(task)
 
     let initDone = false
     let segmentIndex = 0
     while (!initDone || segmentIndex < playlist.segments.length) {
       this.assertNotCancelled(task)
-      const segmentUrl = initDone ? playlist.segments[segmentIndex].url : playlist.initSegmentUrl
+      const isInit = !initDone
+      const segmentUrl = isInit ? playlist.initSegmentUrl : playlist.segments[segmentIndex].url
+      const encryption = isInit ? undefined : playlist.segments[segmentIndex].encryption
       try {
-        buffers.push(await this.fetchSegment(task, segmentUrl, budget))
+        const data = await this.fetchSegment(task, segmentUrl, budget)
+        buffers.push(
+          encryption
+            ? await decryptAes128Segment(
+                await this.fetchHlsAesKey(task, encryption.keyUrl, aesKeys),
+                encryption.iv,
+                data
+              )
+            : data
+        )
       } catch (error) {
         const refreshed = await this.resolveRetryableRefresh(task, error)
         if (!refreshed) {
@@ -381,10 +412,10 @@ export class OffscreenTaskRunner {
         playlist = await this.loadHlsMediaPlaylist(refreshed)
         continue
       }
-      if (initDone) {
-        segmentIndex += 1
-      } else {
+      if (isInit) {
         initDone = true
+      } else {
+        segmentIndex += 1
       }
     }
 
@@ -639,6 +670,74 @@ export class OffscreenTaskRunner {
     })
   }
 
+  /**
+   * 获取 HLS AES-128 key，同任务内按 key URL 缓存。
+   *
+   * key host 必须命中 Vimeo fetch 白名单（player.vimeo.com / *.vimeocdn.com）：白名单外
+   * 的加密交付不受支持，拒绝任务而不是扩大网络边界。签名过期（403/404/410）与分片 fetch
+   * 同口径抛可重签错误，交给既有重签续跑链。
+   */
+  private async fetchHlsAesKey(
+    task: RunnerTask,
+    keyUrl: string,
+    cache: Map<string, ArrayBuffer>
+  ): Promise<ArrayBuffer> {
+    const cached = cache.get(keyUrl)
+    if (cached) {
+      return cached
+    }
+
+    if (!isAllowedVimeoFetchUrl(keyUrl)) {
+      throw new Error(
+        `[OffscreenTaskRunner] 加密 key URL 不在 Vimeo fetch 白名单: id=${task.resource.id}, host=${urlHostname(keyUrl)}, stage=hls-key`
+      )
+    }
+
+    const response = await fetch(keyUrl, {
+      credentials: 'omit',
+      referrerPolicy: 'no-referrer',
+      signal: task.controller.signal
+    })
+    // 与分片/playlist 同口径补齐 30x 跟随后的最终 URL 复检；key 的边界是它的白名单
+    // （player.vimeo.com / *.vimeocdn.com），不是媒体 CDN 判定。
+    if (!isAllowedVimeoFetchUrl(response.url || keyUrl)) {
+      throw new Error(
+        `[OffscreenTaskRunner] 加密 key 重定向后 URL 不在 Vimeo fetch 白名单: id=${task.resource.id}, host=${urlHostname(response.url || keyUrl)}, stage=hls-key`
+      )
+    }
+    if (task.cancelRequested) {
+      throw new TaskCancelledError(task.taskId)
+    }
+
+    if (RETRYABLE_STATUS_CODES.has(response.status)) {
+      throw new VimeoRetryableDownloadError(
+        `HLS 加密 key 已过期: id=${task.resource.id}, host=${urlHostname(response.url || keyUrl)}, stage=hls-key`,
+        response.status
+      )
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        `[OffscreenTaskRunner] HLS 加密 key fetch 失败: id=${task.resource.id}, host=${urlHostname(response.url || keyUrl)}, stage=hls-key, status=${response.status}`
+      )
+    }
+
+    assertDownloadContentType(
+      response.headers.get('Content-Type'),
+      'media-segment',
+      `Vimeo HLS AES key ${task.resource.id}`
+    )
+    const key = await response.arrayBuffer()
+    if (key.byteLength !== AES_128_KEY_LENGTH) {
+      throw new Error(
+        `[OffscreenTaskRunner] HLS 加密 key 字节数非法: id=${task.resource.id}, host=${urlHostname(keyUrl)}, bytes=${key.byteLength}, stage=hls-key`
+      )
+    }
+
+    cache.set(keyUrl, key)
+    return key
+  }
+
   /** 已知 size 超过上限时提前拒绝。 */
   private assertKnownMuxSize(
     task: RunnerTask,
@@ -858,9 +957,13 @@ export class OffscreenTaskRunner {
     }
   }
 
-  /** 产物文件名：资源自带名字优先，否则按 videoId 兜底。 */
+  /**
+   * 产物文件名：资源自带名字优先（扩展名按本次交付产物强制重写），否则按 videoId 兜底。
+   * MP3 转码交付时资源名仍指向 .m4a，扩展名在这里收敛，background 不依赖交付名的正确性。
+   */
   private resolveArtifactFilename(task: RunnerTask, extension: string): string {
-    return task.resource.filename || `${task.descriptor.videoId}.${extension}`
+    const base = (task.resource.filename || task.descriptor.videoId).replace(/\.[^.]*$/, '')
+    return `${base}.${extension}`
   }
 }
 

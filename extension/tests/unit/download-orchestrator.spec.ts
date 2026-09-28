@@ -77,6 +77,7 @@ function resourceFixture(resourceId: string): MediaResource {
     type: RESOURCE_TYPES.VIDEO,
     sourceKind: RESOURCE_SOURCE_KINDS.VIMEO_DASH_VIDEO,
     mimeType: 'video/mp4',
+    title: resourceId,
     filename: `${resourceId}.mp4`,
     documentId: 'vimeo:descriptor-uri:fixture',
     size: 2048,
@@ -107,7 +108,7 @@ describe('DownloadOrchestrator', () => {
       remaining: 9,
       status: 1 as const
     })
-    mocks.getSettings.mockResolvedValue({ downloadPath: 'VimeoDownloader' })
+    mocks.getSettings.mockResolvedValue({ downloadPath: 'VimeoDownloader', filenamePattern: '{title}' })
     mocks.offscreenStartTask.mockResolvedValue({ started: true })
     mocks.offscreenCancelTask.mockResolvedValue({ accepted: true })
     mocks.offscreenListActiveTasks.mockResolvedValue({ tasks: [] })

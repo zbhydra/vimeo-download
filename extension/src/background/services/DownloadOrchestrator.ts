@@ -31,18 +31,15 @@ import type {
 import { MARK_TYPE, type MarkType } from '@/core/api/mark/types'
 import type { QuotaCheckResponse } from '@/core/api/quota/types'
 import { quotaApi } from '@/core/api/quota'
-import {
-  RESOURCE_SOURCE_KINDS,
-  getDefaultResourceExtension,
-  isBrowserManagedSourceKind
-} from '@/core/constants/resource'
+import { RESOURCE_SOURCE_KINDS, isBrowserManagedSourceKind } from '@/core/constants/resource'
 import type { ExtensionEvents } from '@/core/events/types'
 import { ChromeEventEmitter } from '@/core/rpc/ChromeEventBus'
 import type { DownloadTaskSnapshot, MediaResource } from '@/core/types'
 import { SettingsManager } from '@/core/storage/settings'
 import { logger } from '@/core/utils/logger'
 import { recordBackgroundMark } from './ExtensionMarkReporter'
-import { buildDownloadFilename } from './downloadFilename'
+import { buildDownloadFilename, buildResourceFilename } from './downloadFilename'
+import { recordDownloadTaskOutcome } from './downloadHistoryWriteback'
 import { notifyDownloadFinished } from './downloadNotifications'
 import { ensureOffscreenDocument, hasOffscreenDocument } from './offscreenDocument'
 import { resolveVerifiedDirectSource } from './directSource'
@@ -77,8 +74,12 @@ interface OrchestratorTask {
   snapshot: DownloadTaskSnapshot
   /** 执行使用的完整资源。 */
   resource: MediaResource
+  /** 按文件名模板渲染的最终保存名（含扩展名）；入队/对账时渲染一次，终态挂钩共用。 */
+  finalName: string
   /** 发起下载的站点标签页；配额不足时用于弹升级窗。 */
   tabId: number | null
+  /** 下载发起页 URL（入队时快照）；用于历史回写，拿不到时缺省。 */
+  pageUrl?: string
   /** 执行通道：Chrome 直连或 offscreen document。 */
   kind: 'direct' | 'offscreen'
   /** 取消已受理。 */
@@ -149,6 +150,9 @@ export class DownloadOrchestrator {
   ): Promise<{ accepted: boolean; count: number }> {
     await this.ensureReconciled()
 
+    // 历史回写需要发起页 URL，入队时快照一次（终态时 tab 可能已被关闭或导航走）。
+    const pageUrl = await resolveTabUrl(tabId)
+
     let count = 0
     for (const resource of resources) {
       if (
@@ -169,7 +173,7 @@ export class DownloadOrchestrator {
         continue
       }
 
-      const task = this.createTask(resource, tabId)
+      const task = await this.createTask(resource, tabId, pageUrl)
       this.tasks.set(task.snapshot.taskId, task)
       this.queue.push(task.snapshot.taskId)
       count += 1
@@ -333,10 +337,7 @@ export class DownloadOrchestrator {
       const settings = await SettingsManager.getSettings()
       const downloadId = await chrome.downloads.download({
         url: request.blobUrl,
-        filename: buildDownloadFilename(
-          settings.downloadPath,
-          resolveResourceFilename(task.resource) || request.filename
-        ),
+        filename: buildDownloadFilename(settings.downloadPath, task.finalName),
         conflictAction: 'uniquify',
         saveAs: false
       })
@@ -482,13 +483,12 @@ export class DownloadOrchestrator {
         continue
       }
 
+      const filename = await buildResourceFilename(active.resource)
       const task: OrchestratorTask = {
         snapshot: {
           taskId: active.taskId,
           resourceId: active.resourceId,
-          ...(resolveResourceFilename(active.resource)
-            ? { filename: resolveResourceFilename(active.resource) }
-            : {}),
+          filename,
           type: active.resource.type,
           resourceIndex: active.resource.index,
           status: 'downloading',
@@ -499,6 +499,7 @@ export class DownloadOrchestrator {
           bytesAreEstimated: false
         },
         resource: active.resource,
+        finalName: filename,
         tabId: null,
         kind: isBrowserManagedSourceKind(active.resource.sourceKind) ? 'direct' : 'offscreen',
         cancelRequested: false,
@@ -565,6 +566,7 @@ export class DownloadOrchestrator {
           if (outcome.result === 'completed') {
             this.recordTaskMark(task, MARK_TYPE.DOWNLOAD_SUCCESS)
             this.notifyTaskFinished(task, true)
+            this.recordTaskHistory(task, true)
           } else if (outcome.result === 'quota_rejected') {
             this.recordTaskMark(task, MARK_TYPE.DOWNLOAD_QUOTA_INSUFFICIENT)
           }
@@ -581,6 +583,7 @@ export class DownloadOrchestrator {
           )
           this.recordTaskMark(task, MARK_TYPE.DOWNLOAD_FAILED, outcome.error)
           this.notifyTaskFinished(task, false)
+          this.recordTaskHistory(task, false)
           task.snapshot.status = 'failed'
         }
 
@@ -594,10 +597,8 @@ export class DownloadOrchestrator {
     }
   }
 
-  /** 执行当前任务：配额检查后按通道分发。 */
+  /** 执行当前任务：配额检查后按通道分发；落盘名用入队时渲染好的 finalName。 */
   private async performTask(task: OrchestratorTask): Promise<TaskOutcome> {
-    const filename = resolveResourceFilename(task.resource)
-
     if (!task.retryQuotaExempt) {
       const quota = await this.checkAndConsumeQuota(task)
       if (!quota.accepted) {
@@ -611,7 +612,7 @@ export class DownloadOrchestrator {
     }
 
     if (task.kind === 'direct') {
-      await this.runDirectDownload(task, filename)
+      await this.runDirectDownload(task, task.finalName)
       return 'completed'
     }
 
@@ -701,10 +702,12 @@ export class DownloadOrchestrator {
       )
       this.recordTaskMark(task, MARK_TYPE.DOWNLOAD_FAILED, settle.error)
       this.notifyTaskFinished(task, false)
+      this.recordTaskHistory(task, false)
       task.snapshot.status = 'failed'
     } else if (settle.kind === 'completed') {
       this.recordTaskMark(task, MARK_TYPE.DOWNLOAD_SUCCESS)
       this.notifyTaskFinished(task, true)
+      this.recordTaskHistory(task, true)
       this.removeTask(task.snapshot.taskId)
     } else {
       this.removeTask(task.snapshot.taskId)
@@ -840,11 +843,15 @@ export class DownloadOrchestrator {
     }
   }
 
-  /** 创建等待任务并记录下载点击打点。 */
-  private createTask(resource: MediaResource, tabId: number | null): OrchestratorTask {
+  /** 创建等待任务并记录下载点击打点；文件名模板在入队时渲染一次，终态挂钩共用。 */
+  private async createTask(
+    resource: MediaResource,
+    tabId: number | null,
+    pageUrl?: string
+  ): Promise<OrchestratorTask> {
     this.nextSequence += 1
     const taskId = `bg-${Date.now().toString(36)}-${this.nextSequence}-${globalThis.crypto.randomUUID().slice(0, 8)}`
-    const filename = resolveResourceFilename(resource)
+    const filename = await buildResourceFilename(resource)
 
     void recordBackgroundMark(MARK_TYPE.DOWNLOAD_CLICK, buildDownloadMarkMessage(resource))
 
@@ -852,7 +859,7 @@ export class DownloadOrchestrator {
       snapshot: {
         taskId,
         resourceId: resource.id,
-        ...(filename ? { filename } : {}),
+        filename,
         type: resource.type,
         resourceIndex: resource.index,
         status: 'waiting',
@@ -863,7 +870,9 @@ export class DownloadOrchestrator {
         bytesAreEstimated: false
       },
       resource,
+      finalName: filename,
       tabId,
+      ...(pageUrl ? { pageUrl } : {}),
       kind: isBrowserManagedSourceKind(resource.sourceKind) ? 'direct' : 'offscreen',
       cancelRequested: false,
       downloadId: null,
@@ -924,10 +933,7 @@ export class DownloadOrchestrator {
    * 挂钩失败（通知 API 异常、无接收方）不影响编排循环本身。
    */
   private notifyTaskFinished(task: OrchestratorTask, succeeded: boolean): void {
-    void notifyDownloadFinished({
-      filename: resolveResourceFilename(task.resource),
-      succeeded
-    })
+    void notifyDownloadFinished({ filename: task.finalName, succeeded })
 
     if (succeeded) {
       this.eventEmitter.emit('downloadTaskSucceeded', {
@@ -935,6 +941,19 @@ export class DownloadOrchestrator {
         resourceId: task.snapshot.resourceId
       })
     }
+  }
+
+  /**
+   * 任务终态历史回写挂钩：与通知挂钩同一批调用点，把成功/失败终态写入下载历史。
+   * 回写失败（存储异常）只记日志，不影响编排循环。
+   */
+  private recordTaskHistory(task: OrchestratorTask, succeeded: boolean): void {
+    void recordDownloadTaskOutcome({
+      resource: task.resource,
+      ...(task.pageUrl ? { pageUrl: task.pageUrl } : {}),
+      filename: task.finalName,
+      succeeded
+    })
   }
 }
 
@@ -959,14 +978,6 @@ function buildDownloadMarkMessage(resource: MediaResource, error?: Error): strin
     resource_type: resource.type,
     source_kind: resource.sourceKind
   })
-}
-
-/** 统一生成下载使用的文件名。 */
-function resolveResourceFilename(resource: MediaResource): string {
-  return (
-    resource.filename ??
-    `${resource.chatId || 'unknown'}_${resource.messageId}_${resource.index + 1}${getDefaultResourceExtension(resource.type, resource.mimeType)}`
-  )
 }
 
 /** 把页面资源收敛成 Chrome 直连下载的最小合同。 */
@@ -998,6 +1009,27 @@ function toDirectSource(
 
 /** Background 下载编排器单例。 */
 export const downloadOrchestrator = new DownloadOrchestrator()
+
+/**
+ * 读取发起 tab 的当前 URL，供历史回写记录发起页。
+ *
+ * tab 已关闭或无 host 权限读 URL 时缺省；host_permissions 覆盖平台页，正常路径都能拿到。
+ */
+async function resolveTabUrl(tabId: number | null): Promise<string | undefined> {
+  if (tabId === null) {
+    return undefined
+  }
+  try {
+    const tab = await chrome.tabs.get(tabId)
+    return typeof tab.url === 'string' && tab.url.length > 0 ? tab.url : undefined
+  } catch (error) {
+    logger.warn(
+      `[DownloadOrchestrator] 读取发起 tab URL 失败（tab 可能已关闭）: tabId=${tabId}`,
+      error
+    )
+    return undefined
+  }
+}
 
 /** 不阻塞编排循环的轮询延迟。 */
 function delay(ms: number): Promise<void> {

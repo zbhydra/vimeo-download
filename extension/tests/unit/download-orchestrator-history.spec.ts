@@ -1,14 +1,15 @@
 /**
- * DownloadOrchestrator 终态通知挂钩测试。
+ * DownloadOrchestrator 终态历史回写挂钩测试。
  *
- * 任务到达完成/失败终态时必须调用系统通知工具（完成还伴随 downloadTaskSucceeded 事件），
- * 配额拒绝与用户取消不通知——popup 内已有升级弹窗/用户主动行为，通知会造成打扰。
+ * 任务到达成功/失败终态时必须回写下载历史（带发起页 URL 与成败状态）；配额拒绝与用户取消
+ * 不回写。回写与既有通知挂钩（downloadNotifications）是同一批调用点。
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   notifyDownloadFinished: vi.fn(),
+  recordDownloadTaskOutcome: vi.fn(),
   checkAndConsume: vi.fn(),
   recordMark: vi.fn(),
   getSettings: vi.fn(),
@@ -18,6 +19,10 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/background/services/downloadNotifications', () => ({
   notifyDownloadFinished: mocks.notifyDownloadFinished
+}))
+
+vi.mock('@/background/services/downloadHistoryWriteback', () => ({
+  recordDownloadTaskOutcome: mocks.recordDownloadTaskOutcome
 }))
 
 vi.mock('@/core/api/quota', () => ({
@@ -67,7 +72,7 @@ function directResource(resourceId: string): MediaResource {
   }
 }
 
-describe('DownloadOrchestrator 终态通知挂钩', () => {
+describe('DownloadOrchestrator 终态历史回写挂钩', () => {
   beforeEach(async () => {
     vi.resetModules()
     vi.clearAllMocks()
@@ -89,56 +94,50 @@ describe('DownloadOrchestrator 终态通知挂钩', () => {
       document_id: 'vimeo:descriptor-uri:fixture'
     })
     vi.spyOn(chrome.downloads, 'download').mockImplementation(() => Promise.resolve(66))
+    ;(chrome.tabs.get as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: 7,
+      url: 'https://vimeo.com/1196869805'
+    })
 
     ;({ downloadOrchestrator: orchestrator } = await import(
       '@/background/services/DownloadOrchestrator'
     ))
   })
 
-  it('直连下载完成：发送成功通知并广播成功事件', async () => {
+  it('直连下载完成：回写成功历史并携带发起页 URL', async () => {
     ;(chrome.downloads.search as ReturnType<typeof vi.fn>).mockResolvedValue([
       { id: 66, state: 'complete' }
     ])
 
-    await orchestrator.enqueueBatch([directResource('r1')], 1)
+    await orchestrator.enqueueBatch([directResource('r1')], 7)
     await vi.waitFor(() => {
-      expect(mocks.notifyDownloadFinished).toHaveBeenCalledTimes(1)
-      expect(mocks.notifyDownloadFinished).toHaveBeenCalledWith({
-        filename: 'r1.mp4',
-        succeeded: true
-      })
+      expect(mocks.recordDownloadTaskOutcome).toHaveBeenCalledTimes(1)
     })
 
-    // 成功终态同时向扩展页广播成功事件（popup 用于评分引导计数）。
-    await vi.waitFor(() => {
-      expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
-        expect.objectContaining({ event: 'downloadTaskSucceeded' })
-      )
+    expect(mocks.recordDownloadTaskOutcome).toHaveBeenCalledWith({
+      resource: expect.objectContaining({ id: 'r1' }),
+      pageUrl: 'https://vimeo.com/1196869805',
+      filename: 'r1.mp4',
+      succeeded: true
     })
   })
 
-  it('直连下载中断：任务转失败投影并发送失败通知，不发成功事件', async () => {
+  it('直连下载中断：回写失败历史', async () => {
     ;(chrome.downloads.search as ReturnType<typeof vi.fn>).mockResolvedValue([
       { id: 66, state: 'interrupted', error: 'NETWORK_FAILED' }
     ])
 
-    await orchestrator.enqueueBatch([directResource('r1')], 1)
+    await orchestrator.enqueueBatch([directResource('r1')], 7)
     await vi.waitFor(() => {
       expect(orchestrator.getSnapshot().tasks[0]?.status).toBe('failed')
     })
 
-    expect(mocks.notifyDownloadFinished).toHaveBeenCalledTimes(1)
-    expect(mocks.notifyDownloadFinished).toHaveBeenCalledWith({
-      filename: 'r1.mp4',
-      succeeded: false
-    })
-    const eventCalls = (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mock.calls.filter(
-      call => (call[0] as { event?: string })?.event === 'downloadTaskSucceeded'
+    expect(mocks.recordDownloadTaskOutcome).toHaveBeenCalledWith(
+      expect.objectContaining({ succeeded: false })
     )
-    expect(eventCalls).toHaveLength(0)
   })
 
-  it('配额拒绝：不启动下载也不发通知', async () => {
+  it('配额拒绝与等待中取消：不回写历史', async () => {
     mocks.checkAndConsume.mockResolvedValue({
       allowed: false,
       count: 0,
@@ -156,24 +155,16 @@ describe('DownloadOrchestrator 终态通知挂钩', () => {
       )
     })
 
-    expect(mocks.notifyDownloadFinished).not.toHaveBeenCalled()
-    expect(orchestrator.getSnapshot().tasks).toHaveLength(0)
-  })
-
-  it('等待中的任务被取消：不发通知', async () => {
-    // 阻塞队首，让第二个任务停在 waiting 再取消。
-    mocks.resolveVerifiedDirectSource.mockImplementation(
-      () => new Promise(() => undefined)
-    )
-
-    await orchestrator.enqueueBatch([directResource('r1'), directResource('r2')], 1)
+    // 阻塞队首再取消 waiting 任务，两条路径都不应有历史回写。
+    mocks.resolveVerifiedDirectSource.mockImplementation(() => new Promise(() => undefined))
+    mocks.recordDownloadTaskOutcome.mockClear()
+    await orchestrator.enqueueBatch([directResource('r2'), directResource('r3')], 7)
     await vi.waitFor(() => {
       expect(orchestrator.getSnapshot().tasks).toHaveLength(2)
     })
-
     const waitingTaskId = orchestrator.getSnapshot().tasks[1].taskId
     await orchestrator.cancelTask(waitingTaskId)
 
-    expect(mocks.notifyDownloadFinished).not.toHaveBeenCalled()
+    expect(mocks.recordDownloadTaskOutcome).not.toHaveBeenCalled()
   })
 })

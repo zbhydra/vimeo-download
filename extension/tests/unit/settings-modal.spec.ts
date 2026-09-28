@@ -16,6 +16,7 @@ import { I18nService } from '@/locales'
 import enUS from '@/locales/en-US.json'
 import SettingsModal from '@/popup/components/SettingsModal.vue'
 import { settingsModalVisible } from '@/core/composables/settingsModal'
+import { historyViewVisible } from '@/core/composables/historyView'
 import { LANGUAGE_AUTO } from '@/core/constants/i18n'
 
 const IconStub = defineComponent({
@@ -93,6 +94,7 @@ describe('SettingsModal', () => {
     wrapper?.unmount()
     wrapper = null
     settingsModalVisible.value = false
+    historyViewVisible.value = false
   })
 
   it('打开时回读设置：语言下拉含 Auto + 14 locale，保存位置预填', async () => {
@@ -156,5 +158,74 @@ describe('SettingsModal', () => {
       DEFAULT_DOWNLOAD_PATH
     )
     expect(input.element.value).toBe(DEFAULT_DOWNLOAD_PATH)
+  })
+
+  it('点击下载历史入口：收起设置弹层并打开历史视图', async () => {
+    wrapper = await mountOpened()
+
+    await wrapper.get('.settings-history-row').trigger('click')
+    await flushPromises()
+
+    expect(settingsModalVisible.value).toBe(false)
+    expect(historyViewVisible.value).toBe(true)
+  })
+
+  it('文件名规则默认态：收起自定义编辑器，预览按默认模板用固定示例数据渲染', async () => {
+    wrapper = await mountOpened()
+
+    expect(wrapper.get('.pattern-mode-button.pattern-mode-active').text()).toBe(
+      enUS['settings.filenamePattern.mode.default']
+    )
+    expect(wrapper.find('.pattern-input').exists()).toBe(false)
+    expect(wrapper.find('.pattern-variables').exists()).toBe(false)
+    expect(wrapper.get('.pattern-preview-value').text()).toBe('Big Buck Bunny_1080p HD_video.mp4')
+  })
+
+  it('自定义模式：模板输入与实时预览联动，change 写回 settings.filenamePattern', async () => {
+    storageData.set('settings', { language: 'en-US' })
+    wrapper = await mountOpened()
+
+    await wrapper.findAll('.pattern-mode-button')[1].trigger('click')
+    await flushPromises()
+
+    const input = wrapper.get<HTMLInputElement>('.pattern-input')
+    expect(input.element.value).toBe('{title}_{quality}_{type}')
+
+    await input.setValue('{title} by {author}')
+    await input.trigger('change')
+    await flushPromises()
+
+    expect((storageData.get('settings') as { filenamePattern: string }).filenamePattern).toBe(
+      '{title} by {author}'
+    )
+    expect(wrapper.get('.pattern-preview-value').text()).toBe(
+      'Big Buck Bunny by Blender Foundation.mp4'
+    )
+
+    // 存储里已是自定义模板时，重新打开直接回到自定义模式（先落回不可见，让打开监听重新触发）。
+    wrapper.unmount()
+    settingsModalVisible.value = false
+    await flushPromises()
+    wrapper = await mountOpened()
+    expect(wrapper.find('.pattern-input').exists()).toBe(true)
+  })
+
+  it('变量 chips 点击插入模板，重置写回默认模板并收起编辑器', async () => {
+    wrapper = await mountOpened()
+
+    await wrapper.findAll('.pattern-mode-button')[1].trigger('click')
+    await wrapper.get('.pattern-variable-chip').trigger('click')
+    await flushPromises()
+
+    const input = wrapper.get<HTMLInputElement>('.pattern-input')
+    expect(input.element.value).toBe('{title}_{quality}_{type}{title}')
+
+    await wrapper.get('.pattern-reset').trigger('click')
+    await flushPromises()
+
+    expect((storageData.get('settings') as { filenamePattern: string }).filenamePattern).toBe(
+      '{title}_{quality}_{type}'
+    )
+    expect(wrapper.find('.pattern-input').exists()).toBe(false)
   })
 })

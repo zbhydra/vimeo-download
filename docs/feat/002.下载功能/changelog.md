@@ -2,6 +2,19 @@
 
 > 记录本域(下载功能)每次文档修改:一行 why + 一行 from→to。
 
+## 2026-09-28 下载历史、AES-128 解密、MP3 导出与文件名模板
+
+**Why**：竞品四项标配能力缺失——无下载历史（竞品「点击即写、完成不回写」是反面教材）、加密 HLS 完全下不了、音频只能 m4a、文件名固定拼接；四项均为高频用户价值且与本轮竞品差距清单（`DEEP-DIVE.md` §5.4 第 1~4 条）一一对应。
+
+**From → To**：
+- U-H1 下载历史：任务成功/失败终态由 background 编排器回写（与系统通知同一批挂钩，取消与配额拒不回写——与竞品「点击即写」相反的回写语义即差异化）；存储单键 `download_history`，去重键 `videoId|type|quality` 覆盖式去重、500 条裁剪、写锁串行；popup 历史视图（设置弹层唯一入口的全屏覆盖层）：搜索（标题/作者）、4 排序、20 条分页、单删/清空（内嵌确认）、CSV 导出——导出当前筛选视图（竞品导全量），零依赖手写 CSV（RFC 4180 转义 + BOM）。已知限制：quality 存 descriptor 原文（locale 无关）；片段与整片共享去重键互相覆盖。
+- U-H2 AES-128 HLS：media playlist `#EXT-X-KEY` 解析（AES-128/identity，显式 IV 物化、缺省按 media sequence 构造；SAMPLE-AES 等不支持声明按明文口径推进——竞品同款）；offscreen WebCrypto AES-CBC 分片解密（init 不解密，加密 init remux 期大声失败）；key 白名单硬边界（`player.vimeo.com`/`*.vimeocdn.com`，请求前与 30x 重定向复检各一次，复检失败不消费响应）+ 任务内缓存。加密流从完全不可下到可下；真实 Vimeo 现代加密流走 DRM/cbcs，AES-128 样本未获得，合同由 fixture 覆盖。
+- U-H3 MP3 导出：Audio 行格式选择（M4A 默认/MP3 可选，不持久化）；转码链 = 既有 m4a remux 产物 → Mediabunny 解码 → `@breezystack/lamejs`（LGPL-3.0，~58KB gzip，192kbps CBR）→ 裸字节流式写 OPFS；选型依据 WebCodecs 不支持 mp3 编码（`isConfigSupported: false`）。已知限制：时长 ~30ms 级帧粒度偏差、超长音频转码期无进度。
+- U-H4 文件名模板：设置项 `settings.filenamePattern`（默认 `{title}_{quality}_{type}`，6 变量）；应用点单一在 background 命名边界（入队渲染一次 `finalName`，direct/offscreen/对账全路径统一），渲染后仍经既有净化；设置弹层模板区（默认/自定义双模式 + 变量 chips + 实时预览 + 恢复默认）。
+- 合规：新增 `extension/THIRD-PARTY-NOTICES.md`（lamejs LGPL-3.0 义务提示 + 捆绑运行时依赖清单），随 dist 分发。
+- 文档：同步 `tech-扩展端Vimeo本地下载.md`（§1/§2/§6.3/§8.1/§8.9~§8.11 新增/§9/§12.5/§12.7/§12.11 新增/§13/§14）、`feat.md`（功能范围、验收标准、音频格式选择、文件名规则、下载历史节）、`tech-站点适配.md`（HLS 加密口径一行）。
+- 验收：单元 537 通过（新增下载历史存储/回写/视图/CSV、模板渲染、AES 解密与白名单、MP3 分派用例）；`pnpm -C extension build` 通过。
+
 ## 2026-09-26 mux 改 OPFS 流式写盘；插件内购买页、设置弹层与运营三件套
 
 **Why**：mux 产物经 BufferTarget 整份驻留内存，大视频（4K 长片）合成会 OOM；购买跳官网、语言与保存位置入口分散、缺下载终态感知与运营触点，与竞品插件形态不符。

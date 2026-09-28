@@ -675,6 +675,28 @@ describe('VideoPanel', () => {
     expect(lastDownloadedResource(wrapper).id).toBe(`vimeo:${VIDEO_ID}:image:best-thumbnail`)
   })
 
+  it('Audio 行导出格式选择：缺省 m4a 不带 targetFormat，选 MP3 时随资源下发', async () => {
+    wrapper = await mountPanel([
+      ...defaultResources(),
+      vimeoResource({ optionId: 'dash:audio', label: '195 kbps', index: 4, kind: 'audio' })
+    ])
+
+    // 格式选择器只在 Audio 行渲染；缺省值是 m4a（AAC 透传缺省语义）。
+    const formatSelect = wrapper.get<HTMLSelectElement>(
+      '.option-row[data-row="audio"] .audio-format'
+    )
+    expect(formatSelect.element.value).toBe('m4a')
+    expect(wrapper.find('.option-row[data-row="video"] .audio-format').exists()).toBe(false)
+    expect(wrapper.find('.option-row[data-row="subtitle"] .audio-format').exists()).toBe(false)
+
+    await wrapper.get('.option-row[data-row="audio"] .row-download').trigger('click')
+    expect(lastDownloadedResource(wrapper).targetFormat).toBeUndefined()
+
+    await formatSelect.setValue('mp3')
+    await wrapper.get('.option-row[data-row="audio"] .row-download').trigger('click')
+    expect(lastDownloadedResource(wrapper).targetFormat).toBe('mp3')
+  })
+
   it('Best 切到无音轨落到最高画质的纯视频档，下拉、副标题与按钮名换成同一条资源的标签', async () => {
     wrapper = await mountPanel(defaultResources())
 

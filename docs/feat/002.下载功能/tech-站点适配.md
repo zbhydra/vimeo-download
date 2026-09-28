@@ -106,7 +106,7 @@
 - 自有面板:`data-testid="vdl-vimeo-panel"`，内部固定三行 `vdl-vimeo-row-video` / `vdl-vimeo-row-audio` / `vdl-vimeo-row-image`；对应属性前缀为 `data-vdl-*`。
 - config 来源:MAIN world 在 `document_start` 捕获详情页原生 signed config XHR/fetch；顶层 player 页读取初始 HTML 内嵌 playerConfig 与其原生 `config_refresh_url`。`videoId` 只用于身份匹配，禁止从 `videoId`/`h` 重建 config URL。
 - 视频:优先列出 `request.files.progressive[]` 完整 MP4(标签如 `1080p MP4`)；DASH adaptive 更优或 progressive 缺失时，下载 video track + audio track 后在浏览器内 mux 成 MP4(标签 `{height}p HD`)；progressive 与 adaptive 都不可用时才走 HLS fallback(标签 `{height}p HLS`)。
-- HLS:只展示非加密 fMP4 HLS(master variant + media playlist，无 `#EXT-X-KEY`，有 `#EXT-X-MAP`，segment 命中 Vimeo CDN/Akamai)；TS/encrypted/未知结构不展示。
+- HLS:展示 fMP4 HLS(master variant + media playlist，有 `#EXT-X-MAP`，segment 命中 Vimeo CDN/Akamai)；`#EXT-X-KEY` 声明 AES-128 时在扩展内解密后下载（加密口径见 `@tech-扩展端Vimeo本地下载.md` §8.9）；TS/未知结构不展示。
 - 音频:从 DASH playlist `audio[]` 列出所有独立音频轨，`Best Audio` 取最高码率，保存 `.m4a`。
 - 图片:从 `video.thumbs` 取最大尺寸 thumbnail，保存 `.jpg`。
 - Best 规则:progressive 与 adaptive 合并比较分辨率、fps、bitrate；三者都相同才优先 progressive。

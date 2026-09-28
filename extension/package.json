@@ -37,6 +37,7 @@
     "check": "pnpm type-check && pnpm type-check:tests && pnpm lint && pnpm format:check && pnpm check:permissions"
   },
   "dependencies": {
+    "@breezystack/lamejs": "^1.2.7",
     "archiver": "^7.0.1",
     "markdown-it": "^14.1.0",
     "mediabunny": "1.46.0",

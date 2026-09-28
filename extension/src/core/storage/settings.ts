@@ -1,6 +1,7 @@
 import { storageManager } from './index'
 import type { LanguageSetting } from '../constants/i18n'
 import { LANGUAGE_AUTO } from '../constants/i18n'
+import { FILENAME_PATTERN_DEFAULT } from '../utils/filenameTemplate'
 import { logger } from '../utils/logger'
 
 /**
@@ -17,13 +18,16 @@ interface AppSettings {
   language: LanguageSetting
   /** 保存子目录，相对浏览器下载目录；不存绝对路径。 */
   downloadPath?: string
+  /** 下载文件名模板（`{title}_{quality}_{type}` 一类）；background 在命名边界统一渲染。 */
+  filenamePattern: string
   maxConcurrent?: number
 }
 
 // 默认设置
 const DEFAULT_SETTINGS: AppSettings = {
   language: LANGUAGE_AUTO,
-  downloadPath: DEFAULT_DOWNLOAD_PATH
+  downloadPath: DEFAULT_DOWNLOAD_PATH,
+  filenamePattern: FILENAME_PATTERN_DEFAULT
 }
 
 type SettingsCallback = (settings: AppSettings) => void

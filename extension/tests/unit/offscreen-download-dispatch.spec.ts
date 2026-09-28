@@ -7,6 +7,8 @@
  * mux 层 mock 返回 MuxOutputArtifact（OPFS 产物引用），muxArtifactStore 一并 mock。
  */
 
+import { createCipheriv } from 'node:crypto'
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
@@ -19,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   muxVideo: vi.fn(),
   remuxAudio: vi.fn(),
   remuxMuxed: vi.fn(),
+  transcodeMp3: vi.fn(),
   removeMuxArtifact: vi.fn(),
   sweepMuxArtifacts: vi.fn()
 }))
@@ -38,6 +41,10 @@ vi.mock('@/offscreen/mux', () => ({
   muxVimeoVideoToMp4: mocks.muxVideo,
   remuxVimeoAudioToM4a: mocks.remuxAudio,
   remuxVimeoMuxedMp4ToMp4: mocks.remuxMuxed
+}))
+
+vi.mock('@/offscreen/mp3', () => ({
+  transcodeMuxArtifactToMp3: mocks.transcodeMp3
 }))
 
 vi.mock('@/offscreen/muxArtifactStore', () => ({
@@ -65,6 +72,35 @@ const HLS_SEGMENT_URLS = [
   'https://vod-adaptive-ak.vimeocdn.com/hls/1080/seg-2.m4s'
 ]
 const CLIP: VimeoTimeRange = { startSeconds: 12.5, endSeconds: 30 }
+const HLS_KEY_URL = 'https://player.vimeo.com/hls-key/demo-key?sig=1'
+const HLS_FOREIGN_KEY_URL = 'https://evil.example.com/hls-key/demo-key'
+
+/** 固定测试 key（16 字节），与 encryptHlsSegment 的加密 key 一致。 */
+const AES_KEY = Uint8Array.from({ length: 16 }, (_, index) => index + 1)
+
+/** media sequence 0/1 对应的缺省 IV（RFC 8216：128 位 big-endian 序号）。 */
+const SEQUENCE_IV_0 = new Uint8Array(16)
+const SEQUENCE_IV_1 = Uint8Array.from({ length: 16 }, (_, index) => (index === 15 ? 1 : 0))
+
+/** AES-128-CBC 加密分片字节（PKCS#7 填充，与 HLS 交付口径一致）。 */
+function encryptHlsSegment(iv: Uint8Array, plaintext: Uint8Array): Uint8Array {
+  const cipher = createCipheriv('aes-128-cbc', AES_KEY, iv)
+  return Uint8Array.from(Buffer.concat([cipher.update(plaintext), cipher.final()]))
+}
+
+/** 构造带 AES-128 KEY 声明的 HLS media playlist 文本（不带 IV，走缺省 sequence IV）。 */
+function encryptedHlsPlaylistText(options: { keyUrl?: string } = {}): string {
+  return [
+    '#EXTM3U',
+    '#EXT-X-VERSION:7',
+    `#EXT-X-KEY:METHOD=AES-128,URI="${options.keyUrl ?? HLS_KEY_URL}"`,
+    '#EXT-X-MAP:URI="init.mp4"',
+    '#EXTINF:2.000,',
+    'seg-1.m4s',
+    '#EXTINF:2.000,',
+    'seg-2.m4s'
+  ].join('\n')
+}
 
 /** 构造 DASH video 资源；audioTrackId 省略表示无音轨交付。 */
 function dashVideoResource(
@@ -106,8 +142,8 @@ function dashVideoResource(
   }
 }
 
-/** 构造 DASH audio-only 资源。 */
-function dashAudioResource(range?: VimeoTimeRange): MediaResource {
+/** 构造 DASH audio-only 资源；`targetFormat` 模拟 popup 的 MP3 导出选择。 */
+function dashAudioResource(range?: VimeoTimeRange, targetFormat?: 'mp3'): MediaResource {
   const sourceId = `vimeo:${VIDEO_ID}:audio:dash:audio-track`
   const descriptor: VimeoSourceDescriptor = {
     version: 2,
@@ -134,7 +170,8 @@ function dashAudioResource(range?: VimeoTimeRange): MediaResource {
     filename: 'controlled-audio.m4a',
     size: 7,
     documentId: encodeVimeoSourceDescriptor(descriptor),
-    metadata: { messageId: VIDEO_ID }
+    metadata: { messageId: VIDEO_ID },
+    ...(targetFormat ? { targetFormat } : {})
   }
 }
 
@@ -251,6 +288,11 @@ describe('OffscreenTaskRunner 下载分派', () => {
       async (_blob: Blob, _range: VimeoTimeRange | undefined, taskId: string) =>
         artifactMock(taskId, 'mp4', 'video/mp4')
     )
+    mocks.transcodeMp3.mockImplementation(async (artifact: { tempFileName: string }) => ({
+      file: new File(['mp3'], `${artifact.tempFileName}.mp3`, { type: 'audio/mpeg' }),
+      mimeType: 'audio/mpeg',
+      tempFileName: `${artifact.tempFileName}.mp3`
+    }))
     URL.createObjectURL = createObjectUrlMock
     URL.revokeObjectURL = revokeObjectUrlMock
   })
@@ -310,6 +352,54 @@ describe('OffscreenTaskRunner 下载分派', () => {
 
     expect(mocks.remuxAudio).toHaveBeenCalledTimes(1)
     expect(mocks.remuxAudio.mock.calls[0][1]).toEqual(CLIP)
+  })
+
+  it('音频资源缺省按 m4a 交付，不进 MP3 转码链', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(jsonResponse(dashPlaylistPayload(), PLAYLIST_URL))
+        .mockResolvedValueOnce(segmentResponse(AUDIO_SEGMENT_URL, 'audio/mp4'))
+    )
+
+    expect(offscreenTaskRunner.startTask('dispatch-audio-m4a', dashAudioResource())).toBe(true)
+    await vi.waitFor(() => expect(mocks.taskComplete).toHaveBeenCalledTimes(1))
+
+    expect(mocks.transcodeMp3).not.toHaveBeenCalled()
+    expect(mocks.taskComplete.mock.calls[0][0]).toMatchObject({
+      taskId: 'dispatch-audio-m4a',
+      filename: 'controlled-audio.m4a',
+      mimeType: 'audio/mp4'
+    })
+  })
+
+  it('targetFormat=mp3 时在 m4a remux 产物上继续转码，交付 mp3 产物与扩展名', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(jsonResponse(dashPlaylistPayload(), PLAYLIST_URL))
+        .mockResolvedValueOnce(segmentResponse(AUDIO_SEGMENT_URL, 'audio/mp4'))
+    )
+
+    expect(
+      offscreenTaskRunner.startTask('dispatch-audio-mp3', dashAudioResource(undefined, 'mp3'))
+    ).toBe(true)
+    await vi.waitFor(() => expect(mocks.taskComplete).toHaveBeenCalledTimes(1))
+
+    // 转码输入是 remux 产物（OPFS File 引用），不是下载 blob。
+    expect(mocks.transcodeMp3).toHaveBeenCalledTimes(1)
+    const [transcodeInput, transcodeTaskId] = mocks.transcodeMp3.mock.calls[0]
+    expect(transcodeTaskId).toBe('dispatch-audio-mp3')
+    expect(transcodeInput).toMatchObject({ tempFileName: 'dispatch-audio-mp3.m4a' })
+
+    expect(mocks.taskComplete.mock.calls[0][0]).toMatchObject({
+      taskId: 'dispatch-audio-mp3',
+      // 资源自带名仍指向 .m4a，交付名按本次产物扩展名重写。
+      filename: 'controlled-audio.mp3',
+      mimeType: 'audio/mpeg'
+    })
   })
 
   it('HLS 把区间透传给 muxed remux，并按 init+segments 顺序抓取', async () => {
@@ -470,6 +560,176 @@ describe('OffscreenTaskRunner 下载分派', () => {
 
     expect(mocks.taskFailed.mock.calls[0][0].message).toContain('响应 MIME 与资源不匹配')
     expect(arrayBufferSpy).not.toHaveBeenCalled()
+  })
+
+  it('HLS 加密分片 fetch 后解密再喂 mux：产物字节与明文一致，key 按任务缓存', async () => {
+    // 不带 IV 属性：分片 IV 按缺省 media sequence（0、1）构造，端到端验证缺省 IV 链路。
+    // fetch 顺序体现实现口径：先取分片字节、首个加密分片处再取 key（缓存后供 seg-2 复用）。
+    const plaintext1 = Uint8Array.from({ length: 32 }, (_, index) => index)
+    const plaintext2 = Uint8Array.from([9, 8, 7])
+    const initBytes = Uint8Array.from([1, 1, 1, 1])
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        responseWithUrl(
+          encryptedHlsPlaylistText(),
+          200,
+          HLS_MEDIA_URL,
+          'application/vnd.apple.mpegurl'
+        )
+      )
+      .mockResolvedValueOnce(responseWithUrl(initBytes, 200, HLS_INIT_URL, 'video/mp4'))
+      .mockResolvedValueOnce(
+        responseWithUrl(
+          encryptHlsSegment(SEQUENCE_IV_0, plaintext1),
+          200,
+          HLS_SEGMENT_URLS[0],
+          'video/mp4'
+        )
+      )
+      .mockResolvedValueOnce(
+        responseWithUrl(AES_KEY, 200, HLS_KEY_URL, 'application/octet-stream')
+      )
+      .mockResolvedValueOnce(
+        responseWithUrl(
+          encryptHlsSegment(SEQUENCE_IV_1, plaintext2),
+          200,
+          HLS_SEGMENT_URLS[1],
+          'video/mp4'
+        )
+      )
+    vi.stubGlobal('fetch', fetchMock)
+
+    expect(offscreenTaskRunner.startTask('hls-aes-roundtrip', hlsResource())).toBe(true)
+    await vi.waitFor(() => expect(mocks.taskComplete).toHaveBeenCalledTimes(1))
+
+    // init 明文先取（RFC 8216：EXT-X-KEY 只作用于 media segment）；key 仅请求一次。
+    expect(fetchMock.mock.calls.map(call => call[0])).toEqual([
+      HLS_MEDIA_URL,
+      HLS_INIT_URL,
+      ...HLS_SEGMENT_URLS.slice(0, 1),
+      HLS_KEY_URL,
+      ...HLS_SEGMENT_URLS.slice(1)
+    ])
+    expect(fetchMock.mock.calls.filter(call => call[0] === HLS_KEY_URL)).toHaveLength(1)
+
+    const inputBlob = mocks.remuxMuxed.mock.calls[0][0] as Blob
+    const muxedBytes = new Uint8Array(await inputBlob.arrayBuffer())
+    expect(Array.from(muxedBytes)).toEqual([...initBytes, ...plaintext1, ...plaintext2])
+  })
+
+  it('key URL 不在 Vimeo fetch 白名单时拒绝任务，且不发起该请求', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        responseWithUrl(
+          encryptedHlsPlaylistText({ keyUrl: HLS_FOREIGN_KEY_URL }),
+          200,
+          HLS_MEDIA_URL,
+          'application/vnd.apple.mpegurl'
+        )
+      )
+      .mockResolvedValueOnce(
+        responseWithUrl(Uint8Array.from([1, 1, 1, 1]), 200, HLS_INIT_URL, 'video/mp4')
+      )
+      .mockResolvedValueOnce(
+        responseWithUrl(
+          encryptHlsSegment(SEQUENCE_IV_0, Uint8Array.from([1, 2, 3])),
+          200,
+          HLS_SEGMENT_URLS[0],
+          'video/mp4'
+        )
+      )
+    vi.stubGlobal('fetch', fetchMock)
+
+    expect(offscreenTaskRunner.startTask('hls-aes-foreign-key', hlsResource())).toBe(true)
+    await vi.waitFor(() => expect(mocks.taskFailed).toHaveBeenCalledTimes(1))
+
+    // 白名单校验在 key 请求发起前：foreign key URL 不应出现在任何 fetch 调用里。
+    expect(fetchMock.mock.calls.map(call => call[0])).toEqual([
+      HLS_MEDIA_URL,
+      HLS_INIT_URL,
+      HLS_SEGMENT_URLS[0]
+    ])
+    expect(mocks.taskFailed.mock.calls[0][0].message).toContain('不在 Vimeo fetch 白名单')
+    expect(mocks.remuxMuxed).not.toHaveBeenCalled()
+  })
+
+  it('key 响应经 30x 重定向到白名单外主机时拒绝任务，且不消费该响应', async () => {
+    // 白名单只校验 playlist 声明的 key URL；30x 跟随后最终 URL 落在白名单外同样拒绝。
+    const foreignKeyResponse = responseWithUrl(
+      AES_KEY,
+      200,
+      HLS_FOREIGN_KEY_URL,
+      'application/octet-stream'
+    )
+    const arrayBufferSpy = vi.spyOn(foreignKeyResponse, 'arrayBuffer')
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        responseWithUrl(
+          encryptedHlsPlaylistText(),
+          200,
+          HLS_MEDIA_URL,
+          'application/vnd.apple.mpegurl'
+        )
+      )
+      .mockResolvedValueOnce(
+        responseWithUrl(Uint8Array.from([1, 1, 1, 1]), 200, HLS_INIT_URL, 'video/mp4')
+      )
+      .mockResolvedValueOnce(
+        responseWithUrl(
+          encryptHlsSegment(SEQUENCE_IV_0, Uint8Array.from([1, 2, 3])),
+          200,
+          HLS_SEGMENT_URLS[0],
+          'video/mp4'
+        )
+      )
+      .mockResolvedValueOnce(foreignKeyResponse)
+    vi.stubGlobal('fetch', fetchMock)
+
+    expect(offscreenTaskRunner.startTask('hls-aes-key-redirect', hlsResource())).toBe(true)
+    await vi.waitFor(() => expect(mocks.taskFailed).toHaveBeenCalledTimes(1))
+
+    expect(mocks.taskFailed.mock.calls[0][0].message).toContain('重定向后 URL 不在 Vimeo fetch 白名单')
+    // 重定向复检在读取字节前：foreign host 的响应体不得被消费。
+    expect(arrayBufferSpy).not.toHaveBeenCalled()
+    expect(mocks.remuxMuxed).not.toHaveBeenCalled()
+  })
+
+  it('key 与分片不匹配时解密失败进入任务失败链', async () => {
+    const wrongKey = Uint8Array.from({ length: 16 }, (_, index) => 255 - index)
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        responseWithUrl(
+          encryptedHlsPlaylistText(),
+          200,
+          HLS_MEDIA_URL,
+          'application/vnd.apple.mpegurl'
+        )
+      )
+      .mockResolvedValueOnce(
+        responseWithUrl(Uint8Array.from([1, 1, 1, 1]), 200, HLS_INIT_URL, 'video/mp4')
+      )
+      .mockResolvedValueOnce(
+        responseWithUrl(
+          encryptHlsSegment(SEQUENCE_IV_0, Uint8Array.from([1, 2, 3])),
+          200,
+          HLS_SEGMENT_URLS[0],
+          'video/mp4'
+        )
+      )
+      .mockResolvedValueOnce(
+        responseWithUrl(wrongKey, 200, HLS_KEY_URL, 'application/octet-stream')
+      )
+    vi.stubGlobal('fetch', fetchMock)
+
+    expect(offscreenTaskRunner.startTask('hls-aes-wrong-key', hlsResource())).toBe(true)
+    await vi.waitFor(() => expect(mocks.taskFailed).toHaveBeenCalledTimes(1))
+
+    expect(mocks.taskFailed.mock.calls[0][0].message).toContain('AES-CBC 分片解密失败')
+    expect(mocks.remuxMuxed).not.toHaveBeenCalled()
   })
 })
 

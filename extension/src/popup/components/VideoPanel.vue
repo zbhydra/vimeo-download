@@ -109,6 +109,20 @@
           <span v-else class="row-select row-select-static">{{ COVER_FORMAT_LABEL }}</span>
 
           <!--
+            Audio 行导出格式：m4a 是 AAC 透传缺省，MP3 触发 offscreen 转码；M4A/MP3 是与
+            `JPG`、`1080p HD` 同类的技术标识，不进词条表。
+          -->
+          <select
+            v-if="row.kind === 'audio'"
+            v-model="audioFormat"
+            class="row-select audio-format"
+            :aria-label="t(I18N_KEYS.VIDEO_PANEL.AUDIO_FORMAT_LABEL)"
+          >
+            <option :value="AUDIO_TARGET_FORMATS.M4A">M4A</option>
+            <option :value="AUDIO_TARGET_FORMATS.MP3">MP3</option>
+          </select>
+
+          <!--
             音轨开关：与画质下拉正交，只有 Video 行有。实际下载的资源由「下拉画质 × 开关」共同
             决定（见 `resolveVideoSelection`）；当前画质缺少某一侧的变体时锁在存在的一侧并禁用。
           -->
@@ -207,6 +221,7 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { I18N_KEYS } from '@/core/constants/i18n'
 import { DESIGN_TOKENS } from '@/core/constants/design'
+import { AUDIO_TARGET_FORMATS, type AudioTargetFormat } from '@/core/types'
 import type { MediaResource } from '@/core/types'
 import { formatMediaDuration } from '@/core/utils/downloadStatus'
 import { Icon, IconName, IconSize } from '@/core/components/icons'
@@ -322,6 +337,12 @@ const selectedIds = ref<Partial<Record<VideoPanelRowKind, string>>>({})
  */
 const videoWithAudio = ref(true)
 
+/**
+ * Audio 行导出格式；m4a（AAC 透传）是缺省，MP3 只在下载时随资源交给 background。
+ * 与音轨开关同类：面板级偏好，只活在组件内，不写存储。
+ */
+const audioFormat = ref<AudioTargetFormat>(AUDIO_TARGET_FORMATS.M4A)
+
 /** Video 行当前选中的画质档位。 */
 const selectedVideoOption = computed(() =>
   rows.value
@@ -436,14 +457,20 @@ function handleAudioToggle(): void {
   videoWithAudio.value = !videoSelection.value.withAudio
 }
 
-/** 行内下载：下载该行当前选中的档位，区间在可裁剪档位上生效。 */
+/** 行内下载：下载该行当前选中的档位，区间在可裁剪档位上生效，Audio 行按格式选择交付。 */
 function handleDownload(row: VideoPanelRow): void {
   const resource = resourcesById.value.get(selectedResourceId(row.kind) ?? '')
   if (!resource) {
     return
   }
 
-  emit('download', applyActiveClip(resource))
+  const prepared = applyActiveClip(resource)
+  emit(
+    'download',
+    row.kind === 'audio' && audioFormat.value === AUDIO_TARGET_FORMATS.MP3
+      ? { ...prepared, targetFormat: AUDIO_TARGET_FORMATS.MP3 }
+      : prepared
+  )
 }
 
 /**
@@ -753,9 +780,19 @@ function downloadTitle(row: VideoPanelRow): string {
   cursor: not-allowed;
 }
 
-/* Video 行多一个音轨开关列；其余行保持三列，开关不存在 */
+/* Video 行多一个音轨开关列；Audio 行多一个导出格式列；其余行保持三列 */
 .option-row[data-row='video'] {
   grid-template-columns: 96px minmax(0, 1fr) auto 32px;
+}
+
+.option-row[data-row='audio'] {
+  grid-template-columns: 96px minmax(0, 1fr) auto 32px;
+}
+
+/* 导出格式列固定窄宽：只放 M4A/MP3 两个技术标识，不挤压画质下拉 */
+.audio-format {
+  width: 78px;
+  flex-shrink: 0;
 }
 
 .audio-switch {

@@ -33,6 +33,9 @@
     <!-- 内嵌购买视图 -->
     <PremiumView />
 
+    <!-- 下载历史视图 -->
+    <HistoryView />
+
     <Toast :show="toastState.show" :message="toastState.message" :type="toastState.type" />
   </div>
 </template>
@@ -58,6 +61,7 @@ import SettingsModal from './components/SettingsModal.vue'
 import UpgradeModal from '@/core/content/components/UpgradeModal.vue'
 import LoginModal from './components/LoginModal.vue'
 import PremiumView from './components/PremiumView.vue'
+import HistoryView from './components/HistoryView.vue'
 import Toast from '@/core/components/Toast.vue'
 import { useToast } from '@/core/composables/useToast'
 import { registerDownloadSuccess } from '@/core/composables/ratingPrompt'

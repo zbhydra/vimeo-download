@@ -8,6 +8,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { SettingsManager, DEFAULT_DOWNLOAD_PATH } from '@/core/storage/settings'
+import { FILENAME_PATTERN_DEFAULT } from '@/core/utils/filenameTemplate'
 import { LANGUAGE_AUTO, SUPPORTED_LANGUAGES } from '@/core/constants/i18n'
 
 /** chrome.storage.local 的测试后备存储。 */
@@ -47,7 +48,8 @@ describe('语言设置 Auto 模型', () => {
   it('默认设置为 Auto 跟随浏览器，下载子目录默认值不变', () => {
     expect(SettingsManager.getDefaultSettings()).toEqual({
       language: LANGUAGE_AUTO,
-      downloadPath: DEFAULT_DOWNLOAD_PATH
+      downloadPath: DEFAULT_DOWNLOAD_PATH,
+      filenamePattern: FILENAME_PATTERN_DEFAULT
     })
   })
 

@@ -6,8 +6,10 @@
  */
 
 import {
+  AUDIO_TARGET_FORMATS,
   RESOURCE_TYPES,
   RESOURCE_SOURCE_KINDS,
+  type AudioTargetFormat,
   type ResourceType,
   type ResourceSourceKind,
   MIME_TYPE_MAP,
@@ -20,8 +22,10 @@ import {
 // 资源类型（重新导出）
 // ============================================================================
 export {
+  AUDIO_TARGET_FORMATS,
   RESOURCE_TYPES,
   RESOURCE_SOURCE_KINDS,
+  type AudioTargetFormat,
   type ResourceType,
   type ResourceSourceKind,
   MIME_TYPE_MAP,
@@ -72,6 +76,11 @@ export interface MediaResource {
   mimeType?: string
   /** 站点内部文档/下载描述符，Vimeo 用它恢复 DASH track 与 config 信息。 */
   documentId?: string
+  /**
+   * 音频导出目标格式；只在 type=audio 的资源上有意义，popup 下载时按用户选择写入。
+   * 缺省按 m4a 透传交付，不进 offscreen 转码链。
+   */
+  targetFormat?: AudioTargetFormat
   /** 视频编码信息 */
   codec?: string
   /** 媒体宽度 */

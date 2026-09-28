@@ -20,8 +20,10 @@ import {
   parseVimeoConfig,
   parseVimeoDashPlaylist,
   parseVimeoHlsMediaPlaylist,
-  parseVimeoHlsMasterPlaylist
+  parseVimeoHlsMasterPlaylist,
+  type VimeoHlsVariant
 } from '@/sites/vimeo/media'
+import { logger } from '@/core/utils/logger'
 import {
   decodeVimeoSourceDescriptor,
   encodeVimeoSourceDescriptor,
@@ -37,6 +39,7 @@ const REFRESH_CONFIG_URL =
 const PLAYLIST_URL = 'https://vod-adaptive-ak.vimeocdn.com/exp/master.json'
 const HLS_MASTER_URL = 'https://vod-adaptive-ak.vimeocdn.com/hls/master.m3u8'
 const HLS_MEDIA_URL = 'https://vod-adaptive-ak.vimeocdn.com/hls/1080/prog.m3u8'
+const HLS_KEY_URL = 'https://player.vimeo.com/hls-key/demo?sig=1'
 
 describe('Vimeo media parsing', () => {
   beforeEach(() => {
@@ -410,12 +413,19 @@ describe('Vimeo media parsing', () => {
       delivery: 'hls',
       hlsPlaylistUrl: HLS_MEDIA_URL
     })
+    // KEY 是 media playlist 级 tag（RFC 8216）：master 里出现时忽略，variant 照常解析，
+    // 加密裁决下沉到 media playlist 的 EXT-X-KEY 状态机。
     expect(
       parseVimeoHlsMasterPlaylist(
-        ['#EXTM3U', '#EXT-X-KEY:METHOD=AES-128,URI="key"', '#EXTINF:1', 'seg.ts'].join('\n'),
+        [
+          '#EXTM3U',
+          '#EXT-X-KEY:METHOD=AES-128,URI="https://player.vimeo.com/hls-key/k"',
+          '#EXT-X-STREAM-INF:BANDWIDTH=2500000,RESOLUTION=1920x1080,CODECS="avc1.640028,mp4a.40.2"',
+          HLS_MEDIA_URL
+        ].join('\n'),
         HLS_MASTER_URL
       )
-    ).toEqual([])
+    ).toEqual([expect.objectContaining({ url: HLS_MEDIA_URL, height: 1080 })])
     expect(
       parseVimeoHlsMediaPlaylist(
         ['#EXTM3U', '#EXT-X-MAP:URI="init.mp4"', '#EXTINF:1', 'seg.ts'].join('\n'),
@@ -852,6 +862,188 @@ describe('Vimeo media parsing', () => {
     expect(jsonSpy).not.toHaveBeenCalled()
   })
 })
+
+describe('Vimeo HLS AES-128 加密解析', () => {
+  const KEY_URL = HLS_KEY_URL
+
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('提取 AES-128/identity KEY：显式 IV hex 物化为 16 字节并挂到分片', () => {
+    const playlist = parseVimeoHlsMediaPlaylist(
+      [
+        '#EXTM3U',
+        '#EXT-X-VERSION:7',
+        `#EXT-X-KEY:METHOD=AES-128,URI="${KEY_URL}",IV=0x123`,
+        '#EXT-X-MAP:URI="init.mp4"',
+        '#EXTINF:2.000,',
+        'seg-1.m4s',
+        '#EXTINF:2.000,',
+        'https://vod-adaptive-ak.vimeocdn.com/hls/1080/seg-2.m4s'
+      ].join('\n'),
+      HLS_MEDIA_URL,
+      hlsVariantFixture()
+    )
+
+    // 奇数位 hex 左补 0（0x123 → 0x0123），按 big-endian 右对齐 16 字节。
+    const encryption = playlist?.segments[0]?.encryption
+    expect(encryption).toEqual({ keyUrl: KEY_URL, iv: ivFromHex('123') })
+    expect(playlist?.segments[1]?.encryption).toEqual({ keyUrl: KEY_URL, iv: ivFromHex('123') })
+  })
+
+  it('IV 缺省时按分片 media sequence 构造 16 字节 big-endian IV', () => {
+    const playlist = parseVimeoHlsMediaPlaylist(
+      [
+        '#EXTM3U',
+        '#EXT-X-VERSION:7',
+        '#EXT-X-MEDIA-SEQUENCE:7',
+        `#EXT-X-KEY:METHOD=AES-128,URI="${KEY_URL}"`,
+        '#EXT-X-MAP:URI="init.mp4"',
+        '#EXTINF:2.000,',
+        'seg-1.m4s',
+        '#EXTINF:2.000,',
+        'seg-2.m4s',
+        '#EXTINF:2.000,',
+        'seg-3.m4s'
+      ].join('\n'),
+      HLS_MEDIA_URL,
+      hlsVariantFixture()
+    )
+
+    const ivs = playlist?.segments.map(segment => segment.encryption?.iv)
+    expect(ivs).toHaveLength(3)
+    expect(ivs?.[0]).toEqual(ivFromHex('7'))
+    expect(ivs?.[1]).toEqual(ivFromHex('8'))
+    expect(ivs?.[2]).toEqual(ivFromHex('9'))
+  })
+
+  it('IV 非法（非 hex、超 16 字节）时回落 media sequence IV', () => {
+    const notHex = parseVimeoHlsMediaPlaylist(
+      encryptedPlaylistText({ iv: 'zz', mediaSequence: 3 }),
+      HLS_MEDIA_URL,
+      hlsVariantFixture()
+    )
+    const oversized = parseVimeoHlsMediaPlaylist(
+      encryptedPlaylistText({ iv: 'a'.repeat(33), mediaSequence: 3 }),
+      HLS_MEDIA_URL,
+      hlsVariantFixture()
+    )
+
+    expect(notHex?.segments[0]?.encryption?.iv).toEqual(ivFromHex('3'))
+    expect(oversized?.segments[0]?.encryption?.iv).toEqual(ivFromHex('3'))
+  })
+
+  it('METHOD=NONE 重置回明文，仅此前分片保留加密参数', () => {
+    const playlist = parseVimeoHlsMediaPlaylist(
+      [
+        '#EXTM3U',
+        `#EXT-X-KEY:METHOD=AES-128,URI="${KEY_URL}"`,
+        '#EXT-X-MAP:URI="init.mp4"',
+        '#EXTINF:2.000,',
+        'seg-1.m4s',
+        '#EXT-X-KEY:METHOD=NONE',
+        '#EXTINF:2.000,',
+        'seg-2.m4s'
+      ].join('\n'),
+      HLS_MEDIA_URL,
+      hlsVariantFixture()
+    )
+
+    expect(playlist?.segments[0]?.encryption).toEqual({ keyUrl: KEY_URL, iv: ivFromHex('0') })
+    expect(playlist?.segments[1]?.encryption).toBeUndefined()
+  })
+
+  it('SAMPLE-AES 与非 identity KEYFORMAT 按明文跳过并记日志', () => {
+    const warnSpy = vi.spyOn(logger, 'warn')
+
+    const sampleAes = parseVimeoHlsMediaPlaylist(
+      encryptedPlaylistText({ keyAttrs: 'METHOD=SAMPLE-AES,URI="skd://key"', mediaSequence: 1 }),
+      HLS_MEDIA_URL,
+      hlsVariantFixture()
+    )
+    const foreignFormat = parseVimeoHlsMediaPlaylist(
+      encryptedPlaylistText({
+        keyAttrs: 'METHOD=AES-128,KEYFORMAT="com.apple.streamingkeydelivery",URI="skd://key"',
+        mediaSequence: 1
+      }),
+      HLS_MEDIA_URL,
+      hlsVariantFixture()
+    )
+
+    expect(sampleAes?.segments[0]?.encryption).toBeUndefined()
+    expect(foreignFormat?.segments[0]?.encryption).toBeUndefined()
+    expect(warnSpy).toHaveBeenCalledTimes(2)
+    expect(warnSpy.mock.calls[0][0]).toContain('SAMPLE-AES')
+    expect(warnSpy.mock.calls[1][0]).toContain('com.apple.streamingkeydelivery')
+  })
+
+  it('加密 media playlist 照常产出 HLS 下载选项，descriptor 契约不变', () => {
+    const playlist = parseVimeoHlsMediaPlaylist(
+      encryptedPlaylistText({ keyAttrs: `METHOD=AES-128,URI="${KEY_URL}",IV=0x01` }),
+      HLS_MEDIA_URL,
+      hlsVariantFixture()
+    )
+    const config = parseVimeoConfig(configFixture({ dash: false, hls: true }), CONFIG_URL)
+    const options = buildVimeoDownloadOptions(config, null, playlist ? [playlist] : [])
+
+    const hlsOption = options.find(
+      option => option.sourceId === 'vimeo:1201819515:video:hls:1080p:2500'
+    )
+    expect(hlsOption).toMatchObject({ delivery: 'hls', hlsPlaylistUrl: HLS_MEDIA_URL })
+    const hlsDescriptor = hlsOption
+      ? decodeVimeoSourceDescriptor(encodeVimeoSourceDescriptor(hlsOption.descriptor))
+      : null
+    expect(hlsDescriptor).toMatchObject({
+      delivery: 'hls',
+      hlsPlaylistUrl: HLS_MEDIA_URL
+    })
+  })
+})
+
+/** 构造 AES-128 加密形态的 HLS media playlist 文本。 */
+function encryptedPlaylistText(
+  options: { keyAttrs?: string; iv?: string; mediaSequence?: number } = {}
+): string {
+  const iv = options.iv ? `,IV=${options.iv}` : ''
+  const keyAttrs = options.keyAttrs ?? `METHOD=AES-128,URI="${HLS_KEY_URL}"${iv}`
+  return [
+    '#EXTM3U',
+    '#EXT-X-VERSION:7',
+    ...(options.mediaSequence === undefined
+      ? []
+      : [`#EXT-X-MEDIA-SEQUENCE:${options.mediaSequence}`]),
+    `#EXT-X-KEY:${keyAttrs}`,
+    '#EXT-X-MAP:URI="init.mp4"',
+    '#EXTINF:2.000,',
+    'seg-1.m4s'
+  ].join('\n')
+}
+
+function hlsVariantFixture(): VimeoHlsVariant {
+  return {
+    url: HLS_MEDIA_URL,
+    bandwidth: 2500000,
+    width: 1920,
+    height: 1080,
+    fps: 30,
+    codecs: 'avc1.640028,mp4a.40.2'
+  }
+}
+
+/** 与解析层相同口径的 IV 期望值：奇数位左补 0 后 big-endian 右对齐。 */
+function ivFromHex(hex: string): Uint8Array {
+  const padded = (hex.length % 2 === 1 ? `0${hex}` : hex).padStart(32, '0')
+  return Uint8Array.from(
+    Array.from({ length: 16 }, (_, index) =>
+      Number.parseInt(padded.slice(index * 2, index * 2 + 2), 16)
+    )
+  )
+}
 
 interface ConfigFixtureOptions {
   readonly dash?: boolean

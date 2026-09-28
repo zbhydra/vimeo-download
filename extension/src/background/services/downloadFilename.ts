@@ -1,11 +1,28 @@
 /**
  * chrome.downloads 下载路径共享工具。
  *
- * 由 DownloadOrchestrator 共用（direct 直连与 offscreen 产物落盘），
- * 统一保存位置子目录与文件名清洗语义。
+ * 由 DownloadOrchestrator 共用（direct 直连与 offscreen 产物落盘），统一保存位置子目录、
+ * 文件名模板渲染与清洗语义。模板是文件名的唯一应用点：resource.filename 由 content 侧生成、
+ * 只作变量兜底，最终落盘名一律按 settings.filenamePattern 在这里重渲染（content/offscreen
+ * 双路径都经 background 落盘，自动统一）。
  */
 
 import { DEFAULT_DOWNLOAD_PATH } from '@/core/storage/settings'
+import {
+  AUDIO_TARGET_FORMATS,
+  RESOURCE_TYPES,
+  getDefaultResourceExtension,
+  getExtensionFromMimeType
+} from '@/core/constants/resource'
+import type { MediaResource } from '@/core/types'
+import { SettingsManager } from '@/core/storage/settings'
+import {
+  FILENAME_PATTERN_DEFAULT,
+  formatFilenameDate,
+  renderFilenameBase,
+  type FilenameTemplateContext
+} from '@/core/utils/filenameTemplate'
+import { decodeVimeoSourceDescriptor } from '@/sites/vimeo/shared'
 
 /** Chrome 下载目录文件名保守长度上限。 */
 const MAX_FILENAME_LENGTH = 180
@@ -23,6 +40,51 @@ const MAX_DIRECTORY_LENGTH = 120
  */
 export function buildDownloadFilename(directory: string | undefined, filename: string): string {
   return [...normalizeDownloadDirectory(directory), normalizeFilename(filename)].join('/')
+}
+
+/**
+ * 按文件名模板渲染一个资源的最终保存名（含扩展名，不含目录）。
+ *
+ * 变量数据源：title/author 在 resource；quality 取 descriptor 的按钮标签（档位文本）、
+ * videoId 取 descriptor（兜底 messageId）；date 是本次下载时刻；type 从 resource.type 直取。
+ * 模板渲染后主干为空（模板只含空变量等）时回退 resource.filename 主干，再退固定名。
+ * 返回值仍会经 `buildDownloadFilename` 的 normalizeFilename 净化，安全语义保持单一。
+ */
+export async function buildResourceFilename(resource: MediaResource): Promise<string> {
+  const settings = await SettingsManager.getSettings()
+  const descriptor = decodeVimeoSourceDescriptor(resource.documentId)
+  const context: FilenameTemplateContext = {
+    title: resource.title ?? '',
+    quality: descriptor?.label ?? '',
+    type: resource.type,
+    author: resource.author ?? '',
+    date: formatFilenameDate(new Date()),
+    videoId: descriptor?.videoId ?? resource.messageId
+  }
+
+  const base =
+    renderFilenameBase(settings.filenamePattern ?? FILENAME_PATTERN_DEFAULT, context) ||
+    stripExtension(resource.filename ?? '') ||
+    'vimeo-download'
+  return `${base}.${resolveResourceExtension(resource)}`
+}
+
+/** 资源交付扩展名：MP3 目标格式显式覆盖，其余按站点 MIME 推断、类型默认值兜底。 */
+function resolveResourceExtension(resource: MediaResource): string {
+  if (
+    resource.type === RESOURCE_TYPES.AUDIO &&
+    resource.targetFormat === AUDIO_TARGET_FORMATS.MP3
+  ) {
+    return AUDIO_TARGET_FORMATS.MP3
+  }
+  return (
+    getExtensionFromMimeType(resource.mimeType) ?? getDefaultResourceExtension(resource.type)
+  ).replace(/^\./, '')
+}
+
+/** 去掉文件名主干末尾的扩展名；无扩展名时原样返回。 */
+function stripExtension(filename: string): string {
+  return filename.replace(/\.[^.]*$/, '')
 }
 
 /**

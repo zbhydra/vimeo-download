@@ -82,6 +82,46 @@ export async function removeMuxArtifact(fileName: string): Promise<void> {
   }
 }
 
+/** 进行中的裸字节产物写入端（不经 Mediabunny，MP3 帧流等自管容器输出用）。 */
+export interface MuxByteArtifactWriter {
+  /** OPFS 临时文件名（MUX_TEMP_DIR 内唯一）。 */
+  readonly fileName: string
+  /** 追加一段字节；顺序写入，无定位语义。 */
+  write(chunk: Uint8Array): Promise<void>
+  /** 取产物 File。只能在最后一次 write 完成后调用，不可重复关闭。 */
+  finalize(): Promise<File>
+  /** 丢弃产物：中止可写流并删除临时文件。失败路径的清理，不抛出。 */
+  dispose(): Promise<void>
+}
+
+/** 在 OPFS 临时目录创建唯一产物文件并打开裸字节流式写入。 */
+export async function openMuxArtifactByteWriter(
+  stem: string,
+  extension: string
+): Promise<MuxByteArtifactWriter> {
+  const fileName = `${stem}.${extension}`
+  const directory = await muxTempDirectory()
+  const fileHandle = await directory.getFileHandle(fileName, { create: true })
+  const writable = await fileHandle.createWritable()
+
+  return {
+    fileName,
+    write: chunk => writable.write(chunk),
+    finalize: () => {
+      // 与 StreamTarget.finalize 同口径：close 后才允许读回文件引用。
+      return writable.close().then(() => fileHandle.getFile())
+    },
+    async dispose(): Promise<void> {
+      try {
+        await writable.abort()
+      } catch (error) {
+        logger.warn(`[MuxArtifactStore] 中止可写流失败: fileName=${fileName}`, error)
+      }
+      await removeMuxArtifact(fileName)
+    }
+  }
+}
+
 /**
  * 启动清扫：递归删除整个临时目录，清掉上次会话泄漏的未交付产物。
  *

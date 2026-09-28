@@ -3,11 +3,13 @@
  *
  * 从 player config 与 DASH playlist 中生成页面按钮和 popup 共用的 MediaResource。
  * 资源进入缓存前完成 URL 白名单过滤，DASH 只展示能在前端稳定 mux 的 track。
+ * HLS media playlist 解析 AES-128/identity 加密声明，解密在 offscreen 下载期执行。
  */
 
 import { I18N_KEYS } from '@/core/constants/i18n'
 import { RESOURCE_SOURCE_KINDS, RESOURCE_TYPES } from '@/core/constants/resource'
 import type { MediaResource, ResourceSourceKind, VideoGroupMetadata } from '@/core/types'
+import { logger } from '@/core/utils/logger'
 import type { JsonObject, JsonValue } from '@/core/rpc/types'
 import {
   decodeVimeoSourceDescriptor,
@@ -178,6 +180,21 @@ export interface VimeoHlsVariant {
 export interface VimeoHlsSegment {
   /** 绝对 segment URL。 */
   url: string
+  /** AES-128 加密参数；缺失表示明文分片（无 KEY 声明或 METHOD=NONE）。 */
+  encryption?: VimeoHlsEncryption
+}
+
+/**
+ * HLS AES-128 加密参数（RFC 8216 `#EXT-X-KEY`，METHOD=AES-128 且 KEYFORMAT=identity）。
+ *
+ * IV 在解析期物化为 16 字节：显式 IV 直接 hex 解码，缺失时按分片 media sequence 构造，
+ * offscreen 侧不再感知 playlist 上下文。
+ */
+export interface VimeoHlsEncryption {
+  /** 已解析为绝对 URL 的 key 获取地址。 */
+  keyUrl: string
+  /** 16 字节 IV。 */
+  iv: Uint8Array
 }
 
 /** 已安全解析的 HLS fMP4 media playlist。 */
@@ -559,12 +576,13 @@ export function getVimeoSourceRank(resource: MediaResource): number {
   return 1
 }
 
-/** 解析非加密 HLS master variants。 */
+/**
+ * 解析 HLS master variants。
+ *
+ * `#EXT-X-KEY` 是 media playlist 级 tag（RFC 8216 §4.4.2.4），master 里出现时忽略，
+ * 加密语义由各 variant 的 media playlist 解析统一裁决。
+ */
 export function parseVimeoHlsMasterPlaylist(text: string, playlistUrl: string): VimeoHlsVariant[] {
-  if (hasHlsTag(text, '#EXT-X-KEY')) {
-    return []
-  }
-
   const lines = text
     .split(/\r?\n/)
     .map(line => line.trim())
@@ -605,13 +623,19 @@ export function parseVimeoHlsMasterPlaylist(text: string, playlistUrl: string): 
   return variants.filter(isSupportedHlsVariant).sort(compareHlsVariantDesc)
 }
 
-/** 解析安全 fMP4 HLS media playlist；不满足结构时返回 null，不展示按钮。 */
+/**
+ * 解析安全 fMP4 HLS media playlist；不满足结构时返回 null，不展示按钮。
+ *
+ * `#EXT-X-KEY` 状态机随行推进：AES-128/identity 提取为分片加密参数（显式 IV 直接物化，
+ * 缺省按 media sequence 构造），METHOD=NONE 与不支持的声明（SAMPLE-AES 等）把后续分片
+ * 重置回明文并记日志。
+ */
 export function parseVimeoHlsMediaPlaylist(
   text: string,
   playlistUrl: string,
   variant: VimeoHlsVariant
 ): VimeoHlsMediaPlaylist | null {
-  if (hasHlsTag(text, '#EXT-X-KEY') || hasHlsTag(text, '#EXT-X-BYTERANGE')) {
+  if (hasHlsTag(text, '#EXT-X-BYTERANGE')) {
     return null
   }
 
@@ -640,7 +664,17 @@ export function parseVimeoHlsMediaPlaylist(
   }
 
   const segments: VimeoHlsSegment[] = []
+  let mediaSequence = 0
+  let key: ParsedHlsEncryption | null = null
   for (const line of lines) {
+    if (line.startsWith('#EXT-X-KEY:')) {
+      key = parseHlsKey(line, playlistUrl)
+      continue
+    }
+    if (line.startsWith('#EXT-X-MEDIA-SEQUENCE:')) {
+      mediaSequence = readHlsMediaSequence(line.slice('#EXT-X-MEDIA-SEQUENCE:'.length))
+      continue
+    }
     if (line.startsWith('#')) {
       continue
     }
@@ -652,7 +686,18 @@ export function parseVimeoHlsMediaPlaylist(
     if (!isSafeHlsSegmentUrl(segmentUrl)) {
       return null
     }
-    segments.push({ url: segmentUrl })
+    segments.push({
+      url: segmentUrl,
+      ...(key
+        ? {
+            encryption: {
+              keyUrl: key.keyUrl,
+              // 缺省 IV 按分片的 media sequence number 构造（RFC 8216 §5.2）。
+              iv: key.iv ?? mediaSequenceIv(mediaSequence + segments.length)
+            }
+          }
+        : {})
+    })
   }
 
   const codecs = variant.codecs
@@ -1434,6 +1479,78 @@ function isTsSegmentUrl(url: string): boolean {
   } catch (_error) {
     return true
   }
+}
+
+/** 解析中的 #EXT-X-KEY 状态；iv 为 null 表示按分片 media sequence 构造。 */
+interface ParsedHlsEncryption {
+  keyUrl: string
+  iv: Uint8Array | null
+}
+
+/**
+ * 解析 #EXT-X-KEY 行。
+ *
+ * 仅 METHOD=AES-128 且 KEYFORMAT=identity（缺省即 identity）可支持；METHOD=NONE 是明文
+ * 声明，SAMPLE-AES 等不支持的声明把后续分片重置回明文并记日志——后续分片真实加密形态
+ * 无法支持，按明文处理与竞品口径一致，产物好坏由用户在结果中感知。
+ */
+function parseHlsKey(line: string, playlistUrl: string): ParsedHlsEncryption | null {
+  const attrs = parseHlsAttributes(line.slice('#EXT-X-KEY:'.length))
+  const method = (readString(attrs.METHOD) ?? '').toUpperCase()
+  if (method === 'NONE') {
+    return null
+  }
+
+  const keyFormat = (readString(attrs.KEYFORMAT) ?? 'identity').toLowerCase()
+  const keyUri = readString(attrs.URI)
+  const keyUrl = keyUri ? resolveUrlOrNull(keyUri, playlistUrl) : null
+  if (method !== 'AES-128' || keyFormat !== 'identity' || !keyUrl) {
+    logger.warn(
+      `[VimeoMedia] 不支持的 HLS 加密声明，按明文跳过: method=${method || 'missing'}, keyFormat=${keyFormat}, hasUri=${Boolean(keyUri)}`
+    )
+    return null
+  }
+
+  return { keyUrl, iv: parseHlsHexIv(readString(attrs.IV)) }
+}
+
+/** 读取 #EXT-X-MEDIA-SEQUENCE 值；非法时按 0 起算。 */
+function readHlsMediaSequence(value: string): number {
+  const parsed = Number.parseInt(value.trim(), 10)
+  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : 0
+}
+
+/**
+ * media sequence number → 16 字节 big-endian IV（RFC 8216 §5.2 缺省 IV 语义）。
+ *
+ * sequence 超出 128 位按低 128 位截断：HLS 序号不会到达该量级，仅为 BigInt 移位收敛。
+ */
+function mediaSequenceIv(mediaSequence: number): Uint8Array {
+  let value = BigInt(Math.max(0, mediaSequence))
+  const iv = new Uint8Array(16)
+  for (let index = 15; index >= 0; index -= 1) {
+    iv[index] = Number(value & 0xffn)
+    value >>= 8n
+  }
+  return iv
+}
+
+/**
+ * 解析 IV attribute 的 hex 序列，容错口径：可带 0x 前缀、奇数位左补 0、按 big-endian
+ * 右对齐填充高位零；非 hex 或超过 16 字节视为非法，回落 media sequence IV。
+ */
+function parseHlsHexIv(value: string | undefined): Uint8Array | null {
+  const hex = value?.trim().replace(/^0x/i, '') ?? ''
+  if (!hex || !/^[0-9a-fA-F]+$/.test(hex) || hex.length > 32) {
+    return null
+  }
+
+  const normalized = (hex.length % 2 === 1 ? `0${hex}` : hex).padStart(32, '0')
+  const iv = new Uint8Array(16)
+  for (let index = 0; index < 16; index += 1) {
+    iv[index] = Number.parseInt(normalized.slice(index * 2, index * 2 + 2), 16)
+  }
+  return iv
 }
 
 /** HLS tag 大小写无关检查。 */

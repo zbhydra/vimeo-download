@@ -55,6 +55,84 @@
               @change="persistSavePath"
             />
           </label>
+
+          <!--
+            文件名规则：默认/自定义模板 + 变量 chips + 实时预览。存储只落模板字符串
+            （settings.filenamePattern），background 在命名边界统一渲染。
+          -->
+          <div class="settings-field">
+            <span class="settings-field-label">
+              {{ t(I18N_KEYS.SETTINGS.FILENAME_PATTERN_LABEL) }}
+            </span>
+            <div
+              class="pattern-mode"
+              role="group"
+              :aria-label="t(I18N_KEYS.SETTINGS.FILENAME_PATTERN_LABEL)"
+            >
+              <button
+                type="button"
+                class="pattern-mode-button"
+                :class="{ 'pattern-mode-active': !customMode }"
+                @click="useDefaultPattern"
+              >
+                {{ t(I18N_KEYS.SETTINGS.FILENAME_PATTERN_MODE_DEFAULT) }}
+              </button>
+              <button
+                type="button"
+                class="pattern-mode-button"
+                :class="{ 'pattern-mode-active': customMode }"
+                @click="enableCustomPattern"
+              >
+                {{ t(I18N_KEYS.SETTINGS.FILENAME_PATTERN_MODE_CUSTOM) }}
+              </button>
+            </div>
+            <template v-if="customMode">
+              <input
+                ref="patternInput"
+                v-model="filenamePattern"
+                class="settings-control pattern-input"
+                type="text"
+                spellcheck="false"
+                autocomplete="off"
+                :placeholder="FILENAME_PATTERN_DEFAULT"
+                @change="persistFilenamePattern"
+              />
+              <div
+                class="pattern-variables"
+                role="group"
+                :aria-label="t(I18N_KEYS.SETTINGS.FILENAME_PATTERN_VARIABLES_LABEL)"
+              >
+                <button
+                  v-for="variable in FILENAME_VARIABLES"
+                  :key="variable"
+                  type="button"
+                  class="pattern-variable-chip"
+                  @click="insertVariable(variable)"
+                >
+                  {{ variableToken(variable) }}
+                </button>
+              </div>
+              <button type="button" class="pattern-reset" @click="resetPattern">
+                {{ t(I18N_KEYS.SETTINGS.FILENAME_PATTERN_RESET) }}
+              </button>
+            </template>
+            <div class="pattern-preview">
+              <span class="pattern-preview-label">
+                {{ t(I18N_KEYS.SETTINGS.FILENAME_PATTERN_PREVIEW_LABEL) }}
+              </span>
+              <span class="pattern-preview-value">{{ previewFilename }}</span>
+            </div>
+          </div>
+
+          <!-- 下载历史：唯一入口，进入全屏历史视图并收起本弹层 -->
+          <button type="button" class="settings-history-row" @click="handleOpenHistory">
+            <span class="settings-history-label">{{ t(I18N_KEYS.HISTORY.TITLE) }}</span>
+            <Icon
+              class="settings-history-chevron"
+              :name="IconName.CHEVRON_DOWN"
+              :size="IconSize.XS"
+            />
+          </button>
         </div>
       </div>
     </Transition>
@@ -71,13 +149,21 @@
  * 同坑），因此颜色用 COMMON_COLORS 显式声明成覆盖层根节点上的 CSS 变量向下级联。
  */
 
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { I18nService } from '@/locales'
 import { LANGUAGES, LanguageService } from '@/core/services/languageService'
 import { DEFAULT_DOWNLOAD_PATH, SettingsManager } from '@/core/storage/settings'
 import { LANGUAGE_AUTO, I18N_KEYS, type LanguageSetting } from '@/core/constants/i18n'
 import { closeSettingsModal, settingsModalVisible } from '@/core/composables/settingsModal'
+import { openHistoryView } from '@/core/composables/historyView'
+import {
+  FILENAME_PATTERN_DEFAULT,
+  FILENAME_VARIABLES,
+  renderFilenameBase,
+  type FilenameTemplateContext,
+  type FilenameVariable
+} from '@/core/utils/filenameTemplate'
 import { logger } from '@/core/utils/logger'
 import { COMMON_COLORS } from '@/core/constants/style'
 import { Icon, IconName, IconSize } from '@/core/components/icons'
@@ -105,6 +191,38 @@ const languageSetting = ref<LanguageSetting>(LANGUAGE_AUTO)
 /** 保存位置输入框；空串表示回退默认子目录。 */
 const downloadPath = ref(DEFAULT_DOWNLOAD_PATH)
 
+/**
+ * 文件名模板与编辑模式。
+ *
+ * 存储只落模板字符串：等于默认模板即「默认」模式，否则「自定义」。`customMode` 是本地
+ * 交互态（避免输入过程中恰好等于默认模板时编辑器消失），打开弹层时从存储值推导。
+ */
+const filenamePattern = ref(FILENAME_PATTERN_DEFAULT)
+const customMode = ref(false)
+const patternInput = ref<HTMLInputElement | null>(null)
+
+/** 预览固定示例数据；与真实下载无关，只让模板结构可见。 */
+const PATTERN_PREVIEW_CONTEXT: FilenameTemplateContext = {
+  title: 'Big Buck Bunny',
+  quality: '1080p HD',
+  type: 'video',
+  author: 'Blender Foundation',
+  date: '2026-01-31',
+  videoId: '1234567'
+}
+
+/** 预览固定追加的扩展名；真实扩展名由 background 按资源类型与目标格式决定。 */
+const PATTERN_PREVIEW_EXTENSION = '.mp4'
+
+/** 实时预览：输入即渲染，空模板按默认模板展示。 */
+const previewFilename = computed(
+  () =>
+    renderFilenameBase(
+      filenamePattern.value.trim() || FILENAME_PATTERN_DEFAULT,
+      PATTERN_PREVIEW_CONTEXT
+    ) + PATTERN_PREVIEW_EXTENSION
+)
+
 // 每次打开都从存储回读，保证与上次会话（或 background 侧写入）一致。
 watch(settingsModalVisible, async visible => {
   if (!visible) {
@@ -115,6 +233,9 @@ watch(settingsModalVisible, async visible => {
     const settings = await SettingsManager.getSettings()
     languageSetting.value = settings.language ?? LANGUAGE_AUTO
     downloadPath.value = settings.downloadPath ?? DEFAULT_DOWNLOAD_PATH
+    filenamePattern.value = settings.filenamePattern ?? FILENAME_PATTERN_DEFAULT
+    // 存储值非默认模板即说明用户在自定义模式；等号场景落回默认，与存储单一真相一致。
+    customMode.value = filenamePattern.value !== FILENAME_PATTERN_DEFAULT
   } catch (error) {
     logger.error('[SettingsModal] 读取设置失败，沿用当前显示值:', error)
   }
@@ -159,6 +280,67 @@ async function persistSavePath(): Promise<void> {
 /** 关闭弹层。 */
 function handleClose(): void {
   closeSettingsModal()
+}
+
+/** 切回默认模板：写入默认值并收起自定义编辑器。 */
+async function useDefaultPattern(): Promise<void> {
+  customMode.value = false
+  filenamePattern.value = FILENAME_PATTERN_DEFAULT
+  await persistPattern()
+}
+
+/** 进入自定义模式：以当前模板为编辑种子（默认模式则从默认模板起改），并聚焦输入框。 */
+async function enableCustomPattern(): Promise<void> {
+  customMode.value = true
+  await nextTick()
+  patternInput.value?.focus()
+}
+
+/** 自定义输入提交（change 事件）：空值视为回到默认模板。 */
+async function persistFilenamePattern(): Promise<void> {
+  const normalized = filenamePattern.value.trim() || FILENAME_PATTERN_DEFAULT
+  filenamePattern.value = normalized
+  await persistPattern()
+}
+
+/** 重置：回到默认模板并收起编辑器。 */
+async function resetPattern(): Promise<void> {
+  await useDefaultPattern()
+}
+
+/** 变量 chips 的展示文本（`{title}` 等）；模板插值里不直接写花括号嵌套。 */
+function variableToken(variable: FilenameVariable): string {
+  return `{${variable}}`
+}
+
+/** 把变量占位插入输入框光标处（无光标信息时追加到末尾），插入后聚焦回输入框。 */
+async function insertVariable(variable: FilenameVariable): Promise<void> {
+  const input = patternInput.value
+  const token = `{${variable}}`
+  const value = filenamePattern.value
+  const start = input?.selectionStart ?? value.length
+  const end = input?.selectionEnd ?? start
+  filenamePattern.value = value.slice(0, start) + token + value.slice(end)
+  await nextTick()
+  const caret = start + token.length
+  input?.setSelectionRange(caret, caret)
+  input?.focus()
+  await persistPattern()
+}
+
+/** 模板写入设置；失败只记日志，界面保留当前输入。 */
+async function persistPattern(): Promise<void> {
+  try {
+    await SettingsManager.updateSettings({ filenamePattern: filenamePattern.value })
+  } catch (error) {
+    logger.error(`[SettingsModal] 文件名模板写入失败: pattern=${filenamePattern.value}`, error)
+  }
+}
+
+/** 进入下载历史：收起本弹层，打开全屏历史视图。 */
+function handleOpenHistory(): void {
+  closeSettingsModal()
+  openHistoryView()
 }
 </script>
 
@@ -255,6 +437,122 @@ select.settings-control {
 
 .settings-control:hover {
   border-color: var(--settings-gray-400);
+}
+
+.settings-history-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--settings-gray-300);
+  border-radius: 8px;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.settings-history-row:hover {
+  border-color: var(--settings-primary);
+}
+
+.settings-history-row:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.2);
+  border-color: var(--settings-primary);
+}
+
+.settings-history-label {
+  font-size: 13px;
+  color: var(--settings-gray-900);
+}
+
+.settings-history-chevron {
+  transform: rotate(-90deg);
+  color: var(--settings-gray-500);
+}
+
+/* 文件名规则：模式切换、模板输入、变量 chips 与预览 */
+.pattern-mode {
+  display: flex;
+  gap: 6px;
+}
+
+.pattern-mode-button {
+  flex: 1;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--settings-gray-300);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--settings-gray-800);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.pattern-mode-button:hover {
+  border-color: var(--settings-gray-400);
+}
+
+.pattern-mode-button.pattern-mode-active {
+  border-color: var(--settings-gray-900);
+  background: var(--settings-gray-900);
+  color: #ffffff;
+}
+
+.pattern-variables {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pattern-variable-chip {
+  padding: 3px 9px;
+  border: 1px solid var(--settings-gray-300);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--settings-gray-800);
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  cursor: pointer;
+}
+
+.pattern-variable-chip:hover {
+  border-color: var(--settings-primary);
+  color: var(--settings-gray-900);
+}
+
+.pattern-reset {
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--settings-gray-500);
+  font-size: 11px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.pattern-reset:hover {
+  color: var(--settings-gray-800);
+}
+
+.pattern-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--settings-gray-50);
+}
+
+.pattern-preview-label {
+  font-size: 11px;
+  color: var(--settings-gray-500);
+}
+
+.pattern-preview-value {
+  font-size: 12px;
+  color: var(--settings-gray-900);
+  word-break: break-all;
 }
 
 .settings-modal-fade-enter-active,

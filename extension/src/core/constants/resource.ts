@@ -62,6 +62,20 @@ export function isBrowserManagedSourceKind(
 }
 
 /**
+ * 音频导出目标格式。
+ *
+ * m4a 是 DASH audio remux 的默认交付（AAC 透传零转码）；mp3 触发 offscreen 转码链
+ * （WebCodecs 解码 + lame 编码）。只在音频资源上携带，其他资源类型忽略该字段。
+ */
+export const AUDIO_TARGET_FORMATS = {
+  M4A: 'm4a',
+  MP3: 'mp3'
+} as const
+
+/** 音频导出目标格式类型。 */
+export type AudioTargetFormat = (typeof AUDIO_TARGET_FORMATS)[keyof typeof AUDIO_TARGET_FORMATS]
+
+/**
  * MIME 类型映射（与资源类型强相关）
  */
 export const MIME_TYPE_MAP = {

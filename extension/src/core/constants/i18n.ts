@@ -102,7 +102,9 @@ export const I18N_KEYS = {
     /** 聚合页检测到多个视频时的数量说明，参数 `count` 为视频数 */
     DETECTED_COUNT: 'videoPanel.detectedCount',
     /** 多视频选择器的可访问名称 */
-    VIDEO_SWITCHER_LABEL: 'videoPanel.videoSwitcherLabel'
+    VIDEO_SWITCHER_LABEL: 'videoPanel.videoSwitcherLabel',
+    /** Audio 行导出格式选择器的可访问名称 */
+    AUDIO_FORMAT_LABEL: 'videoPanel.audioFormat.label'
   },
 
   /** Popup 下载状态相关 */
@@ -144,7 +146,83 @@ export const I18N_KEYS = {
     /** 保存位置标题 */
     SAVE_PATH_LABEL: 'settings.savePath.label',
     /** 保存位置输入占位，说明填的是下载目录下的子目录 */
-    SAVE_PATH_PLACEHOLDER: 'settings.savePath.placeholder'
+    SAVE_PATH_PLACEHOLDER: 'settings.savePath.placeholder',
+    /** 文件名规则标签 */
+    FILENAME_PATTERN_LABEL: 'settings.filenamePattern.label',
+    /** 文件名规则模式：使用默认模板 */
+    FILENAME_PATTERN_MODE_DEFAULT: 'settings.filenamePattern.mode.default',
+    /** 文件名规则模式：自定义模板 */
+    FILENAME_PATTERN_MODE_CUSTOM: 'settings.filenamePattern.mode.custom',
+    /** 变量 chips 组的可访问名称 */
+    FILENAME_PATTERN_VARIABLES_LABEL: 'settings.filenamePattern.variables',
+    /** 实时预览标签 */
+    FILENAME_PATTERN_PREVIEW_LABEL: 'settings.filenamePattern.preview',
+    /** 重置回默认模板按钮 */
+    FILENAME_PATTERN_RESET: 'settings.filenamePattern.reset'
+  },
+
+  /** 下载历史视图（popup 内全屏覆盖层） */
+  HISTORY: {
+    /** 视图标题；设置弹层的入口行复用此文案 */
+    TITLE: 'history.title',
+    /** 搜索框占位（标题/作者） */
+    SEARCH_PLACEHOLDER: 'history.searchPlaceholder',
+    /** 排序：最新优先 */
+    SORT_NEWEST: 'history.sort.newest',
+    /** 排序：最早优先 */
+    SORT_OLDEST: 'history.sort.oldest',
+    /** 排序：标题 A–Z */
+    SORT_TITLE_ASC: 'history.sort.titleAsc',
+    /** 排序：标题 Z–A */
+    SORT_TITLE_DESC: 'history.sort.titleDesc',
+    /** 状态：任务成功落盘 */
+    STATUS_SUCCESS: 'history.status.success',
+    /** 状态：任务失败 */
+    STATUS_FAILED: 'history.status.failed',
+    /** 导出 CSV 按钮 */
+    EXPORT_CSV: 'history.exportCsv',
+    /** 清空全部按钮 */
+    CLEAR_ALL: 'history.clearAll',
+    /** 打开原页面按钮可访问名 */
+    OPEN_PAGE: 'history.openPage',
+    /** 单条删除按钮可访问名 */
+    DELETE_ENTRY: 'history.deleteEntry',
+    /** 空态：还没有历史 */
+    EMPTY: 'history.empty',
+    /** 空态：搜索无结果 */
+    EMPTY_SEARCH: 'history.emptySearch',
+    /** 单条删除确认文案 */
+    CONFIRM_DELETE_MESSAGE: 'history.confirm.deleteMessage',
+    /** 清空确认文案，参数 `count` 为记录总数 */
+    CONFIRM_CLEAR_MESSAGE: 'history.confirm.clearMessage',
+    /** 确认操作：取消 */
+    CONFIRM_CANCEL: 'history.confirm.cancel',
+    /** 确认操作：删除 */
+    CONFIRM_DELETE: 'history.confirm.delete',
+    /** 确认操作：清空 */
+    CONFIRM_CLEAR: 'history.confirm.clear',
+    /** 上一页按钮可访问名 */
+    PREV_PAGE: 'history.prevPage',
+    /** 下一页按钮可访问名 */
+    NEXT_PAGE: 'history.nextPage',
+    /** 页码指示，参数 `page`/`total` 为当前页与总页数 */
+    PAGE_INDICATOR: 'history.pageIndicator',
+    /** CSV 列头：下载时间 */
+    COLUMN_DATE: 'history.column.date',
+    /** CSV 列头：标题 */
+    COLUMN_TITLE: 'history.column.title',
+    /** CSV 列头：作者 */
+    COLUMN_AUTHOR: 'history.column.author',
+    /** CSV 列头：类型 */
+    COLUMN_TYPE: 'history.column.type',
+    /** CSV 列头：档位 */
+    COLUMN_QUALITY: 'history.column.quality',
+    /** CSV 列头：状态 */
+    COLUMN_STATUS: 'history.column.status',
+    /** CSV 列头：文件名 */
+    COLUMN_FILENAME: 'history.column.filename',
+    /** CSV 列头：页面链接 */
+    COLUMN_PAGE_URL: 'history.column.pageUrl'
   },
 
   /** 系统通知（background 侧经 I18nService 取文案） */

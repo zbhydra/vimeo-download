@@ -149,7 +149,8 @@ async function mountPopup(): Promise<VueWrapper> {
         SettingsModal: true,
         UpgradeModal: true,
         LoginModal: true,
-        PremiumView: true
+        PremiumView: true,
+        HistoryView: true
       }
     }
   })

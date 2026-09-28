@@ -6,8 +6,10 @@
  */
 
 import {
+  AUDIO_TARGET_FORMATS,
   RESOURCE_SOURCE_KINDS,
   RESOURCE_TYPES,
+  type AudioTargetFormat,
   type ResourceSourceKind,
   type ResourceType
 } from '@/core/constants/resource'
@@ -68,6 +70,11 @@ export function parseMediaResource(value: JsonValue | undefined, label: string):
   const documentId = optionalString(value.documentId)
   if (documentId !== undefined) {
     resource.documentId = documentId
+  }
+  // 音频导出目标格式：只认 mp3（m4a 是缺省语义，不落字段）；非法值按可选字段口径丢弃。
+  const targetFormat = parseAudioTargetFormat(value.targetFormat)
+  if (targetFormat !== undefined) {
+    resource.targetFormat = targetFormat
   }
   const codec = optionalString(value.codec)
   if (codec !== undefined) {
@@ -174,6 +181,11 @@ function parseEnum(
   }
 
   throw new Error(`[MediaResource] ${label} 不在允许取值内: ${String(value)}`)
+}
+
+/** 解析音频导出目标格式；目前只接受 mp3 非缺省值，其余丢弃。 */
+function parseAudioTargetFormat(value: JsonValue | undefined): AudioTargetFormat | undefined {
+  return value === AUDIO_TARGET_FORMATS.MP3 ? AUDIO_TARGET_FORMATS.MP3 : undefined
 }
 
 /** 判断值是否为 JSON 对象。 */

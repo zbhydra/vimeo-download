@@ -312,6 +312,22 @@ export default defineConfig({
           console.error('Failed to copy content script CSS:', error)
         }
       }
+    },
+    {
+      // 第三方许可声明随 dist / dist.zip 分发（商店上传包内自带 LGPL 等义务文本）。
+      name: 'copy-third-party-notices',
+      writeBundle() {
+        try {
+          copyFileSync(
+            resolve(__dirname, 'THIRD-PARTY-NOTICES.md'),
+            resolve(__dirname, 'dist', 'THIRD-PARTY-NOTICES.md')
+          )
+
+          console.log('✓ Copied THIRD-PARTY-NOTICES.md to dist')
+        } catch (error) {
+          console.error('Failed to copy THIRD-PARTY-NOTICES.md:', error)
+        }
+      }
     }
   ],
   server: {
