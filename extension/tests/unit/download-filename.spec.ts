@@ -13,6 +13,7 @@ import {
   SettingsManager
 } from '@/core/storage/settings'
 import { FILENAME_PATTERN_DEFAULT } from '@/core/utils/filenameTemplate'
+import { normalizeFilename } from '@/core/utils/downloadFilename'
 import { RESOURCE_SOURCE_KINDS, RESOURCE_TYPES } from '@/core/constants/resource'
 import type { MediaResource } from '@/core/types'
 import { encodeVimeoSourceDescriptor, type VimeoSourceDescriptor } from '@/sites/vimeo/shared'
@@ -63,6 +64,20 @@ describe('buildDownloadFilename', () => {
     const segments = normalizeDownloadDirectory(longSegments.join('/'))
     expect(segments.join('/').length).toBeLessThanOrEqual(120)
     expect(segments[0]).toBe('segment-0')
+  })
+})
+
+describe('normalizeFilename（popup 预览与 background 落盘共用的净化语义）', () => {
+  it('非法路径字符与控制字符替换为空格，连续空白收敛为一个', () => {
+    expect(normalizeFilename('a<b>c:"d/e\\f|g?h*i')).toBe('a b c d e f g h i')
+    expect(normalizeFilename('video\u0007name')).toBe('video name')
+    expect(normalizeFilename('  spaced   out\tname ')).toBe('spaced out name')
+  })
+
+  it('超出 180 字符上限截断，清洗后为空或只剩路径语义时换兜底名', () => {
+    expect(normalizeFilename('x'.repeat(200)).length).toBe(180)
+    expect(normalizeFilename('')).toBe('vimeo-download')
+    expect(normalizeFilename('..')).toBe('vimeo-download')
   })
 })
 
@@ -119,6 +134,14 @@ describe('buildResourceFilename', () => {
     try {
       const filename = await buildResourceFilename(vimeoResource())
       expect(filename).toBe('Blender Foundation/2026-09-03_Demo Video_1196869805_1080p HD_video.mp4')
+      // 渲染结果落盘前统一过 normalizeFilename：模板引入的 `/` 换成空格，其余字符保持原样
+      expect(buildDownloadFilename(undefined, filename)).toBe(
+        `${DEFAULT_DOWNLOAD_PATH}/Blender Foundation 2026-09-03_Demo Video_1196869805_1080p HD_video.mp4`
+      )
+      // popup 预览走同一函数（纯函数），保证「预览 = 落盘」
+      expect(normalizeFilename(filename)).toBe(
+        'Blender Foundation 2026-09-03_Demo Video_1196869805_1080p HD_video.mp4'
+      )
     } finally {
       vi.useRealTimers()
     }

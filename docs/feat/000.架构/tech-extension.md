@@ -6,7 +6,7 @@
 
 ### A1. 技术栈
 
-- **Vue 3.5 + Pinia 3 + vue-i18n 11 + Vite 7**（`extension/package.json`）。`tailwindcss` 与 `@tailwindcss/vite` 仍是 devDependency 但零使用，属僵尸依赖；新代码继续用 scoped CSS，不要引入 Tailwind。
+- **Vue 3.5 + Pinia 3 + vue-i18n 11 + Vite 7**（`extension/package.json`）。Tailwind 已移除（曾为未使用的僵尸依赖，2026-09-28 清理）；新代码继续用 scoped CSS，不要引入 Tailwind。
 - 构建：`vite-plugin-web-extension`。
 - 本地调试：`pnpm dev` 使用 `vite build --watch --mode development` 构建 `dist`，并通过当前 Microsoft Edge 的 CDP `DevToolsActivePort` 执行 `Extensions.loadUnpacked` 重新加载本地 unpacked extension；不创建新 profile，不接管浏览器启动。
 - **Chrome Manifest V3**（`manifest_version: 3`）：站点静态数据以 `extension/src/platforms/registry.ts` 的 `SITE_REGISTRATION` 为唯一事实源，权限与入口的最终组装以 `extension/vite.config.ts` 的 `webExtension({ manifest })` 配置为准。`permissions` 当前为 `storage` / `identity` / `downloads` / `offscreen` / `notifications`（offscreen 用于 DASH/HLS 下载的 offscreen document；notifications 用于下载终态系统通知），`host_permissions` 只含 Vimeo 页面与 Vimeo 媒体 CDN。标签页 URL 只通过已限定的 host_permissions 读取，不申请 `activeTab` 或 `tabs`。API 与 SLS 走标准 CORS，Google 登录走 `identity` 权限 + `chrome.identity.launchWebAuthFlow` 交互窗口（不注入 content script、不授予官网 host access、不申请 host_permissions），两者均不重复进入 host_permissions。

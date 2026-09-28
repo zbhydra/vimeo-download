@@ -26,6 +26,8 @@ import {
 import {
   closeOtherPages,
   getExtensionServiceWorker,
+  pruneStaleRunProfiles,
+  resolveRunProfileDir,
   resolveVimeoProfileDir
 } from '../scripts/setup-test-profile-runtime.mjs'
 
@@ -78,6 +80,42 @@ function ensureDir(dir: string): void {
   fs.mkdirSync(dir, { recursive: true })
 }
 
+/**
+ * 在一次性 profile 里预写 Chromium 下载目录偏好。
+ *
+ * `Browser.setDownloadBehavior` 的 `default` 行为把文件落到 profile 的下载目录偏好；
+ * CfT 新 profile 默认指向 `~/Downloads`，首启前写入 `Default/Preferences` 让 Chrome
+ * 把扩展产物落进本次运行的下载目录（首启合并该 JSON，随后由 Chrome 自行接管）。
+ */
+function writeProfileDownloadPrefs(profileDir: string, downloadDir: string): void {
+  fs.mkdirSync(path.join(profileDir, 'Default'), { recursive: true })
+  fs.writeFileSync(
+    path.join(profileDir, 'Default', 'Preferences'),
+    JSON.stringify({ download: { default_directory: downloadDir } })
+  )
+}
+
+/**
+ * 恢复 Chrome 原生下载行为，保证扩展 `chrome.downloads.download` 链路可用。
+ *
+ * Playwright 对持久化上下文固定注入 `Browser.setDownloadBehavior allowAndName`：下载
+ * 会被 GUID 改名落进 Playwright 的 downloadsPath（真实文件名与 `filename` 子目录全部
+ * 丢失），任何按名字断言落盘产物的用例都无法成立。这里在 browser 级 CDP 会话上用
+ * `behavior: 'default'` 覆盖回原生下载流：promise 正常 resolve、`downloads.search`
+ * 终态可见、文件按扩展声明的 `filename`（含 `vimeo-video-downloader/` 子目录）落到
+ * profile 偏好的下载目录。必须在 context 初始化后立刻调用一次，Playwright 不会再次
+ * 下发该设置。
+ */
+async function restoreNativeDownloadBehavior(context: BrowserContext): Promise<void> {
+  const browser = context.browser()
+  if (!browser) {
+    throw new Error('[E2E_DOWNLOAD_BEHAVIOR_FAILED] persistent context 无 browser 会话')
+  }
+
+  const session = await browser.newBrowserCDPSession()
+  await session.send('Browser.setDownloadBehavior', { behavior: 'default' })
+}
+
 /** 启动并初始化一个加载扩展的持久化上下文。 */
 async function launchExtensionContext(
   playwright: PlaywrightWorkerArgs['playwright'],
@@ -94,6 +132,7 @@ async function launchExtensionContext(
 
   ensureDir(profileDir)
   ensureDir(downloadDir)
+  writeProfileDownloadPrefs(profileDir, downloadDir)
   const launchOptions = createExtensionChromiumLaunchOptions([
     `--disable-extensions-except=${distPath}`,
     `--load-extension=${distPath}`,
@@ -108,6 +147,7 @@ async function launchExtensionContext(
       viewport: { width: 1280, height: 720 }
     })
     await installE2eBrowserIdentity(context)
+    await restoreNativeDownloadBehavior(context)
     await context.route('https://vimeo-download.ap-southeast-1.log.aliyuncs.com/**', async route => {
       await route.fulfill({ status: 204, body: '' })
     })
@@ -148,8 +188,14 @@ export const test = base.extend<ExtensionFixtures>({
     await use(createTestRunId())
   },
 
-  profileDir: async ({ browserName: _browserName }, use) => {
-    const profileDir = resolveVimeoProfileDir()
+  profileDir: async ({ testRunId }, use) => {
+    const baseDir = resolveVimeoProfileDir()
+    ensureDir(baseDir)
+    // 每次运行使用一次性 profile 子目录，并在启动前清掉历史运行残留：profile 由当次
+    // 启动的同一 Chromium 全新初始化，外部浏览器（真实 Chrome）以更新格式打开过的残留
+    // 目录不可能再被本套件加载，CfT chromium 启动即退的格式漂移（U-H1）不会复发。
+    pruneStaleRunProfiles(baseDir)
+    const profileDir = resolveRunProfileDir(baseDir, testRunId)
     ensureDir(profileDir)
     await use(profileDir)
   },

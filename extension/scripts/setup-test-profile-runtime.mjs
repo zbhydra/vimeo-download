@@ -25,19 +25,60 @@ export const extensionRoot = path.resolve(path.dirname(scriptPath), '..')
 /** 当前扩展构建产物目录。 */
 export const distPath = path.join(extensionRoot, 'dist')
 
-/** 真实 Vimeo E2E 默认 profile，setup 与 Playwright fixture 必须共同使用。 */
+/** 真实 Vimeo E2E 默认 profile 基目录，setup 与 Playwright fixture 必须共同使用。 */
 const defaultVimeoProfileDir = path.join(extensionRoot, 'tests/logs/test-user-data')
+
+/** 一次性运行 profile 的子目录名前缀（与 fixtures 的 testRunId 前缀一致）。 */
+const runProfileDirPrefix = 'e2e-'
 
 /** 扩展 service worker 启动超时。 */
 const serviceWorkerTimeoutMs = 15_000
 
 /**
- * 解析 setup 与真实 E2E 共用的 Vimeo profile。
+ * 解析 setup 与真实 E2E 共用的 Vimeo profile 基目录。
  *
- * @returns {string} Vimeo persistent context 使用的绝对 user data 目录。
+ * 基目录本身不再是浏览器 profile：每次测试运行在它下面生成一次性子目录（见
+ * resolveRunProfileDir），由当次启动的同一 Chromium 初始化，杜绝「profile 被外部
+ * 浏览器以更新格式打开后 CfT chromium 拒绝启动」的格式漂移（U-H1 事故根因）。
+ *
+ * @returns {string} Vimeo persistent context 的 user data 基目录。
  */
 export function resolveVimeoProfileDir() {
   return defaultVimeoProfileDir
+}
+
+/**
+ * 解析一次测试运行的一次性 profile 目录。
+ *
+ * @param {string} baseDir profile 基目录（resolveVimeoProfileDir）。
+ * @param {string} runId 本次测试运行 ID（fixtures 的 testRunId）。
+ * @returns {string} 本次运行专用的 user data 目录。
+ */
+export function resolveRunProfileDir(baseDir, runId) {
+  return path.join(baseDir, runId)
+}
+
+/**
+ * 清理历史运行残留的一次性 profile 目录。
+ *
+ * 只删除带运行 ID 前缀的子目录，不触碰基目录下的人工产物；E2E 固定 `workers=1`
+ * 串行执行，清理与后续启动不会并发冲突。
+ *
+ * @param {string} baseDir profile 基目录。
+ * @returns {void}
+ */
+export function pruneStaleRunProfiles(baseDir) {
+  let entries
+  try {
+    entries = fs.readdirSync(baseDir, { withFileTypes: true })
+  } catch {
+    return
+  }
+  for (const entry of entries) {
+    if (entry.isDirectory() && entry.name.startsWith(runProfileDirPrefix)) {
+      fs.rmSync(path.join(baseDir, entry.name), { recursive: true, force: true })
+    }
+  }
 }
 
 /**

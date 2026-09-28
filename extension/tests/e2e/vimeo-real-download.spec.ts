@@ -4,9 +4,10 @@
  * U8 起下载统一由 background 编排：offscreen document 执行 DASH/HLS 分片与 remux，产物
  * blob 由 background 经 `chrome.downloads` 落盘——页面不再派发 download 事件，断言改走
  * 落盘产物：background 只会把文件写进下载目录的 `vimeo-video-downloader/` 子目录，等待
- * 该子目录出现新的可播放 MP4 即是 background 链路的端到端证据。注：共享 profile 下
- * Playwright 对扩展 SW 的 `worker.evaluate` 会无限挂起（干净 profile 正常），因此不采用
- * `chrome.downloads.search` 断言。
+ * 该子目录出现新的可播放 MP4 即是 background 链路的端到端证据。注：fixtures 已把下载
+ * 行为恢复为 Chrome 原生 `default`，`chrome.downloads.download` 会正常 resolve；但
+ * Playwright 自身的 download 事件/产物 API 对扩展 SW 发起的下载不可靠，文件系统断言
+ * 仍是唯一可信的端到端锚点。
  *
  * 面板选项由样本当前 config 决定，用例不预设 delivery：取样本实际提供的 DASH/HLS 选项；
  * 样本不再提供该交付时带原因 skip。

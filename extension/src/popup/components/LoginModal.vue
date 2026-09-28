@@ -1,7 +1,12 @@
 <template>
   <Teleport to="body">
     <Transition name="login-modal-fade">
-      <div v-if="loginModalVisible" class="login-modal-overlay" @click.self="closeLoginModal">
+      <div
+        v-if="loginModalVisible"
+        class="login-modal-overlay"
+        :style="colorVars"
+        @click.self="closeLoginModal"
+      >
         <div
           class="login-modal-dialog"
           role="dialog"
@@ -147,6 +152,27 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+
+/**
+ * 覆盖层根节点显式级联的颜色变量。
+ *
+ * 组件根节点是 Teleport，Vue 的 style v-bind()（useCssVars）会把变量挂到 Teleport 锚点而非
+ * 真实 DOM（PremiumView / SettingsModal 同坑），scoped 样式里的 v-bind 颜色在生产中全部失效
+ * （回退继承色）。因此这里把用到的 COMMON_COLORS 显式声明成覆盖层根节点上的 CSS 变量向下级联。
+ */
+const colorVars = {
+  '--login-primary': COMMON_COLORS.PRIMARY,
+  '--login-primary-dark': COMMON_COLORS.PRIMARY_DARK,
+  '--login-gray-50': COMMON_COLORS.GRAY_50,
+  '--login-gray-100': COMMON_COLORS.GRAY_100,
+  '--login-gray-300': COMMON_COLORS.GRAY_300,
+  '--login-gray-400': COMMON_COLORS.GRAY_400,
+  '--login-gray-500': COMMON_COLORS.GRAY_500,
+  '--login-gray-600': COMMON_COLORS.GRAY_600,
+  '--login-gray-800': COMMON_COLORS.GRAY_800,
+  '--login-gray-900': COMMON_COLORS.GRAY_900,
+  '--login-error': COMMON_COLORS.ERROR
+}
 
 const step = ref<LoginStep>('email')
 const email = ref('')
@@ -340,13 +366,13 @@ function openPrivacy(): void {
   border: none;
   border-radius: 999px;
   background: transparent;
-  color: v-bind('COMMON_COLORS.GRAY_500');
+  color: var(--login-gray-500);
   cursor: pointer;
 }
 
 .login-modal-close:hover {
-  background: v-bind('COMMON_COLORS.GRAY_100');
-  color: v-bind('COMMON_COLORS.GRAY_800');
+  background: var(--login-gray-100);
+  color: var(--login-gray-800);
 }
 
 .login-modal-heading {
@@ -360,14 +386,14 @@ function openPrivacy(): void {
   margin: 0;
   font-size: 17px;
   font-weight: 600;
-  color: v-bind('COMMON_COLORS.GRAY_900');
+  color: var(--login-gray-900);
 }
 
 .login-modal-description {
   margin: 0;
   font-size: 12px;
   line-height: 1.5;
-  color: v-bind('COMMON_COLORS.GRAY_500');
+  color: var(--login-gray-500);
 }
 
 .login-google-button {
@@ -376,18 +402,18 @@ function openPrivacy(): void {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid v-bind('COMMON_COLORS.GRAY_300');
+  border: 1px solid var(--login-gray-300);
   border-radius: 8px;
   background: #ffffff;
-  color: v-bind('COMMON_COLORS.GRAY_800');
+  color: var(--login-gray-800);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
 }
 
 .login-google-button:hover:not(:disabled) {
-  border-color: v-bind('COMMON_COLORS.PRIMARY');
-  color: v-bind('COMMON_COLORS.PRIMARY');
+  border-color: var(--login-primary);
+  color: var(--login-primary);
 }
 
 .login-google-button:disabled {
@@ -399,7 +425,7 @@ function openPrivacy(): void {
   margin: 10px 0;
   text-align: center;
   font-size: 11px;
-  color: v-bind('COMMON_COLORS.GRAY_400');
+  color: var(--login-gray-400);
 }
 
 .login-modal-form,
@@ -416,29 +442,29 @@ function openPrivacy(): void {
 .login-field-label {
   font-size: 11px;
   font-weight: 600;
-  color: v-bind('COMMON_COLORS.GRAY_500');
+  color: var(--login-gray-500);
 }
 
 .login-input {
   width: 100%;
   min-height: 38px;
   padding: 0 12px;
-  border: 1px solid v-bind('COMMON_COLORS.GRAY_300');
+  border: 1px solid var(--login-gray-300);
   border-radius: 8px;
   background: #ffffff;
-  color: v-bind('COMMON_COLORS.GRAY_900');
+  color: var(--login-gray-900);
   font-size: 13px;
   box-sizing: border-box;
 }
 
 .login-input:focus {
   outline: 2px solid rgba(51, 144, 236, 0.2);
-  border-color: v-bind('COMMON_COLORS.PRIMARY');
+  border-color: var(--login-primary);
 }
 
 .login-input:disabled {
-  background: v-bind('COMMON_COLORS.GRAY_50');
-  color: v-bind('COMMON_COLORS.GRAY_400');
+  background: var(--login-gray-50);
+  color: var(--login-gray-400);
 }
 
 .login-code-row {
@@ -467,24 +493,24 @@ function openPrivacy(): void {
 }
 
 .login-primary-button {
-  background: v-bind('COMMON_COLORS.PRIMARY');
+  background: var(--login-primary);
   color: #ffffff;
 }
 
 .login-primary-button:hover:not(:disabled) {
-  background: v-bind('COMMON_COLORS.PRIMARY_DARK');
+  background: var(--login-primary-dark);
 }
 
 .login-secondary-button {
   flex-shrink: 0;
-  border: 1px solid v-bind('COMMON_COLORS.GRAY_300');
+  border: 1px solid var(--login-gray-300);
   background: #ffffff;
-  color: v-bind('COMMON_COLORS.GRAY_600');
+  color: var(--login-gray-600);
 }
 
 .login-secondary-button:hover:not(:disabled) {
-  border-color: v-bind('COMMON_COLORS.PRIMARY');
-  color: v-bind('COMMON_COLORS.PRIMARY');
+  border-color: var(--login-primary);
+  color: var(--login-primary);
 }
 
 .login-primary-button:disabled,
@@ -502,22 +528,22 @@ function openPrivacy(): void {
 }
 
 .login-modal-status {
-  color: v-bind('COMMON_COLORS.GRAY_500');
+  color: var(--login-gray-500);
 }
 
 .login-modal-error {
-  color: v-bind('COMMON_COLORS.ERROR');
+  color: var(--login-error);
 }
 
 .login-modal-terms {
-  color: v-bind('COMMON_COLORS.GRAY_500');
+  color: var(--login-gray-500);
 }
 
 .login-terms-link {
   padding: 0;
   border: none;
   background: transparent;
-  color: v-bind('COMMON_COLORS.PRIMARY');
+  color: var(--login-primary);
   font: inherit;
   font-weight: 600;
   cursor: pointer;

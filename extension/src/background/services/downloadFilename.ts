@@ -16,6 +16,7 @@ import {
 } from '@/core/constants/resource'
 import type { MediaResource } from '@/core/types'
 import { SettingsManager } from '@/core/storage/settings'
+import { normalizeFilename } from '@/core/utils/downloadFilename'
 import {
   FILENAME_PATTERN_DEFAULT,
   formatFilenameDate,
@@ -23,9 +24,6 @@ import {
   type FilenameTemplateContext
 } from '@/core/utils/filenameTemplate'
 import { decodeVimeoSourceDescriptor } from '@/sites/vimeo/shared'
-
-/** Chrome 下载目录文件名保守长度上限。 */
-const MAX_FILENAME_LENGTH = 180
 
 /** 保存子目录保守长度上限；超出的目录段直接丢弃，保证路径长度可控。 */
 const MAX_DIRECTORY_LENGTH = 120
@@ -128,20 +126,4 @@ function isSafeDirectorySegment(segment: string): boolean {
   return Array.from(segment).every(
     character => character.charCodeAt(0) >= 32 && !RESERVED_SEGMENT_CHARACTERS.includes(character)
   )
-}
-
-/** 生成 Chrome 接受的相对下载文件名：单段名字，不含目录分隔符与控制字符。 */
-function normalizeFilename(value: string): string {
-  const normalized = Array.from(value.trim(), character =>
-    character.charCodeAt(0) < 32 ? ' ' : character
-  )
-    .join('')
-    .replace(/[<>:"/\\|?*]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .slice(0, MAX_FILENAME_LENGTH)
-  // 清洗后正好是 `.` / `..` 的名字仍带路径语义（Chrome 会直接报错），换兜底名。
-  if (normalized.length === 0 || normalized === '.' || normalized === '..') {
-    return 'vimeo-download'
-  }
-  return normalized
 }

@@ -165,6 +165,7 @@ import {
   type FilenameVariable
 } from '@/core/utils/filenameTemplate'
 import { logger } from '@/core/utils/logger'
+import { normalizeFilename } from '@/core/utils/downloadFilename'
 import { COMMON_COLORS } from '@/core/constants/style'
 import { Icon, IconName, IconSize } from '@/core/components/icons'
 
@@ -214,13 +215,19 @@ const PATTERN_PREVIEW_CONTEXT: FilenameTemplateContext = {
 /** 预览固定追加的扩展名；真实扩展名由 background 按资源类型与目标格式决定。 */
 const PATTERN_PREVIEW_EXTENSION = '.mp4'
 
-/** 实时预览：输入即渲染，空模板按默认模板展示。 */
-const previewFilename = computed(
-  () =>
+/**
+ * 实时预览：输入即渲染，空模板按默认模板展示。
+ *
+ * 渲染结果过与 background 落盘同一道 `normalizeFilename` 净化（非法字符替换、空白收敛、
+ * 长度截断），保证「预览 = 落盘」：模板含 `/` 等非法字符时预览的就是真实保存名。
+ */
+const previewFilename = computed(() =>
+  normalizeFilename(
     renderFilenameBase(
       filenamePattern.value.trim() || FILENAME_PATTERN_DEFAULT,
       PATTERN_PREVIEW_CONTEXT
     ) + PATTERN_PREVIEW_EXTENSION
+  )
 )
 
 // 每次打开都从存储回读，保证与上次会话（或 background 侧写入）一致。

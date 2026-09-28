@@ -2,7 +2,7 @@
 
 import { IconName } from '@/core/components/icons'
 import { I18N_KEYS } from '@/core/constants/i18n'
-import { COMMON_COLORS } from '@/core/constants/style'
+import { DESIGN_TOKENS } from '@/core/constants/design'
 import { RESOURCE_TYPES, type ResourceType } from '@/core/types'
 
 /** 单个资源类型在 Popup 中的展示属性。 */
@@ -15,27 +15,32 @@ export interface ResourceTypePresentation {
   color: string
 }
 
-/** 所有可下载资源类型的唯一 Popup 展示映射。 */
+/**
+ * 所有可下载资源类型的唯一 Popup 展示映射。
+ *
+ * 颜色统一走 design token（docs/references/specs/design.md Geist 色阶）；design.md 未定义
+ * 资源类型语义色，映射取舍见 DESIGN_TOKENS 内各组注释。
+ */
 const RESOURCE_TYPE_PRESENTATIONS: Record<ResourceType, ResourceTypePresentation> = {
   [RESOURCE_TYPES.IMAGE]: {
     labelKey: I18N_KEYS.RESOURCE_ITEM.TYPE_IMAGE,
     icon: IconName.PHOTO,
-    color: COMMON_COLORS.IMAGE_TEXT
+    color: DESIGN_TOKENS.PURPLE_700
   },
   [RESOURCE_TYPES.VIDEO]: {
     labelKey: I18N_KEYS.RESOURCE_ITEM.TYPE_VIDEO,
     icon: IconName.FILM,
-    color: COMMON_COLORS.VIDEO_TEXT
+    color: DESIGN_TOKENS.BLUE_800
   },
   [RESOURCE_TYPES.AUDIO]: {
     labelKey: I18N_KEYS.RESOURCE_ITEM.TYPE_AUDIO,
     icon: IconName.MUSICAL_NOTE,
-    color: COMMON_COLORS.AUDIO_TEXT
+    color: DESIGN_TOKENS.GREEN_900
   },
   [RESOURCE_TYPES.SUBTITLE]: {
     labelKey: I18N_KEYS.RESOURCE_ITEM.TYPE_SUBTITLE,
     icon: IconName.DOCUMENT,
-    color: COMMON_COLORS.SUBTITLE_TEXT
+    color: DESIGN_TOKENS.AMBER_900
   }
 }
 

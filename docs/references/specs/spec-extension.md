@@ -10,7 +10,7 @@
 - 构建链：`vue-tsc → vite build → zip-dist`（`pnpm build`）；`pnpm check` = type-check + lint + format:check + check:permissions 全套。
 - 两套构建：`pnpm build` = 商店包（连生产占位域名、开 SLS、额外产出 `dist.zip`）；`pnpm build:dev` = 开发包（连 `http://localhost:7900` + `http://localhost:7910`、关 SLS、不压缩带 sourcemap）。**两者都写 `dist/` 且 `emptyOutDir` 全量清空，后跑的覆盖先跑的**，`pnpm test:unit:run` 结束时 `dist/` 是生产包；对照表与加载口径见 `@../../feat/000.架构/tech-extension.md` §A6。
 - `prebuild` / `pretype-check` 自动跑 `rpc-generate:check`，register 改了不重新生成会 **fail build**。
-- Tailwind 是僵尸依赖（装了 0 用），新代码继续 scoped CSS，不要用 Tailwind。
+- Tailwind 已移除（曾为未使用的僵尸依赖），新代码继续 scoped CSS，不要用 Tailwind。
 
 ## 2. 代码风格
 

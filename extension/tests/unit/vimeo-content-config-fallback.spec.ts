@@ -5,6 +5,15 @@
  * 实现。覆盖四类——两个通道都拿不到快照时回到既有的空面板降级；兜底拿到快照时经同一解析链
  * 渲染出真实选项；聚合页回退经有界并发逐视频合并写入；身份/路由在回退轮进行中接管时的
  * 编排守卫与配对清空。
+ *
+ * 被测控制器没有销毁钩子（observer 挂在共享 body、window 监听与 debounce/重扫定时器均不
+ * 释放），而 vi.resetModules + 动态 import 会让每个用例产出新控制器、旧控制器残留在共享
+ * happy-dom 环境里。跨用例隔离契约因此在测试侧收口：
+ * - 全文件统一 fake 定时器（只 fake setTimeout/clearTimeout）：每用例独立时钟，afterEach
+ *   切回真实定时器即丢弃未触发的 debounce/重扫定时器，旧定时器永不落入后续用例；
+ *   vi.waitFor 走 vitest 的 safe timers（真实定时器），轮询不受影响。
+ * - 追踪用例期间创建的每个 MutationObserver 并在 afterEach 统一 disconnect：旧 observer
+ *   不再响应后续用例对共享 body 的改动，不会拿着新用例的 mock 状态做扫描串扰。
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -20,7 +29,32 @@ const pristineReplaceState = history.replaceState.bind(history)
 const pristinePushState = history.pushState.bind(history)
 const BASE_HREF = window.location.href
 
+/** 原生 MutationObserver；每个用例前后用它安装/还原追踪构造器。 */
+const NativeMutationObserver = MutationObserver
+
+/** 当前用例期间创建的全部 MutationObserver。 */
+let trackedObservers: MutationObserver[] = []
+
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+  trackedObservers = []
+  vi.stubGlobal(
+    'MutationObserver',
+    class extends NativeMutationObserver {
+      constructor(callback: MutationCallback) {
+        super(callback)
+        trackedObservers.push(this)
+      }
+    }
+  )
+})
+
 afterEach(() => {
+  for (const observer of trackedObservers.splice(0)) {
+    observer.disconnect()
+  }
+  vi.stubGlobal('MutationObserver', NativeMutationObserver)
+  vi.useRealTimers()
   history.replaceState = pristineReplaceState
   history.pushState = pristinePushState
   if (window.location.href !== BASE_HREF) {
@@ -139,7 +173,7 @@ describe('Vimeo content config 捕获降级', () => {
     document.querySelector('meta[property="og:video:url"]')?.remove()
     document.body.appendChild(document.createElement('h1'))
     // 等一次完整 debounce 扫描（300ms）落定，再断言回退路径整条短路。
-    await settle(SCAN_DEBOUNCE_WAIT_MS)
+    await advanceTimers(SCAN_DEBOUNCE_WAIT_MS)
 
     expect(mocks.listCapturedVimeoVideoIds).not.toHaveBeenCalled()
     expect(mocks.requestCapturedVimeoConfig).toHaveBeenCalledTimes(1)
@@ -152,17 +186,10 @@ describe('Vimeo content 聚合页回退编排', () => {
   let vimeoResourceBuffer: typeof import('@/sites/vimeo/content/resourceBuffer').vimeoResourceBuffer
 
   beforeEach(async () => {
-    // 回退编排的节奏全在 setTimeout（debounce 扫描、重扫定时）与 Promise 微任务里：
-    // 用 fake 定时器逐段推进，既消除并发完成顺序的抖动，也保证重扫定时器不泄漏到后续用例。
-    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
     vi.resetModules()
     vi.clearAllMocks()
     prepareAggregatePage()
     ;({ vimeoResourceBuffer } = await import('@/sites/vimeo/content/resourceBuffer'))
-  })
-
-  afterEach(() => {
-    vi.useRealTimers()
   })
 
   it('身份缺失时逐视频合并写入，每个视频只编排一次', async () => {
@@ -348,11 +375,6 @@ function createDeferred(): {
     resolve = fulfil
   })
   return { promise, resolve }
-}
-
-/** 冲掉指定时长的定时器/微任务：debounce 扫描与在途 Promise 的后续编排都在其中完成。 */
-async function settle(waitMs = 0): Promise<void> {
-  await new Promise(resolve => setTimeout(resolve, waitMs))
 }
 
 /** 覆盖一次完整 debounce 扫描（默认 300ms）的等待时长。 */

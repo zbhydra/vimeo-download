@@ -1,7 +1,6 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import webExtension, { type PluginOptions } from 'vite-plugin-web-extension'
-import tailwindcss from '@tailwindcss/vite'
 import VueI18n from '@intlify/unplugin-vue-i18n/vite'
 import { copyFileSync, mkdirSync } from 'fs'
 import { dirname, resolve } from 'path'
@@ -256,7 +255,6 @@ export default defineConfig({
       include: [resolve(__dirname, './src/locales/**/*.json')],
       runtimeOnly: false
     }),
-    tailwindcss(),
     webExtension({
       ...devWebExtensionConfig,
       skipManifestValidation: true, // 禁用schema验证 ,不然会卡主很多

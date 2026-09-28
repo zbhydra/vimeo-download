@@ -25,9 +25,14 @@ pnpm run test:clean
 站点 DOM、站点结构化数据、媒体请求、页面按钮和浏览器下载。下载用例必须把文件保存到测试
 目录，并检查文件大小、Chrome 下载终态与 CDN 域名。
 
-只允许一个非产品数据边界：
+只允许两个非产品数据边界：
 
 - SLS WebTracking 请求固定返回 `204`，避免 E2E 污染正式埋点。
+- fixtures 在 browser 级 CDP 会话上把下载行为恢复为 Chrome 原生 `default`（覆盖
+  Playwright 的 `allowAndName` 劫持），否则落盘产物被 GUID 改名、真实文件名与
+  `filename` 子目录全部丢失，按名字断言下载产物的用例无法成立；扩展的
+  `chrome.downloads.download` 在原生行为下正常 resolve，产物经 profile 偏好落到
+  `tests/logs/downloads/<testRunId>`。
 
 禁止 route 站点 document、DOM、结构化数据、媒体、官网页面或其他项目 API。真实环境失败
 必须按样本变化、网络/WAF 或产品回归分类，不能用假页面替代。
@@ -41,13 +46,19 @@ pnpm run test:clean
 
 | 场景 | 目录 |
 |---|---|
-| Vimeo profile | `tests/logs/test-user-data`（固定绝对路径） |
+| Vimeo profile 基目录 | `tests/logs/test-user-data`（固定绝对路径，只作父目录） |
+| 运行 profile | `<基目录>/<testRunId>`（每次运行一次性生成，启动前自动清理历史运行残留） |
 | 下载文件 | `tests/logs/downloads/<testRunId>` |
 | Playwright 报告 | `tests/logs/playwright-report` |
 | trace / screenshot / video | `tests/logs/test-results` |
 
 Vimeo 固定样本是公开视频，不依赖登录态；`pnpm test:setup` 只负责 fresh build 并准备
-profile 目录，不需要人工登录。Playwright 使用 `fullyParallel=false`、`workers=1`。
+基目录，profile 由每次运行的 Playwright Chromium 全新初始化，不需要人工登录。
+Playwright 使用 `fullyParallel=false`、`workers=1`。
+
+**不要用真实 Chrome 打开基目录下的任何 profile**：真实浏览器会把 profile 升级到自己的
+格式，旧版 CfT chromium 随后启动即退（U-H1 事故根因）。运行级一次性 profile 让本套件
+永远只加载由同一 Chromium 初始化的目录，该漂移结构上不会复发。
 
 ## 固定样本
 

@@ -3,7 +3,7 @@
 本文件声明 Vimeo Downloader 扩展分发产物（`dist/`）中捆绑的第三方组件及其许可。
 覆盖范围为打包进分发产物的运行时依赖；仅构建期使用的依赖（打包 / 压缩脚本等）不随产物分发，不在此列。
 
-声明基于 `extension/package.json` 的 `dependencies` 全量核对：`archiver`（仅 `scripts/zip-dist.js` 构建脚本使用）与 `markdown-it`（当前无引用）均不进入分发产物，故未列出。
+声明基于 `extension/package.json` 的 `dependencies` 全量核对：`archiver`（仅 `scripts/zip-dist.js` 构建脚本使用）不进入分发产物，故未列出。
 
 ## 组件清单
 

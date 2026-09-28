@@ -49,6 +49,20 @@ export const DESIGN_TOKENS = {
   /** red-900：错误条文本与破坏性按钮 hover。 */
   RED_900: '#d8001b',
 
+  /**
+   * 资源类型（video/image/audio/subtitle）的图标与类型徽章前景，按 Geist 色阶逐通道取旧
+   * 色板（style.ts COMMON_COLORS.*_TEXT）的最近对应；design.md 未定义资源类型语义色，故以
+   * 「白底小字号前景对比度不低于旧值」为约束就近映射。
+   */
+  /** blue-800：视频前景（旧 VIDEO_TEXT #1d4ed8 的最近对应；不用 accent blue-700 以保持类型色与品牌焦点的层次差）。 */
+  BLUE_800: '#0059ec',
+  /** purple-700：图片前景（旧 IMAGE_TEXT #7c3aed 的最近对应，对比度 5.5:1 ≈ 旧值 5.7:1）。 */
+  PURPLE_700: '#a000f8',
+  /** green-900：音频前景（旧 AUDIO_TEXT #15803d 的几乎逐通道重合对应）。 */
+  GREEN_900: '#107d32',
+  /** amber-900：字幕前景（旧 SUBTITLE_TEXT #b45309 的几乎逐通道重合对应）。 */
+  AMBER_900: '#aa4d00',
+
   /** rounded.sm：控件、输入框、缩略图。 */
   RADIUS_SM: '6px',
   /** rounded.md：卡片与浮层。 */
