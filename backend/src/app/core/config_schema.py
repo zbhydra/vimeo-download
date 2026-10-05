@@ -329,18 +329,24 @@ class Settings:
 
     def _apply_config_data(self) -> None:
         """把已加载的原始配置映射为强类型配置对象。"""
-        self.app = AppSettings(**self._config_section("app"))
-        self.database = DatabaseSettings(**self._config_section("database"))
-        self.logging = LoggingSettings(**self._config_section("logging"))
-        self.api = APISettings(**self._config_section("api"))
-        self.auth = AuthSettings(**self._config_section("auth"))
-        self.redis = RedisSettings(**self._config_section("redis"))
-        self.feishu_alarm = FeishuAlarmSettings(**self._config_section("feishu_alarm"))
+        self.app = AppSettings.model_validate(self._config_section("app"))
+        self.database = DatabaseSettings.model_validate(
+            self._config_section("database")
+        )
+        self.logging = LoggingSettings.model_validate(self._config_section("logging"))
+        self.api = APISettings.model_validate(self._config_section("api"))
+        self.auth = AuthSettings.model_validate(self._config_section("auth"))
+        self.redis = RedisSettings.model_validate(self._config_section("redis"))
+        self.feishu_alarm = FeishuAlarmSettings.model_validate(
+            self._config_section("feishu_alarm")
+        )
         self.smtp = self._load_smtp_settings()
-        self.admin = AdminSettings(**self._config_section("admin"))
-        self.service_node = ServiceNodeSettings(**self._config_section("service_node"))
-        self.download_token = DownloadTokenSettings(
-            **self._config_section("download_token")
+        self.admin = AdminSettings.model_validate(self._config_section("admin"))
+        self.service_node = ServiceNodeSettings.model_validate(
+            self._config_section("service_node")
+        )
+        self.download_token = DownloadTokenSettings.model_validate(
+            self._config_section("download_token")
         )
         if self.app.role == "download" and self.download_token.private_key:
             raise ValueError(

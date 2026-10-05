@@ -108,6 +108,11 @@ describe('background uninstall url', () => {
       tabs: {
         create: mocks.createTab
       },
+      downloads: {
+        onDeterminingFilename: {
+          addListener: vi.fn()
+        }
+      },
       // 下载终态通知挂钩在 background/index 导入链上注册点击/关闭监听。
       notifications: {
         create: mocks.createNotification,

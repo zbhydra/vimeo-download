@@ -177,7 +177,7 @@ class QuotaService:
         expire_at = reset_at // 1000
         try:
             redis = await redis_client.get_client()
-            raw_result = await redis.eval(
+            raw_result = await redis.eval(  # type: ignore[misc]
                 _QUOTA_SET_SCRIPT,
                 1,
                 key,
