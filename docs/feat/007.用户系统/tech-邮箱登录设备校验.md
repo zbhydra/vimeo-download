@@ -17,7 +17,7 @@ website 在用户访问页面后,先通过一个真实图片请求建立"当前�
 | --- | --- |
 | HTML 挂载点 | `data-footer-brand-icon` |
 | Cookie | `client_uuid` |
-| 图片路径 | `/assets/icons/logo.svg`（带固定版本 query；后端同时兼容旧路径 `/assets/icons/credits.svg`） |
+| 图片路径 | `/assets/icons/logo.svg`（带固定版本 query） |
 | 公开错误码 | `AUTH_PAGE_REFRESH_REQUIRED` |
 | Redis key | `device_trust:{device_id}` |
 | 后端 service | `device_service` |
@@ -180,11 +180,11 @@ POST /api/client/media/download-pre-v2
 
 ## 8. nginx 反代
 
-website 主域在静态 `.svg` 规则之前对该图片路径做精确路径反代，规则为正则匹配（同时兼容 credits 图标路径），反代头与缓存策略以 `website/deploy/vimeo-web.conf` 为准。
+website 主域在静态 `.svg` 规则之前对该图片路径做精确路径反代，反代头与缓存策略以 `website/deploy/vimeo-web.conf` 为准。
 
 测试环境同样加到 `website/deploy/vimeo-web-test.conf`,目标后端使用测试 API 服务。
 
-匹配范围只限这两个图标路径,不要扩大到 `/assets/` 或 `/assets/icons/` 目录,避免静态资源整体绕到后端。
+匹配范围只限该图标路径,不要扩大到 `/assets/` 或 `/assets/icons/` 目录,避免静态资源整体绕到后端。
 
 ## 9. 边界
 

@@ -27,7 +27,7 @@ const LEGACY_DEVICE_STORAGE_KEY = 'homepage_legacy_device_ids'
 const CLIENT_UUID_COOKIE_MAX_AGE_SECONDS = 7 * 24 * 60 * 60
 /** footer 中承载品牌图标资源的挂载点；图标为透明资源，请求用于后端写 device_trust。 */
 const FOOTER_BRAND_ICON_SELECTOR = '[data-footer-brand-icon]'
-/** 后端提供的品牌图标 SVG 路径（透明内容）；旧 `/assets/icons/credits.svg` 仅后端兼容。 */
+/** 后端提供的品牌图标 SVG 路径（透明内容）。 */
 // 固定版本号只用于绕开 CDN 旧 404 缓存；Nginx 用不含 query 的 URI 匹配，仍会反代到后端写 device_trust。
 const FOOTER_BRAND_ICON_PATH = '/assets/icons/logo.svg?v=20260706'
 /** 透明装饰资源的替代文本：留空，避免读屏器对不可见图片做无意义播报。 */

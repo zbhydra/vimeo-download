@@ -346,7 +346,7 @@ def _include_business_routes(app_instance: FastAPI) -> None:
     from app.api.callback.test_pay_callback import router as callback_router
     from app.api.client.auth_client import router as auth_router
     from app.api.client.checkin_client import router as checkin_router
-    from app.api.client.credits_asset_client import router as credits_asset_router
+    from app.api.client.brand_asset_client import router as brand_asset_router
     from app.api.client.credit_client import router as credit_router
     from app.api.client.mark_client import router as mark_router
     from app.api.client.order_client import router as order_router
@@ -376,7 +376,7 @@ def _include_business_routes(app_instance: FastAPI) -> None:
     app_instance.include_router(
         remote_config_router, prefix="/api/client", tags=["client"]
     )
-    app_instance.include_router(credits_asset_router)
+    app_instance.include_router(brand_asset_router)
     _include_media_pre_v2_routes(app_instance)
     app_instance.include_router(
         callback_router, prefix="/api/callback", tags=["callback"]

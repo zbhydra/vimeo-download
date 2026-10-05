@@ -40,7 +40,6 @@ TEST_USER_FULL_NAME = "Test Auth User"
 TEST_DEVICE_ID = "test-device-auth-api"
 TEST_TRUSTED_IP = "203.0.113.10"
 BRAND_LOGO_SVG_PATH = "/assets/icons/logo.svg"
-LEGACY_CREDITS_SVG_PATH = "/assets/icons/credits.svg"
 
 
 def unwrap_ok(response):
@@ -519,26 +518,21 @@ class TestBrandLogoSvgAPI:
     ):
         """合法 client_uuid Cookie 会写入设备可信关系。"""
         enable_device_trust(monkeypatch)
-        device_id = make_test_device_id("credits-svg")
+        device_id = make_test_device_id("logo-svg")
 
         await trust_test_device(async_client, device_id)
 
         assert await device_service.verify(device_id, TEST_TRUSTED_IP)
         assert await device_service.verify(device_id, "203.0.113.11")
 
-    @pytest.mark.parametrize(
-        "svg_path",
-        [BRAND_LOGO_SVG_PATH, LEGACY_CREDITS_SVG_PATH],
-    )
     async def test_brand_logo_svg_returns_logo_without_cookie(
         self,
         async_client,
         caplog,
-        svg_path: str,
     ):
-        """新旧路径缺少 Cookie 时均返回站点图标 SVG。"""
+        """Logo 路径缺少 Cookie 时仍返回站点图标 SVG。"""
         with caplog.at_level("INFO", logger="server"):
-            response = await async_client.get(svg_path)
+            response = await async_client.get(BRAND_LOGO_SVG_PATH)
 
         assert response.status_code == 200
         assert response.headers["content-type"] == "image/svg+xml; charset=utf-8"
@@ -546,7 +540,13 @@ class TestBrandLogoSvgAPI:
         assert response.headers["x-robots-tag"] == "noindex, nofollow"
         assert_site_icon_svg(response.text)
         assert "device_trust_set_skipped: reason=missing_client_uuid" in caplog.text
-        assert f"path={svg_path}" in caplog.text
+        assert f"path={BRAND_LOGO_SVG_PATH}" in caplog.text
+
+    async def test_legacy_credits_svg_path_is_removed(self, async_client):
+        """旧 Credits 路径不再注册。"""
+        response = await async_client.get("/assets/icons/credits.svg")
+
+        assert response.status_code == 404
 
     async def test_brand_logo_svg_ignores_invalid_cookie_without_trust(
         self, async_client, monkeypatch, caplog, make_test_device_id
@@ -580,7 +580,7 @@ class TestBrandLogoSvgAPI:
             return None
 
         monkeypatch.setattr(
-            "app.api.client.credits_asset_client.get_client_ip",
+            "app.api.client.brand_asset_client.get_client_ip",
             missing_client_ip,
         )
 
@@ -599,7 +599,7 @@ class TestBrandLogoSvgAPI:
         self, async_client, monkeypatch, make_test_device_id
     ):
         """Redis 写入失败时 SVG 路由 fail-open。"""
-        device_id = make_test_device_id("credits-redis-fail")
+        device_id = make_test_device_id("logo-redis-fail")
 
         async def fail_get_client():
             raise RuntimeError("test redis unavailable for device trust set")
@@ -624,10 +624,10 @@ class TestBrandLogoSvgAPI:
         """路由内部异常返回非 JSON 404，但响应体仍是 SVG 文档。"""
 
         async def fail_store_device_trust(_request):
-            raise RuntimeError("test credits svg route failure")
+            raise RuntimeError("test brand logo svg route failure")
 
         monkeypatch.setattr(
-            "app.api.client.credits_asset_client._store_device_trust_from_cookie",
+            "app.api.client.brand_asset_client._store_device_trust_from_cookie",
             fail_store_device_trust,
         )
 

@@ -6,7 +6,7 @@
 
 ## Cache Rules
 
-见 `cache-rules.md`。其中生产站与测试站的 `/assets/icons/logo.svg` 和 `/assets/icons/credits.svg` 必须绕过 Cloudflare 缓存，因为请求需要打到后端写入 `device_trust`。
+见 `cache-rules.md`。其中生产站与测试站的 `/assets/icons/logo.svg` 必须绕过 Cloudflare 缓存，因为请求需要打到后端写入 `device_trust`。
 
 ## 退役页面重定向
 

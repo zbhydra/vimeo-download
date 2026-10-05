@@ -2,7 +2,7 @@
 
 ## Bypass device trust icon
 
-用途：`/assets/icons/logo.svg` 和 `/assets/icons/credits.svg` 是 Website 设备可信校验资源，请求必须穿透 Cloudflare 并打到后端，由后端写入 `device_trust`。不能缓存。
+用途：`/assets/icons/logo.svg` 是 Website 设备可信校验资源，请求必须穿透 Cloudflare 并打到后端，由后端写入 `device_trust`。不能缓存。
 
 Cloudflare 位置：
 
@@ -13,10 +13,8 @@ Cloudflare 位置：
 表达式：
 
 ```text
-(http.host in {"vimeodownloader.app" "www.vimeodownloader.app" "test.vimeodownloader.app"} and (
-  http.request.uri.path eq "/assets/icons/logo.svg" or
-  http.request.uri.path eq "/assets/icons/credits.svg"
-))
+(http.host in {"vimeodownloader.app" "www.vimeodownloader.app" "test.vimeodownloader.app"} and
+  http.request.uri.path eq "/assets/icons/logo.svg")
 ```
 
 动作：
@@ -34,7 +32,6 @@ Cache eligibility: Bypass cache
 ```bash
 curl -I "https://vimeodownloader.app/assets/icons/logo.svg"
 curl -I "https://vimeodownloader.app/assets/icons/logo.svg?v=20260706"
-curl -I "https://vimeodownloader.app/assets/icons/credits.svg"
 curl -I "https://test.vimeodownloader.app/assets/icons/logo.svg?v=20260706"
 ```
 

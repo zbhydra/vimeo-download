@@ -1,9 +1,7 @@
-"""Website 站点图标 SVG 资源路由。
+"""Website 站点 Logo SVG 资源路由。
 
 返回 32×32 透明 SVG：页面以普通 img 正常加载该资源，请求穿透到后端用于
 写入设备可信关系（device_trust），但不产生任何可见内容。
-`/assets/icons/credits.svg` 是旧版路径，部署过渡期继续兼容；新页面统一使用
-`/assets/icons/logo.svg`。
 """
 
 from fastapi import APIRouter, Request, status
@@ -74,7 +72,6 @@ async def _store_device_trust_from_cookie(request: Request) -> None:
 
 
 @router.get("/assets/icons/logo.svg", include_in_schema=False)
-@router.get("/assets/icons/credits.svg", include_in_schema=False)
 async def brand_logo_icon(request: Request) -> Response:
     """返回站点图标 SVG，并在 Cookie 合法时建立设备可信关系。"""
     try:
