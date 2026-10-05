@@ -262,7 +262,7 @@ export default defineConfig({
         manifest_version: 3,
         minimum_chrome_version: '116',
         name: '__MSG_extensionName__',
-        version: '1.4.2',
+        version: '1.0.1',
         default_locale: 'en',
         description: '__MSG_extensionDescription__',
         // identity 只用于 Google 授权：background 用 launchWebAuthFlow 打开 Google 授权页。

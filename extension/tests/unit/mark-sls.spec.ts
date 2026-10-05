@@ -109,7 +109,7 @@ describe('extension SLS mark', () => {
     stubRuntimeGlobals(enabledSlsConfig)
     vi.stubGlobal('chrome', {
       ...chrome,
-      runtime: { ...chrome.runtime, getManifest: () => ({ version: '1.4.2' }) }
+      runtime: { ...chrome.runtime, getManifest: () => ({ version: '1.0.1' }) }
     })
     const { STORAGE_KEYS } = await import('../../src/core/api/config')
     const { buildSlsMarkFields, buildSlsMarkUrl } = await import('../../src/core/api/mark/sls')
