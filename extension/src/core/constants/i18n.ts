@@ -93,6 +93,8 @@ export const I18N_KEYS = {
     CLIP_HINT: 'videoPanel.clip.hint',
     /** 当前视频档位不支持时间裁剪 */
     CLIP_UNSUPPORTED: 'videoPanel.clip.unsupported',
+    /** 裁剪输入不完整或区间非法 */
+    CLIP_INVALID: 'videoPanel.clip.invalid',
     /** 音轨开关的可访问名称 */
     AUDIO_SWITCH_LABEL: 'videoPanel.audioSwitch.label',
     /** 音轨开关 - 交付带音轨 */
@@ -132,7 +134,9 @@ export const I18N_KEYS = {
     /** 取消单个任务的可访问名称 */
     CANCEL_TASK: 'downloadStatus.cancelTask',
     /** 重试单个失败任务的可访问名称 */
-    RETRY_TASK: 'downloadStatus.retryTask'
+    RETRY_TASK: 'downloadStatus.retryTask',
+    /** 从队列移除失败任务 */
+    REMOVE_TASK: 'downloadStatus.removeTask'
   },
 
   /** 设置弹层相关 */

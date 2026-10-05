@@ -1,163 +1,159 @@
 <template>
   <Teleport to="body">
-    <Transition name="premium-fade">
-      <div
-        v-if="premiumViewVisible"
-        class="premium-overlay"
-        role="dialog"
-        aria-modal="true"
-        :style="colorVars"
-      >
-        <header class="premium-header">
-          <h2 class="premium-title">{{ t(I18N_KEYS.PREMIUM.TITLE) }}</h2>
-          <button
-            type="button"
-            class="premium-close"
-            :aria-label="t(I18N_KEYS.APP_ERROR.DISMISS)"
-            @click="handleClose"
-          >
-            <Icon :name="IconName.X_MARK" :size="IconSize.SM" />
+    <dialog
+      ref="dialog"
+      class="premium-overlay"
+      aria-labelledby="vdl-premium-title"
+      :style="colorVars"
+      @close="handleClose"
+    >
+      <header class="premium-header">
+        <h2 id="vdl-premium-title" class="premium-title">{{ t(I18N_KEYS.PREMIUM.TITLE) }}</h2>
+        <button
+          type="button"
+          class="premium-close"
+          :aria-label="t(I18N_KEYS.APP_ERROR.DISMISS)"
+          @click="handleClose"
+        >
+          <Icon :name="IconName.X_MARK" :size="IconSize.SM" />
+        </button>
+      </header>
+
+      <main class="premium-body">
+        <!-- 登录门控：未登录先登录，登录成功后回到本视图 -->
+        <div v-if="phase === 'gate'" class="premium-center">
+          <div class="premium-hero-icon" aria-hidden="true">
+            <Icon :name="IconName.CROWN" :size="IconSize.XL" />
+          </div>
+          <p class="premium-message">{{ t(I18N_KEYS.PREMIUM.GATE_MESSAGE) }}</p>
+          <button type="button" class="premium-primary-button" @click="handleLogin">
+            {{ t(I18N_KEYS.AUTH.LOGIN) }}
           </button>
-        </header>
+        </div>
 
-        <main class="premium-body">
-          <!-- 登录门控：未登录先登录，登录成功后回到本视图 -->
-          <div v-if="phase === 'gate'" class="premium-center">
-            <div class="premium-hero-icon" aria-hidden="true">
-              <Icon :name="IconName.CROWN" :size="IconSize.XL" />
-            </div>
-            <p class="premium-message">{{ t(I18N_KEYS.PREMIUM.GATE_MESSAGE) }}</p>
-            <button type="button" class="premium-primary-button" @click="handleLogin">
-              {{ t(I18N_KEYS.AUTH.LOGIN) }}
+        <!-- 套餐配置加载中 -->
+        <div v-else-if="phase === 'loading'" class="premium-center" aria-busy="true">
+          <Icon class="premium-spinner" :name="IconName.ARROW_PATH" :size="IconSize.LG" />
+        </div>
+
+        <!-- 套餐配置加载失败 / 无可用套餐 -->
+        <div v-else-if="phase === 'loadFailed' || phase === 'empty'" class="premium-center">
+          <p class="premium-message">
+            {{
+              t(phase === 'empty' ? I18N_KEYS.PREMIUM.ERROR_EMPTY : I18N_KEYS.PREMIUM.ERROR_LOAD)
+            }}
+          </p>
+          <button type="button" class="premium-primary-button" @click="enterView">
+            {{ t(I18N_KEYS.PREMIUM.RETRY) }}
+          </button>
+        </div>
+
+        <!-- 套餐选择与发起支付 -->
+        <template v-else-if="phase === 'ready' || phase === 'creating'">
+          <ul class="premium-selling">
+            <li class="premium-selling-item">
+              <Icon class="premium-selling-icon" :name="IconName.CHECK" :size="IconSize.SM" />
+              <span>{{ t(I18N_KEYS.PREMIUM.SELLING_UNLIMITED) }}</span>
+            </li>
+            <li class="premium-selling-item">
+              <Icon class="premium-selling-icon" :name="IconName.CHECK" :size="IconSize.SM" />
+              <span>{{ t(I18N_KEYS.PREMIUM.SELLING_QUALITY) }}</span>
+            </li>
+            <li class="premium-selling-item">
+              <Icon class="premium-selling-icon" :name="IconName.CHECK" :size="IconSize.SM" />
+              <span>{{ t(I18N_KEYS.PREMIUM.SELLING_TRIMMING) }}</span>
+            </li>
+          </ul>
+
+          <div class="premium-plans" role="radiogroup" :aria-label="t(I18N_KEYS.PREMIUM.TITLE)">
+            <button
+              v-for="plan in plans"
+              :key="plan.product_id"
+              type="button"
+              role="radio"
+              :aria-checked="plan.product_id === selectedPlanId"
+              class="premium-plan"
+              :class="{ 'is-selected': plan.product_id === selectedPlanId }"
+              @click="selectPlan(plan.product_id)"
+            >
+              <span class="premium-plan-period">{{ periodLabel(plan.period) }}</span>
+              <span class="premium-plan-price">
+                {{ formatPrice(plan.display_amount, plan.display_currency) }}
+              </span>
+              <span class="premium-plan-note">
+                {{ t(plan.auto_renew ? I18N_KEYS.PREMIUM.AUTO_RENEW : I18N_KEYS.PREMIUM.ONE_TIME) }}
+                ·
+                {{ quotaHint(plan) }}
+              </span>
             </button>
           </div>
 
-          <!-- 套餐配置加载中 -->
-          <div v-else-if="phase === 'loading'" class="premium-center" aria-busy="true">
-            <Icon class="premium-spinner" :name="IconName.ARROW_PATH" :size="IconSize.LG" />
-          </div>
-
-          <!-- 套餐配置加载失败 / 无可用套餐 -->
-          <div v-else-if="phase === 'loadFailed' || phase === 'empty'" class="premium-center">
-            <p class="premium-message">
-              {{
-                t(phase === 'empty' ? I18N_KEYS.PREMIUM.ERROR_EMPTY : I18N_KEYS.PREMIUM.ERROR_LOAD)
-              }}
-            </p>
-            <button type="button" class="premium-primary-button" @click="loadPlans">
-              {{ t(I18N_KEYS.PREMIUM.RETRY) }}
-            </button>
-          </div>
-
-          <!-- 套餐选择与发起支付 -->
-          <template v-else-if="phase === 'ready' || phase === 'creating'">
-            <ul class="premium-selling">
-              <li class="premium-selling-item">
-                <Icon class="premium-selling-icon" :name="IconName.CHECK" :size="IconSize.SM" />
-                <span>{{ t(I18N_KEYS.PREMIUM.SELLING_UNLIMITED) }}</span>
-              </li>
-              <li class="premium-selling-item">
-                <Icon class="premium-selling-icon" :name="IconName.CHECK" :size="IconSize.SM" />
-                <span>{{ t(I18N_KEYS.PREMIUM.SELLING_QUALITY) }}</span>
-              </li>
-              <li class="premium-selling-item">
-                <Icon class="premium-selling-icon" :name="IconName.CHECK" :size="IconSize.SM" />
-                <span>{{ t(I18N_KEYS.PREMIUM.SELLING_TRIMMING) }}</span>
-              </li>
-            </ul>
-
-            <div class="premium-plans" role="radiogroup" :aria-label="t(I18N_KEYS.PREMIUM.TITLE)">
+          <div v-if="selectedPlanChannels.length > 1" class="premium-channels">
+            <span class="premium-channels-label">
+              {{ t(I18N_KEYS.PREMIUM.PAYMENT_METHOD) }}
+            </span>
+            <div class="premium-channel-list" role="radiogroup">
               <button
-                v-for="plan in plans"
-                :key="plan.product_id"
+                v-for="channel in selectedPlanChannels"
+                :key="channel.payment_method"
                 type="button"
                 role="radio"
-                :aria-checked="plan.product_id === selectedPlanId"
-                class="premium-plan"
-                :class="{ 'is-selected': plan.product_id === selectedPlanId }"
-                @click="selectPlan(plan.product_id)"
+                :aria-checked="channel.payment_method === selectedChannelMethod"
+                class="premium-channel"
+                :class="{ 'is-selected': channel.payment_method === selectedChannelMethod }"
+                @click="selectedChannelMethod = channel.payment_method"
               >
-                <span class="premium-plan-period">{{ periodLabel(plan.period) }}</span>
-                <span class="premium-plan-price">
-                  {{ formatPrice(plan.display_amount, plan.display_currency) }}
-                </span>
-                <span class="premium-plan-note">
-                  {{
-                    t(plan.auto_renew ? I18N_KEYS.PREMIUM.AUTO_RENEW : I18N_KEYS.PREMIUM.ONE_TIME)
-                  }}
-                  ·
-                  {{ quotaHint(plan) }}
-                </span>
+                {{ channel.payment_method_name || channel.payment_method }}
               </button>
             </div>
-
-            <div v-if="selectedPlanChannels.length > 1" class="premium-channels">
-              <span class="premium-channels-label">
-                {{ t(I18N_KEYS.PREMIUM.PAYMENT_METHOD) }}
-              </span>
-              <div class="premium-channel-list" role="radiogroup">
-                <button
-                  v-for="channel in selectedPlanChannels"
-                  :key="channel.payment_method"
-                  type="button"
-                  role="radio"
-                  :aria-checked="channel.payment_method === selectedChannelMethod"
-                  class="premium-channel"
-                  :class="{ 'is-selected': channel.payment_method === selectedChannelMethod }"
-                  @click="selectedChannelMethod = channel.payment_method"
-                >
-                  {{ channel.payment_method_name || channel.payment_method }}
-                </button>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              class="premium-primary-button premium-buy"
-              :disabled="phase === 'creating'"
-              @click="handleBuy"
-            >
-              {{ t(phase === 'creating' ? I18N_KEYS.PREMIUM.CREATING : I18N_KEYS.PREMIUM.BUY) }}
-            </button>
-            <p v-if="actionError" class="premium-error" role="alert">{{ actionError }}</p>
-          </template>
-
-          <!-- 已发起支付：外部收银台打开，轮询订单状态 -->
-          <div v-else-if="phase === 'pending'" class="premium-center" aria-busy="true">
-            <Icon class="premium-spinner" :name="IconName.ARROW_PATH" :size="IconSize.LG" />
-            <p class="premium-heading">{{ t(I18N_KEYS.PREMIUM.PENDING_TITLE) }}</p>
-            <p class="premium-message">{{ t(I18N_KEYS.PREMIUM.PENDING_MESSAGE) }}</p>
-            <button type="button" class="premium-secondary-button" @click="handleCancelPayment">
-              {{ t(I18N_KEYS.PREMIUM.PENDING_CANCEL) }}
-            </button>
           </div>
 
-          <!-- 支付成功 -->
-          <div v-else-if="phase === 'success'" class="premium-center">
-            <div class="premium-hero-icon is-success" aria-hidden="true">
-              <Icon :name="IconName.CHECK" :size="IconSize.XL" />
-            </div>
-            <p class="premium-heading">{{ t(I18N_KEYS.PREMIUM.SUCCESS_TITLE) }}</p>
-            <p class="premium-message">{{ t(I18N_KEYS.PREMIUM.SUCCESS_MESSAGE) }}</p>
-            <button type="button" class="premium-primary-button" @click="handleClose">
-              {{ t(I18N_KEYS.PREMIUM.SUCCESS_DONE) }}
-            </button>
-          </div>
+          <button
+            type="button"
+            class="premium-primary-button premium-buy"
+            :disabled="phase === 'creating'"
+            @click="handleBuy"
+          >
+            {{ t(phase === 'creating' ? I18N_KEYS.PREMIUM.CREATING : I18N_KEYS.PREMIUM.BUY) }}
+          </button>
+          <p v-if="actionError" class="premium-error" role="alert">{{ actionError }}</p>
+        </template>
 
-          <!-- 支付未完成 / 履约失败 -->
-          <div v-else class="premium-center">
-            <p class="premium-heading">{{ t(I18N_KEYS.PREMIUM.FAILED_TITLE) }}</p>
-            <p class="premium-message">{{ t(failedReasonKey) }}</p>
-            <p v-if="supportMail" class="premium-support">
-              {{ t(I18N_KEYS.PREMIUM.SUPPORT, { email: supportMail }) }}
-            </p>
-            <button type="button" class="premium-primary-button" @click="handleRetry">
-              {{ t(I18N_KEYS.PREMIUM.RETRY) }}
-            </button>
+        <!-- 已发起支付：外部收银台打开，轮询订单状态 -->
+        <div v-else-if="phase === 'pending'" class="premium-center" aria-busy="true">
+          <Icon class="premium-spinner" :name="IconName.ARROW_PATH" :size="IconSize.LG" />
+          <p class="premium-heading">{{ t(I18N_KEYS.PREMIUM.PENDING_TITLE) }}</p>
+          <p class="premium-message">{{ t(I18N_KEYS.PREMIUM.PENDING_MESSAGE) }}</p>
+          <button type="button" class="premium-secondary-button" @click="handleCancelPayment">
+            {{ t(I18N_KEYS.PREMIUM.PENDING_CANCEL) }}
+          </button>
+        </div>
+
+        <!-- 支付成功 -->
+        <div v-else-if="phase === 'success'" class="premium-center">
+          <div class="premium-hero-icon is-success" aria-hidden="true">
+            <Icon :name="IconName.CHECK" :size="IconSize.XL" />
           </div>
-        </main>
-      </div>
-    </Transition>
+          <p class="premium-heading">{{ t(I18N_KEYS.PREMIUM.SUCCESS_TITLE) }}</p>
+          <p class="premium-message">{{ t(I18N_KEYS.PREMIUM.SUCCESS_MESSAGE) }}</p>
+          <button type="button" class="premium-primary-button" @click="handleClose">
+            {{ t(I18N_KEYS.PREMIUM.SUCCESS_DONE) }}
+          </button>
+        </div>
+
+        <!-- 支付未完成 / 履约失败 -->
+        <div v-else class="premium-center">
+          <p class="premium-heading">{{ t(I18N_KEYS.PREMIUM.FAILED_TITLE) }}</p>
+          <p class="premium-message">{{ t(failedReasonKey) }}</p>
+          <p v-if="supportMail" class="premium-support">
+            {{ t(I18N_KEYS.PREMIUM.SUPPORT, { email: supportMail }) }}
+          </p>
+          <button type="button" class="premium-primary-button" @click="handleRetry">
+            {{ t(I18N_KEYS.PREMIUM.RETRY) }}
+          </button>
+        </div>
+      </main>
+    </dialog>
   </Teleport>
 </template>
 
@@ -168,7 +164,7 @@
  * 状态机：gate（未登录）→ loading → ready ⇄ creating → pending → success / failed；
  * 套餐配置与下单合同复用官网 pricing 同一套后端协议（checkout-configs → order/create
  * → 外部收银台 → 轮询 order/status），不发明新协议。轮询只在 popup 存活期间进行：
- * 用户去收银台支付时 popup 通常已被销毁，重新打开后由登录态初始化刷新订阅状态。
+ * background 创建订单并保存当前用户的订单引用，重开视图立即向服务端查询该订单。
  */
 
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
@@ -182,12 +178,9 @@ import { subscriptionApi } from '@/core/api/subscription'
 import {
   buildCreateOrderRequest,
   classifyOrderStatus,
-  createOrder,
   getDefaultOrderPaymentChannel,
   getOrderStatus,
   hasOrderPollingTimedOut,
-  isPaymentGatewayError,
-  isPaymentPriceUpdatedError,
   isRecoverableOrderStatusError,
   ORDER_POLL_INTERVAL_MS,
   readPaymentUrl
@@ -197,6 +190,8 @@ import { useAuthStore } from '@/core/stores/authStore'
 import { useQuotaStore } from '@/core/stores/quotaStore'
 import { openExternalPage } from '@/core/utils/navigation'
 import { openLoginModal } from '@/core/composables/loginModal'
+import { useNativeDialog } from '@/core/composables/nativeDialog'
+import { BackgroundChannel } from '@/popup/rpc/background.rpc'
 import {
   closePremiumView,
   getPremiumSource,
@@ -219,9 +214,11 @@ type PremiumPhase =
 type FailedReason = 'orderGone' | 'cancelled' | 'fulfillment' | 'timeout' | 'generic' | 'gateway'
 
 const { t } = useI18n()
+const dialog = useNativeDialog(premiumViewVisible)
 
 const authStore = useAuthStore()
 const quotaStore = useQuotaStore()
+const background = new BackgroundChannel()
 
 /**
  * 组件根节点是 Teleport，Vue 的 style v-bind()（useCssVars）会把变量挂到 Teleport
@@ -298,28 +295,21 @@ watch(premiumViewVisible, visible => {
   }
 })
 
-// 登录门控与登录成功后的自动衔接：登录完成（根组件刷新登录态）直接进入套餐加载。
+// 用户变化后重新读取该用户的订单引用，避免沿用上一位用户的交易投影。
 watch(
-  () => authStore.isAuthenticated,
-  authenticated => {
+  () => authStore.user?.user_id,
+  () => {
     if (!premiumViewVisible.value) {
       return
     }
-    if (!authenticated) {
-      stopPolling()
-      phase.value = 'gate'
-      return
-    }
-    if (phase.value === 'gate') {
-      void loadPlans()
-    }
+    void enterView()
   }
 )
 
 onBeforeUnmount(stopPolling)
 
-/** 打开视图：清空交易态，按登录态决定先登录还是直接加载套餐。 */
-function enterView(): void {
+/** 打开视图：先恢复当前用户的订单定位，没有引用时加载套餐。 */
+async function enterView(): Promise<void> {
   stopPolling()
   plans.value = []
   selectedPlanId.value = null
@@ -334,7 +324,28 @@ function enterView(): void {
     phase.value = 'gate'
     return
   }
-  void loadPlans()
+  phase.value = 'loading'
+  const userId = authStore.user?.user_id
+  try {
+    const reference = await background.getLatestOrderReference()
+    if (!premiumViewVisible.value || authStore.user?.user_id !== userId) {
+      return
+    }
+    if (!reference) {
+      await loadPlans()
+      return
+    }
+    orderNo.value = reference.orderNo
+    phase.value = 'pending'
+    pollStartedAt.value = Date.now()
+    await pollOnce()
+    if (phase.value === 'pending' && premiumViewVisible.value) {
+      startPolling()
+    }
+  } catch (error) {
+    logger.error('[PremiumView] 读取订单引用失败:', error)
+    phase.value = 'loadFailed'
+  }
 }
 
 /** 拉取可购买套餐配置；价格变化（后端 21005）时也走这里刷新。 */
@@ -380,8 +391,30 @@ async function handleBuy(): Promise<void> {
 
   phase.value = 'creating'
   actionError.value = ''
+  const userId = authStore.user?.user_id
   try {
-    const response = await createOrder(buildCreateOrderRequest(plan, channel))
+    const result = await background.createCheckoutOrder(buildCreateOrderRequest(plan, channel))
+    if (!premiumViewVisible.value || authStore.user?.user_id !== userId) {
+      return
+    }
+    if (result.status === 'failed') {
+      if (result.reason === 'auth') {
+        phase.value = 'gate'
+      } else if (result.reason === 'priceUpdated') {
+        await loadPlans()
+      } else {
+        phase.value = 'ready'
+        actionError.value = t(
+          result.reason === 'gateway'
+            ? I18N_KEYS.PREMIUM.ERROR_GATEWAY
+            : result.reason === 'orderGone'
+              ? I18N_KEYS.PREMIUM.ERROR_ORDER_GONE
+              : I18N_KEYS.PREMIUM.ERROR_GENERIC
+        )
+      }
+      return
+    }
+    const response = result.order
     const paymentUrl = readPaymentUrl(response.payment_data, channel.payment_method)
     if (!paymentUrl) {
       // 渠道返回了不可信或无法识别的支付数据，按网关故障引导重试。
@@ -401,38 +434,38 @@ async function handleBuy(): Promise<void> {
     await openExternalPage(paymentUrl, `payment:${channel.payment_method}`)
   } catch (error) {
     logger.error('[PremiumView] 创建订单失败:', error)
-    if (error instanceof Error && isAuthSessionFailure(error)) {
-      phase.value = 'gate'
-      return
-    }
-    // 价格配置已变化：重新拉取套餐配置后让用户重新确认。
-    if (error instanceof Error && isPaymentPriceUpdatedError(error)) {
-      await loadPlans()
-      return
-    }
     phase.value = 'ready'
-    actionError.value = resolveActionError(error)
+    actionError.value = t(I18N_KEYS.PREMIUM.ERROR_GENERIC)
   }
 }
 
 /** 轮询订单状态直到终态或超时；单次网络错误保留现场等下一轮。 */
 async function pollOnce(): Promise<void> {
-  if (!orderNo.value || phase.value !== 'pending') {
+  if (!orderNo.value || phase.value !== 'pending' || !premiumViewVisible.value) {
     return
   }
 
+  const queriedOrderNo = orderNo.value
+  const userId = authStore.user?.user_id
   try {
-    const status = await getOrderStatus(orderNo.value)
-    if (phase.value !== 'pending') {
+    const status = await getOrderStatus(queriedOrderNo)
+    if (
+      phase.value !== 'pending' ||
+      orderNo.value !== queriedOrderNo ||
+      authStore.user?.user_id !== userId ||
+      !premiumViewVisible.value
+    ) {
       return
     }
 
     const outcome = classifyOrderStatus(status)
     if (outcome === 'paid') {
+      forgetOrderReference(queriedOrderNo)
       finishSuccess()
       return
     }
     if (outcome === 'expired' || outcome === 'cancelled' || outcome === 'failed') {
+      forgetOrderReference(queriedOrderNo)
       finishFailed(
         outcome === 'expired' ? 'orderGone' : outcome === 'cancelled' ? 'cancelled' : 'fulfillment'
       )
@@ -442,7 +475,12 @@ async function pollOnce(): Promise<void> {
       finishFailed('timeout')
     }
   } catch (error) {
-    if (phase.value !== 'pending') {
+    if (
+      phase.value !== 'pending' ||
+      orderNo.value !== queriedOrderNo ||
+      authStore.user?.user_id !== userId ||
+      !premiumViewVisible.value
+    ) {
       return
     }
     logger.error('[PremiumView] 查询订单状态失败:', error)
@@ -452,9 +490,17 @@ async function pollOnce(): Promise<void> {
       return
     }
     if (error instanceof Error && isRecoverableOrderStatusError(error)) {
+      forgetOrderReference(queriedOrderNo)
       finishFailed('orderGone')
     }
   }
+}
+
+/** 清理失败只影响下次是否再查询，不改变服务端已经确认的结果。 */
+function forgetOrderReference(completedOrderNo: string): void {
+  background.clearOrderReference({ orderNo: completedOrderNo }).catch(error => {
+    logger.error(`[PremiumView] 清理已终态订单引用失败: orderNo=${completedOrderNo}`, error)
+  })
 }
 
 function startPolling(): void {
@@ -490,13 +536,12 @@ function finishFailed(reason: FailedReason): void {
 /** 用户放弃等待：停止轮询并回到套餐选择；订单留待服务端过期。 */
 function handleCancelPayment(): void {
   stopPolling()
-  phase.value = 'ready'
+  void loadPlans()
 }
 
 /** 从失败态重试：回到套餐选择重新发起。 */
 function handleRetry(): void {
-  phase.value = 'ready'
-  actionError.value = ''
+  void loadPlans()
 }
 
 function handleClose(): void {
@@ -506,17 +551,6 @@ function handleClose(): void {
 
 function handleLogin(): void {
   openLoginModal(getPremiumSource())
-}
-
-/** 下单失败的用户文案归类。 */
-function resolveActionError(error: unknown): string {
-  if (error instanceof Error && isPaymentGatewayError(error)) {
-    return t(I18N_KEYS.PREMIUM.ERROR_GATEWAY)
-  }
-  if (error instanceof Error && isRecoverableOrderStatusError(error)) {
-    return t(I18N_KEYS.PREMIUM.ERROR_ORDER_GONE)
-  }
-  return t(I18N_KEYS.PREMIUM.ERROR_GENERIC)
 }
 
 /** 周期展示文案。 */
@@ -555,11 +589,20 @@ function formatPrice(amount: number, currency: string): string {
 .premium-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1900;
-  display: flex;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
   flex-direction: column;
   background: #ffffff;
   box-sizing: border-box;
+}
+
+.premium-overlay[open] {
+  display: flex;
 }
 
 .premium-header {
@@ -825,20 +868,8 @@ function formatPrice(amount: number, currency: string): string {
   color: var(--premium-primary);
 }
 
-.premium-fade-enter-active,
-.premium-fade-leave-active {
-  transition: opacity 0.18s ease;
-}
-
-.premium-fade-enter-from,
-.premium-fade-leave-to {
-  opacity: 0;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .premium-spinner,
-  .premium-fade-enter-active,
-  .premium-fade-leave-active {
+  .premium-spinner {
     transition: none;
     animation: none;
   }

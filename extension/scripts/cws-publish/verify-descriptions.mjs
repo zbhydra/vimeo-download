@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 // Verify the "说明" textarea content in CWS matches docs/assets/store/*.txt for each locale.
 // Read-only: never modifies, never clicks save.
-// Usage: node scripts/cws-publish/verify-descriptions.mjs
+// 用法：node scripts/cws-publish/verify-descriptions.mjs <目标后台URL>
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { connectPage, findListingPage } from './cdp-helper.mjs';
+import { connectPage, findCwsPage } from './cdp-helper.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 // scripts/cws-publish → extension → 仓库根；商店文案在仓库根的 docs/ 下，不在 extension/ 内。
@@ -30,8 +30,7 @@ const LANGS = [
   ['葡萄牙文（巴西） – pt-BR', 'pt.txt'],
 ];
 
-const listing = await findListingPage();
-if (!listing) { console.error('no CWS listing page open'); process.exit(2); }
+const listing = await findCwsPage(process.argv[2], 'listing');
 const cdp = await connectPage(listing.id);
 
 async function clickAt(x, y) {

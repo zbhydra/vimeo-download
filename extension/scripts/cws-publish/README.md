@@ -17,13 +17,13 @@
      --user-data-dir="$HOME/.edge-cws-profile"
    ```
 
-2. 在这个浏览器里登录 CWS Developer Dashboard，并打开目标扩展的 `/edit/listing` 页。
+2. 在这个浏览器里登录 CWS Developer Dashboard，复制目标扩展的完整后台 `/edit/` 页面 URL。每条浏览器命令都必须显式传入该 URL；publisher 与 extension ID 从 URL 解析。执行前打开命令所需页面，并只保留一个同条目同页面标签页。
 
-3. 本机已装 Node.js（脚本用内置 `ws` 或 `agent-browser` 自带的 `ws` 模块）。
+3. 本机已装支持原生 WebSocket 的 Node.js（22.4+）及系统 `unzip`。本地检查另需 `zip`。
 
 ## 使用
 
-推荐的端到端顺序（每一步都可独立重跑，失败不会污染前一步）：
+从 `extension/` 目录执行。将 `CWS_TARGET_URL` 设为已复制的完整后台 URL。
 
 ```bash
 # 1. 预检 _locales 摘要长度（本地，无需浏览器）
@@ -32,22 +32,33 @@ node scripts/cws-publish/check-summary-length.mjs
 # 2. 打包
 pnpm build
 
-# 3. 上传 dist.zip 到 CWS（需要浏览器 9222 + 登录 + 已打开扩展 devconsole）
-node scripts/cws-publish/upload-package.mjs
+# 3. 打开目标 /edit/package 页，上传 dist.zip；可在 URL 后附自定义 ZIP 路径
+node scripts/cws-publish/upload-package.mjs "$CWS_TARGET_URL"
 
 # 4. 在 CWS 后台维护多语言说明后，只读校验 14 种语言的说明字段
-node scripts/cws-publish/verify-descriptions.mjs
+node scripts/cws-publish/verify-descriptions.mjs "$CWS_TARGET_URL"
 
-# 5. 提交审查（disabled 时会自动抓 CWS 的拒绝原因打印出来）
-node scripts/cws-publish/submit-review.mjs
+# 5. 打开目标 /edit/distribution 页，提交审查；按钮禁用时读取拒绝原因
+node scripts/cws-publish/submit-review.mjs "$CWS_TARGET_URL"
 
 # 辅助：查看当前草稿版本 / 警告
-node scripts/cws-publish/probe-package.mjs
+node scripts/cws-publish/probe-package.mjs "$CWS_TARGET_URL"
+
+# 本地检查：不访问浏览器或商店
+node scripts/cws-publish/check-local.mjs
 ```
+
+`verify-descriptions` 和 `probe-submit` 要求目标 `/edit/listing` 页已打开；`probe-why-blocked` 要求 `/edit/distribution` 页。`probe-submit` 只在显式条目内导航读取状态。
+
+目标页未打开或重复时，命令拒绝操作；调整标签页后重试。上传前读取待上传 ZIP 自身的 `manifest.json`，并核对全部文件与当前 `dist/` 一致；不一致时重新构建打包。草稿版本检查取 ZIP 的实际版本。
+
+这些检查证明显式目标选择与 ZIP 对应当前本地产物。没有 manifest key 时，包本身不能证明商店条目身份；执行者仍须确认复制的 URL 属于该扩展。本地 `dist/` 的来源由构建流程保证。
 
 ## 文件
 
-- `cdp-helper.mjs` — 最小 CDP WebSocket 客户端封装 + CWS tab 发现。
+- `cdp-helper.mjs` — 原生 WebSocket CDP 通信与显式目标页精确选择。
+- `package-check.mjs` — 上传 ZIP 的 manifest 和当前 `dist/` 文件内容核对。
+- `check-local.mjs` — 身份选择及 ZIP 一致性的本地检查。
 - `check-summary-length.mjs` — 纯本地预检，`public/_locales/*/messages.json` 的 `extensionDescription` ≤ 132 字符。
 - `upload-package.mjs` — 通过 `Page.setInterceptFileChooserDialog + DOM.setFileInputFiles` 上传 zip，绕开原生文件对话框；等到 draft 版本更新后退出。
 - `verify-descriptions.mjs` — 只读校验每种语言的 textarea 内容长度 + 首段是否匹配文件。
@@ -67,10 +78,9 @@ node scripts/cws-publish/probe-package.mjs
 
 5. **摘要（short description, 132 char max）不在 CWS 后台**：它由扩展包里 `public/_locales/<lang>/messages.json` 的 `extensionDescription.message` 提供，每种语言都要 ≤ 132 字符，否则 CWS 上传新 zip 时就会拒。
 
-## 当前扩展的 CWS Developer Dashboard URLs
+## 目标 URL 格式
 
-**TODO(待替换)**：`<publisher-id>` 与 `<extension-id>` 是占位符，Vimeo 版扩展在 CWS 建好条目后
-把真实值填到这里（脚本本身从命令行 URL 取这两段，不硬编码）。
+`<publisher-id>` 与 `<extension-id>` 表示从目标条目 URL 读取的值，不是可直接执行的参数。
 
 - 套件：`https://chrome.google.com/webstore/devconsole/<publisher-id>/<extension-id>/edit/package`
 - 商店资讯：`https://chrome.google.com/webstore/devconsole/<publisher-id>/<extension-id>/edit/listing`

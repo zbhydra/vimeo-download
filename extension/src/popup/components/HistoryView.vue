@@ -1,165 +1,163 @@
 <template>
   <Teleport to="body">
-    <Transition name="history-fade">
-      <div
-        v-if="historyViewVisible"
-        class="history-overlay"
-        role="dialog"
-        aria-modal="true"
-        :style="colorVars"
-      >
-        <header class="history-header">
-          <h2 class="history-title">{{ t(I18N_KEYS.HISTORY.TITLE) }}</h2>
-          <button
-            type="button"
-            class="history-close"
-            :aria-label="t(I18N_KEYS.APP_ERROR.DISMISS)"
-            @click="handleClose"
-          >
-            <Icon :name="IconName.X_MARK" :size="IconSize.SM" />
+    <dialog
+      ref="dialog"
+      class="history-overlay"
+      aria-labelledby="vdl-history-title"
+      :style="colorVars"
+      @close="handleClose"
+    >
+      <header class="history-header">
+        <h2 id="vdl-history-title" class="history-title">{{ t(I18N_KEYS.HISTORY.TITLE) }}</h2>
+        <button
+          type="button"
+          class="history-close"
+          :aria-label="t(I18N_KEYS.APP_ERROR.DISMISS)"
+          @click="handleClose"
+        >
+          <Icon :name="IconName.X_MARK" :size="IconSize.SM" />
+        </button>
+      </header>
+
+      <div class="history-toolbar">
+        <input
+          v-model="searchQuery"
+          class="history-search"
+          type="search"
+          :placeholder="t(I18N_KEYS.HISTORY.SEARCH_PLACEHOLDER)"
+        />
+        <select v-model="sortMode" class="history-sort" :aria-label="t(I18N_KEYS.HISTORY.TITLE)">
+          <option value="newest">{{ t(I18N_KEYS.HISTORY.SORT_NEWEST) }}</option>
+          <option value="oldest">{{ t(I18N_KEYS.HISTORY.SORT_OLDEST) }}</option>
+          <option value="titleAsc">{{ t(I18N_KEYS.HISTORY.SORT_TITLE_ASC) }}</option>
+          <option value="titleDesc">{{ t(I18N_KEYS.HISTORY.SORT_TITLE_DESC) }}</option>
+        </select>
+      </div>
+
+      <!-- 危险操作确认条：单条删除与清空共用 -->
+      <div v-if="pendingConfirm" class="history-confirm" role="alert">
+        <span class="history-confirm-message">{{ confirmMessage }}</span>
+        <div class="history-confirm-actions">
+          <button type="button" class="history-confirm-cancel" @click="cancelConfirm">
+            {{ t(I18N_KEYS.HISTORY.CONFIRM_CANCEL) }}
           </button>
-        </header>
-
-        <div class="history-toolbar">
-          <input
-            v-model="searchQuery"
-            class="history-search"
-            type="search"
-            :placeholder="t(I18N_KEYS.HISTORY.SEARCH_PLACEHOLDER)"
-          />
-          <select v-model="sortMode" class="history-sort" :aria-label="t(I18N_KEYS.HISTORY.TITLE)">
-            <option value="newest">{{ t(I18N_KEYS.HISTORY.SORT_NEWEST) }}</option>
-            <option value="oldest">{{ t(I18N_KEYS.HISTORY.SORT_OLDEST) }}</option>
-            <option value="titleAsc">{{ t(I18N_KEYS.HISTORY.SORT_TITLE_ASC) }}</option>
-            <option value="titleDesc">{{ t(I18N_KEYS.HISTORY.SORT_TITLE_DESC) }}</option>
-          </select>
+          <button type="button" class="history-confirm-danger" @click="confirmPending">
+            {{ confirmActionLabel }}
+          </button>
         </div>
+      </div>
 
-        <!-- 危险操作确认条：单条删除与清空共用 -->
-        <div v-if="pendingConfirm" class="history-confirm" role="alert">
-          <span class="history-confirm-message">{{ confirmMessage }}</span>
-          <div class="history-confirm-actions">
-            <button type="button" class="history-confirm-cancel" @click="cancelConfirm">
-              {{ t(I18N_KEYS.HISTORY.CONFIRM_CANCEL) }}
-            </button>
-            <button type="button" class="history-confirm-danger" @click="confirmPending">
-              {{ confirmActionLabel }}
-            </button>
-          </div>
-        </div>
-
-        <main class="history-body">
-          <ul v-if="pageItems.length > 0" class="history-list">
-            <li v-for="entry in pageItems" :key="historyEntryKey(entry)" class="history-item">
-              <span class="history-item-type" :style="{ color: presentationOf(entry).color }">
-                <Icon :name="presentationOf(entry).icon" :size="IconSize.SM" />
-              </span>
-              <div class="history-item-body">
-                <div class="history-item-top">
-                  <span class="history-item-name" :title="entry.title">{{ entry.title }}</span>
-                  <span
-                    class="history-item-status"
-                    :class="entry.status === 'success' ? 'is-success' : 'is-failed'"
-                  >
-                    <Icon
-                      :name="entry.status === 'success' ? IconName.CHECK : IconName.X_MARK"
-                      :size="IconSize.XS"
-                    />
-                    {{
-                      t(
-                        entry.status === 'success'
-                          ? I18N_KEYS.HISTORY.STATUS_SUCCESS
-                          : I18N_KEYS.HISTORY.STATUS_FAILED
-                      )
-                    }}
-                  </span>
-                </div>
-                <div class="history-item-meta">
-                  <span v-if="entry.author">{{ entry.author }}</span>
-                  <span v-if="entry.quality">{{ entry.quality }}</span>
-                  <span>{{ relativeTime(entry.downloadedAt) }}</span>
-                </div>
-              </div>
-              <div class="history-item-actions">
-                <button
-                  v-if="entry.pageUrl"
-                  type="button"
-                  class="history-item-action"
-                  :aria-label="t(I18N_KEYS.HISTORY.OPEN_PAGE)"
-                  :title="t(I18N_KEYS.HISTORY.OPEN_PAGE)"
-                  @click="openEntryPage(entry)"
+      <main class="history-body">
+        <ul v-if="pageItems.length > 0" class="history-list">
+          <li v-for="entry in pageItems" :key="historyEntryKey(entry)" class="history-item">
+            <span class="history-item-type" :style="{ color: presentationOf(entry).color }">
+              <Icon :name="presentationOf(entry).icon" :size="IconSize.SM" />
+            </span>
+            <div class="history-item-body">
+              <div class="history-item-top">
+                <span class="history-item-name" :title="entry.title">{{ entry.title }}</span>
+                <span
+                  class="history-item-status"
+                  :class="entry.status === 'success' ? 'is-success' : 'is-failed'"
                 >
                   <Icon
-                    class="history-icon-right"
-                    :name="IconName.CHEVRON_DOWN"
+                    :name="entry.status === 'success' ? IconName.CHECK : IconName.X_MARK"
                     :size="IconSize.XS"
                   />
-                </button>
-                <button
-                  type="button"
-                  class="history-item-action is-danger"
-                  :aria-label="t(I18N_KEYS.HISTORY.DELETE_ENTRY)"
-                  :title="t(I18N_KEYS.HISTORY.DELETE_ENTRY)"
-                  @click="askDeleteEntry(entry)"
-                >
-                  <Icon :name="IconName.TRASH" :size="IconSize.XS" />
-                </button>
+                  {{
+                    t(
+                      entry.status === 'success'
+                        ? I18N_KEYS.HISTORY.STATUS_SUCCESS
+                        : I18N_KEYS.HISTORY.STATUS_FAILED
+                    )
+                  }}
+                </span>
               </div>
-            </li>
-          </ul>
-          <div v-else class="history-empty">
-            <Icon :name="IconName.INBOX" :size="IconSize.XL" />
-            <p class="history-empty-message">
-              {{ t(entries.length > 0 ? I18N_KEYS.HISTORY.EMPTY_SEARCH : I18N_KEYS.HISTORY.EMPTY) }}
-            </p>
-          </div>
-        </main>
+              <div class="history-item-meta">
+                <span v-if="entry.author">{{ entry.author }}</span>
+                <span v-if="entry.quality">{{ entry.quality }}</span>
+                <span>{{ relativeTime(entry.downloadedAt) }}</span>
+              </div>
+            </div>
+            <div class="history-item-actions">
+              <button
+                v-if="entry.pageUrl"
+                type="button"
+                class="history-item-action"
+                :aria-label="t(I18N_KEYS.HISTORY.OPEN_PAGE)"
+                :title="t(I18N_KEYS.HISTORY.OPEN_PAGE)"
+                @click="openEntryPage(entry)"
+              >
+                <Icon
+                  class="history-icon-right"
+                  :name="IconName.CHEVRON_DOWN"
+                  :size="IconSize.XS"
+                />
+              </button>
+              <button
+                type="button"
+                class="history-item-action is-danger"
+                :aria-label="t(I18N_KEYS.HISTORY.DELETE_ENTRY)"
+                :title="t(I18N_KEYS.HISTORY.DELETE_ENTRY)"
+                @click="askDeleteEntry(entry)"
+              >
+                <Icon :name="IconName.TRASH" :size="IconSize.XS" />
+              </button>
+            </div>
+          </li>
+        </ul>
+        <div v-else class="history-empty">
+          <Icon :name="IconName.INBOX" :size="IconSize.XL" />
+          <p class="history-empty-message">
+            {{ t(entries.length > 0 ? I18N_KEYS.HISTORY.EMPTY_SEARCH : I18N_KEYS.HISTORY.EMPTY) }}
+          </p>
+        </div>
+      </main>
 
-        <footer class="history-footer">
-          <div class="history-footer-actions">
-            <button
-              type="button"
-              class="history-footer-button"
-              :disabled="visibleEntries.length === 0"
-              @click="exportCsv"
-            >
-              {{ t(I18N_KEYS.HISTORY.EXPORT_CSV) }}
-            </button>
-            <button
-              type="button"
-              class="history-footer-button is-danger"
-              :disabled="entries.length === 0"
-              @click="askClearAll"
-            >
-              {{ t(I18N_KEYS.HISTORY.CLEAR_ALL) }}
-            </button>
-          </div>
-          <div v-if="totalPages > 1" class="history-pagination">
-            <button
-              type="button"
-              class="history-item-action"
-              :disabled="currentPage <= 1"
-              :aria-label="t(I18N_KEYS.HISTORY.PREV_PAGE)"
-              @click="currentPage -= 1"
-            >
-              <Icon class="history-icon-prev" :name="IconName.CHEVRON_DOWN" :size="IconSize.XS" />
-            </button>
-            <span class="history-page-indicator">
-              {{ t(I18N_KEYS.HISTORY.PAGE_INDICATOR, { page: currentPage, total: totalPages }) }}
-            </span>
-            <button
-              type="button"
-              class="history-item-action"
-              :disabled="currentPage >= totalPages"
-              :aria-label="t(I18N_KEYS.HISTORY.NEXT_PAGE)"
-              @click="currentPage += 1"
-            >
-              <Icon class="history-icon-next" :name="IconName.CHEVRON_DOWN" :size="IconSize.XS" />
-            </button>
-          </div>
-        </footer>
-      </div>
-    </Transition>
+      <footer class="history-footer">
+        <div class="history-footer-actions">
+          <button
+            type="button"
+            class="history-footer-button"
+            :disabled="visibleEntries.length === 0"
+            @click="exportCsv"
+          >
+            {{ t(I18N_KEYS.HISTORY.EXPORT_CSV) }}
+          </button>
+          <button
+            type="button"
+            class="history-footer-button is-danger"
+            :disabled="entries.length === 0"
+            @click="askClearAll"
+          >
+            {{ t(I18N_KEYS.HISTORY.CLEAR_ALL) }}
+          </button>
+        </div>
+        <div v-if="totalPages > 1" class="history-pagination">
+          <button
+            type="button"
+            class="history-item-action"
+            :disabled="currentPage <= 1"
+            :aria-label="t(I18N_KEYS.HISTORY.PREV_PAGE)"
+            @click="currentPage -= 1"
+          >
+            <Icon class="history-icon-prev" :name="IconName.CHEVRON_DOWN" :size="IconSize.XS" />
+          </button>
+          <span class="history-page-indicator">
+            {{ t(I18N_KEYS.HISTORY.PAGE_INDICATOR, { page: currentPage, total: totalPages }) }}
+          </span>
+          <button
+            type="button"
+            class="history-item-action"
+            :disabled="currentPage >= totalPages"
+            :aria-label="t(I18N_KEYS.HISTORY.NEXT_PAGE)"
+            @click="currentPage += 1"
+          >
+            <Icon class="history-icon-next" :name="IconName.CHEVRON_DOWN" :size="IconSize.XS" />
+          </button>
+        </div>
+      </footer>
+    </dialog>
   </Teleport>
 </template>
 
@@ -183,12 +181,11 @@ import { logger } from '@/core/utils/logger'
 import { openExternalPage } from '@/core/utils/navigation'
 import {
   buildHistoryKey,
-  clearDownloadHistory,
   getDownloadHistory,
-  removeDownloadHistoryEntry,
   type DownloadHistoryEntry
 } from '@/core/storage/downloadHistory'
 import { closeHistoryView, historyViewVisible } from '@/core/composables/historyView'
+import { useNativeDialog } from '@/core/composables/nativeDialog'
 import {
   countHistoryPages,
   filterHistoryEntries,
@@ -203,8 +200,10 @@ import {
   type HistoryCsvHeaders
 } from '@/popup/utils/historyCsv'
 import { getResourceTypePresentation } from '@/popup/utils/resourcePresentation'
+import { BackgroundChannel } from '@/popup/rpc/background.rpc'
 
 const { t, locale } = useI18n()
+const dialog = useNativeDialog(historyViewVisible)
 
 /** 覆盖层根节点显式级联的颜色变量（Teleport 子树拿不到 useCssVars 变量）。 */
 const colorVars = {
@@ -322,10 +321,12 @@ function cancelConfirm(): void {
 async function confirmPending(): Promise<void> {
   try {
     if (pendingDeleteKey.value !== null) {
-      await removeDownloadHistoryEntry(pendingDeleteKey.value)
+      await new BackgroundChannel().removeDownloadHistoryEntry({ key: pendingDeleteKey.value })
     } else if (pendingClear.value) {
-      await clearDownloadHistory()
+      await new BackgroundChannel().clearDownloadHistory()
     }
+  } catch (error) {
+    logger.error('[HistoryView] 修改历史失败:', error)
   } finally {
     cancelConfirm()
     entries.value = await getDownloadHistory()
@@ -374,11 +375,20 @@ function handleClose(): void {
 .history-overlay {
   position: fixed;
   inset: 0;
-  z-index: 2100;
-  display: flex;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
   flex-direction: column;
   background: #ffffff;
   box-sizing: border-box;
+}
+
+.history-overlay[open] {
+  display: flex;
 }
 
 .history-header {
@@ -712,22 +722,5 @@ function handleClose(): void {
   text-align: center;
   font-size: 11px;
   color: var(--history-gray-500);
-}
-
-.history-fade-enter-active,
-.history-fade-leave-active {
-  transition: opacity 0.18s ease;
-}
-
-.history-fade-enter-from,
-.history-fade-leave-to {
-  opacity: 0;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .history-fade-enter-active,
-  .history-fade-leave-active {
-    transition: none;
-  }
 }
 </style>

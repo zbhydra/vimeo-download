@@ -15,12 +15,12 @@ import { ChromeEventSubscriber } from '@/core/rpc/ChromeEventBus'
 import { logger } from '@/core/utils/logger'
 import { BackgroundChannel } from '@/popup/rpc/background.rpc'
 
-/** 当前 Popup 的目标页面下载状态。 */
+/** 当前 Popup 的全局下载队列投影。 */
 export const useDownloadStatusStore = defineStore('downloadStatus', () => {
-  /** 当前页面按创建顺序排列的未完成任务。 */
+  /** 全局按创建顺序排列的未完成任务。 */
   const tasks = ref<DownloadTaskSnapshot[]>([])
 
-  /** 当前 content document 生命周期作用域。 */
+  /** 当前 background worker 生命周期作用域。 */
   const scopeId = ref<string | null>(null)
 
   /** 最近应用的快照版本。 */
@@ -37,9 +37,6 @@ export const useDownloadStatusStore = defineStore('downloadStatus', () => {
 
   /** 当前下载状态事件的取消订阅函数。 */
   let eventUnsubscribe: (() => void) | null = null
-
-  /** 初始化 RPC 期间暂存的最新事件快照；background 是唯一作用域，单槽足够。 */
-  let pendingSnapshot: DownloadQueueSnapshot | null = null
 
   /** 正在下载的任务。 */
   const activeTasks = computed(() => tasks.value.filter(task => task.status === 'downloading'))
@@ -91,28 +88,13 @@ export const useDownloadStatusStore = defineStore('downloadStatus', () => {
 
     backgroundClient = new BackgroundChannel()
     eventSubscriber = new ChromeEventSubscriber<ExtensionEvents>()
-    eventUnsubscribe = eventSubscriber.on('downloadQueueUpdated', snapshot => {
-      if (scopeId.value === null) {
-        if (pendingSnapshot === null || snapshot.revision > pendingSnapshot.revision) {
-          pendingSnapshot = snapshot
-        }
-        return
-      }
-      applySnapshot(snapshot)
-    })
+    eventUnsubscribe = eventSubscriber.on('downloadQueueUpdated', applySnapshot)
 
     try {
       const initialSnapshot = await backgroundClient.getDownloadQueue()
-      scopeId.value = initialSnapshot.scopeId
       applySnapshot(initialSnapshot)
-
-      if (pendingSnapshot) {
-        applySnapshot(pendingSnapshot)
-      }
     } catch (error) {
       logger.error('[downloadStatusStore] 查询下载编排队列失败', error)
-    } finally {
-      pendingSnapshot = null
     }
   }
 
@@ -153,11 +135,12 @@ export const useDownloadStatusStore = defineStore('downloadStatus', () => {
     }
   }
 
-  /** 应用同一页面作用域内的新版本快照。 */
+  /** 同一 worker 拒绝旧版本，新 worker 用自己的 revision 重新开始。 */
   function applySnapshot(snapshot: DownloadQueueSnapshot): void {
-    if (snapshot.scopeId !== scopeId.value || snapshot.revision < revision.value) {
+    if (snapshot.scopeId === scopeId.value && snapshot.revision < revision.value) {
       return
     }
+    scopeId.value = snapshot.scopeId
     revision.value = snapshot.revision
     tasks.value = snapshot.tasks.map(task => ({ ...task }))
   }
@@ -170,10 +153,9 @@ export const useDownloadStatusStore = defineStore('downloadStatus', () => {
     eventSubscriber = null
     backgroundClient?.destroy()
     backgroundClient = null
-    pendingSnapshot = null
   }
 
-  /** 清空上一目标页面的快照身份。 */
+  /** 清空上一 Popup 订阅的快照身份。 */
   function resetSnapshot(): void {
     tasks.value = []
     scopeId.value = null

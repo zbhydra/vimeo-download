@@ -6,7 +6,7 @@
  * 本模块负责临时文件的完整生命周期：
  *
  * - 创建：`vdl-mux/<stem>.<ext>`，stem 取全局唯一的 taskId 防碰撞；
- * - 交付：File 交 OffscreenTaskRunner 交付；background 经 downloads.onChanged 确认落盘后
+ * - 交付：File 交 OffscreenTaskRunner 交付；background 经 downloads.search 确认落盘后
  *   在 releaseTaskArtifact 中删除；
  * - 清扫：offscreen 启动时递归删除整个目录（上次会话崩溃/泄漏的兜底）。
  *

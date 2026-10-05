@@ -9,11 +9,11 @@
 import { vi } from 'vitest'
 import { chrome } from './mocks/chrome-api'
 
-vi.stubGlobal('__API_BASE_URL__', 'https://api.vimeo-video-downloader.example')
-vi.stubGlobal('__DEV__', false)
-vi.stubGlobal('__WEBSITE_BASE_URL__', 'https://vimeo-video-downloader.example')
+vi.stubGlobal('__API_BASE_URL__', 'http://localhost:7900')
+vi.stubGlobal('__DEV__', true)
+vi.stubGlobal('__WEBSITE_BASE_URL__', 'http://localhost:7910')
 vi.stubGlobal('__ALI_SLS_MARK_CONFIG__', {
-  enabled: true,
+  enabled: false,
   endpoint: 'https://vimeo-download.ap-southeast-1.log.aliyuncs.com',
   logstore: 'vimeo-download-mark-log',
   topic: 'mark-log',

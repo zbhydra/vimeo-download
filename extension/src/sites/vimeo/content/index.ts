@@ -13,6 +13,7 @@ import { ChromeEventSubscriber } from '@/core/rpc/ChromeEventBus'
 import { waitForInjectedReady } from '@/core/rpc/injectedReady'
 import { synchronizeRuntimeConfig } from '@/content/runtimeConfig'
 import { logger } from '@/core/utils/logger'
+import { I18nService } from '@/locales'
 import {
   loadVimeoResourcesFromCapturedConfig,
   type VimeoResourceSnapshot
@@ -60,12 +61,6 @@ class VimeoContentController {
   /** background RPC 客户端：下载发起统一改道 background 编排（U8）。 */
   private readonly backgroundClient = new BackgroundChannel()
 
-  /** 页面按钮在途下载会话：videoId → 触发下载的资源 ID。 */
-  private readonly activeButtonDownloads = new Map<string, { sourceId: string }>()
-
-  /** 当前 URL。 */
-  private currentHref = window.location.href
-
   /** 当前 videoId。 */
   private currentVideoId: string | null = null
 
@@ -111,13 +106,22 @@ class VimeoContentController {
       })
     })
 
+    vimeoResourceBuffer.onPageChange(() => this.handleRouteChange())
     vimeoResourceBuffer.start()
     vimeoMessageHandler.start()
     this.installQueueSnapshotListener()
     this.installUpgradeModalListener()
     this.installFrameIdentityListener()
     this.installMutationObserver()
-    this.installRouteWatcher()
+    I18nService.onLanguageChange(() => {
+      if (!this.currentVideoId) return
+      const snapshot = this.currentSnapshot
+      this.buttonPanel.render(
+        this.currentVideoId,
+        snapshot?.resources ?? [],
+        snapshot?.config.expiresAt
+      )
+    })
     this.scanAndRender()
 
     logger.info('[VimeoContent] 初始化完成')
@@ -131,15 +135,7 @@ class VimeoContentController {
    */
   private installQueueSnapshotListener(): void {
     this.queueEventSubscriber.on('downloadQueueUpdated', snapshot => {
-      for (const [videoId, session] of this.activeButtonDownloads) {
-        const task = snapshot.tasks.find(entry => entry.resourceId === session.sourceId)
-        if (task && task.status !== 'failed') {
-          this.buttonPanel.updateProgress(videoId, session.sourceId, task.progress)
-          continue
-        }
-        this.activeButtonDownloads.delete(videoId)
-        this.buttonPanel.endDownload(videoId)
-      }
+      this.buttonPanel.applyQueueSnapshot(snapshot.tasks)
     })
   }
 
@@ -183,28 +179,6 @@ class VimeoContentController {
     })
   }
 
-  /** 监听 Vimeo SPA 路由变化。 */
-  private installRouteWatcher(): void {
-    const originalPushState = history.pushState
-    const originalReplaceState = history.replaceState
-
-    history.pushState = (...args) => {
-      const result = originalPushState.apply(history, args)
-      this.handleRouteChange()
-      return result
-    }
-
-    history.replaceState = (...args) => {
-      const result = originalReplaceState.apply(history, args)
-      this.handleRouteChange()
-      return result
-    }
-
-    window.addEventListener('popstate', () => {
-      this.handleRouteChange()
-    })
-  }
-
   /** 监听 Vimeo player frame helper 的身份消息。 */
   private installFrameIdentityListener(): void {
     window.addEventListener('message', event => {
@@ -220,25 +194,14 @@ class VimeoContentController {
 
   /** SPA 路由变化处理。 */
   private handleRouteChange(): void {
-    window.setTimeout(() => {
-      if (window.location.href === this.currentHref) {
-        return
-      }
-
-      logger.info(
-        `[VimeoContent] SPA 路由切换: host=${window.location.hostname}, stage=route-change`
-      )
-      this.currentHref = window.location.href
-      this.currentVideoId = null
-      this.currentSnapshot = null
-      this.frameIdentity = null
-      vimeoResourceBuffer.resetForPageChange()
-      this.fallbackLoadedVideoIds.clear()
-      resetVimeoConfigFallback()
-      this.activeButtonDownloads.clear()
-      this.buttonPanel.clear()
-      this.scheduleScan()
-    }, 0)
+    logger.info(`[VimeoContent] SPA 路由切换: host=${window.location.hostname}, stage=route-change`)
+    this.currentVideoId = null
+    this.currentSnapshot = null
+    this.frameIdentity = null
+    this.fallbackLoadedVideoIds.clear()
+    resetVimeoConfigFallback()
+    this.buttonPanel.clear()
+    this.scheduleScan()
   }
 
   /** debounce 扫描。 */
@@ -262,11 +225,10 @@ class VimeoContentController {
     }
 
     if (this.currentVideoId !== identity.videoId) {
+      vimeoResourceBuffer.resetForPageChange()
       this.currentVideoId = identity.videoId
       this.currentSnapshot = null
-      vimeoResourceBuffer.resetForPageChange()
       this.fallbackLoadedVideoIds.clear()
-      this.activeButtonDownloads.clear()
       this.buttonPanel.clear()
       this.buttonPanel.renderEmpty(identity.videoId)
     }
@@ -416,7 +378,6 @@ class VimeoContentController {
     if (!this.buttonPanel.beginDownload(videoId, resource.id)) {
       return
     }
-    this.activeButtonDownloads.set(videoId, { sourceId: resource.id })
 
     try {
       // U8 改道：页面按钮下载统一发 background 编排（带完整 resource），执行与页面
@@ -429,7 +390,6 @@ class VimeoContentController {
       }
     } catch (error) {
       logger.error(`[VimeoContent] 发起 background 下载失败: resourceId=${resource.id}`, error)
-      this.activeButtonDownloads.delete(videoId)
       this.buttonPanel.endDownload(videoId)
     }
   }

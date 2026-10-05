@@ -130,8 +130,7 @@ function resolveAliSlsMarkConfig(
     endpoint,
     logstore,
     topic:
-      readEnvValue(env.EXTENSION_ALI_SLS_TOPIC, env.PUBLIC_ALI_SLS_TOPIC) ||
-      DEFAULT_ALI_SLS_TOPIC,
+      readEnvValue(env.EXTENSION_ALI_SLS_TOPIC, env.PUBLIC_ALI_SLS_TOPIC) || DEFAULT_ALI_SLS_TOPIC,
     source:
       readEnvValue(env.EXTENSION_ALI_SLS_SOURCE, env.PUBLIC_ALI_SLS_SOURCE) ||
       DEFAULT_ALI_SLS_SOURCE
@@ -154,9 +153,7 @@ export function createExtensionBuildEnv(env: ExtensionBuildProcessEnv): Extensio
   )
   const aliSlsMark = resolveAliSlsMarkConfig(env, isProductionBuild)
   const contentScriptMatches = uniqueValues(SITE_REGISTRATION.matches)
-  const webAccessibleResources = uniqueValues(
-    SITE_REGISTRATION.styles.map(style => style.resource)
-  )
+  const webAccessibleResources = uniqueValues(SITE_REGISTRATION.styles.map(style => style.resource))
   // API/SLS/Google 登录域走标准 CORS，都不申请 host_permissions；
   // 这里只保留站点页面与媒体 CDN 权限。
   const hostPermissions = uniqueValues(SITE_REGISTRATION.hostPermissions)
@@ -263,6 +260,7 @@ export default defineConfig({
       additionalInputs: ['src/offscreen.html'],
       manifest: () => ({
         manifest_version: 3,
+        minimum_chrome_version: '116',
         name: '__MSG_extensionName__',
         version: '1.4.2',
         default_locale: 'en',
@@ -302,29 +300,17 @@ export default defineConfig({
     {
       name: 'copy-content-css',
       writeBundle() {
-        try {
-          copySiteStyles(SITE_REGISTRATION)
-
-          console.log('✓ Copied content script CSS to dist')
-        } catch (error) {
-          console.error('Failed to copy content script CSS:', error)
-        }
+        copySiteStyles(SITE_REGISTRATION)
       }
     },
     {
       // 第三方许可声明随 dist / dist.zip 分发（商店上传包内自带 LGPL 等义务文本）。
       name: 'copy-third-party-notices',
       writeBundle() {
-        try {
-          copyFileSync(
-            resolve(__dirname, 'THIRD-PARTY-NOTICES.md'),
-            resolve(__dirname, 'dist', 'THIRD-PARTY-NOTICES.md')
-          )
-
-          console.log('✓ Copied THIRD-PARTY-NOTICES.md to dist')
-        } catch (error) {
-          console.error('Failed to copy THIRD-PARTY-NOTICES.md:', error)
-        }
+        copyFileSync(
+          resolve(__dirname, 'THIRD-PARTY-NOTICES.md'),
+          resolve(__dirname, 'dist', 'THIRD-PARTY-NOTICES.md')
+        )
       }
     }
   ],

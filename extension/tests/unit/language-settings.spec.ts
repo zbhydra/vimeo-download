@@ -53,6 +53,35 @@ describe('语言设置 Auto 模型', () => {
     })
   })
 
+  it('读取中间版本默认目录和模板时迁移到竞品默认，并保留其他自定义值', async () => {
+    storageData.set('settings', {
+      language: LANGUAGE_AUTO,
+      downloadPath: 'vimeo-video-downloader',
+      filenamePattern: '{title}'
+    })
+
+    const migrated = await SettingsManager.getSettings()
+    expect(migrated.filenamePattern).toBe(FILENAME_PATTERN_DEFAULT)
+    expect(migrated.downloadPath).toBe(DEFAULT_DOWNLOAD_PATH)
+    expect(storageData.get('settings')).toMatchObject({
+      downloadPath: DEFAULT_DOWNLOAD_PATH,
+      filenamePattern: FILENAME_PATTERN_DEFAULT
+    })
+
+    storageData.set('settings', {
+      language: LANGUAGE_AUTO,
+      downloadPath: 'my-videos',
+      filenamePattern: '{date}_{title}'
+    })
+    const custom = await SettingsManager.getSettings()
+    expect(custom.filenamePattern).toBe('{date}_{title}')
+    expect(custom.downloadPath).toBe('my-videos')
+    expect(storageData.get('settings')).toMatchObject({
+      downloadPath: 'my-videos',
+      filenamePattern: '{date}_{title}'
+    })
+  })
+
   it('language=auto 时按浏览器语言即时解析，不固化具体 locale', async () => {
     storageData.set('settings', { language: 'auto' })
     ;(chrome.i18n.getAcceptLanguages as ReturnType<typeof vi.fn>).mockResolvedValue(['zh-CN', 'zh'])

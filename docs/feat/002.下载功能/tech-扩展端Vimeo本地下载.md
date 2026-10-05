@@ -51,7 +51,7 @@ Vimeo 扩展端可以做**纯前端下载**,并且不应该只做“首版 progr
 
 - website/backend 匿名 Playwright 解析。
 - 后端代理下载、后端刷新 signed URL。
-- 破解 DRM、Widevine/cbcs 交付、OTT 内容（AES-128 HLS 的支持口径见 §8.9；SAMPLE-AES 等不支持声明按明文口径处理,真实 DRM 流不在范围）。
+- 破解 DRM、Widevine/cbcs 交付、OTT 内容（AES-128 HLS 的支持口径见 §8.9；SAMPLE-AES 等不支持声明明确拒绝）。
 - 绕过密码页、私有权限、登录墙。
 - 从 `blob:` 播放地址反推完整视频文件。
 - 服务器端 mux。
@@ -63,7 +63,7 @@ Vimeo 扩展端可以做**纯前端下载**,并且不应该只做“首版 progr
 
 ## 3. 权限与上下文边界
 
-Manifest 需要把 Vimeo 页面和 CDN 都列入 host permissions。这是扩展端本地请求,不是我们的后端请求。媒体主机以真实采样为准：progressive 为 `vod-progressive-ak.vimeocdn.com`，DASH/HLS 为 `vod-adaptive-ak.vimeocdn.com` 与 `skyfire.vimeocdn.com`，全部落在 `vimeocdn.com` 下，因此不额外申请其它 CDN 域。字幕不属于媒体 CDN：播放器 config 里的 `text_tracks[].url` 指向 `player.vimeo.com/texttrack/*`（第三个 host permission 已覆盖），或 Vimeo 字幕 CDN；两者都不需要新增权限。
+Manifest 需要把 Vimeo 页面和 CDN 都列入 host permissions。这是扩展端本地请求,不是我们的后端请求。媒体主机以真实采样为准：progressive 为 `vod-progressive-ak.vimeocdn.com`，DASH/HLS 为 `vod-adaptive-ak.vimeocdn.com` 与 `skyfire.vimeocdn.com`，全部落在 `vimeocdn.com` 下，因此不额外申请其它 CDN 域。字幕不属于媒体 CDN：播放器 config 里的 `text_tracks[].url` 可指向 `player.vimeo.com/texttrack/*`、`vimeo.com/texttrack/*`、`www.vimeo.com/texttrack/*` 或 Vimeo 字幕 CDN；现有页面与 CDN host permissions 已覆盖这些来源，不新增权限。
 
 ```text
 https://vimeo.com/*
@@ -82,7 +82,7 @@ https://*.vimeocdn.com/*
 | player-frame content(`player.vimeo.com`) | 只把 frame 内 `videoId` postMessage 给 top content 作为 identity 兜底;不传 config 或 signed URL,不启动资源缓存与下载调度 |
 | injected / MAIN world | `document_start` 安装原生 config 捕获,保留完整 signed URL 与 JSON,并按捕获序提供有界概要枚举；不执行下载（分片读取与 remux 已迁 offscreen），不做后端通信 |
 | popup | 视频面板（见 §12）：播放页展示单视频,身份缺失聚合页展示多视频选择器;展示当前 tab 的视频信息、档位行（Video / 直接下载 / Audio / Subtitle / Image，见 §12.5）与时间裁剪，按选中档位把资源投递给 background 编排器；底部队列订阅 background 编排快照,提供取消、重试与「全部停止」 |
-| background | 不负责初始资源发现;`DownloadOrchestrator` 全局编排——单并发 FIFO、出队配额检查(fail-open + 升级弹窗)、打点、SW 冷启动对账、取消墓碑;直连类经 `directSource` 校验/刷新后用 `chrome.downloads` 执行;DASH/HLS 驱动 offscreen 执行并接收产物 blob URL 落盘;签名失效时直连播放页重签(见 §8.6) |
+| background | 不负责初始资源发现;`DownloadOrchestrator` 全局编排——单并发 FIFO、出队配额检查(fail-open + 升级弹窗)、打点、SW 首次成功冷启动接管;直连类经 `directSource` 校验/刷新后用 `chrome.downloads` 执行;DASH/HLS 驱动 offscreen 执行并接收产物 blob URL 落盘;签名失效时直连播放页重签(见 §8.6) |
 | offscreen document | DASH/HLS 执行真相源:分片 fetch + Mediabunny remux、进度/心跳回传、按 AbortController 响应取消、blob 产物交 background;由 background 惰性创建、常驻不自动关闭（见 `@../000.架构/tech-extension.md` §A2.1） |
 
 DASH/HLS 执行环境的选择:页面（content/injected）随导航销毁、SW 随 idle 退出，都承担不了长任务；offscreen document 兼得长生命周期与 blob API。分片读取与 remux 因此跟随 offscreen 存活，切换视频、刷新或关闭来源页面不再中断下载。adaptive mux 复用 website `client_mux` 已验证的 Mediabunny 思路,但实现位置在 extension 侧 offscreen。
@@ -306,7 +306,7 @@ RPC 合同:无入参;响应为按捕获先后排序的概要数组,每条含 `vi
 | `request.files.progressive[]` | 完整 MP4 直链,有 `quality/width/height/fps/mime/size/url`；`size` 是真实字节数,缺失时不展示大小 |
 | `request.files.dash` | DASH playlist 入口,用于最高画质 mux 与 audio-only |
 | `request.files.hls` | HLS playlist 入口,无可展示 DASH video 时 fallback |
-| `request.text_tracks[]` | 字幕轨,含 `url` / `lang` / `label` / `kind`;`url` 常为 `/texttrack/{id}.vtt?...` 相对路径,按 config URL 解析 |
+| `request.text_tracks[]` | 字幕轨,含 `url` / `lang` / `label` / `kind`;相对 `url` 常为 `/texttrack/{id}.vtt?...`,按 `https://vimeo.com/` 归一，绝对 URL 保留后再过字幕白名单 |
 | `request.config_refresh_url` | Vimeo 原生 signed 刷新地址;config/playlist 或下载 URL 过期时最多使用一次 |
 | `request.timestamp` | config 签发时间,Unix 秒 |
 | `request.expires` | 相对 `timestamp` 的 TTL 秒数,不是 Unix 绝对时间 |
@@ -456,17 +456,13 @@ HLS 只做 fallback:
 
 - 优先 DASH,因为 DASH playlist 明确给出独立 video/audio track 和 segment 列表。
 - 没有可用 DASH video+audio 但有 HLS 时,支持 fMP4 HLS fallback,含 AES-128 加密交付（§8.9）。
-- 解析 master m3u8 variant 后再读取 media playlist;variant 必须声明 `avc1`/`avc3` video codec 与 `mp4a` audio codec。
-- media playlist 必须有 `#EXT-X-MAP`,不得使用 `#EXT-X-BYTERANGE`,segment 必须为 HTTPS Vimeo CDN/Akamai,且不能是 `.ts`。`#EXT-X-KEY` 状态机随行推进:AES-128/identity 提取为分片加密参数（显式 IV 直接物化,缺省按 media sequence 构造）;`METHOD=NONE` 与不支持的声明（SAMPLE-AES 等）把后续分片重置回明文处理并记日志——不支持的加密交付按「声明即明文」口径推进（竞品同款）,分片真实加密形态未获样本。
+- 解析 master m3u8 variant 后再读取 media playlist；variant 必须声明 `avc1`/`avc3` video codec 与 `mp4a` audio codec。若 variant 的 AUDIO 关联带非空 URI 的外置 AUDIO group，明确拒绝；无 URI 的内嵌声明不因此拒绝，CODECS 不能证明外置音轨已在视频内。
+- media playlist 必须有 `#EXT-X-MAP`,不得使用 `#EXT-X-BYTERANGE`,segment 必须为 HTTPS Vimeo CDN/Akamai,且不能是 `.ts`。AES-128/identity 提取为分片加密参数（显式 IV 直接物化,缺省按 media sequence 构造）；`METHOD=NONE` 恢复明文，SAMPLE-AES、非 identity 或缺失 key URI 明确拒绝，不静默按明文交付。真实边界样本仍需单独验证。
 - 满足上述条件时把 init + fMP4 segments（AES-128 分片先解密）交给 Mediabunny remux 成 MP4;TS/未知结构不展示按钮。
-- Audio-only 只在 HLS 明确提供独立 audio rendition 时显示（加密口径同上）。
 
 ### 6.4 Audio-only
 
-Audio 行来源优先级:
-
-1. DASH playlist `audio[]`。
-2. HLS 独立 audio rendition。
+Audio 行来源为 DASH playlist `audio[]`。
 
 DASH audio 下载:
 
@@ -506,7 +502,7 @@ config.request.text_tracks[]
 
 - 每个 track 生成一个 Subtitle 候选,语言标识优先 `lang`,缺失时用 `label`；同一标识或同一 URL 只保留第一条。
 - 展示名优先 `label`,缺失时用 `lang`。
-- 相对 URL（如 `/texttrack/{id}.vtt?...`）按 config URL 解析成绝对地址。
+- 相对 URL（如 `/texttrack/{id}.vtt?...`）按 `https://vimeo.com/` 归一成绝对地址；绝对 URL 原样保留。
 - 只接受命中字幕白名单的 URL（见 §9）;白名单之外的 host 不进入资源缓存。
 - 按 URL 扩展名判断格式：`.vtt` → WebVTT（默认）、`.ttml`/`.dfxp`/`.xml` → TTML、`.srt` → SubRip。
 - 文件名：`{safeTitle}-{label}.{ext}`。
@@ -561,7 +557,7 @@ Image  [Thumbnail]
 
 ```text
 popup/content downloadBatch({resources, tabId})
--> DownloadOrchestrator 入队（同资源已有未完成任务时去重合并）
+-> DownloadOrchestrator 入队（来源身份 + 输出格式/裁剪/音轨意图的活跃任务去重）
 -> 全局单并发 FIFO 出队（跨 tab 共享同一下载通道）
 -> 出队时检查配额：quotaApi.checkAndConsume(1)
    - API 异常 → fail-open 放行
@@ -573,14 +569,15 @@ popup/content downloadBatch({resources, tabId})
 
 编排队列协议:
 
-- 任务投影（waiting / downloading / failed）按创建序维护，每次可见变化提升 revision，经 `downloadQueueUpdated` 事件推送（runtime 送达 Popup，tabs 广播送达 content 页面按钮），`getDownloadQueue` 可主动查询；快照作用域恒为 `background` 全局队列，不区分页面。
+- 任务投影（waiting / downloading / failed）按创建序维护，每次可见变化提升 revision，经 `downloadQueueUpdated` 事件推送（runtime 送达 Popup，tabs 广播送达 content 页面按钮），`getDownloadQueue` 可主动查询；scopeId 是当前 SW 实例 UUID，新 scope 接受低 revision。初查传输失败时允许可信实时快照建立 scope，页面查询只匹配活跃项。
+- 入队先完成异步文件名计算，再同步查活跃身份、创建并登记；格式、裁剪与所选音轨在创建时固定，重签只更新来源。failed 旧项不参与活跃判重。
 - 失败任务保留为 failed 投影，队列继续执行后续项；人工重试重新入队排到 FIFO 尾部并跳过配额（用户已见过的失败不重复扣额度），不自动重试。
-- SW 冷启动（或收到未知任务消息）时向 offscreen 对账：以 `listActiveTasks` 为真相源重建执行中任务；SW 内存中的等待队列不持久化，不恢复。浏览器或 SW 重启后任务丢失是已知限制。
+- 当前 SW 仅首次成功向 offscreen 对账接管：复用 `reconcilePromise` 缓存成功，失败清缓存并抛错，后续调用可重试；不在每次入队或迟到消息中重复重建任务。SW 内存中的等待队列不持久化；未知迟到 complete 拒绝并释放产物。
 - 打点统一由 background 记录：入队记 `download_click`，成功记 `download_success`，失败记 `download_failed`，配额拒绝记 `download_quota_insufficient`（不计为下载失败）；摘要不含媒体 URL 与签名。
 
 直连边界校验（`directSource`，原 `BrowserDownloadService` 收敛为共享校验/刷新函数）:
 
-- 创建前校验原始 URL 只能是 Vimeo HTTPS CDN，source kind、媒体类型、MIME 与 descriptor 必须一致。
+- 创建前按来源校验原始 URL：媒体与封面只能是 Vimeo HTTPS CDN，字幕只能是 Vimeo 主站/播放器的 `/texttrack/` 或 Vimeo CDN；source kind、媒体类型、MIME 与 descriptor 必须一致。
 - 字幕响应 MIME 接受 `text/*`、`application/ttml+xml`、`application/x-subrip`，以及 CDN 默认的 `application/octet-stream` / `binary/octet-stream`。字幕是纯文本，安全边界在 URL 白名单而不是 MIME，MIME 拒绝只会得到一条取消后重试必然重现的失败路径。
 - Chrome 返回服务端授权/禁止/失败中断时，background 从原生 refresh config 只重建 Progressive/Thumbnail 列表，不加载无关 DASH/HLS playlist；恢复同一个直连选项并重建一次任务，第二次失败直接提示用户重试。
 - 文件名主干按设置项 `settings.filenamePattern`（默认 `{title}_{quality}_{type}`）的模板渲染,应用点唯一在 background 命名边界（`buildResourceFilename`）：任务入队时渲染一次定稿为 `finalName`,直连、offscreen 与 SW 冷启动对账全路径都用同一份定稿落盘。变量集 6 个——`{title}`（资源标题）、`{quality}`（descriptor 档位文本,如 `1080p HD` / `128 kbps`）、`{type}`（`video`/`audio`/`subtitle`/`image`）、`{author}`、`{date}`（本机时区 `YYYY-MM-DD`）、`{videoId}`；缺数据变量按空串渲染。渲染只做变量替换与空变量残留分隔符清理（连续同类分隔符合并成一个、首尾分隔符裁掉）,未收录的 `{token}` 原样保留——写错变量名在文件名里可直接看到,不静默丢弃；渲染主干为空时回退资源自带名主干,再退固定名。渲染结果仍经下方既有净化规则,安全语义保持单一。popup 设置弹层用同一渲染函数做实时预览（见 §12.7）。
@@ -592,9 +589,9 @@ popup/content downloadBatch({resources, tabId})
 执行在 offscreen document（`OffscreenTaskRunner`），与页面生命周期解耦:
 
 1. background 出队 DASH/HLS 任务：惰性确保 offscreen document 存在，经 RPC 下发 `taskId + 完整 MediaResource`（描述符携带 playlist URL、track id、裁剪区间）。
-2. offscreen 请求并校验 playlist，按序分片 `fetch`（`credentials: omit`）：video init + segments、（有音轨时）audio init + segments；分片响应校验内容类型与字节。
+2. offscreen 请求并校验 playlist，按序分片 `fetch`（`credentials: omit`）：video init + segments、（有音轨时）audio init + segments；playlist 与分片共用原任务 AbortSignal，分片响应校验内容类型与字节。
 3. 分片流式喂给 Mediabunny remux 输出 MP4 / M4A（含 §8.5 的 packet 级裁剪）；remux 输出经 StreamTarget 流式写入 OPFS 临时文件，不在内存整份驻留（见下方「产物存储」）。
-4. 产物以 OPFS File 引用创建的 blob URL 经 `taskComplete` 交 background：background 用 `chrome.downloads.download` 写入保存位置子目录，等 `downloads.onChanged` 确认 complete/interrupted（落盘回执）后应答；offscreen 收到回执才 revoke blob 并删除 OPFS 临时文件，落盘中断收敛为任务失败。
+4. 派发前 background 先登记 completion；OPFS File 的 blob URL 经 `taskComplete` 交付，background 用 `chrome.downloads.download` 写入保存位置子目录，并沿用 `downloads.search` 轮询确认 complete/interrupted。同一 RunnerTask 保留至交付 ACK，可被心跳与 `listActiveTasks` 读取；收到回执才释放 blob/OPFS 产物，落盘中断收敛为失败。
 5. 任务执行期间 offscreen 以 20s 心跳保活 SW，进度按 250ms 节流回传（终态与首次报告不受节流约束）；`taskComplete` 的应答超时单独放宽到 120s，避免大产物慢盘落盘被 RPC 默认超时误判失败。
 
 产物存储（OPFS 临时文件，`muxArtifactStore`）:
@@ -635,7 +632,7 @@ popup/content downloadBatch({resources, tabId})
 3. 音频取覆盖请求起点的 packet；音频起点沿用视频的时间基准，保证裁剪后不出现音画错位。
 4. 终点取第一个不早于请求终点的 packet；请求终点超出媒体长度时输出到媒体结尾。
 5. 请求起点不早于媒体长度时报错，不产出与请求无关的片尾。
-6. 区间并入 option/source id（`:clip:{start}-{end}`）与文件名（`-clip-{start}-{end}s`），使同一画质的多个片段在资源缓存、Popup 选择与下载队列中各自独立；signed URL 过期刷新后按去掉后缀的同一画质恢复并保留区间。秒数只接受能写成十进制文本的值：`String(1e-7)` 这类指数记法构造出来的后缀正则读不回来，`parseVimeoTimeRange` 直接拒绝，Popup 侧按「区间不合法」回落整片下载。
+6. 区间并入 option/source id（`:clip:{start}-{end}`）与文件名（`-clip-{start}-{end}s`），使同一画质的多个片段在资源缓存、Popup 选择与下载队列中各自独立；signed URL 过期刷新后按去掉后缀的同一画质恢复并保留区间。秒数只接受能写成十进制文本的值；解析拒绝的区间由 Popup 阻止提交，不降成整片。
 7. 只有 DASH/HLS 交付支持裁剪；progressive 直链经 Chrome 下载管理器保存，无法只取区间，字幕与 thumbnail 不参与裁剪。
 
 精度限制：裁剪精确到 packet（视频帧即 packet），不重新编码，不按分片跳读。
@@ -646,8 +643,8 @@ offscreen 分片拉取遇到 `403` / `404` / `410`（VimeoRetryableDownloadError
 
 1. background 用扩展身份直连 `https://player.vimeo.com/video/{videoId}`，从返回 HTML 取内嵌原生 `window.playerConfig`（不依赖页面注入，不需要 `h` 可见的播放页以外的入口），解析出最新资源快照。
 2. **track 一致守卫**决定续跑方式:
-   - 新快照的 videoTrackId/audioTrackId 与原任务一致 → `continue`：回传新签名资源，offscreen 按分片游标（按索引）续跑，进度不回退;
-   - 不一致（`Best` 因最新画质排序回落换 track）→ `restart`：整任务以新快照从头重跑，与既有「刷新后沿用同 delivery 最新最高选项」行为一致;
+   - DASH 新快照的 videoTrackId/audioTrackId 与原任务一致 → `continue`：回传新签名资源，offscreen 按分片游标（按索引）续跑，进度不回退;
+   - DASH track 不一致，或 HLS 无法证明来源一致 → `restart`：整任务以新快照从头重跑，用户输出格式、区间与音轨意图仍固定;
    - 找不到同 delivery 候选、指定档位没有同 track 候选、或播放页给不出 config → 抛错，任务失败（用户明确选择的东西不悄悄换档）。
 3. 每任务只允许一次重签；重签后的再次 403 直接失败，不进入循环刷新。
 
@@ -658,7 +655,7 @@ offscreen 分片拉取遇到 `403` / `404` / `410`（VimeoRetryableDownloadError
 - 等待任务：直接出队移除，未进入配额检查，不消耗额度。
 - 直连下载中：`chrome.downloads.cancel(downloadId)`，执行路径按取消请求收敛为取消终态。
 - offscreen 下载中：转发 `cancelTask`，offscreen abort 在途分片 fetch（下载阶段即时生效；remux 阶段的取消在交付边界生效）。
-- **取消墓碑**：取消转发偶发失败（空响应等）时，任务本地终止移出投影并记录墓碑——该 taskId 的任何后续进度、交付与冷启动对账一律拒绝;对账遇到墓碑任务趁机补发取消而不是复活任务,迟到产物不落盘。墓碑有上限,超限按插入序淘汰。
+- 取消转发失败时本地收敛并移除任务；未知迟到交付直接拒绝并释放产物，不重新建任务，不保存取消墓碑或补发恢复队列。
 - 取消不是下载失败或额度不足，不显示失败提示；已扣额度不退。
 
 ### 8.8 下载终态系统通知
@@ -667,13 +664,13 @@ offscreen 分片拉取遇到 `403` / `404` / `410`（VimeoRetryableDownloadError
 
 - 通知能力异常只记日志，不反噬下载链路；取消终态不发通知。
 - 文案经 background 侧 I18nService 按用户界面语言（`settings.language`，与 popup 共享同一份 locale 字典）解析，不另建 `chrome.i18n` 文案；正文携带目标文件名。
-- 成功终态同时向扩展页广播 `downloadTaskSucceeded` 事件，供 popup 评分引导做成功计数（§12.10）。
+- 成功终态先由 background 持久写入成功次数，再广播 `downloadTaskSucceeded`；popup 只重读事实判断评分资格（§12.10）。
 
 ### 8.9 HLS AES-128 加密交付
 
 media playlist 声明 `#EXT-X-KEY:METHOD=AES-128`（KEYFORMAT=identity,或无 KEYFORMAT 属性的缺省 identity）时,分片在 offscreen 解密后照常走既有 remux 链路：
 
-1. **解析**（media playlist 层）：`#EXT-X-KEY` 是 playlist 级状态机——AES-128/identity 提取 key URL 与 IV（显式 `IV=` 属性直接物化；缺省 IV 按 RFC 8216 用分片的 media sequence 构造 128 位 big-endian 序号）；`METHOD=NONE` 与不支持的声明（SAMPLE-AES 等）把后续分片重置回明文口径并记日志（§6.3）。`#EXT-X-KEY` 只作用于 media segment：init segment（`#EXT-X-MAP`）不解密——RFC 允许 init 加密但现实交付均为明文,遇加密 init 在 remux 期大声失败,不做静默兼容。
+1. **解析**（media playlist 层）：AES-128/identity 提取 key URL 与 IV（显式 `IV=` 属性直接物化；缺省按 media sequence 构造 128 位 big-endian 序号）；`METHOD=NONE` 恢复明文，不支持或缺失 URI 的加密声明拒绝（§6.3）。init segment（`#EXT-X-MAP`）不解密，遇不支持的加密 init 报错，不静默兼容。
 2. **key 获取**（offscreen 执行器,任务内按 key URL 缓存）：key host 必须命中 Vimeo fetch 白名单（`player.vimeo.com` / `*.vimeocdn.com`,与媒体分片的 CDN 判定同源但独立校验）,白名单外的加密交付拒绝任务而不是扩大网络边界——校验在请求发起前（playlist 声明的 key URL）与响应落地后（30x 跟随的最终 `response.url` 复检,复检失败不消费该响应体）各一次。
 3. **解密**（`offscreen/decrypt.ts`,WebCrypto AES-CBC）：分片含 PKCS#7 填充,解密失败（key/IV 与分片不匹配或分片损坏）按任务失败链收敛,不产出损坏产物。
 
@@ -712,7 +709,7 @@ remux 产物（OPFS m4a File）
 | `filename` / `pageUrl` / `author` | 确认落盘名（入队渲染的 `finalName`）与发起页 URL,拿不到时缺失 |
 | `downloadedAt` | 终态回写时间（epoch 毫秒）,排序与裁剪依据 |
 
-存储规则:同键覆盖式去重（同视频同类型同档位再次下载时更新时间与状态并移到最前,不产生重复条目,与竞品覆盖语义对齐）；容量固定 500 条,超限按时间裁剪最旧；写入走串行锁,两条任务同时到终态不互相覆盖；写入失败只记日志,不反噬下载链路。读取时对旧版本/损坏条目做形状校验,坏条目直接丢弃。
+存储规则:同键覆盖式去重（同视频同类型同档位再次下载时更新时间与状态并移到最前,不产生重复条目,与竞品覆盖语义对齐）；容量固定 500 条,超限按时间裁剪最旧。终态回写、单删与清空都由 background 持有同一 Promise 写链，popup 只读且经 RPC 发起删除；写入失败只记日志,不反噬下载链路。读取时对旧版本/损坏条目做形状校验,坏条目直接丢弃。
 
 已知限制:片段与整片共享同一去重键（`:clip:` 区间不参与键）,互相覆盖；`quality` 存 descriptor 原文,历史里混存中英文语言名等站点数据属预期。
 
@@ -721,24 +718,24 @@ remux 产物（OPFS m4a File）
 允许:
 
 - `https://*.vimeocdn.com/*`
-- `https://player.vimeo.com/*` 用于 config/playlist,以及字幕直链 `https://player.vimeo.com/texttrack/*`
-- 字幕额外接受 Vimeo 字幕 CDN（同样落在 `vimeocdn.com` 下）
+- `https://player.vimeo.com/*` 用于 config/playlist，以及字幕直链 `https://player.vimeo.com/texttrack/*`
+- `https://vimeo.com/texttrack/*` 与 `https://www.vimeo.com/texttrack/*` 用于字幕直链
 
 拒绝:
 
 - `blob:`
 - `data:`
 - `http:`
-- 任意非 Vimeo CDN host（字幕只放宽到 `player.vimeo.com/texttrack/*` 这一个端点，不放宽 `vimeocdn.com` 之外的 CDN，也不改 manifest）
-- HLS AES-128 key URL 白名单外,或 30x 重定向后最终 URL 落在白名单外（§8.9）;SAMPLE-AES 等不支持声明按明文口径推进（§6.3）,真实 DRM/cbcs 交付不在范围
+- 任意不在上述白名单的 host 或路径（字幕只放宽到 Vimeo 主站/播放器的 `/texttrack/` 端点，不放宽其它 CDN，也不改 manifest）
+- HLS AES-128 key URL 白名单外,或 30x 重定向后最终 URL 落在白名单外（§8.9）；不支持的加密声明同样拒绝（§6.3）。
 
-白名单要在资源进入缓存前校验,下载前再校验一次。字幕与媒体走两套判定：`player.vimeo.com` 只对 `/texttrack/` 前缀放行。
+白名单要在资源进入缓存前校验,下载前再校验一次。字幕与媒体走两套判定：`vimeo.com`、`www.vimeo.com`、`player.vimeo.com` 只对 `/texttrack/` 前缀放行，媒体 CDN 仍按独立 CDN 白名单判定。
 
 config refresh、DASH/HLS playlist 与 segment 的扩展 `fetch` 必须使用 `credentials: omit`。这些 signed URL 自带访问授权,Vimeo CDN 使用通配 `Access-Control-Allow-Origin`;携带 Cookie 会触发 `WildcardOriginNotAllowed`,表现为播放器正常播放但扩展 fetch 得到 `net::ERR_FAILED`。Progressive/Thumbnail 不再由页面 `fetch`，而是把 signed URL 交给 Chrome 网络栈；它们不依赖 Vimeo Cookie，也不需要把 Cookie 复制到 background。
 
 ## 10. SPA 与刷新
 
-Vimeo 页面可能在同一 tab 内切换视频。content 用 History API / `popstate` 与 `MutationObserver` 触发 300ms debounce,重新提取 `videoId`;videoId 变化后清理旧面板与资源缓存。
+Vimeo 页面可能在同一 tab 内切换视频。`getVimeoPageKey` 以完整 href 生成唯一页面 key，复用 ResourceBuffer 的 500ms URL 检查触发 controller 与 buffer 统一 reset；DOM 扫描仍经 MutationObserver debounce。panel 是页面活动下载会话的唯一 owner，回到原页后以 background 活跃快照恢复 busy。页面下载入口只接受 `event.isTrusted` 点击。
 
 资源扫描是事件驱动的:
 
@@ -869,16 +866,16 @@ content 的 Vimeo 缓存按视频分组持有资源(见 §11):播放页走 `repl
 - 滑杆写回输入的秒数恒为十进制文本（整数不带小数点、小数保留一位，无指数记法），`parseVimeoTimeRange` 的十进制文本约束因此恒成立。空输入只做显示兜底（起点 0 / 终点全长），不回写输入，「不填 = 整片」语义不变；对侧输入为空时滑杆交互补默认端点，一次拖动即生成完整区间。
 - 滑杆时长上限取视频时长：组元数据 `durationSeconds`（§12.4 同源）优先，缺失时取各档位资源时长的最大值；两者都没有时上限为 0，滑杆整体禁用（没有可表达的区间，与「档位不可裁剪」同视）。
 - 键盘与可访问性：双 handle 各自可聚焦（`role="slider"`），方向键 ±1s、Shift ±10s、Home/End 跳到该 handle 的边界（起点 `[0, 终点]`、终点 `[起点, 上限]`）；`aria-valuemin/max/now/text` 与起止可访问名完整，禁用时 `aria-disabled` 通告；两端刻度是纯展示（读屏值走 handle 的 `aria-valuetext`）。
-- 起点/终点为秒、相对媒体起点；区间合法（起点 ≥ 0、终点 > 起点，且两个秒数都能写成 `:clip:` 后缀认的十进制文本）才生效，未填或不合法时按整片下载——`1e-7` 这类指数记法属于不合法。
+- 起点/终点为秒、相对媒体起点；仅两空且原生输入无 badInput 时表示整片。单端、负数、逆序或不能写成合法十进制区间的输入拒绝提交。VideoPanel 在原生 input 事件读取 `validity.badInput`，只作为表单有效性投影，并入同一个 `clipInvalid` 控制按钮与提交入口；不完整 `e/-` 不因 DOM value 为空而变成整片意图。
 - 可用性由 Video 行当前档位决定：只有 `dash` / `hls` 交付能按 packet 取区间。Video 行没有可裁剪档位（页面只有 progressive 直链）时滑杆与数字输入一并禁用并在面板上说明原因（`videoPanel.clip.unsupported`），可用时展示区间只对 DASH/HLS 生效的说明（`videoPanel.clip.hint`）。
 - 生效后 Video / Audio 行的下载调用 `applyVimeoTimeRange`，身份与文件名带 `:clip:{start}-{end}`；Subtitle / Image / 直接下载行不参与裁剪，始终整片下载。无音轨档位同样可裁剪，身份形如 `dash:{trackId}:no-audio:clip:{start}-{end}`——`:no-audio` 段在内、`:clip:` 追加在最后，去后缀仍能定位回那条纯视频档位。
-- 片段不写进缓存：popup 只发送片段资源 ID，content 侧 `VimeoResourceBuffer.getResource` 命中不到时去掉 `:clip:` 后缀取回全片档位，再用同一份 `applyVimeoTimeRange` 还原区间；两条路径用同一个函数，身份完全一致。
+- 片段不写进缓存：VideoPanel 用 `applyVimeoTimeRange` 把区间与身份并入完整 `MediaResource`，resourceStore 经 `downloadBatch` 直接投递 background；提交不依赖 content 再按片段 ID 还原资源。
 
 ### 12.7 设置弹层（界面语言 + 保存位置 + 文件名规则 + 下载历史入口）
 
 - 设置集中在 header 齿轮打开的设置弹层（`SettingsModal.vue`，模块级单例控制器 `core/composables/settingsModal.ts`，与 LoginModal/PremiumView 控制器同构；不设独立 options 页）。弹层本期四项：界面语言、保存位置、文件名规则与下载历史入口。
 - **界面语言**：下拉提供 Auto（跟随浏览器，默认值）+ 14 个 locale；写入 `settings.language`，该字段新增 `'auto'` 取值（`LanguageSetting`），读取时即时按浏览器解析、不固化为具体 locale，旧版本留下的空值统一归一为 Auto。具体 locale 即改即生效。
-- **保存位置**：值持久化在 `chrome.storage.local` 的 `settings.downloadPath`（既有 `SettingsManager`，不新建存储层）；默认值 `vimeo-video-downloader`，输入变化在 `change` 时写回，不逐按键写。设置弹层是保存位置的**唯一编辑入口**——VideoPanel 面板内已不再渲染该输入。
+- **保存位置**：值持久化在 `chrome.storage.local` 的 `settings.downloadPath`（既有 `SettingsManager`，不新建存储层）；默认值 `vimeoMediaDownloader`，输入变化在 `change` 时写回，不逐按键写。设置弹层是保存位置的**唯一编辑入口**——VideoPanel 面板内已不再渲染该输入。读取中间版本默认值 `vimeo-video-downloader` 时迁移到新默认，其他自定义目录保留。
 - **文件名规则**：默认 / 自定义双模式按钮 + 自定义输入框 + 6 个变量 chips（点击在光标处插入 `{变量}`）+ 实时预览 + 恢复默认按钮。值持久化在 `settings.filenamePattern`（默认 `{title}_{quality}_{type}`，见 §8.1 变量集）；`change` 时写入（去空白,空值归一默认模板）,非默认值即自定义模式。预览用与 background 同一个渲染函数,按当前输入即时渲染样例文件名（不含扩展名,不做净化——净化只发生在 background 命名边界,弹层不复制规则）。
 - **下载历史**：弹层内「下载历史」行是历史视图的**唯一入口**（§12.11），点击打开全屏历史视图并收起本弹层。
 - 存的是**下载目录下的相对子目录**，不存绝对路径。归一化与合法性判定只在真正调用 `chrome.downloads.download` 的 background（`downloadFilename` 统一清洗）做一次：弹层只做去空白与空值回填默认（空输入按默认子目录写回并显示），不复制一份校验规则。目录段丢弃规则与文件名清洗见 §8.1。
@@ -897,7 +894,7 @@ popup footer 上方依次是公告跑马灯与评分引导，两者都是模块�
 
 **评分引导**（`RatingPrompt.vue`，`core/composables/ratingPrompt.ts`）：
 
-- 触发：登录用户**首次下载成功**后展示一次。成功计数来自 background 编排器的 `downloadTaskSucceeded` 事件（§8.8），popup 根组件转调 `registerDownloadSuccess`；成功次数（`download_success_count`）只增不减，此前未登录、登录后再次成功时同样触发——判定以登录态为准，不把首次成功永久让给未登录态。
+- 触发：background 在真实成功终态写 `download_success_count` 后通知 popup；重开也读取持久事实。资格为未评分、当前已登录且成功次数大于零，实际渲染再次受当前 auth 门控；此前游客成功也可在登录后获得资格，不依赖成功发生时 popup 存活。
 - 交互：五星星级条；1-3 星展示致谢后自动收起，4-5 星打开 `EXTENSION_STORE_URL`（`core/constants/deployment.ts`，扩展未上架，当前为占位地址，上架后替换）。任意交互（评分 / 点 ×）写入 `has_rated` 永久消失。
 - 存储异常按「未评分、零计数」兜底，只记日志不阻塞 UI。
 
@@ -917,13 +914,13 @@ popup footer 上方依次是公告跑马灯与评分引导，两者都是模块�
 
 ### 12.11 下载历史视图
 
-popup 内全屏覆盖层（`HistoryView.vue`,模块级单例控制器 `core/composables/historyView.ts`,与 PremiumView/SettingsModal 控制器同构）,入口唯一在设置弹层的「下载历史」行（§12.7）。数据源是 §8.11 的下载历史存储,popup 直接读写同一键:
+popup 内全屏覆盖层（`HistoryView.vue`,模块级单例控制器 `core/composables/historyView.ts`,与 PremiumView/SettingsModal 控制器同构）,入口唯一在设置弹层的「下载历史」行（§12.7）。数据源是 §8.11 的下载历史存储，读取在 popup，删除与清空经 background RPC:
 
 - **列表项**：类型图标（按资源类型着色）、标题、相对时间（`Intl.RelativeTimeFormat` 按当前界面语言本地化,秒→年逐级放大）、档位与成败标记（成功/失败用颜色与文案区分,失败条目明确标红）。
 - **搜索**：关键词命中标题或作者,大小写不敏感;清空恢复全量。
 - **排序**：最新（默认）/ 最早 / 标题正序 / 标题倒序,下拉切换;四种排序都是纯派生,不改存储顺序。
 - **分页**：每页 20 条,页码指示与前后翻页;过滤结果变化时页码越界收敛到最后一页,空列表也视作一页。
-- **单条删除 / 清空全部**：行内删除按钮与清空按钮都走内嵌确认条（确认 / 取消,`role="alert"`）,不弹系统对话框;清空与终态回写同锁串行,防止清空后并发回写复活已删记录。
+- **单条删除 / 清空全部**：行内删除按钮与清空按钮都走内嵌确认条（确认 / 取消,`role="alert"`）,不弹系统对话框；background 串行处理这些写操作与终态回写，不跨上下文各建一份写链。
 - **CSV 导出**：导出**当前筛选视图**（搜索 + 排序后的可见记录;竞品导全量,导出所见即所得是本产品的差异化口径）。零依赖手写 CSV:RFC 4180 风格全字段双引号包裹（内部引号翻倍）,`\r\n` 行分隔,头部 UTF-8 BOM 保证 Excel 直接打开中文不乱码;8 列（时间 ISO 8601 / 标题 / 作者 / 类型 / 档位 / 状态 / 文件名 / 页面 URL）,列头按当前界面语言翻译;文件名 `vimeo-history-YYYY-MM-DD.csv`（本机时区）,经 blob URL 交 Chrome 下载管理器,落浏览器默认下载目录根（不走保存位置子目录——文件名模板与净化规则是媒体产物的命名边界,历史导出不在其上）。可见记录为空时不导出。
 - 历史视图内的删除/清空只影响历史记录,不动已落盘文件。
 
@@ -933,7 +930,7 @@ popup 内全屏覆盖层（`HistoryView.vue`,模块级单例控制器 `core/comp
 extension/src/platforms/registry.ts                 # 唯一站点(Vimeo)的静态数据源：Manifest 声明 + 站点入口 URL
 extension/src/background/services/
 ├── DownloadOrchestrator.ts                         # 全局下载编排：单并发 FIFO、出队配额(fail-open+升级弹窗)、
-│                                                   #   打点、SW 冷启动对账、取消墓碑、直连/offscreen 分流与落盘回执
+│                                                   #   打点、SW 首次冷启动接管、直连/offscreen 分流与落盘回执
 ├── directSource.ts                                 # 直连来源校验与刷新（原 BrowserDownloadService 收敛为共享函数）
 ├── downloadFilename.ts                             # 保存子目录 + 文件名统一清洗；模板渲染命名边界（buildResourceFilename）
 ├── downloadHistoryWriteback.ts                     # 任务终态历史回写挂钩（成功/失败回写,取消与配额拒不回写,见 §8.11）
@@ -975,8 +972,6 @@ extension/src/sites/vimeo/
     └── configCapture.ts
 ```
 
-已随本轮架构退役的旧链：`sites/vimeo/injected/download.ts` / `mux.ts`（页面内分片与 mux）、`core/content/download/`（downloadManager 等 FIFO）、`core/content/services/QuotaService.ts` / `ContentMarkReporter.ts`、`core/protocol/`、`core/rpc/DomEventBus.ts`、`core/downloadProgress.ts` 与 background 的 `BrowserDownloadService.ts`（改名 `directSource.ts`）、`startBrowserDownload` / `getBrowserDownloadStatus` / `checkQuota` RPC、content 侧下载 RPC、EventRpc `downloadMedia`。
-
 入口注册:
 
 - `extension/src/sites/vimeo/content/entry.ts`:Vimeo content 业务入口。
@@ -1017,16 +1012,15 @@ extension/src/sites/vimeo/
 - Popup 面板展示当前视频的封面、标题与画质，档位行默认选中第一项；当前视频有 progressive 直链时 Video 行之后出现「直接下载」行，没有该档位时整行不渲染；没有字幕时 Subtitle 行禁用，没有缩略图时 Image 行按钮禁用。
 - Popup 面板在 Video 行没有可裁剪档位（页面只有 progressive 直链）时禁用时间裁剪并说明原因，选中 DASH/HLS 档位后可通过双滑杆或数字输入区间下载片段，滑杆与数字输入联动同一区间、上限为视频时长；片段身份与文件名带 `:clip:{start}-{end}`，字幕与封面始终整片下载；关掉音轨开关后片段身份是 `dash:{trackId}:no-audio:clip:{start}-{end}`，缓存按去后缀的基础 ID 还原出纯视频档位。
 - Popup 面板 Video 行的下拉只列 DASH/HLS 画质档位，音轨由独立开关切换：关掉后下载的是同画质的纯视频资源，下拉、信息区副标题与下载按钮的可访问名一起换成那条资源的标签（含它自己的大小）；当前画质只有一种交付时（playlist 无音轨、视频合计超限、HLS 直链）开关禁用并停在唯一可用的那一侧，`Best` 的无音轨交付落到最高画质的纯视频档；「直接下载」行的 progressive 直链没有音轨开关，下载恒为全片全音轨单文件。
-- Popup 面板与页面面板的档位文案随界面语言切换（`Best` 在 zh-CN 下显示 `最佳`），没有档位的行占位按钮读屏名称同样走词条；片段区间输入非法值（起点不小于终点、负数、`1e-7` 这类指数记法）时按整片下载，content 未回查到资源时 Popup 给出下载失败提示，不静默丢弃请求。
+- Popup 与页面面板档位文案随界面语言切换；片段区间非法时阻止支持裁剪行的提交并提示，原生不完整 `e/-` 不能变成整片下载，两空且无 badInput 可下载整片。
 - `vimeo.com/watch` 等无身份聚合页:Popup 显示检测数量与视频选择器,列表项为各视频封面与标题,切换后信息区与档位行联动;页面按钮不渲染;只检测到一个视频时选择器不出现;检测上限 16 个视频,页面稳定后轮播持续供给的新捕获由 3s 重扫跟进,零资源(无可下载档位)的视频不进选择器。
 - 身份在聚合页回退轮进行中出现时,在途回退按三处守卫中断(重扫定时器同受身份守卫约束、自然衰减),聚合资源不混入单视频 buffer;聚合页资源按视频分组写入,同一 videoId 每页只编排一次;长驻聚合页组数达 16 后按首并入序淘汰最旧组,badge 随之回落。
 - 下载期间切换视频、刷新或关闭来源标签页,DASH/HLS 与直连任务都不中断并照常落盘;Popup 重开后底部队列仍显示执行中的任务。
-- 下载中任务可从 Popup 底部队列取消并立即消失;「全部停止」同时取消等待与下载中任务;取消后迟到的产物交付不落盘（墓碑）。
+- 下载中任务可从 Popup 底部队列取消；「全部停止」取消等待与下载中任务；未知迟到产物交付不落盘并释放，不重建已移除任务。
 - Popup 设置弹层提供文件名规则区:默认 / 自定义双模式、变量 chips 点击插入、预览随输入实时更新、恢复默认还原 `{title}_{quality}_{type}`;按自定义模板（如 `{date}_{author}_{title}`）下载的产物按模板落盘,缺数据变量不残留分隔符,写错的 `{token}` 原样出现在文件名里。
 - 任务成功或失败后,设置弹层的「下载历史」行进入历史视图:条目带类型图标、标题、相对时间与成败标记;搜索命中标题/作者,四种排序与 20 条分页正确;单条删除与清空走内嵌确认;导出的 CSV 只含当前筛选视图,Excel 打开中文不乱码;取消的任务与配额拒绝不出现在历史里。
 - Audio 行格式下拉选 MP3 后,下载产物为 `.mp3`（audio/mpeg）,选 M4A（默认）产物为 `.m4a`;重开 Popup 回到 M4A。
-- 声明 AES-128 的 HLS fixture:分片解密后产物字节与明文一致,缺省 IV 按 media sequence 构造,key 任务内只请求一次;key URL 白名单外或 30x 重定向到白名单外时任务失败且不消费该响应;SAMPLE-AES 声明按明文口径推进。
-- Unit/Integration 覆盖 config 捕获、聚合页枚举回退与按视频合并、回退重扫定时器与有界并发加载、组数上限淘汰、`videoGroups` 组元数据通路（校验链唯一来源、字段补齐、零资源组与游离资源边界）、身份出现守卫、`getResources` 响应限额、四行按钮、编排器入队去重/单并发/配额拒绝与 fail-open/落盘回执/取消墓碑/冷启动对账、终态历史回写（成败回写、取消与配额拒不回写）与历史存储（去重覆盖、500 条裁剪、坏条目丢弃、写锁串行、单删/清空）、历史视图纯逻辑（过滤/排序/分页/相对时间）与 CSV 转义、文件名模板渲染（变量替换、残留分隔符清理、未知 token 保留、主干为空回退）、offscreen 任务执行/进度节流/重签守卫、HLS AES 解密（端到端往返、sequence IV、key 缓存、白名单内外边界、重定向复检不消费响应）、MP3 分派（m4a 缺省不转码、targetFormat=mp3 转码链与交付名扩展名重写）、直连来源校验与刷新、文件名清洗、未知长度 `Downloading...`、重复点击锁、一次签名重签、adaptive `Best` 保持同 delivery、无音轨交付、字幕建模与白名单、片段区间透传与 packet 级裁剪、Popup 面板档位生成（Video 行只列 DASH/HLS、progressive 直链归直接下载行、无直链整行不渲染）与裁剪调用、音轨开关的画质 × 开关映射与「无音轨 + 片段」组合、裁剪双滑杆的 0.1s 钳制/键盘步进/边界与 aria、缓存按片段 ID 还原资源、刷新片段缺 `text_tracks` 时沿用旧轨、档位词条在 zh-CN 下不回退英文 label、14 个 locale 键集合与占位符对齐、文件名和 URL/MIME 边界。
-- 公网 smoke 固定使用 `https://vimeo.com/1196869805?fl=ip&fe=ec`（只提供 DASH 交付的样本），覆盖 offscreen 下载路径：取样本当前 config 实际给出的 DASH/HLS 选项，不预设 delivery，样本不再提供该交付时带原因 skip；面板缺失或始终给不出选项按真实回归失败处理。`pnpm test:e2e:vimeo` 只运行 `extension-e2e-vimeo-real` 这一个 project。Vimeo 明确返回 Cloudflare 人机验证时标记外部环境阻塞，不误报产品失败；Cloudflare 只能记为环境 skip，不能记为通过。
-- 真实站点验收（2026-09-26，offscreen 迁移后）：下载中关闭来源标签页后继续下载并落盘、刷新页面后任务继续、下载中取消（含取消转发失败后 tombstone 复验不复活、迟到交付不落盘）、直链下载、聚合页检测元数据展示均通过。
-- 真实站点验收（2026-09-26，OPFS 流式写盘后）：446MB / 830s 大文件在下载期间关闭来源页面后仍完成落盘，产物可本地播放（moov 在文件尾无影响）；合成期间无整份内存驻留，大文件 OOM 风险消除。
+- 声明 AES-128 的 HLS parser/媒体字节检查：解密后字节与明文一致，缺省 IV 按 media sequence 构造，key 白名单与未知加密拒绝；这些检查不代替真实 HLS 兼容性证据。
+- 定向纯逻辑入口见 `extension/tests/unit/download-task-contract.spec.ts`、`offscreen-task-runner.spec.ts`、`vimeo-media.spec.ts` 与 `resource-buffer.spec.ts`；认证真实后端入口为 `extension/tests/integration/email-login-real.spec.ts`。Chrome/parser/媒体字节可以隔离，项目 HTTP 响应不得 mock。
+- `extension/tests/e2e/vimeo-real-download.spec.ts` 明确使用真实 `player.vimeo.com/video/1196869805`，经普通扩展页面验证 content 资源、FIFO、MP4/MP3 裁剪、真实 quota 业务字段/次数、历史与成功事实；轨道/时长与解码使用已有 ffprobe/ffmpeg。它不代替顶层 Vimeo 页面入口或 action popup 生命周期。命令/profile/fresh build 规则见 [客户端测试规范](../../references/specs/spec-test-client.md)。
+- 运行结果只记在对应执行计划；当前收口状态见 [035 验收记录](./plans/035.插件审查问题收口.md#5-验收记录)。源码合同和已写断言不等于真实样本通过；安全拦截或工具边界必须明确记为环境未验，不伪造媒体或把 skip 记 passed。

@@ -115,9 +115,10 @@ export const useAuthStore = defineStore('auth', () => {
 
       clearAuth()
 
-      // 清除配额状态
+      // 退出后读取真实游客额度。
       const quotaStore = useQuotaStore()
       quotaStore.clearQuota()
+      await quotaStore.refreshQuota()
 
       logger.info('[AuthStore] Logout successful')
     } catch (err) {

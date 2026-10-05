@@ -1,10 +1,14 @@
 /**
  * Background RPC v2 register。
  *
- * register 声明 background 能力边界；后端请求统一由 background 代其他上下文发起。
+ * register 声明 background 能力边界与持久业务写入入口。
  */
 
 import type {
+  BackgroundCreateCheckoutOrderRequest,
+  BackgroundCreateCheckoutOrderResponse,
+  BackgroundOrderReference,
+  BackgroundClearOrderReferenceRequest,
   BackgroundGetRemoteConfigResponse,
   BackgroundGetDownloadQueueResponse,
   BackgroundGetRuntimeConfigResponse,
@@ -16,6 +20,8 @@ import type {
   BackgroundRecordMarkResponse,
   BackgroundStartGoogleLoginRequest,
   BackgroundStartGoogleLoginResponse,
+  BackgroundEmailLoginRequest,
+  BackgroundRemoveHistoryRequest,
   BackgroundUpdateBadgeRequest,
   BackgroundUpdateBadgeResponse,
   BackgroundTaskProgressRequest,
@@ -46,6 +52,37 @@ export const CLASS_NAME = 'BackgroundChannel' as const
 
 /** Background RPC 方法签名声明。 */
 export const Handler = {
+  /** 下单并保存订单定位后返回收银台数据。 */
+  createCheckoutOrder(
+    _params: BackgroundCreateCheckoutOrderRequest
+  ): Promise<BackgroundCreateCheckoutOrderResponse> {
+    return declarationOnly('background.createCheckoutOrder')
+  },
+
+  /** 获取当前用户的最后订单引用。 */
+  getLatestOrderReference(): Promise<BackgroundOrderReference | null> {
+    return declarationOnly('background.getLatestOrderReference')
+  },
+
+  /** 服务端确认终态后清理匹配的当前用户订单引用。 */
+  clearOrderReference(_params: BackgroundClearOrderReferenceRequest): Promise<void> {
+    return declarationOnly('background.clearOrderReference')
+  },
+  /** 由 background 兑换邮箱验证码并保存登录态。 */
+  loginWithEmailCode(_params: BackgroundEmailLoginRequest): Promise<void> {
+    return declarationOnly('background.loginWithEmailCode')
+  },
+
+  /** 历史删除与终态回写共用 background 串行链。 */
+  removeDownloadHistoryEntry(_params: BackgroundRemoveHistoryRequest): Promise<void> {
+    return declarationOnly('background.removeDownloadHistoryEntry')
+  },
+
+  /** 清空下载历史。 */
+  clearDownloadHistory(): Promise<void> {
+    return declarationOnly('background.clearDownloadHistory')
+  },
+
   /** background 连通性检查。 */
   ping(): Promise<BackgroundPingResponse> {
     return declarationOnly('background.ping')
@@ -152,6 +189,12 @@ export type BackgroundHandler = typeof Handler
 
 /** background 方法允许调用方。 */
 export const METHOD_TARGETS = {
+  createCheckoutOrder: ['popup'],
+  getLatestOrderReference: ['popup'],
+  clearOrderReference: ['popup'],
+  loginWithEmailCode: ['popup'],
+  removeDownloadHistoryEntry: ['popup'],
+  clearDownloadHistory: ['popup'],
   /** ping 允许 content/popup 调用。 */
   ping: ['content', 'popup'],
   /** getState 允许 content/popup 调用。 */
@@ -192,6 +235,12 @@ export const METHOD_TARGETS = {
 
 /** background 方法允许传输。 */
 export const METHOD_TRANSPORTS = {
+  createCheckoutOrder: ['chrome'],
+  getLatestOrderReference: ['chrome'],
+  clearOrderReference: ['chrome'],
+  loginWithEmailCode: ['chrome'],
+  removeDownloadHistoryEntry: ['chrome'],
+  clearDownloadHistory: ['chrome'],
   /** ping 使用 Chrome message。 */
   ping: ['chrome'],
   /** getState 使用 Chrome message。 */
@@ -232,6 +281,12 @@ export const METHOD_TRANSPORTS = {
 
 /** background 方法请求体限制，单位字节。 */
 export const METHOD_REQUEST_LIMITS = {
+  createCheckoutOrder: 4096,
+  getLatestOrderReference: 1024,
+  clearOrderReference: 1024,
+  loginWithEmailCode: 4096,
+  removeDownloadHistoryEntry: 4096,
+  clearDownloadHistory: 1024,
   /** ping 无业务参数。 */
   ping: 1024,
   /** getState 无业务参数。 */
@@ -272,6 +327,12 @@ export const METHOD_REQUEST_LIMITS = {
 
 /** background 方法响应体限制，单位字节。 */
 export const METHOD_RESPONSE_LIMITS = {
+  createCheckoutOrder: 16384,
+  getLatestOrderReference: 1024,
+  clearOrderReference: 1024,
+  loginWithEmailCode: 1024,
+  removeDownloadHistoryEntry: 1024,
+  clearDownloadHistory: 1024,
   /** ping 返回连通状态。 */
   ping: 4096,
   /** getState 返回状态文本。 */

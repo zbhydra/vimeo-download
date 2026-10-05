@@ -55,6 +55,8 @@ export function isEventMessage(
 export interface ExtensionEvents extends EventDefinition {
   /** 显示升级弹窗。 */
   showUpgradeModal: { resetAt?: number }
+  /** 消费接口已有响应，popup 重新读取服务端权益与额度。 */
+  quotaConsumed: void
   /** 升级订阅弹窗从隐藏进入显示。 */
   upgradeModalOpened: void
   /** 游客登录提示从隐藏进入显示。 */

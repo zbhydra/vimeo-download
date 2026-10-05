@@ -1,54 +1,48 @@
 <template>
   <Teleport to="body" :disabled="!useTeleport">
-    <Transition name="modal-fade">
-      <div
-        v-if="show && isAuthenticated !== null"
-        class="vdl-upgrade-modal-overlay"
-        @click.self="handleClose"
-      >
-        <div
-          class="vdl-upgrade-modal-container"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="vdl-upgrade-modal-title"
-          aria-describedby="vdl-upgrade-modal-message"
-          @click.stop
+    <dialog
+      ref="dialog"
+      class="vdl-upgrade-modal-overlay"
+      aria-labelledby="vdl-upgrade-modal-title"
+      aria-describedby="vdl-upgrade-modal-message"
+      @click.self="handleClose"
+      @close="handleClose"
+    >
+      <div class="vdl-upgrade-modal-container" @click.stop>
+        <button
+          type="button"
+          class="vdl-upgrade-modal-close-btn"
+          :aria-label="t(I18N_KEYS.APP_ERROR.DISMISS)"
+          @click="handleClose"
         >
-          <button
-            type="button"
-            class="vdl-upgrade-modal-close-btn"
-            :aria-label="t(I18N_KEYS.APP_ERROR.DISMISS)"
-            @click="handleClose"
-          >
-            <Icon :name="IconName.X_MARK" :size="IconSize.SM" />
-          </button>
+          <Icon :name="IconName.X_MARK" :size="IconSize.SM" />
+        </button>
 
-          <div class="vdl-upgrade-modal-content">
-            <div class="vdl-upgrade-modal-icon" aria-hidden="true">
-              <Icon :name="isAuthenticated ? IconName.CROWN : IconName.USER" :size="IconSize.XL" />
-            </div>
-
-            <h2 id="vdl-upgrade-modal-title" class="vdl-upgrade-modal-title">
-              {{ t(isAuthenticated ? I18N_KEYS.QUOTA.UPGRADE_TITLE : I18N_KEYS.AUTH.LOGIN) }}
-            </h2>
-            <p id="vdl-upgrade-modal-message" class="vdl-upgrade-modal-message">
-              {{
-                t(isAuthenticated ? I18N_KEYS.QUOTA.UPGRADE_MESSAGE : I18N_KEYS.QUOTA.LOGIN_MESSAGE)
-              }}
-            </p>
-
-            <div v-if="resetAt > 0" class="vdl-upgrade-modal-reset" aria-live="polite">
-              <strong class="vdl-upgrade-modal-reset-countdown">{{ resetCountdown }}</strong>
-              <span class="vdl-upgrade-modal-reset-time">{{ resetTime }}</span>
-            </div>
-
-            <button type="button" class="vdl-upgrade-modal-btn" @click="handleUpgrade">
-              {{ t(isAuthenticated ? I18N_KEYS.QUOTA.UPGRADE_BUTTON : I18N_KEYS.AUTH.LOGIN) }}
-            </button>
+        <div class="vdl-upgrade-modal-content">
+          <div class="vdl-upgrade-modal-icon" aria-hidden="true">
+            <Icon :name="isAuthenticated ? IconName.CROWN : IconName.USER" :size="IconSize.XL" />
           </div>
+
+          <h2 id="vdl-upgrade-modal-title" class="vdl-upgrade-modal-title">
+            {{ t(isAuthenticated ? I18N_KEYS.QUOTA.UPGRADE_TITLE : I18N_KEYS.AUTH.LOGIN) }}
+          </h2>
+          <p id="vdl-upgrade-modal-message" class="vdl-upgrade-modal-message">
+            {{
+              t(isAuthenticated ? I18N_KEYS.QUOTA.UPGRADE_MESSAGE : I18N_KEYS.QUOTA.LOGIN_MESSAGE)
+            }}
+          </p>
+
+          <div v-if="resetAt > 0" class="vdl-upgrade-modal-reset" aria-live="polite">
+            <strong class="vdl-upgrade-modal-reset-countdown">{{ resetCountdown }}</strong>
+            <span class="vdl-upgrade-modal-reset-time">{{ resetTime }}</span>
+          </div>
+
+          <button type="button" class="vdl-upgrade-modal-btn" @click="handleUpgrade">
+            {{ t(isAuthenticated ? I18N_KEYS.QUOTA.UPGRADE_BUTTON : I18N_KEYS.AUTH.LOGIN) }}
+          </button>
         </div>
       </div>
-    </Transition>
+    </dialog>
   </Teleport>
 </template>
 
@@ -58,9 +52,8 @@ import { useI18n } from 'vue-i18n'
 import { Icon, IconName, IconSize } from '@/core/components/icons'
 import { logger } from '@/core/utils/logger'
 import { I18N_KEYS } from '@/core/constants/i18n'
-import { openPricingPage } from '@/core/utils/navigation'
-import { openPremiumView } from '@/core/composables/premiumView'
 import { openLoginModal } from '@/core/composables/loginModal'
+import { useNativeDialog } from '@/core/composables/nativeDialog'
 import { authApi } from '@/core/api/auth/api'
 import { ChromeEventEmitter } from '@/core/rpc/ChromeEventBus'
 import type { ExtensionEvents } from '@/core/events/types'
@@ -74,7 +67,7 @@ interface Props {
   show?: boolean
   /** 每日下载额度的下一次刷新时间，使用毫秒时间戳。 */
   resetAt?: number
-  /** Popup 使用原地渲染，普通页面入口使用 Teleport。 */
+  /** 是否传送到 document.body；Shadow DOM 与 popup 使用原地渲染。 */
   useTeleport?: boolean
 }
 
@@ -87,10 +80,12 @@ const props = withDefaults(defineProps<Props>(), {
 /** 只向父级同步弹窗显隐，不在组件内部保存第二份显隐状态。 */
 const emit = defineEmits<{
   'update:show': [value: boolean]
+  upgrade: []
 }>()
 
 const { locale, t } = useI18n()
 const isAuthenticated = ref<boolean | null>(null)
+const dialog = useNativeDialog(computed(() => props.show && isAuthenticated.value !== null))
 const eventEmitter = new ChromeEventEmitter<ExtensionEvents>()
 /** 计算倒计时的当前时间，由轻量定时器推进。 */
 const currentTime = ref(Date.now())
@@ -180,27 +175,14 @@ function handleClose(): void {
   emit('update:show', false)
 }
 
-/**
- * 游客先完成插件登录，已登录用户进入购买流程。
- *
- * popup 内购买已收进 popup 的 Premium 视图（useTeleport=false 是 popup 的挂载方式）；
- * 弹窗宿主页面（content）没有 popup 可承载，退回官网订阅页，保证入口仍有一条可用路径。
- * 未登录时 popup 是唯一的登录面：弹窗宿主不在时 openLoginModal 会自行退回订阅页。
- */
+/** 游客进入现有登录入口，已登录购买动作交给实际宿主。 */
 async function handleUpgrade(): Promise<void> {
   if (!(await authApi.isAuthenticated())) {
     openLoginModal('upgrade_modal')
     handleClose()
     return
   }
-  if (!props.useTeleport) {
-    logger.info('[UpgradeModal] Open popup premium view')
-    openPremiumView('upgrade_modal')
-    handleClose()
-    return
-  }
-  logger.info('[UpgradeModal] Open pricing page')
-  await openPricingPage('upgrade_modal')
+  emit('upgrade')
   handleClose()
 }
 </script>

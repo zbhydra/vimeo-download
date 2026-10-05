@@ -4,20 +4,27 @@
 
 项目内所有 Python 相关临时产物统一收口到 `backend/.cache/`。
 
-日常运行 Python 命令时，统一通过：
+日常运行 Python 命令时，使用项目虚拟环境并指定缓存目录：
 
 ```bash
 cd backend
-./scripts/with-python-cache.sh <command> [args...]
+PYTHONPYCACHEPREFIX=.cache/pycache ./.venv/bin/python <script> [args...]
 ```
 
 常见示例：
 
 ```bash
 cd backend
-./scripts/with-python-cache.sh ./.venv/bin/pytest
-./scripts/with-python-cache.sh ./.venv/bin/mypy src tests
-./scripts/with-python-cache.sh ./.venv/bin/ruff check .
+PYTHONPYCACHEPREFIX=.cache/pycache ./.venv/bin/pytest
+PYTHONPYCACHEPREFIX=.cache/pycache ./.venv/bin/mypy --cache-dir=.cache/mypy src tests
+./.venv/bin/ruff check --cache-dir=.cache/ruff .
+```
+
+启动本地业务 API：
+
+```bash
+cd backend/src
+PYTHONPYCACHEPREFIX=../.cache/pycache ../.venv/bin/python -m app.main
 ```
 
 ## 代理输出总限速

@@ -67,6 +67,12 @@ DASH/HLS 下载需要长生命周期执行环境且只用 blob API 与 OPFS（�
 - **生命周期**：常驻不自动关闭——交付中的 blob URL 依赖文档存活，重复冷启动也有成本；无任务时的内存占用是已知限制。
 - **通信**：offscreen 无 DOM 可达性差异，只经 `chrome.runtime` message（RPC chrome transport）与 background 双向通信，不与 content/popup 直接通信。
 
+### A2.2 Popup 与内容页模态
+
+Login、Settings、History、Premium、Upgrade 使用常驻 closed 原生 `dialog`，由 `core/composables/nativeDialog.ts` 将 owner 显隐同步到 `showModal/close`，`close` 事件回写原 owner。普通扩展页与 Shadow DOM 使用原生焦点、Tab 和最上层 Escape；action popup 的 Escape 可由浏览器宿主关闭整个 popup，焦点返回来源页，用户重开继续，不额外拦截宿主键盘。
+
+Upgrade 的购买动作由宿主提供：popup 打开 Premium，content 打开官网 Pricing；Teleport 参数仅控制渲染位置。邮箱登录界面在 popup，兑换与保存的 background owner 见 [账号与认证](../007.用户系统/tech-账号与认证.md#81-邮箱验证码登录)。
+
 ### A3. RPC 系统（自研 v2，声明式 + 代码生成）
 
 目录：`extension/src/core/rpc/`。
@@ -95,7 +101,9 @@ DASH/HLS 下载需要长生命周期执行环境且只用 blob API 与 OPFS（�
 
 插件不暴露通用 Counter API。下载前唯一的计数与额度消耗入口是 `core/api/quota/api.ts` 的 `quotaApi.checkAndConsume()`，调用 `/api/client/quota/check`；是否允许下载只读取响应的 `status`。响应可携带服务端每日额度下一次刷新的毫秒时间戳，该字段仅贯穿 content Shadow DOM 与 Popup 降级事件用于展示分钟倒计时和用户本地时区的具体刷新时刻；字段缺失或弹窗异常不得改变额度结论。对应 `@../003.积分系统/`、`@../005.计数器系统/` 与 `@../006.订阅系统/`。
 
-`core/stores/quotaStore.ts` 另通过 `subscriptionApi.getStatus()` 调用 `/api/client/subscription/status`，读取并派生额度展示状态（`remaining` / `dailyLimit` / `isPaidUser`，`daily_limit === -1` 表示不限次）。Popup Footer 固定为一行：联系邮箱与复制按钮，点击邮箱交给系统默认邮件客户端，复制结果通过全局 Toast 反馈。该接口不承担计数或额度消耗。
+`core/stores/quotaStore.ts` 另通过 `subscriptionApi.getStatus()` 调用 `/api/client/subscription/status`，读取并派生额度展示状态（`remaining` / `dailyLimit` / `isPaidUser`，`daily_limit === -1` 表示不限次）。background 收到消费响应后广播 `quotaConsumed`，UI 重读 status，模块 Promise 串行读取，初始化中的读取不丢消费通知；退出后读取游客状态。该接口不承担计数或额度消耗。
+
+仅 quota 消费端点对携带无效认证的请求优先返回 401，复用既有单飞 refresh 链；匿名消费仍按设备身份处理，其他 optional 匿名接口合同不变。失败或取消不返还已消费额度，API 异常仍沿用 fail-open，文件成功不能代替额度验收。
 
 **远端配置**：content 与 popup 都是远端配置的读取方（popup 供公告跑马灯消费 `announcement` 分组，见 `@../002.下载功能/tech-扩展端Vimeo本地下载.md` §12.10），经 background RPC 调 `/api/client/remote-config/config` 取顶层稀疏覆盖，再用 `core/remoteConfig/createRemoteConfigStore.ts` 按顶层分组浅覆盖到包内默认值：缺项保留本地值、分组类型不符时整组跳过、读取失败保留默认值，且不写 `chrome.storage`。站点级参数（如 Vimeo 的 `muxMaxBytes`）先按已知字段过滤（`pickVimeoConfig` 只接受有限正整数，写错类型的字段丢弃并保留默认值），再经 `applySiteConfig` 同步给 MAIN world；MAIN world 因 EventRpc 通道可被页面伪造而再校验一次，两侧用同一套规则。服务端只存稀疏覆盖，配置改动在客户端重新加载页面后生效，不做推送、轮询或版本号。
 
@@ -114,7 +122,7 @@ DASH/HLS 下载需要长生命周期执行环境且只用 blob API 与 OPFS（�
 
   两者 manifest 与权限完全一致（`host_permissions` / `content_scripts.matches` 由 `SITE_REGISTRATION` 派生，与 `NODE_ENV` 无关），差异只在注入的 base URL、SLS 开关与压缩 / sourcemap。
 - **offscreen 入口产物**：`src/offscreen.html` 经 `vite-plugin-web-extension` 的 `additionalInputs` 进入两套构建的 `dist/`（offscreen document 不在 manifest 声明，加载 dist 后该文件必须存在，否则首个下载任务创建文档失败）。
-- **`pnpm test:unit:run` 跑完时 `dist/` 是生产包**：`tests/unit/manifest-build.spec.ts` 自身执行 `pnpm build`（`NODE_ENV=production`）来断言 manifest 组装结果。所以「跑完测试直接加载 `dist/`」拿到的是连生产域名的包，要开发包必须重新跑 `pnpm build:dev`。
+- **测试不隐式切换生产包**：manifest 单测只检查配置；真实 E2E 的 `tests/global-setup.ts` 每次 fresh dev build 并核对入口。生产 ZIP 校验应在 dev build 覆盖 dist 前完成；发布前 `scripts/cws-publish/package-check.mjs` 的 `checkUploadPackage` 核对实际 manifest、清单与字节。
 - 商店安装的 ID 由商店维持，本地加载的 ID 由浏览器分配；登录回调通过 `chrome.identity.getRedirectURL()` 获取当前安装的地址。
 - manifest `host_permissions` / 站点 `content_scripts.matches` / `web_accessible_resources` 按 dev/prod 与 `src/platforms/registry.ts` 的 `SITE_REGISTRATION` 生成，`vite.config.ts` 只消费该注册表：host_permissions 只含 Vimeo 页面与 Vimeo 媒体 CDN，API 域依赖后端通配 CORS，Google 登录走 manifest 声明的 `identity` 权限（`launchWebAuthFlow` 回调 `*.chromiumapp.org` 不需要 host access）。prod 包不包含 `localhost:7900` / `localhost:7910`；dev 包不默认请求线上官网。
 - `core/api/client/HttpClient.ts` + `interceptors.ts`：自封装 HttpClient，拦截器链注入 `deviceId / token / Accept-Language / headers`，5xx 重试、401 刷新 token。

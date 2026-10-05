@@ -1,13 +1,13 @@
-Vimeo Video Downloader — Vimeo-Videos, Audio und Titelbilder in Chrome speichern
+Vimeo Video Downloader — Vimeo-Videos, Audio, Untertitel und Titelbilder in Chrome speichern
 
-Eine Chrome-Erweiterung für Vimeo-Zuschauer, die eine lokale Kopie des Videos möchten, das sie gerade ansehen – mit einem Panel direkt auf der Seite für Video-, Audio- und Titelbild-Downloads.
+Eine Chrome-Erweiterung für Vimeo-Zuschauer, die eine lokale Kopie des Videos möchten, das sie gerade ansehen – mit einem Panel direkt auf der Seite für Video-, Audio-, Untertitel- und Titelbild-Downloads.
 
 
 WAS DAS IST
 
-Vimeo Video Downloader ist eine Chrome-Erweiterung für Vimeo-Seiten (vimeo.com, www.vimeo.com und player.vimeo.com). Sie liest die Wiedergabeinformationen, die der Vimeo-Player auf der Seite bereits geladen hat, und macht daraus Download-Schaltflächen für das Video, dessen Audiospur und dessen Titelbild.
+Vimeo Video Downloader ist eine Chrome-Erweiterung für unterstützte Vimeo-Videoseiten (vimeo.com, www.vimeo.com und player.vimeo.com). Sie ermittelt die Wiedergabeinformationen des Players und bietet Download-Schaltflächen für Video, Audio, Untertitel und Titelbilder.
 
-Sie ist kein Vimeo-Client, kein Bot und kein eigenständiger Downloader. Sie läuft vollständig in der Vimeo-Seite, die Sie bereits geöffnet haben, und arbeitet nur mit dem Video, das diese Seite gerade abspielt.
+Sie ist kein Vimeo-Client, kein Bot und kein eigenständiger Downloader. Sie erkennt Ressourcen auf unterstützten Vimeo-Seiten und führt Downloads im Browser-Hintergrund aus.
 
 
 FÜR WEN DAS GEDACHT IST
@@ -23,8 +23,8 @@ Sie sind vermutlich auf dieser Seite gelandet, weil Sie eines der Folgenden möc
 3. Das Titelbild
    Sie möchten das Vorschaubild des Videos als eigene Datei.
 
-4. Mehrere Dateien ohne wiederholtes Klicken
-   Sie möchten mehrere Einträge in der Popup-Liste auswählen und in einem Zug einreihen.
+4. Mehrere Dateien in einer Warteschlange
+   Sie möchten Einträge im Popup einzeln hinzufügen und der Reihe nach herunterladen.
 
 Wenn nichts davon auf Sie zutrifft, reichen die Speicherfunktionen Ihres Browsers wahrscheinlich aus und Sie brauchen diese Erweiterung nicht.
 
@@ -32,13 +32,14 @@ Wenn nichts davon auf Sie zutrifft, reichen die Speicherfunktionen Ihres Browser
 KERN-FUNKTIONEN
 
 ### Download-Panel auf der Seite
-Wenn eine Vimeo-Videoseite geladen wird, fügt die Erweiterung neben dem Titelbereich des Videos ein kleines Panel mit drei Zeilen ein:
+Auf unterstützten Vimeo-Videoseiten fügt die Erweiterung nahe dem Titel oder Aktionsbereich ein kleines Panel mit vier Zeilen ein:
 
 - Video – eine Schaltfläche pro verfügbarer Videoqualität
 - Audio – eine Schaltfläche pro verfügbarer Audiospur
+- Subtitle – verfügbare Untertitelspuren
 - Image – das Titelbild
 
-Ist eine dieser Dateiarten für das aktuelle Video nicht verfügbar, zeigt die Zeile statt einer Schaltfläche einen Bindestrich. Beim Wechsel zu einem anderen Video ohne Neuladen der Seite wird das Panel neu aufgebaut.
+Ist eine dieser Dateiarten für das aktuelle Video nicht verfügbar, zeigt die Zeile einen deaktivierten Platzhalter. Beim Wechsel zu einem anderen Video ohne Neuladen der Seite wird das Panel neu aufgebaut.
 
 ### Video-Downloads
 Das Video wird als MP4-Datei gespeichert. Je nachdem, was der Vimeo-Player für dieses Video bereitstellt, sehen Sie:
@@ -48,10 +49,13 @@ Das Video wird als MP4-Datei gespeichert. Je nachdem, was der Vimeo-Player für 
 - Einen Rückfall-Eintrag „1080p HLS“ für Videos, die nur diese Auslieferung anbieten
 - Eine Schaltfläche „Best“, die die höchste für dieses Video verfügbare Qualität auswählt
 
-Aufgelistet werden nur die Qualitäten, die Vimeo für dieses Video tatsächlich ausliefert. Die Erweiterung erfindet nichts, skaliert nichts hoch und transcodiert nichts.
+Aufgelistet werden nur ermittelte Qualitäten. Video wird ohne Transcodierung oder Hochskalierung zusammengesetzt; MP3-Audio wird transcodiert.
 
 ### Audio-Downloads
-Die Audiospur wird separat als M4A-Datei gespeichert. Die Schaltflächen sind mit der Audiobitrate beschriftet (zum Beispiel „128 kbps“), dazu gibt es eine Schaltfläche „Best Audio“, die die höchste verfügbare Bitrate wählt.
+Die Audiospur wird separat als M4A gespeichert; im Popup kann MP3 mit Transcodierung gewählt werden. Die Schaltflächen zeigen die Audiobitrate (zum Beispiel „128 kbps“), „Best Audio“ wählt die höchste verfügbare Bitrate.
+
+### Untertitel, Zuschnitt und Einstellungen
+Verfügbare Untertitel werden als VTT gespeichert. Adaptive Video- und Audiodateien lassen sich im Popup zuschneiden; Video ohne Transcodierung mit Keyframe-Genauigkeit. Progressive MP4 werden vollständig gespeichert. Auch beim Zuschnitt wird die gesamte Quelle heruntergeladen. Einstellungen umfassen Speicher-Unterordner, Dateinamen-Vorlage und UI-Sprache. Erfolgreiche und fehlgeschlagene Downloads stehen im lokalen Verlauf mit CSV-Export.
 
 ### Titelbild herunterladen
 Das Titelbild des Videos wird als JPEG-Datei gespeichert.
@@ -59,16 +63,16 @@ Das Titelbild des Videos wird als JPEG-Datei gespeichert.
 ### Ressourcenliste im Popup
 Klicken Sie auf das Erweiterungssymbol, um alle herunterladbaren Einträge zu sehen, die der aktuelle Tab ermittelt hat:
 
-- Nach Typ gruppiert, mit Anzahl für Video, Audio und Bild
-- Einzelne Einträge, eine Auswahl oder alles in der Liste herunterladen
+- Ressourcenzeilen für Video, Audio, Untertitel und Bilder; progressive MP4 in einer separaten Direktdownload-Zeile
+- Eine Option wählen und den einzelnen Eintrag über seine Zeile herunterladen
 - Live-Fortschritt, Übertragungsgeschwindigkeit und Status pro Eintrag
-- Liste leeren und Seite neu einlesen
 
-### Stapel-Downloads
-Downloads laufen über eine einzige Warteschlange, sodass Sie mehrere Einträge auf einmal einreihen können, ohne für jede Datei einen neuen Tab zu öffnen. Die Dateien werden nacheinander auf die Festplatte geschrieben.
+
+### Download-Warteschlange
+Einzeln hinzugefügte Downloads teilen eine globale FIFO-Warteschlange über alle Tabs und werden nacheinander gespeichert. Ein Seitenwechsel oder das Schließen des Quell-Tabs unterbricht sie nicht von sich aus.
 
 ### Große Dateien
-Dateien, die Chrome selbst abrufen kann, gehen an den Chrome-Downloadmanager, sodass die Übertragung unabhängig davon weiterläuft, ob die Seite noch geöffnet ist. Adaptive (segmentierte) Videos müssen auf der Seite zusammengesetzt werden, und dieser Weg hat ein Speicherbudget: Standardmäßig wird ein segmentiertes Video über 768 MB nicht zum Download angeboten, und ein laufender Download wird abgebrochen, wenn er dieses Budget überschreitet.
+Direkte Dateien gehen an den Chrome-Downloadmanager. Adaptive DASH/HLS-Medien werden in einem Offscreen-Dokument zusammengesetzt; temporäre Ausgabedateien liegen im lokalen Browserspeicher (OPFS). Eingaben belegen weiterhin Speicher: Das Standardbudget beträgt 768 MiB. Bekannte zu große Einträge werden nicht angeboten, laufende Downloads bei Überschreitung gestoppt. Unbegrenzt große Streaming-Eingaben werden nicht unterstützt.
 
 Dieses Budget lässt sich über die Remote-Konfiguration der Erweiterung anpassen, also erhöhen oder senken, ohne eine neue Version auszuliefern.
 
@@ -83,8 +87,8 @@ SO FUNKTIONIERT ES
 
 1. Installieren Sie die Erweiterung aus dem Chrome Web Store
 2. Heften Sie das Symbol für den schnellen Zugriff an die Symbolleiste
-3. Öffnen Sie eine beliebige Videoseite auf vimeo.com oder player.vimeo.com und starten Sie die Wiedergabe
-4. Neben dem Videotitel erscheint ein Download-Panel mit den Zeilen Video, Audio und Image
+3. Öffnen Sie eine unterstützte Videoseite auf vimeo.com oder player.vimeo.com und starten Sie die Wiedergabe
+4. Ein Download-Panel mit den Zeilen Video, Audio, Subtitle und Image erscheint
 5. Klicken Sie auf die gewünschte Qualität oder öffnen Sie das Erweiterungssymbol für die vollständige Liste
 6. Die Datei wird von Ihrem Browser auf Ihre lokale Festplatte geschrieben
 
@@ -94,15 +98,15 @@ Die Anmeldung ist optional. Sie dient nur Ihrem täglichen Download-Kontingent u
 WOFÜR ES GEEIGNET IST UND WAS ES NICHT TUT
 
 Geeignet für:
-- Videos, die in Ihrem eigenen Browser auf vimeo.com, www.vimeo.com und player.vimeo.com abspielbar sind
+- Unterstützte Videoseiten auf oberster Ebene auf vimeo.com, www.vimeo.com und player.vimeo.com; abspielbar bedeutet nicht immer herunterladbar
 - Die Wahl einer bestimmten Qualität oder der Audiospur statt des Standardstreams
 - Das Speichern des Titelbilds
 - Das Einreihen mehrerer Einträge von derselben Seite
 
 Nicht geeignet für:
-- Den Download privater, passwortgeschützter, kostenpflichtiger oder anderweitig zugriffsbeschränkter Vimeo-Videos. Das sind die Zugriffskontrollen von Vimeo selbst; die Erweiterung kann und will sie nicht umgehen. Wenn der Player das Video in Ihrem Browser nicht abspielen kann, kann die Erweiterung es ebenfalls nicht speichern
+- Das Umgehen von Zugriffskontrollen. Private, passwortgeschützte oder kostenpflichtige Videos werden auch bei möglicher Wiedergabe nicht garantiert unterstützt
 - Das Entfernen oder Umgehen von DRM
-- Das Auslesen von Informationen, die die Seite noch nicht geladen hat
+- Alle HLS-Formate: MPEG-TS, vollständige Live-Aufzeichnung, externe Audio-/Untertitelspuren und unbekannte Verschlüsselung werden nicht unterstützt
 - Den Einsatz auf anderen Websites als Vimeo
 - Den Einsatz in den Vimeo-Desktop- oder Mobil-Apps – dies ist ausschließlich eine Browser-Erweiterung
 - Jegliches Crawling oder Scraping im Hintergrund
@@ -114,19 +118,19 @@ F: Brauche ich ein Konto, um die Erweiterung zu nutzen?
 A: Nein. Sie können ohne Anmeldung herunterladen. Die Anmeldung ist optional und betrifft nur Ihr tägliches Download-Kontingent und Ihren Abonnementstatus.
 
 F: Können private, passwortgeschützte oder kostenpflichtige Vimeo-Videos heruntergeladen werden?
-A: Nein. Diese Beschränkungen setzt Vimeo durch, nicht diese Erweiterung. Die Erweiterung sieht nur die Wiedergabeinformationen, die Vimeo bereits an Ihren Browser ausgeliefert hat, für ein Video, das Sie abspielen können. Sie entsperrt, errät oder umgeht nichts.
+A: Die Unterstützung ist nicht garantiert. Die Erweiterung nutzt die für Ihren Browser verfügbaren Wiedergabeinformationen und entsperrt oder umgeht keine Vimeo-Zugriffskontrollen.
 
 F: Welche Qualitäten bekomme ich?
-A: Die, die Vimeo für dieses konkrete Video ausliefert. Typische Seiten bieten mehrere direkte MP4-Auflösungen und/oder einen adaptiven Stream; die höchste verfügbare Option wird immer als „Best“ angeboten. Fehlt eine höhere Auflösung in der Liste, liefert Vimeo sie nicht an Ihren Browser aus.
+A: Die unterstützten Qualitäten, die die Erweiterung für das Video ermitteln kann. „Best“ wählt die höchste verfügbare Option. Fehlende Auflösungen können an der Quelle, Formatunterstützung oder dem Budget für adaptive Eingaben liegen.
 
 F: Warum gibt es bei manchen Downloads eine Größenbeschränkung?
-A: Bei Dateien, die Chrome direkt abrufen kann, fügt die Erweiterung keine Beschränkung hinzu. Adaptive (segmentierte) Videos müssen auf der Seite zusammengesetzt werden, was Speicher belegt, daher gilt ein Budget. Es ist über die Remote-Konfiguration der Erweiterung einstellbar und beträgt standardmäßig 768 MB.
+A: Direkte Dateien nutzen den Chrome-Downloadmanager. Adaptive Eingaben belegen trotz OPFS-Ausgabe Speicher; das remote konfigurierbare Budget beträgt standardmäßig 768 MiB. Zuschnitt reduziert den Download der vollständigen Quelle nicht.
 
 F: Lädt die Erweiterung meine Daten irgendwohin hoch?
-A: Die Medien selbst laufen niemals über einen Server der Entwickler. Video-, Audio- und Bilddateien gehen von Vimeos Servern in Ihren Browser und dann auf Ihre lokale Festplatte. Die Erweiterung kontaktiert die API der Entwickler nur für die Anmeldung, Ihr tägliches Download-Kontingent, Ihren Abonnementstatus und eine kleine Remote-Einstellungsdatei.
+A: Die Medien selbst laufen niemals über Server der Entwickler. Video, Audio, Untertitel und Bilder gehen von Vimeo an Ihren Browser und Ihre Festplatte. Entwicklerdienste werden auch für Kontofunktionen, Kontingente, Abonnements, Remote-Einstellungen sowie Nutzungs- und Fehlerberichte kontaktiert.
 
 F: Welche Berechtigungen braucht die Erweiterung?
-A: storage (Speichern Ihrer Einstellungen und Ihres Anmeldestatus), identity (Google-Anmeldung über das Autorisierungsfenster von Chrome), downloads (Schreiben von Dateien auf Ihre Festplatte) sowie Zugriff auf Vimeo-Seiten und das Medien-CDN von Vimeo, damit das Panel angezeigt und die Dateien abgerufen werden können.
+A: storage (Einstellungen, Anmeldestatus und lokaler Verlauf), identity (Google-Anmeldung), downloads (Dateien speichern und Status lesen), offscreen (Medienverarbeitung im Hintergrund), notifications (Download abgeschlossen oder fehlgeschlagen) sowie Zugriff auf Vimeo-Seiten und das Medien-CDN.
 
 F: Ist sie kostenlos?
 A: Es gibt ein kostenloses tägliches Download-Kontingent, und ein neues Konto oder Gerät startet mit einem unbegrenzten ersten Tag. Für mehr oder unbegrenzte tägliche Downloads gibt es einen kostenpflichtigen Unlimited-Plan. Die vollständige Liste steht auf der Preisseite der Website der Erweiterung.
@@ -135,10 +139,10 @@ F: Welche Browser werden unterstützt?
 A: Chrome und andere Chromium-basierte Browser wie Edge und Brave.
 
 F: Funktioniert sie auf jeder Vimeo-Seite?
-A: Sie funktioniert auf Videoseiten auf vimeo.com, www.vimeo.com und player.vimeo.com. Seiten, die kein einzelnes Video abspielen – Profile, Feeds, Suchergebnisse – bieten der Erweiterung nichts zum Auslesen.
+A: Sie unterstützt eine begrenzte Auswahl von Videoseiten auf oberster Ebene auf vimeo.com, www.vimeo.com und player.vimeo.com. Drittanbieter-Einbettungen sowie alle privaten oder Live-Seiten werden nicht garantiert unterstützt.
 
 F: Welche Dateiformate entstehen?
-A: MP4 für Video, M4A für Audio, JPEG für das Titelbild.
+A: MP4 für Video, M4A oder MP3 für Audio, VTT für Untertitel, JPEG für das Titelbild.
 
 
 TECHNISCHE HINWEISE
@@ -146,8 +150,8 @@ TECHNISCHE HINWEISE
 - Browser: Chrome, Edge, Brave und andere Chromium-basierte Browser
 - Manifest V3
 - Host-Berechtigungen: vimeo.com, www.vimeo.com, player.vimeo.com und die Medien-CDN-Hosts von Vimeo
-- Downloads: direkte Dateien über den Chrome-Downloadmanager, segmentierte Videos werden auf der Seite zusammengesetzt
-- Speicherbudget für adaptive Videos: standardmäßig 768 MB, remote konfigurierbar
+- Downloads: globale FIFO-Warteschlange; direkte Dateien über den Chrome-Downloadmanager, DASH/HLS in einem Offscreen-Dokument
+- Speicherbudget für adaptive Eingaben: standardmäßig 768 MiB, remote konfigurierbar; OPFS speichert nur die Ausgabe
 - UI-Sprachen: 14 Locales
 
 

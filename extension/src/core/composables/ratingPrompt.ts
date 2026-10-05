@@ -2,9 +2,8 @@
  * 评分引导控制器。
  *
  * 登录用户首次下载成功后，popup footer 展示一次五星引导条；任意交互（评分/关闭）写入
- * has_rated 永久消失。成功计数来自 background 编排器的 downloadTaskSucceeded 事件，由
- * popup 根组件转调 registerDownloadSuccess。状态是模块级单例，与 LoginModal/PremiumView
- * 控制器同构。
+ * has_rated 永久消失。成功计数由 background 在下载落盘后写入；popup 初始化与成功事件
+ * 都只读取事实，关闭 popup 不会漏记下载。状态是模块级单例。
  */
 
 import { ref } from 'vue'
@@ -25,7 +24,7 @@ const THANKS_VISIBLE_MS = 2500
 
 let thanksHideTimer: ReturnType<typeof setTimeout> | null = null
 
-/** 读取评分状态持久化值；存储异常按「未评分、零计数」兜底。 */
+/** 读取评分状态与 background 写入的成功事实。 */
 async function readRatingState(): Promise<{ hasRated: boolean; successCount: number }> {
   const [hasRated, successCount] = await Promise.all([
     storageManager.get<boolean>(STORAGE_KEYS.HAS_RATED),
@@ -41,29 +40,31 @@ async function readRatingState(): Promise<{ hasRated: boolean; successCount: num
   }
 }
 
-/**
- * 记录一次下载成功并按需展开引导条。
- *
- * 成功次数只增不减；已评分用户与未登录用户不展示。此前未登录、登录后再次成功时同样
- * 触发展示——「登录用户首次成功」的判定以登录态为准，而不是把首次成功永久让给未登录态。
- */
-export async function registerDownloadSuccess(isAuthenticated: boolean): Promise<void> {
+/** 已下载成功且当前已登录的未评分用户可以看到引导。 */
+export function isRatingPromptEligible(
+  hasRated: boolean,
+  isAuthenticated: boolean,
+  successCount: number
+): boolean {
+  return !hasRated && isAuthenticated && successCount > 0
+}
+
+/** 读取已完成下载的事实并更新评分资格，不重复计数。 */
+export async function refreshRatingPrompt(isAuthenticated: boolean): Promise<void> {
+  if (!isAuthenticated) {
+    clearThanksHideTimer()
+    ratingPromptPhase.value = 'hidden'
+    return
+  }
   try {
     const { hasRated, successCount } = await readRatingState()
-    const nextCount = successCount + 1
-    await storageManager.set(STORAGE_KEYS.DOWNLOAD_SUCCESS_COUNT, nextCount)
-
-    if (hasRated || !isAuthenticated) {
-      return
+    if (ratingPromptPhase.value !== 'thanks') {
+      ratingPromptPhase.value = isRatingPromptEligible(hasRated, isAuthenticated, successCount)
+        ? 'prompt'
+        : 'hidden'
     }
-
-    clearThanksHideTimer()
-    ratingPromptPhase.value = 'prompt'
-    logger.info(
-      `[RatingPrompt] 展示评分引导: successCount=${nextCount}, isFirst=${nextCount === 1}`
-    )
   } catch (error) {
-    logger.error('[RatingPrompt] 记录下载成功失败，跳过评分引导:', error)
+    logger.error('[RatingPrompt] 读取评分资格失败:', error)
   }
 }
 

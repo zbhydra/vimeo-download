@@ -3,8 +3,13 @@
 .vdl-upgrade-modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 2000;
-  display: flex;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  border: 0;
   align-items: center;
   justify-content: center;
   padding: 16px;
@@ -13,6 +18,14 @@
   font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   letter-spacing: 0;
+}
+
+.vdl-upgrade-modal-overlay[open] {
+  display: flex;
+}
+
+.vdl-upgrade-modal-overlay::backdrop {
+  background: transparent;
 }
 
 .vdl-upgrade-modal-container {
@@ -178,16 +191,6 @@
   background: #1f67bf;
 }
 
-.modal-fade-enter-active,
-.modal-fade-leave-active {
-  transition: opacity 200ms ease;
-}
-
-.modal-fade-enter-from,
-.modal-fade-leave-to {
-  opacity: 0;
-}
-
 @media (max-width: 400px) {
   .vdl-upgrade-modal-content {
     padding-right: 24px;
@@ -197,9 +200,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .vdl-upgrade-modal-close-btn,
-  .vdl-upgrade-modal-btn,
-  .modal-fade-enter-active,
-  .modal-fade-leave-active {
+  .vdl-upgrade-modal-btn {
     transition: none;
   }
 }

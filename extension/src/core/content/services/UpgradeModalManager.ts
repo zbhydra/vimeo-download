@@ -11,6 +11,7 @@ import { SUPPORTED_LANGUAGES } from '@/core/constants/i18n'
 import { ChromeEventEmitter } from '@/core/rpc/ChromeEventBus'
 import type { ExtensionEvents } from '@/core/events/types'
 import { logger } from '@/core/utils/logger'
+import { openPricingPage } from '@/core/utils/navigation'
 import messages from '../../../locales/index'
 import UpgradeModal from '../components/UpgradeModal.vue'
 import upgradeModalStyles from '../components/UpgradeModal.css?inline'
@@ -28,6 +29,7 @@ class UpgradeModalManagerClass {
   private vueApp: App | null = null
   private showRef: { value: boolean } | null = null
   private resetAtRef: { value: number | undefined } | null = null
+  private unregisterI18n: (() => void) | null = null
 
   /**
    * 显示升级弹窗
@@ -167,6 +169,7 @@ class UpgradeModalManagerClass {
       fallbackLocale: SUPPORTED_LANGUAGES.EN_US,
       messages
     })
+    this.unregisterI18n = I18nService.registerVueI18nInstance(i18n)
 
     // 创建包装组件
     const WrapperComponent = {
@@ -186,6 +189,9 @@ class UpgradeModalManagerClass {
             show: manager.showRef!.value,
             resetAt: manager.resetAtRef!.value,
             useTeleport: false,
+            onUpgrade: () => {
+              void openPricingPage('upgrade_modal')
+            },
             'onUpdate:show': (val: boolean) => {
               if (!val) {
                 handleClose()
@@ -212,6 +218,8 @@ class UpgradeModalManagerClass {
    * 清理资源（公共方法）
    */
   cleanup(): void {
+    this.unregisterI18n?.()
+    this.unregisterI18n = null
     if (this.vueApp) {
       try {
         this.vueApp.unmount()

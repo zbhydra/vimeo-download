@@ -290,6 +290,8 @@ VALUES ('registration_ip_benefit_guard', '{"window_seconds":86400,"max_registrat
 
 验证码登录/注册。Body:`{ email, code(=6) }`。校验验证码:未注册则创建无密码账号(`register_method=email_code`)并按 IP 注册权益风控决定是否赠送 10 Credits;已注册则登录;并发创建冲突按 IntegrityError 处理。响应:`{ access_token, refresh_token, token_type:"bearer", expires_in, user: UserInfo }`。
 
+插件 `LoginModal` 负责收集邮箱、发送验证码和展示结果；提交经仅允许 popup 调用的 `loginWithEmailCode` RPC 交给 `BackgroundMessageRouter`。background 完成兑换并保存 access、refresh 与用户信息三键后返回，popup 关闭不结束这段工作；重开由 `authStore.initialize()` 读取并校验存储身份。网站仍由自己的认证上下文完成登录，设备可信闸门见 [Website 设备可信校验](./tech-邮箱登录设备校验.md)。
+
 ### 8.2 密码注册/登录(历史接口,前端未暴露 UI)
 
 #### `POST /api/client/auth/register`
@@ -311,6 +313,8 @@ Body:`{ refresh_token }`。解码 → 加载用户 → `_ensure_user_can_login` 
 > 新 refresh 的存储由 `rotate_refresh_token` pipeline 内的 `ZADD` 完成,接口本身不再单独 `store_token` 新 refresh。
 
 Extension 对 refresh 响应采用结果判定:HTTP 200 必须同时满足成功业务码且含非空 `access_token + refresh_token`,否则视为永久失败并清除插件本地认证状态;HTTP 200 响应不可解析同样等价于没有 token。网络异常和非认证类非 200 响应只视为临时故障,保留现有登录态供后续重试。
+
+插件 `interceptors.ts` 的单飞 refresh Promise 覆盖 fetch 与响应体解析，使用有界 AbortSignal；失败后允许下一次请求重试。Popup 根组件在首次 await 前订阅业务事件，认证初始化不延迟额度和成功通知订阅。
 
 #### `POST /api/client/auth/logout`
 

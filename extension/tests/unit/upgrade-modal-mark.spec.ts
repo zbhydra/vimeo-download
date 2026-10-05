@@ -10,24 +10,15 @@ const mocks = vi.hoisted(() => ({
   emit: vi.fn(),
   isAuthenticated: vi.fn(),
   openLoginModal: vi.fn(),
-  openPricingPage: vi.fn(),
-  openPremiumView: vi.fn()
+  onUpgrade: vi.fn()
 }))
 
 vi.mock('@/core/api/auth/api', () => ({
   authApi: { isAuthenticated: mocks.isAuthenticated }
 }))
 
-vi.mock('@/core/utils/navigation', () => ({
-  openPricingPage: mocks.openPricingPage
-}))
-
 vi.mock('@/core/composables/loginModal', () => ({
   openLoginModal: mocks.openLoginModal
-}))
-
-vi.mock('@/core/composables/premiumView', () => ({
-  openPremiumView: mocks.openPremiumView
 }))
 
 vi.mock('@/core/rpc/ChromeEventBus', () => ({
@@ -60,7 +51,8 @@ function mountUpgradeModal(show: boolean, resetAt = 0, useTeleport = false): Vue
   })
 
   return mount(UpgradeModal, {
-    props: { show, resetAt, useTeleport },
+    attachTo: document.body,
+    props: { show, resetAt, useTeleport, onUpgrade: mocks.onUpgrade },
     global: {
       plugins: [i18n],
       stubs: { Icon: true }
@@ -77,8 +69,7 @@ describe('UpgradeModal SLS event', () => {
     mocks.emit.mockReset()
     mocks.isAuthenticated.mockResolvedValue(true)
     mocks.openLoginModal.mockReset()
-    mocks.openPricingPage.mockReset().mockResolvedValue(true)
-    mocks.openPremiumView.mockReset()
+    mocks.onUpgrade.mockReset()
   })
 
   afterEach(() => {
@@ -119,9 +110,7 @@ describe('UpgradeModal SLS event', () => {
     await flushPromises()
 
     const prompt = wrapper.find('.vdl-upgrade-modal-reset')
-    expect(prompt.find('.vdl-upgrade-modal-reset-countdown').text()).toBe(
-      'Next refresh in 1h 28m'
-    )
+    expect(prompt.find('.vdl-upgrade-modal-reset-countdown').text()).toBe('Next refresh in 1h 28m')
     expect(prompt.find('.vdl-upgrade-modal-reset-time').text()).toContain('Next refresh:')
 
     const contentClasses = Array.from(
@@ -149,9 +138,7 @@ describe('UpgradeModal SLS event', () => {
     wrapper = mountUpgradeModal(true, resetAt)
     await flushPromises()
 
-    expect(wrapper.find('.vdl-upgrade-modal-reset-countdown').text()).toBe(
-      'Next refresh in 28m'
-    )
+    expect(wrapper.find('.vdl-upgrade-modal-reset-countdown').text()).toBe('Next refresh in 28m')
 
     vi.setSystemTime(resetAt)
     await vi.advanceTimersByTimeAsync(30_000)
@@ -160,7 +147,7 @@ describe('UpgradeModal SLS event', () => {
     )
   })
 
-  it('游客提示登录，不显示升级或记录升级曝光，登录用户进入 popup 购买视图', async () => {
+  it('游客提示登录，登录用户的购买动作交给宿主', async () => {
     mocks.isAuthenticated.mockResolvedValue(false)
     wrapper = mountUpgradeModal(true)
     await flushPromises()
@@ -171,7 +158,7 @@ describe('UpgradeModal SLS event', () => {
     await flushPromises()
     expect(mocks.openLoginModal).toHaveBeenCalledOnce()
     expect(mocks.openLoginModal).toHaveBeenCalledWith('upgrade_modal')
-    expect(mocks.openPremiumView).not.toHaveBeenCalled()
+    expect(mocks.onUpgrade).not.toHaveBeenCalled()
 
     await wrapper.setProps({ show: false })
     mocks.isAuthenticated.mockResolvedValue(true)
@@ -180,12 +167,10 @@ describe('UpgradeModal SLS event', () => {
     expect(wrapper.get('.vdl-upgrade-modal-title').text()).toBe('Upgrade')
     await wrapper.get('.vdl-upgrade-modal-btn').trigger('click')
     await flushPromises()
-    // popup 挂载（useTeleport=false）购买收进 popup 内嵌购买视图
-    expect(mocks.openPremiumView).toHaveBeenCalledWith('upgrade_modal')
-    expect(mocks.openPricingPage).not.toHaveBeenCalled()
+    expect(mocks.onUpgrade).toHaveBeenCalledOnce()
   })
 
-  it('content 页面宿主（Teleport 挂载）退回官网订阅页', async () => {
+  it('Teleport 挂载使用同一宿主购买动作', async () => {
     wrapper = mountUpgradeModal(true, 0, true)
     await flushPromises()
     // Teleport 渲染到 document.body，不在 wrapper 树内
@@ -193,7 +178,6 @@ describe('UpgradeModal SLS event', () => {
     expect(button).not.toBeNull()
     button!.click()
     await flushPromises()
-    expect(mocks.openPricingPage).toHaveBeenCalledWith('upgrade_modal')
-    expect(mocks.openPremiumView).not.toHaveBeenCalled()
+    expect(mocks.onUpgrade).toHaveBeenCalledOnce()
   })
 })

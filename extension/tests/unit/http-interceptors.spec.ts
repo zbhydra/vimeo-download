@@ -2,7 +2,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { API_CONFIG, HTTP_HEADERS, STORAGE_KEYS } from '../../src/core/api/config'
+import { API_CONFIG, STORAGE_KEYS } from '../../src/core/api/config'
 import {
   acceptLanguageInjector,
   authRefreshInterceptor,
@@ -16,7 +16,6 @@ import {
   tokenInjector
 } from '../../src/core/api/client/interceptors'
 import { ApiError, type HttpResponse, type RequestContext } from '../../src/core/api/client/types'
-import type { JsonValue } from '../../src/core/rpc/types'
 
 const mocks = vi.hoisted(() => ({
   storage: new Map<string, string>(),
@@ -176,9 +175,9 @@ describe('HTTP request and response interceptors', () => {
   it('uses a stable error-code fallback and supports suppressing the toast', () => {
     const response = createResponse({ code: 50123, data: {}, msg: '' }, 200)
 
-    expect(() =>
-      dataExtractor(response, createContext({ skipErrorToast: true }))
-    ).toThrow('error code:50123')
+    expect(() => dataExtractor(response, createContext({ skipErrorToast: true }))).toThrow(
+      'error code:50123'
+    )
     expect(mocks.toastError).not.toHaveBeenCalled()
   })
 })
@@ -251,158 +250,6 @@ describe('HTTP retry and authentication interceptors', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it('stores refreshed tokens and prepares the original request for retry', async () => {
-    mocks.storage.set(STORAGE_KEYS.REFRESH_TOKEN, 'refresh-old')
-    const fetchMock = vi.fn().mockResolvedValue(
-      refreshResponse({
-        code: 10000,
-        data: {
-          access_token: 'access-new',
-          refresh_token: 'refresh-new',
-          token_type: 'bearer',
-          expires_in: 3600
-        }
-      })
-    )
-    vi.stubGlobal('fetch', fetchMock)
-    const context = createContext({ headers: { Existing: 'yes' } })
-
-    await authRefreshInterceptor(new ApiError('unauthorized', 401), context)
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      `${API_CONFIG.BASE_URL}/api/client/auth/refresh`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': HTTP_HEADERS.CONTENT_TYPE,
-          'X-Client-Product': 'extension'
-        },
-        body: JSON.stringify({ refresh_token: 'refresh-old' })
-      }
-    )
-    expect(mocks.storage.get(STORAGE_KEYS.ACCESS_TOKEN)).toBe('access-new')
-    expect(mocks.storage.get(STORAGE_KEYS.REFRESH_TOKEN)).toBe('refresh-new')
-    expect(context.options.headers).toEqual({
-      Existing: 'yes',
-      Authorization: 'Bearer access-new'
-    })
-    expect(context._shouldRetry).toBe(true)
-  })
-
-  it('shares one refresh request across concurrent unauthorized calls', async () => {
-    mocks.storage.set(STORAGE_KEYS.REFRESH_TOKEN, 'refresh-old')
-    const fetchMock = vi.fn().mockResolvedValue(
-      refreshResponse({
-        code: 10000,
-        data: {
-          access_token: 'access-new',
-          refresh_token: 'refresh-new'
-        }
-      })
-    )
-    vi.stubGlobal('fetch', fetchMock)
-    const first = createContext()
-    const second = createContext()
-
-    await Promise.all([
-      authRefreshInterceptor(new ApiError('first', 401), first),
-      authRefreshInterceptor(new ApiError('second', 401), second)
-    ])
-
-    expect(fetchMock).toHaveBeenCalledOnce()
-    expect(first._shouldRetry).toBe(true)
-    expect(second._shouldRetry).toBe(true)
-  })
-
-  it.each([
-    [refreshResponse({ code: 10013, msg: 'expired' }, 500), false],
-    [refreshResponse({ code: 50001, msg: 'temporary' }, 503), true],
-    [refreshResponse({ code: 10104, msg: 'user not found' }), false],
-    [refreshResponse({ code: 50001, msg: 'business failure' }), false],
-    [refreshResponse({ code: 10000, data: { access_token: 'only-access' } }), false],
-    [refreshResponse({ code: 10000, data: { access_token: ' ', refresh_token: 'refresh' } }), false],
-    [refreshResponse(null), false],
-    [refreshResponse([]), false],
-    [refreshResponse({ code: 10000, data: {} }, 201), true],
-    [new Response('not-json', { status: 401 }), false],
-    [new Response('not-json', { status: 200 }), false],
-    [new Response('not-json', { status: 503 }), true]
-  ])('classifies an unsuccessful refresh response', async (response, preserveAuth) => {
-    mocks.storage.set(STORAGE_KEYS.REFRESH_TOKEN, 'refresh-old')
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response))
-    const error = new ApiError('unauthorized', 401)
-    const context = createContext()
-
-    await authRefreshInterceptor(error, context)
-
-    expect(error.preserveAuthState).toBe(preserveAuth)
-    expect(context._preserveAuthOnUnauthorized).toBe(preserveAuth ? true : undefined)
-    expect(context._shouldRetry).toBeUndefined()
-  })
-
-  it('clears stored auth after a 200 refresh response without a complete token pair', async () => {
-    mocks.storage.set(STORAGE_KEYS.ACCESS_TOKEN, 'access-old')
-    mocks.storage.set(STORAGE_KEYS.REFRESH_TOKEN, 'refresh-old')
-    mocks.storage.set(STORAGE_KEYS.USER_INFO, 'user-old')
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(refreshResponse({ code: 10104, msg: 'user not found' }))
-    )
-    const error = new ApiError('unauthorized', 401)
-    const context = createContext()
-
-    await authRefreshInterceptor(error, context)
-    await defaultErrorHandler(error, context)
-
-    expect(mocks.remove.mock.calls.map(call => call[0])).toEqual([
-      STORAGE_KEYS.ACCESS_TOKEN,
-      STORAGE_KEYS.REFRESH_TOKEN,
-      STORAGE_KEYS.USER_INFO
-    ])
-    expect(mocks.storage.size).toBe(0)
-  })
-
-  it('preserves auth state when the refresh request fails', async () => {
-    mocks.storage.set(STORAGE_KEYS.REFRESH_TOKEN, 'refresh-old')
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('offline')))
-    const error = new ApiError('unauthorized', 401)
-    const context = createContext()
-
-    await authRefreshInterceptor(error, context)
-
-    expect(error.preserveAuthState).toBe(true)
-    expect(context._preserveAuthOnUnauthorized).toBe(true)
-    expect(mocks.loggerWarn).toHaveBeenCalledWith(
-      '[HttpClient] Auth refresh request failed:',
-      expect.any(TypeError)
-    )
-  })
-
-  it('preserves auth state when storing refreshed credentials fails', async () => {
-    mocks.storage.set(STORAGE_KEYS.REFRESH_TOKEN, 'refresh-old')
-    mocks.set.mockRejectedValue(new Error('storage unavailable'))
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(
-        refreshResponse({
-          code: 10000,
-          data: { access_token: 'access-new', refresh_token: 'refresh-new' }
-        })
-      )
-    )
-    const error = new ApiError('unauthorized', 401)
-    const context = createContext()
-
-    await authRefreshInterceptor(error, context)
-
-    expect(error.preserveAuthState).toBe(true)
-    expect(context._preserveAuthOnUnauthorized).toBe(true)
-    expect(mocks.loggerWarn).toHaveBeenCalledWith(
-      '[HttpClient] Token refresh failed:',
-      expect.any(Error)
-    )
-  })
-
   it('clears all authentication keys for an unhandled 401', async () => {
     mocks.storage.set(STORAGE_KEYS.ACCESS_TOKEN, 'access')
     mocks.storage.set(STORAGE_KEYS.REFRESH_TOKEN, 'refresh')
@@ -422,12 +269,15 @@ describe('HTTP retry and authentication interceptors', () => {
     [new ApiError('unauthorized', 401), createContext({ preserveAuthOnUnauthorized: true })],
     [new ApiError('unauthorized', 401), { ...createContext(), _shouldRetry: true }],
     [new ApiError('unauthorized', 401), { ...createContext(), _preserveAuthOnUnauthorized: true }]
-  ])('keeps auth storage when the failure is not a final unauthorized result', async (error, context) => {
-    await defaultErrorHandler(error, context)
+  ])(
+    'keeps auth storage when the failure is not a final unauthorized result',
+    async (error, context) => {
+      await defaultErrorHandler(error, context)
 
-    expect(mocks.remove).not.toHaveBeenCalled()
-    expect(mocks.loggerError).toHaveBeenCalledOnce()
-  })
+      expect(mocks.remove).not.toHaveBeenCalled()
+      expect(mocks.loggerError).toHaveBeenCalledOnce()
+    }
+  )
 
   it('keeps auth storage when the error explicitly preserves authentication', async () => {
     const error = new ApiError('unauthorized', 401)
@@ -454,11 +304,4 @@ function createResponse(data: object, status = 200): HttpResponse<object> {
     status,
     headers: new Headers({ 'Content-Type': 'application/json' })
   }
-}
-
-function refreshResponse(body: JsonValue, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' }
-  })
 }

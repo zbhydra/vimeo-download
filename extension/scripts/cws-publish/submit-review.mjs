@@ -2,20 +2,12 @@
 // Click "提交審查" (Submit for review) on the CWS listing/distribution page and confirm the dialog.
 // Exits non-zero if the button is disabled (with a hint about why from the on-page help).
 //
-// Usage: node scripts/cws-publish/submit-review.mjs
+// 用法：node scripts/cws-publish/submit-review.mjs <目标后台URL>
 
-import { connectPage, findListingPage } from './cdp-helper.mjs';
+import { connectPage, findCwsPage } from './cdp-helper.mjs';
 
-const page = await findListingPage();
-if (!page) { console.error('no CWS page open'); process.exit(2); }
+const page = await findCwsPage(process.argv[2], 'distribution');
 const cdp = await connectPage(page.id);
-
-const parts = page.url.match(/\/devconsole\/([^/]+)\/([^/]+)\//);
-if (!parts) { console.error('cannot derive distribution URL'); process.exit(2); }
-const distUrl = `https://chrome.google.com/webstore/devconsole/${parts[1]}/${parts[2]}/edit/distribution`;
-
-await cdp.send('Page.navigate', { url: distUrl });
-await new Promise(r => setTimeout(r, 5000));
 
 async function clickAt(x, y) {
   await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });

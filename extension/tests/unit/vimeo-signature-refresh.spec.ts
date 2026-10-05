@@ -164,4 +164,23 @@ describe('vimeoSignatureRefresh', () => {
     ) as VimeoSourceDescriptor
     expect(descriptor.audioTrackId).toBeUndefined()
   })
+
+  it('HLS 无法用缺省 DASH track ID 证明来源一致，重签必须整任务重跑', async () => {
+    const original = originalDescriptor({
+      sourceId: 'vimeo:1196869805:video:hls:1080p',
+      delivery: 'hls',
+      videoTrackId: undefined,
+      audioTrackId: undefined,
+      hlsPlaylistUrl: 'https://vod-adaptive-ak.vimeocdn.com/old.m3u8'
+    })
+    mocks.loadResources.mockResolvedValue({
+      resources: [
+        freshResource(
+          { ...original, hlsPlaylistUrl: 'https://vod-adaptive-ak.vimeocdn.com/new.m3u8' },
+          { sourceKind: RESOURCE_SOURCE_KINDS.VIMEO_HLS_VIDEO }
+        )
+      ]
+    })
+    expect((await refreshVimeoTaskResource(original)).mode).toBe('restart')
+  })
 })

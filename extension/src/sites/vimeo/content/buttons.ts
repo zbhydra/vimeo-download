@@ -6,7 +6,7 @@
 
 import { I18N_KEYS } from '@/core/constants/i18n'
 import { RESOURCE_TYPES } from '@/core/constants/resource'
-import type { MediaResource } from '@/core/types'
+import type { DownloadTaskSnapshot, MediaResource } from '@/core/types'
 import { I18nService } from '@/locales'
 import { getVimeoResourceChoice, getVimeoResourceLabel } from '@/sites/vimeo/media'
 import { decodeVimeoSourceDescriptor } from '@/sites/vimeo/shared'
@@ -135,6 +135,20 @@ export class VimeoButtonPanel {
     this.renderDownloadState(videoId)
   }
 
+  /** 按 background 唯一队列投影更新会话，页面切换只移除 DOM，不丢失终态清理。 */
+  applyQueueSnapshot(tasks: readonly DownloadTaskSnapshot[]): void {
+    for (const [videoId, session] of this.activeDownloads) {
+      const task = tasks.find(
+        entry => entry.resourceId === session.sourceId && entry.status !== 'failed'
+      )
+      if (task) {
+        this.updateProgress(videoId, session.sourceId, task.progress)
+      } else {
+        this.endDownload(videoId)
+      }
+    }
+  }
+
   /** 创建一行按钮。 */
   private createRow(kind: VimeoRowKind, label: string, resources: MediaResource[]): HTMLElement {
     const row = document.createElement('div')
@@ -183,6 +197,9 @@ export class VimeoButtonPanel {
     labelElement.textContent = label
     button.appendChild(labelElement)
     button.addEventListener('click', event => {
+      if (!event.isTrusted) {
+        return
+      }
       event.preventDefault()
       event.stopPropagation()
       this.clickHandler?.(resource.id)

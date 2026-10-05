@@ -1,6 +1,6 @@
 <template>
   <!-- 评分引导条：footer 上方一次性展示，评分或关闭后永久消失 -->
-  <div v-if="ratingPromptPhase !== 'hidden'" class="rating-prompt">
+  <div v-if="authStore.isAuthenticated && ratingPromptPhase !== 'hidden'" class="rating-prompt">
     <template v-if="ratingPromptPhase === 'prompt'">
       <span class="rating-text">{{ t(I18N_KEYS.RATING.PROMPT) }}</span>
       <div class="rating-stars" role="group" :aria-label="t(I18N_KEYS.RATING.PROMPT)">
@@ -50,8 +50,10 @@ import {
 import { Icon, IconName, IconSize } from '@/core/components/icons'
 import { COMMON_COLORS } from '@/core/constants/style'
 import { I18N_KEYS } from '@/core/constants/i18n'
+import { useAuthStore } from '@/core/stores/authStore'
 
 const { t } = useI18n()
+const authStore = useAuthStore()
 
 /** 提交星级；低分走致谢态，高分交由控制器跳转商店。 */
 async function rate(stars: number): Promise<void> {

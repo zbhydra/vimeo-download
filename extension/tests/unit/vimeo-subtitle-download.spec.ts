@@ -27,6 +27,7 @@ const VIDEO_ID = '1201819515'
 const CONFIG_URL = `https://player.vimeo.com/video/${VIDEO_ID}/config?h=dc93ef4923&s=native_signature`
 const REFRESH_CONFIG_URL = `https://player.vimeo.com/video/${VIDEO_ID}/config/request?signature=refresh`
 const ENGLISH_SUBTITLE_URL = `https://player.vimeo.com/texttrack/1234567.vtt?token=signed`
+const VIMEO_SUBTITLE_URL = `https://vimeo.com/texttrack/1234567.vtt?token=signed`
 const CHINESE_SUBTITLE_URL = `https://captions.vimeocdn.com/captions/${VIDEO_ID}-zh.vtt?token=signed`
 
 describe('Vimeo 字幕资源建模', () => {
@@ -61,14 +62,14 @@ describe('Vimeo 字幕资源建模', () => {
 
     // 没有 lang 时以 label 作为语言标识，避免静默丢掉仍然可下载的字幕。
     expect(config.textTracks.map(track => track.lang)).toEqual(['en', 'zh', '无语言'])
-    expect(config.textTracks[0].url).toBe(ENGLISH_SUBTITLE_URL)
+    expect(config.textTracks[0].url).toBe(VIMEO_SUBTITLE_URL)
 
     const english = resources.find(resource => resource.id === `vimeo:${VIDEO_ID}:subtitle:en`)
     const chinese = resources.find(resource => resource.id === `vimeo:${VIDEO_ID}:subtitle:zh`)
     expect(english).toMatchObject({
       type: RESOURCE_TYPES.SUBTITLE,
       sourceKind: RESOURCE_SOURCE_KINDS.VIMEO_SUBTITLE_URL,
-      url: ENGLISH_SUBTITLE_URL,
+      url: VIMEO_SUBTITLE_URL,
       mimeType: 'text/vtt'
     })
     expect(english?.filename).toBe('Demo Video-English.vtt')
@@ -133,6 +134,7 @@ describe('Vimeo 字幕资源建模', () => {
     expect(isVimeoSubtitleUrl('https://player.vimeo.com/texttrack/1.vtt')).toBe(true)
     expect(isVimeoSubtitleUrl(`https://player.vimeo.com/video/${VIDEO_ID}/config`)).toBe(false)
     expect(isVimeoSubtitleUrl('https://captions.vimeocdn.com/captions/1.vtt')).toBe(true)
+    expect(isVimeoSubtitleUrl('https://vimeo.com/texttrack/1.vtt')).toBe(true)
     expect(isVimeoSubtitleUrl('https://vimeo.com/1.vtt')).toBe(false)
     expect(isVimeoSubtitleUrl('http://player.vimeo.com/texttrack/1.vtt')).toBe(false)
   })
@@ -209,7 +211,7 @@ describe('Vimeo 字幕资源建模', () => {
     expect(buttons.map(button => button.textContent)).toEqual(['English', '中文'])
 
     buttons[1].click()
-    expect(clicked).toEqual([`vimeo:${VIDEO_ID}:subtitle:zh`])
+    expect(clicked).toEqual([])
   })
 
   it('字幕按 Chrome 原生下载来源分派，且不支持片段裁剪', () => {
@@ -260,4 +262,3 @@ function configFixture(options: ConfigFixtureOptions = {}) {
     }
   }
 }
-

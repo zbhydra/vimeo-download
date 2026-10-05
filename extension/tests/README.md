@@ -1,7 +1,14 @@
 # 插件端 E2E
 
-插件 E2E 只验收真实站点。受控 HTML、假站点数据、假媒体响应和通用 API mock 不属于
-E2E；纯逻辑和异常分支由 Unit/Integration 覆盖。
+插件 E2E 只验收真实站点。纯逻辑和协议转换由 Unit 覆盖；本项目后端合同由连接本地真实
+后端的 Integration / E2E 覆盖，所有测试均禁止伪造本项目 API 响应。
+
+## Unit / Integration
+
+`pnpm test:unit:run` 执行 `tests/unit/` 与 `tests/integration/`，默认项目 API 地址是
+`http://localhost:7900`，运行前启动本地真实后端。Chrome API、通用 HTTP transport、
+Vimeo 媒体协议和外部 SLS 可在单测中隔离；登录、配额、商品、订单和远端配置 API 不得模拟。
+Manifest 单测检查当前 Vite 配置，不运行构建或重写 `dist/`。
 
 ## 命令
 

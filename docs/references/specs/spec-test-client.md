@@ -54,7 +54,8 @@
 - vitest + happy-dom；目录 `extension/tests/unit/**` + `tests/integration/**`，`*.spec.ts`。
 - chrome mock：`tests/mocks/chrome-api.ts`（完整 mock，每方法 `vi.fn`，支持 callback 与 Promise 两种形态），`setupFiles: tests/setup.ts` 注入 `global.chrome`。
 - **覆盖率 80% 硬门槛**（lines / functions / branches / statements，v8 provider）。
-- 范式：`vi.stubGlobal('__DEV__', ...)` + 动态 import；`vi.mock` 替换 logger / storageManager / Router。
+- 范式：`vi.stubGlobal('__DEV__', ...)` + 动态 import；可隔离 Chrome API、logger、存储与纯协议传输，禁止伪造本项目 API 响应。通用 HTTP transport 的测试使用独立测试地址，不调用项目 API；纯信封解析可直接传入协议对象。
+- `tests/setup.ts` 默认使用本地开发 API 并关闭 SLS；真实集成检查请求运行中的本地后端，环境不可达或合同不符必须失败，不能整组跳过。Manifest 单测检查配置，不触发构建；真实构建产物由 E2E fresh build 校验。
 - 命令：`pnpm test:unit:run` / `test:coverage`。
 - ⚠️ `setup.ts` 把 `console.log/warn/error/info` 全 mock 成 `vi.fn`，单测里看不到错误日志——与「catch 必 console.error」规范冲突，**单测除外**。
 
@@ -65,21 +66,20 @@
   `--load-extension` 的完整 Chromium headed 模式，并在任何站点页面创建前安装身份 init
   script。新版稳定 Google Chrome 不允许这条 unpacked extension 启动链路，禁止用于插件 E2E。
 - 目录：`tests/e2e/*.spec.ts`、`tests/manual/*.manual.spec.ts`（manual 仅 `E2E_INCLUDE_MANUAL=1` 入发现）。
-- E2E 分两层：默认 hard gate 可在目标站点真实 HTTPS origin 上 route 外部站点的本地 HTML/DOM/接口 fixture，但本项目后端 API 必须连接本地真实后端；必须加载 fresh-built unpacked extension，并完整启动 background、MAIN injected、ISOLATED content 与真实 Chrome API，禁止只 mount Vue component。真实站点与登录态仅作为显式 Canary / manual，不进入默认 `test`、`check` 或日常 reviewer。
+- 默认 E2E 连接真实 Vimeo 与本地真实后端，加载 fresh-built 开发包并完整启动 background、MAIN injected、ISOLATED content 与真实 Chrome API，禁止只 mount Vue component。
 - `extension/` 的 Playwright project 只有 `extension-e2e-vimeo-real`（`testMatch` 为 `tests/e2e/vimeo-real-download.spec.ts`）。新增端到端能力时在既有站点 project 上扩展，不新建平台 project。
 - Playwright 配置使用 `fullyParallel=false`、`workers=1`；`retries` 只由 CI 决定（本地 0）。每条 test 开始时先关闭 persistent context 遗留的普通页与站点页，再创建 fresh page，结束时关闭本 test 页面。
-- controlled E2E 的 fixture 必须集中在测试入口，只覆盖当前验收需要的站点合同；不得增加生产测试开关、第二套启动框架或组件级假 E2E。真实 Canary 禁止替换站点 document、DOM、结构化数据与媒体响应。
 - 真实 Vimeo 下载的配额检查请求本地真实后端，必须断言配额调用次数；Vimeo 页面 DOM、媒体请求和 Chrome 下载不得 mock。
 - **chrome.* 是真实浏览器实现**，不 mock；`chrome.storage` 直接在 page 里操作。
 - Vimeo 使用固定公网真实样本；只允许屏蔽 SLS 埋点请求，站点页面、配置、媒体和下载不得 mock。Cloudflare challenge 只能记为环境 skip，不能记为通过。
 - Vimeo 样本是公开视频，不依赖登录态；面板选项由样本当前 config 决定，用例不预设 delivery（DASH / HLS / progressive）——取样本实际提供的选项，样本不再提供该交付时带原因 skip。面板缺失或始终给不出选项都是真实回归，按失败处理。
-- 登录态：真实 Vimeo 入口固定使用同一个绝对 profile `extension/tests/logs/test-user-data/`，不提供 profile 参数或环境变量。`pnpm test:setup`（等价于 `test:setup:vimeo`）在 fresh build 后准备该 profile；日常 E2E 只读取 profile，不重复运行 setup。
+- Vimeo profile 基目录固定为 `extension/tests/logs/test-user-data/`；每次运行在 `<基目录>/<testRunId>` 创建独立 profile，不提供 profile 参数或环境变量。`pnpm test:setup`（等价于 `test:setup:vimeo`）在 fresh build 后准备基目录；E2E 启动前清理历史运行目录，由测试 Chromium 初始化本次 profile。
 
 | 命令 | 说明 |
 |------|------|
 | `pnpm test` / `test:headed` | 完整 Chromium headed；执行 `extension-e2e-vimeo-real` 的真实 Vimeo 流程 |
 | `pnpm test:e2e:vimeo` | 只运行 `extension-e2e-vimeo-real` |
-| `pnpm test:setup` / `test:setup:vimeo` | fresh build 后准备真实 Vimeo 的固定 profile |
+| `pnpm test:setup` / `test:setup:vimeo` | fresh build 后准备真实 Vimeo 的 profile 基目录 |
 | `pnpm test:clean` / `test:report` | 清理 / 看 report |
 
 ## 4. 数据、登录态与清理
@@ -106,9 +106,9 @@
 | `fixed timeout` 等待 UI | flaky，用 locator auto-wait |
 | 用 `any` / `unknown` 写测试辅助类型 | 项目禁 any |
 | extension e2e 用 `page.route` mock chrome API | chrome.* 用真实浏览器实现，单测才 mock |
-| 用 component mount 代替 controlled extension e2e | 无法证明 background、content、injected、Manifest 与真实 Chrome API 启动链 |
-| 真实 Canary route 站点页面、DOM、结构化数据或媒体 | 会把外部兼容性验收降级为 fixture 验收 |
-| 默认测试或并发进程读取固定 profile | Chromium profile 锁冲突与构建产物串味 |
+| 用 component mount 代替 extension e2e | 无法证明 background、content、injected、Manifest 与真实 Chrome API 启动链 |
+| E2E route 站点页面、DOM、结构化数据或媒体 | 无法证明真实站点兼容性 |
+| 并发进程读取同一个运行 profile | Chromium profile 锁冲突与构建产物串味 |
 | 给 website-shared 加独立测试体系 | 其覆盖入口是 website 的 module-scripts.test.js |
 | 固定账号 / ID / 文件名（extension 下载目录已用 testRunId 隔离） | 并行污染 |
 
@@ -125,6 +125,6 @@
 - [ ] 单测 chrome mock 走 `tests/mocks/chrome-api.ts`
 - [ ] 覆盖率达 80%
 - [ ] e2e 用统一完整 Chromium headed 身份的 `launchPersistentContext --load-extension=dist`
-- [ ] controlled hard gate 加载 fresh-built unpacked extension 并证明 background/content/injected 启动，不只挂组件
-- [ ] 真实 Canary 的本项目 API（含配额）连接本地真实后端；站点页面、媒体与 chrome.* 不 mock
-- [ ] 固定持久化 profile 只由 setup 脚本准备，串行使用且不复制用户日常 profile
+- [ ] E2E 加载 fresh-built 开发包并证明 background/content/injected 启动，不只挂组件
+- [ ] 本项目 API（含配额）连接本地真实后端；站点页面、媒体与 chrome.* 不 mock
+- [ ] 每次运行的 profile 由测试 Chromium 初始化，串行使用且不复制用户日常 profile

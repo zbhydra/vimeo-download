@@ -349,7 +349,7 @@ export function parseVimeoConfig(
     dashPlaylistUrl: readDashPlaylistUrl(files.dash),
     hlsPlaylistUrl: readHlsPlaylistUrl(files.hls),
     thumbnails,
-    textTracks: readTextTracks(request.text_tracks, configUrl) ?? fallbackConfig?.textTracks ?? []
+    textTracks: readTextTracks(request.text_tracks) ?? fallbackConfig?.textTracks ?? []
   }
 }
 
@@ -588,6 +588,17 @@ export function parseVimeoHlsMasterPlaylist(text: string, playlistUrl: string): 
     .map(line => line.trim())
     .filter(line => line.length > 0)
   const variants: VimeoHlsVariant[] = []
+  const externalAudioGroups = new Set<string>()
+  for (const line of lines) {
+    if (!line.startsWith('#EXT-X-MEDIA:')) {
+      continue
+    }
+    const attrs = parseHlsAttributes(line.slice('#EXT-X-MEDIA:'.length))
+    const groupId = readString(attrs['GROUP-ID'])
+    if (attrs.TYPE === 'AUDIO' && readString(attrs.URI) && groupId) {
+      externalAudioGroups.add(groupId)
+    }
+  }
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index]
@@ -609,6 +620,10 @@ export function parseVimeoHlsMasterPlaylist(text: string, playlistUrl: string): 
     }
 
     const attrs = parseHlsAttributes(line.slice('#EXT-X-STREAM-INF:'.length))
+    // CODECS 包含 rendition group 的编码，不能据此认定音频已内嵌于视频。
+    if (externalAudioGroups.has(readString(attrs.AUDIO) ?? '')) {
+      continue
+    }
     const resolution = readString(attrs.RESOLUTION)?.match(/^(\d+)x(\d+)$/)
     variants.push({
       url,
@@ -627,8 +642,7 @@ export function parseVimeoHlsMasterPlaylist(text: string, playlistUrl: string): 
  * 解析安全 fMP4 HLS media playlist；不满足结构时返回 null，不展示按钮。
  *
  * `#EXT-X-KEY` 状态机随行推进：AES-128/identity 提取为分片加密参数（显式 IV 直接物化，
- * 缺省按 media sequence 构造），METHOD=NONE 与不支持的声明（SAMPLE-AES 等）把后续分片
- * 重置回明文并记日志。
+ * 缺省按 media sequence 构造），METHOD=NONE 表示明文；未知加密拒绝整个选项。
  */
 export function parseVimeoHlsMediaPlaylist(
   text: string,
@@ -668,7 +682,11 @@ export function parseVimeoHlsMediaPlaylist(
   let key: ParsedHlsEncryption | null = null
   for (const line of lines) {
     if (line.startsWith('#EXT-X-KEY:')) {
-      key = parseHlsKey(line, playlistUrl)
+      const parsed = parseHlsKey(line, playlistUrl)
+      if (parsed === undefined) {
+        return null
+      }
+      key = parsed
       continue
     }
     if (line.startsWith('#EXT-X-MEDIA-SEQUENCE:')) {
@@ -903,10 +921,10 @@ function withThumbnailUrlFallback(
  * 读取 text tracks。
  *
  * 字段缺失（例如 `/config/request` 刷新片段不带字幕）时返回 null，由调用方沿用刷新前的轨道；
- * 只有合法且命中 Vimeo 字幕白名单的轨道才进入资源缓存。相对 URL 按 config URL 解析：
+ * 只有合法且命中 Vimeo 字幕白名单的轨道才进入资源缓存。相对 URL 按 Vimeo 主站解析：
  * Vimeo 播放器 config 里的字幕地址常见为 `/texttrack/{id}.vtt?...` 形式。
  */
-function readTextTracks(value: JsonValue | undefined, configUrl: string): VimeoTextTrack[] | null {
+function readTextTracks(value: JsonValue | undefined): VimeoTextTrack[] | null {
   if (!Array.isArray(value)) {
     return null
   }
@@ -926,7 +944,7 @@ function readTextTracks(value: JsonValue | undefined, configUrl: string): VimeoT
       continue
     }
 
-    const url = resolveUrlOrNull(rawUrl, configUrl)
+    const url = resolveVimeoTextTrackUrl(rawUrl)
     if (!url || !isVimeoSubtitleUrl(url) || seenUrls.has(url) || seenLangs.has(lang)) {
       continue
     }
@@ -937,6 +955,15 @@ function readTextTracks(value: JsonValue | undefined, configUrl: string): VimeoT
   }
 
   return tracks
+}
+
+/** 绝对字幕 URL 原样保留；相对地址按竞品约定归一到 Vimeo 主站。 */
+function resolveVimeoTextTrackUrl(rawUrl: string): string | null {
+  if (parseUrl(rawUrl)) {
+    return rawUrl
+  }
+
+  return resolveUrlOrNull(rawUrl, 'https://vimeo.com/')
 }
 
 /** 从 URL 扩展名判断字幕格式；无法识别时按 Vimeo 默认交付的 WebVTT 处理。 */
@@ -1491,10 +1518,9 @@ interface ParsedHlsEncryption {
  * 解析 #EXT-X-KEY 行。
  *
  * 仅 METHOD=AES-128 且 KEYFORMAT=identity（缺省即 identity）可支持；METHOD=NONE 是明文
- * 声明，SAMPLE-AES 等不支持的声明把后续分片重置回明文并记日志——后续分片真实加密形态
- * 无法支持，按明文处理与竞品口径一致，产物好坏由用户在结果中感知。
+ * 声明；未知加密返回 undefined，让调用方拒绝该选项。
  */
-function parseHlsKey(line: string, playlistUrl: string): ParsedHlsEncryption | null {
+function parseHlsKey(line: string, playlistUrl: string): ParsedHlsEncryption | null | undefined {
   const attrs = parseHlsAttributes(line.slice('#EXT-X-KEY:'.length))
   const method = (readString(attrs.METHOD) ?? '').toUpperCase()
   if (method === 'NONE') {
@@ -1506,9 +1532,9 @@ function parseHlsKey(line: string, playlistUrl: string): ParsedHlsEncryption | n
   const keyUrl = keyUri ? resolveUrlOrNull(keyUri, playlistUrl) : null
   if (method !== 'AES-128' || keyFormat !== 'identity' || !keyUrl) {
     logger.warn(
-      `[VimeoMedia] 不支持的 HLS 加密声明，按明文跳过: method=${method || 'missing'}, keyFormat=${keyFormat}, hasUri=${Boolean(keyUri)}`
+      `[VimeoMedia] 拒绝不支持的 HLS 加密声明: method=${method || 'missing'}, keyFormat=${keyFormat}, hasUri=${Boolean(keyUri)}`
     )
-    return null
+    return undefined
   }
 
   return { keyUrl, iv: parseHlsHexIv(readString(attrs.IV)) }

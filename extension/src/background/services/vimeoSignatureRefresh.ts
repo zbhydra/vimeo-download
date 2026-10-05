@@ -3,9 +3,9 @@
  *
  * offscreen 分片拉取遇到 403/404/410 时，由 background 直连播放页取回内嵌原生 config
  * （不依赖页面注入），解析出最新资源快照，再按守卫决定：
- * - 新快照的 videoTrackId/audioTrackId 与原任务一致 → `continue`：回传新签名资源，
+ * - DASH 新快照的 videoTrackId/audioTrackId 与原任务一致 → `continue`：回传新签名资源，
  *   offscreen 按分片游标续跑；
- * - 不一致（best 回落换 track）→ `restart`：整任务以新快照重跑，等同旧「刷新后沿用同
+ * - 不一致或 HLS 无法证明来源一致 → `restart`：整任务以新快照重跑，等同旧「刷新后沿用同
  *   delivery 最新最高选项」的行为；
  * - 找不到同 delivery 候选或播放页给不出 config → 抛错，任务失败。
  */
@@ -103,9 +103,11 @@ function findFreshAdaptiveResource(
   return sameTracks ?? candidates[0] ?? null
 }
 
-/** 守卫：新快照与原任务的 video/audio track 完全一致才允许按游标续跑。 */
+/** DASH track 完全一致才按游标续跑；HLS 无稳定 track 标识，必须整任务重跑。 */
 function isTrackConsistent(original: VimeoSourceDescriptor, fresh: VimeoSourceDescriptor): boolean {
   return (
+    original.delivery === 'dash' &&
+    fresh.delivery === 'dash' &&
     (original.videoTrackId ?? undefined) === (fresh.videoTrackId ?? undefined) &&
     (original.audioTrackId ?? undefined) === (fresh.audioTrackId ?? undefined)
   )

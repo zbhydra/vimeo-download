@@ -22,6 +22,7 @@
       :reset-at="upgradeModalResetAt"
       :use-teleport="false"
       @update:show="showUpgradeModal = $event"
+      @upgrade="openPremiumView('upgrade_modal')"
     />
 
     <!-- 插件本地登录弹窗 -->
@@ -41,10 +42,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useResourceStore } from '@/popup/stores/resourceStore'
 import { useDownloadStatusStore } from '@/popup/stores/downloadStatusStore'
 import { useAuthStore } from '@/core/stores/authStore'
+import { useQuotaStore } from '@/core/stores/quotaStore'
+import { openPremiumView } from '@/core/composables/premiumView'
 import { ChromeEventSubscriber } from '@/core/rpc/ChromeEventBus'
 import type { ExtensionEvents } from '@/core/events/types'
 import { ensureSupportedTabOpen, openSiteTab } from '@/popup/utils/tabs'
@@ -64,14 +67,22 @@ import PremiumView from './components/PremiumView.vue'
 import HistoryView from './components/HistoryView.vue'
 import Toast from '@/core/components/Toast.vue'
 import { useToast } from '@/core/composables/useToast'
-import { registerDownloadSuccess } from '@/core/composables/ratingPrompt'
+import { refreshRatingPrompt } from '@/core/composables/ratingPrompt'
 import type { MediaResource } from '@/core/types'
 
 // Stores
 const store = useResourceStore()
 const downloadStatusStore = useDownloadStatusStore()
 const authStore = useAuthStore()
+const quotaStore = useQuotaStore()
 const { toastState } = useToast()
+
+watch(
+  () => authStore.isAuthenticated,
+  authenticated => {
+    void refreshRatingPrompt(authenticated)
+  }
+)
 
 // 升级弹窗状态
 const showUpgradeModal = ref(false)
@@ -92,6 +103,19 @@ function recordMark(markType: MarkType): void {
 
 // 生命周期
 onMounted(async () => {
+  upgradeModalUnsubscribe = eventSubscriber.on('showUpgradeModal', payload => {
+    upgradeModalResetAt.value = payload.resetAt
+    showUpgradeModal.value = true
+  })
+  downloadSuccessUnsubscribe = eventSubscriber.on('downloadTaskSucceeded', () => {
+    void refreshRatingPrompt(authStore.isAuthenticated)
+  })
+  eventSubscriber.on('quotaConsumed', () => {
+    quotaStore.refreshQuota().catch(error => {
+      logger.error('[Popup] 消费后刷新额度失败:', error)
+    })
+  })
+
   // 第一时间记录弹窗打开打点（不等待，不阻塞）
   recordMark(MARK_TYPE.POPUP_OPEN)
 
@@ -104,17 +128,7 @@ onMounted(async () => {
     downloadStatusStore.initialize(targetTab),
     authStore.initialize()
   ])
-
-  // 订阅升级弹窗事件
-  upgradeModalUnsubscribe = eventSubscriber.on('showUpgradeModal', payload => {
-    upgradeModalResetAt.value = payload.resetAt
-    showUpgradeModal.value = true
-  })
-
-  // 订阅下载成功事件：评分引导按成功次数与登录态决定是否展开
-  downloadSuccessUnsubscribe = eventSubscriber.on('downloadTaskSucceeded', () => {
-    void registerDownloadSuccess(authStore.isAuthenticated)
-  })
+  await refreshRatingPrompt(authStore.isAuthenticated)
 })
 
 onUnmounted(() => {

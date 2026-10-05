@@ -1,33 +1,20 @@
 /**
  * Vimeo content config 捕获降级与聚合页回退编排测试。
  *
- * 只替换 RPC 与配置同步边界（并发池用真实实现）：控制器、按钮面板与 config 解析链都是真实
- * 实现。覆盖四类——两个通道都拿不到快照时回到既有的空面板降级；兜底拿到快照时经同一解析链
- * 渲染出真实选项；聚合页回退经有界并发逐视频合并写入；身份/路由在回退轮进行中接管时的
- * 编排守卫与配对清空。
- *
- * 被测控制器没有销毁钩子（observer 挂在共享 body、window 监听与 debounce/重扫定时器均不
- * 释放），而 vi.resetModules + 动态 import 会让每个用例产出新控制器、旧控制器残留在共享
- * happy-dom 环境里。跨用例隔离契约因此在测试侧收口：
- * - 全文件统一 fake 定时器（只 fake setTimeout/clearTimeout）：每用例独立时钟，afterEach
- *   切回真实定时器即丢弃未触发的 debounce/重扫定时器，旧定时器永不落入后续用例；
- *   vi.waitFor 走 vitest 的 safe timers（真实定时器），轮询不受影响。
- * - 追踪用例期间创建的每个 MutationObserver 并在 afterEach 统一 disconnect：旧 observer
- *   不再响应后续用例对共享 body 的改动，不会拿着新用例的 mock 状态做扫描串扰。
+ * 只替换捕获 RPC 与配置同步边界，不请求项目后端；控制器、资源缓存的 URL 轮询、
+ * 按钮面板与 config 解析链均用真实实现。资源操作的 spy 保留原行为。
+ * 每个用例独立推进定时器，结束时停止缓存并释放 observer，避免旧控制器跨用例重扫。
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { JsonValue } from '@/core/rpc/types'
 
-/**
- * happy-dom 的 window/history 跨用例共享，而控制器的 start 会包装 pushState/replaceState：
- * 在任何用例启动前记录原生方法与初始地址，afterEach 统一还原，避免包装层层嵌套后
- * 一次 replaceState 触发所有旧控制器继续扫描、路由状态串进后续用例。
- */
-const pristineReplaceState = history.replaceState.bind(history)
-const pristinePushState = history.pushState.bind(history)
 const BASE_HREF = window.location.href
+
+let activeResourceBuffer:
+  | typeof import('@/sites/vimeo/content/resourceBuffer').vimeoResourceBuffer
+  | null = null
 
 /** 原生 MutationObserver；每个用例前后用它安装/还原追踪构造器。 */
 const NativeMutationObserver = MutationObserver
@@ -36,7 +23,7 @@ const NativeMutationObserver = MutationObserver
 let trackedObservers: MutationObserver[] = []
 
 beforeEach(() => {
-  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] })
   trackedObservers = []
   vi.stubGlobal(
     'MutationObserver',
@@ -50,15 +37,16 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  activeResourceBuffer?.stop()
+  activeResourceBuffer = null
   for (const observer of trackedObservers.splice(0)) {
     observer.disconnect()
   }
   vi.stubGlobal('MutationObserver', NativeMutationObserver)
+  vi.restoreAllMocks()
   vi.useRealTimers()
-  history.replaceState = pristineReplaceState
-  history.pushState = pristinePushState
   if (window.location.href !== BASE_HREF) {
-    pristineReplaceState(null, '', BASE_HREF)
+    history.replaceState(null, '', BASE_HREF)
   }
 })
 
@@ -89,16 +77,6 @@ vi.mock('@/core/rpc/injectedReady', () => ({
   waitForInjectedReady: vi.fn(() => Promise.resolve())
 }))
 
-vi.mock('@/sites/vimeo/content/resourceBuffer', () => ({
-  vimeoResourceBuffer: {
-    start: vi.fn(),
-    resetForPageChange: vi.fn(),
-    replaceSnapshot: vi.fn(),
-    mergeVideoResources: vi.fn(),
-    getResource: vi.fn()
-  }
-}))
-
 vi.mock('@/sites/vimeo/content/messageHandler', () => ({
   vimeoMessageHandler: { start: vi.fn() }
 }))
@@ -127,14 +105,14 @@ describe('Vimeo content config 捕获降级', () => {
     await startContent()
 
     await vi.waitFor(() => {
-      expect(mocks.loggerWarn).toHaveBeenCalledWith(
-        expect.stringContaining('原生 config 捕获超时')
-      )
+      expect(mocks.loggerWarn).toHaveBeenCalledWith(expect.stringContaining('原生 config 捕获超时'))
     })
 
     const panel = queryPanel()
     expect(panel?.getAttribute('data-vdl-video-id')).toBe(VIDEO_ID)
-    expect(panel?.querySelectorAll('[data-testid="vdl-vimeo-option"]:not(:disabled)').length).toBe(0)
+    expect(panel?.querySelectorAll('[data-testid="vdl-vimeo-option"]:not(:disabled)').length).toBe(
+      0
+    )
     expect(panel?.querySelectorAll('[data-vdl-choice="unavailable"]').length).toBe(4)
   })
 
@@ -159,7 +137,39 @@ describe('Vimeo content config 捕获降级', () => {
     expect(mocks.requestCapturedVimeoConfig).toHaveBeenCalledWith(VIDEO_ID)
   })
 
-  it('已收敛身份的页面在身份瞬时缺失时不枚举捕获，聚合结果不混入单视频缓存', async () => {
+  it('设置语言变化重绘当前快照，同时保留活动下载忙碌态且不重取资源', async () => {
+    const { VimeoButtonPanel } = await import('@/sites/vimeo/content/buttons')
+    const renderSpy = vi.spyOn(VimeoButtonPanel.prototype, 'render')
+    mocks.requestCapturedVimeoConfig.mockResolvedValue(capturedFixture(VIDEO_ID))
+    await startContent()
+    await vi.waitFor(() => expect(enabledOptions().length).toBeGreaterThan(0))
+    const { I18nService } = await import('@/locales')
+    const { I18N_KEYS } = await import('@/core/constants/i18n')
+    const { vimeoResourceBuffer } = await import('@/sites/vimeo/content/resourceBuffer')
+    const resource = vimeoResourceBuffer.getAllResources()[0]
+    const panelOwner = renderSpy.mock.contexts[0] as InstanceType<typeof VimeoButtonPanel>
+    panelOwner.beginDownload(VIDEO_ID, resource.id)
+    expect(queryPanel()?.getAttribute('aria-busy')).toBe('true')
+    vi.mocked(vimeoResourceBuffer.replaceSnapshot).mockClear()
+
+    for (const [listener] of vi.mocked(chrome.storage.onChanged.addListener).mock.calls) {
+      listener({ settings: { newValue: { language: 'zh-CN' } } }, 'local')
+    }
+    await vi.waitFor(() => expect(I18nService.getCurrentLanguage()).toBe('zh-CN'))
+
+    expect(document.querySelector('[data-testid="vdl-vimeo-row-label"]')?.textContent).toBe(
+      I18nService.t(I18N_KEYS.RESOURCE_ITEM.TYPE_VIDEO)
+    )
+    expect(queryPanel()?.getAttribute('aria-busy')).toBe('true')
+    expect(enabledOptions()).toHaveLength(0)
+    expect(queryPanel()?.querySelector('[aria-busy="true"]')?.textContent).toBe(
+      I18nService.t(I18N_KEYS.RESOURCE_ITEM.DOWNLOADING)
+    )
+    expect(mocks.requestCapturedVimeoConfig).toHaveBeenCalledTimes(1)
+    expect(vimeoResourceBuffer.replaceSnapshot).not.toHaveBeenCalled()
+  })
+
+  it('身份瞬时缺失不混入聚合资源，URL 切到聚合页后清理旧身份并恢复回退', async () => {
     const { vimeoResourceBuffer } = await import('@/sites/vimeo/content/resourceBuffer')
     mocks.requestCapturedVimeoConfig.mockImplementation((videoId: string) =>
       Promise.resolve(capturedFixture(videoId))
@@ -178,11 +188,20 @@ describe('Vimeo content config 捕获降级', () => {
     expect(mocks.listCapturedVimeoVideoIds).not.toHaveBeenCalled()
     expect(mocks.requestCapturedVimeoConfig).toHaveBeenCalledTimes(1)
     expect(vimeoResourceBuffer.mergeVideoResources).not.toHaveBeenCalled()
+
+    mocks.listCapturedVimeoVideoIds.mockResolvedValue(['222'])
+    history.pushState(null, '', '/watch#aggregate')
+    await advanceTimers(900)
+
+    expect(mocks.listCapturedVimeoVideoIds).toHaveBeenCalled()
+    expect(vimeoResourceBuffer.mergeVideoResources).toHaveBeenCalledWith('222', expect.anything())
+    expect(vimeoResourceBuffer.getVideoGroups().map(group => group.videoId)).toEqual(['222'])
+    expect(queryPanel()).toBeNull()
   })
 })
 
 describe('Vimeo content 聚合页回退编排', () => {
-  /** 资源缓存 mock；静态类型沿用真实模块，运行时是 vi.mock 的替身。 */
+  /** 真实资源缓存；资源写入 spy 仅记录调用。 */
   let vimeoResourceBuffer: typeof import('@/sites/vimeo/content/resourceBuffer').vimeoResourceBuffer
 
   beforeEach(async () => {
@@ -213,9 +232,7 @@ describe('Vimeo content 聚合页回退编排', () => {
   })
 
   it('重扫定时器拾取后到的捕获，已编排视频不重复点查', async () => {
-    mocks.listCapturedVimeoVideoIds
-      .mockResolvedValueOnce(['111'])
-      .mockResolvedValue(['111', '333'])
+    mocks.listCapturedVimeoVideoIds.mockResolvedValueOnce(['111']).mockResolvedValue(['111', '333'])
     mocks.requestCapturedVimeoConfig.mockImplementation((videoId: string) =>
       Promise.resolve(capturedFixture(videoId))
     )
@@ -236,9 +253,7 @@ describe('Vimeo content 聚合页回退编排', () => {
   it('身份收敛后丢弃在途回退结果，不混入其他视频', async () => {
     const pendingFirst = createDeferred()
     const pendingSecond = createDeferred()
-    mocks.listCapturedVimeoVideoIds
-      .mockResolvedValueOnce(['111', '222'])
-      .mockResolvedValue([])
+    mocks.listCapturedVimeoVideoIds.mockResolvedValueOnce(['111', '222']).mockResolvedValue([])
     mocks.requestCapturedVimeoConfig.mockImplementation((videoId: string) => {
       if (videoId === '111') {
         return pendingFirst.promise
@@ -254,11 +269,10 @@ describe('Vimeo content 聚合页回退编排', () => {
     expect(mocks.requestCapturedVimeoConfig).toHaveBeenCalledWith('111')
     expect(mocks.requestCapturedVimeoConfig).toHaveBeenCalledWith('222')
 
-    // 页面收敛出身份（happy-dom 的 MutationObserver 不走 fake 定时器，用路由变化触发重扫，
-    // 身份守卫的丢弃逻辑与 SPA 内身份出现完全一致）：buffer 重置为单视频快照。
+    // URL 变化经缓存的 500ms 轮询通知 controller，再由 debounce 扫描收敛到单视频。
     attachIdentity('333')
     history.replaceState(null, '', '/route-identity')
-    await advanceTimers(600)
+    await advanceTimers(900)
     expect(vimeoResourceBuffer.replaceSnapshot).toHaveBeenCalledWith('333', expect.anything())
     expect(vimeoResourceBuffer.resetForPageChange).toHaveBeenCalled()
 
@@ -273,9 +287,7 @@ describe('Vimeo content 聚合页回退编排', () => {
   it('SPA 路由切换时丢弃在途回退轮，旧页面资源不写进新页面', async () => {
     const pendingFirst = createDeferred()
     const pendingSecond = createDeferred()
-    mocks.listCapturedVimeoVideoIds
-      .mockResolvedValueOnce(['111', '222'])
-      .mockResolvedValue([])
+    mocks.listCapturedVimeoVideoIds.mockResolvedValueOnce(['111', '222']).mockResolvedValue([])
     mocks.requestCapturedVimeoConfig.mockImplementation((videoId: string) =>
       videoId === '111' ? pendingFirst.promise : pendingSecond.promise
     )
@@ -285,8 +297,8 @@ describe('Vimeo content 聚合页回退编排', () => {
     expect(mocks.requestCapturedVimeoConfig).toHaveBeenCalledWith('222')
 
     history.replaceState(null, '', '/route-discard')
-    // 路由切换处理（0ms）与新页面首轮扫描（debounce 300ms）都在推进窗口内落定。
-    await advanceTimers(600)
+    // 500ms 页面轮询与 debounce 300ms 扫描均在窗口内落定。
+    await advanceTimers(900)
     expect(vimeoResourceBuffer.resetForPageChange).toHaveBeenCalled()
 
     pendingFirst.resolve(capturedFixture('111'))
@@ -307,7 +319,7 @@ describe('Vimeo content 聚合页回退编排', () => {
     expect(vimeoResourceBuffer.mergeVideoResources).toHaveBeenCalledTimes(2)
 
     history.replaceState(null, '', '/route-reattach')
-    await advanceTimers(600)
+    await advanceTimers(900)
     expect(mocks.resetVimeoConfigFallback).toHaveBeenCalled()
     expect(vimeoResourceBuffer.resetForPageChange).toHaveBeenCalled()
     expect(vimeoResourceBuffer.mergeVideoResources).toHaveBeenCalledTimes(4)
@@ -345,6 +357,11 @@ function attachIdentity(videoId: string): void {
 
 /** 启动真实 content 控制器；控制器自管异步扫描，测试只等结果。 */
 async function startContent(): Promise<void> {
+  const { vimeoResourceBuffer } = await import('@/sites/vimeo/content/resourceBuffer')
+  activeResourceBuffer = vimeoResourceBuffer
+  vi.spyOn(vimeoResourceBuffer, 'resetForPageChange')
+  vi.spyOn(vimeoResourceBuffer, 'replaceSnapshot')
+  vi.spyOn(vimeoResourceBuffer, 'mergeVideoResources')
   const { startVimeoContent } = await import('@/sites/vimeo/content/index')
   startVimeoContent()
   await Promise.resolve()

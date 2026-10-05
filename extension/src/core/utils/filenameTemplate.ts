@@ -8,7 +8,7 @@
  * `buildDownloadFilename` 的既有规则统一承担，渲染结果不含扩展名，由调用方追加。
  */
 
-/** 默认模板；与竞品默认 `{title}_{quality}_{type}` 对齐。 */
+/** 默认模板：标题、档位与类型组成主干，扩展名由实际交付格式决定。 */
 export const FILENAME_PATTERN_DEFAULT = '{title}_{quality}_{type}'
 
 /** 模板支持的变量全集，同时是设置弹层变量 chips 的展示顺序。 */

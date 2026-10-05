@@ -33,15 +33,15 @@ describe('buildDownloadFilename', () => {
       ['/etc/passwd', 'etc/passwd/controlled-1080p.mp4'],
       ['a//b/', 'a/b/controlled-1080p.mp4'],
       // 回退段（含反斜杠写法）整段丢弃，逃不出下载目录
-      ['../..', 'vimeo-video-downloader/controlled-1080p.mp4'],
+      ['../..', 'vimeoMediaDownloader/controlled-1080p.mp4'],
       ['..\\..\\windows', 'windows/controlled-1080p.mp4'],
       // 盘符段含 `:`，整段丢弃
       ['C:\\Windows\\System32', 'Windows/System32/controlled-1080p.mp4'],
       // `~` 开头的段按家目录语义处理，直接丢弃
       ['~/Documents', 'Documents/controlled-1080p.mp4'],
       // 空值回退默认子目录，Chrome 才不会收到空路径
-      ['', 'vimeo-video-downloader/controlled-1080p.mp4'],
-      ['   ', 'vimeo-video-downloader/controlled-1080p.mp4']
+      ['', 'vimeoMediaDownloader/controlled-1080p.mp4'],
+      ['   ', 'vimeoMediaDownloader/controlled-1080p.mp4']
     ]
 
     for (const [downloadPath, expected] of cases) {
@@ -122,7 +122,7 @@ function mockSettings(filenamePattern?: string): void {
 }
 
 describe('buildResourceFilename', () => {
-  it('默认模板按任务上下文渲染：title/author 取 resource，quality/videoId 取 descriptor', async () => {
+  it('默认模板只按标题渲染，实际扩展名仍随资源格式决定', async () => {
     mockSettings()
     const filename = await buildResourceFilename(vimeoResource())
     expect(filename).toBe('Demo Video_1080p HD_video.mp4')

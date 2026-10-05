@@ -95,6 +95,8 @@ async function refreshAccessToken(): Promise<RefreshAccessTokenResult> {
     return 'missing_refresh'
   }
 
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT)
   try {
     const response = await fetch(`${API_CONFIG.BASE_URL}${API.ENDPOINTS.AUTH_REFRESH}`, {
       method: 'POST',
@@ -102,13 +104,17 @@ async function refreshAccessToken(): Promise<RefreshAccessTokenResult> {
         'Content-Type': HTTP_HEADERS.CONTENT_TYPE,
         [HTTP_HEADERS.CLIENT_PRODUCT]: 'extension'
       },
-      body: JSON.stringify({ refresh_token: refreshToken })
+      body: JSON.stringify({ refresh_token: refreshToken }),
+      signal: controller.signal
     })
 
-    return parseRefreshResponse(response)
+    const result = await parseRefreshResponse(response)
+    return controller.signal.aborted ? 'transient_failed' : result
   } catch (err) {
     logger.warn('[HttpClient] Auth refresh request failed:', err)
     return 'transient_failed'
+  } finally {
+    clearTimeout(timeoutId)
   }
 }
 

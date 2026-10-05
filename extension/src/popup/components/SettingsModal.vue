@@ -1,141 +1,131 @@
 <template>
   <Teleport to="body">
-    <Transition name="settings-modal-fade">
-      <div
-        v-if="settingsModalVisible"
-        class="settings-overlay"
-        :style="colorVars"
-        @click.self="handleClose"
-      >
-        <div
-          class="settings-dialog"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="vdl-settings-modal-title"
-          @click.stop
+    <dialog
+      ref="dialog"
+      class="settings-overlay"
+      aria-labelledby="vdl-settings-modal-title"
+      :style="colorVars"
+      @click.self="handleClose"
+      @close="handleClose"
+    >
+      <div class="settings-dialog" @click.stop>
+        <button
+          type="button"
+          class="settings-close"
+          :aria-label="t(I18N_KEYS.APP_ERROR.DISMISS)"
+          @click="handleClose"
         >
-          <button
-            type="button"
-            class="settings-close"
-            :aria-label="t(I18N_KEYS.APP_ERROR.DISMISS)"
-            @click="handleClose"
-          >
-            <Icon :name="IconName.X_MARK" :size="IconSize.SM" />
-          </button>
+          <Icon :name="IconName.X_MARK" :size="IconSize.SM" />
+        </button>
 
-          <h2 id="vdl-settings-modal-title" class="settings-title">
-            {{ t(I18N_KEYS.SETTINGS.TITLE) }}
-          </h2>
+        <h2 id="vdl-settings-modal-title" class="settings-title">
+          {{ t(I18N_KEYS.SETTINGS.TITLE) }}
+        </h2>
 
-          <!-- 界面语言：Auto 跟随浏览器，具体 locale 即改即生效 -->
-          <label class="settings-field">
-            <span class="settings-field-label">{{ t(I18N_KEYS.SETTINGS.LANGUAGE_LABEL) }}</span>
-            <select
-              class="settings-control"
-              :value="languageSetting"
-              @change="handleLanguageChange"
-            >
-              <option :value="LANGUAGE_AUTO">{{ t(I18N_KEYS.SETTINGS.LANGUAGE_AUTO) }}</option>
-              <option v-for="lang in languageOptions" :key="lang.value" :value="lang.value">
-                {{ lang.label }}
-              </option>
-            </select>
-          </label>
+        <!-- 界面语言：Auto 跟随浏览器，具体 locale 即改即生效 -->
+        <label class="settings-field">
+          <span class="settings-field-label">{{ t(I18N_KEYS.SETTINGS.LANGUAGE_LABEL) }}</span>
+          <select class="settings-control" :value="languageSetting" @change="handleLanguageChange">
+            <option :value="LANGUAGE_AUTO">{{ t(I18N_KEYS.SETTINGS.LANGUAGE_AUTO) }}</option>
+            <option v-for="lang in languageOptions" :key="lang.value" :value="lang.value">
+              {{ lang.label }}
+            </option>
+          </select>
+        </label>
 
-          <!-- 保存位置：下载目录下的相对子目录，弹层是唯一编辑入口 -->
-          <label class="settings-field">
-            <span class="settings-field-label">{{ t(I18N_KEYS.SETTINGS.SAVE_PATH_LABEL) }}</span>
-            <input
-              v-model="downloadPath"
-              class="settings-control"
-              type="text"
-              spellcheck="false"
-              autocomplete="off"
-              :placeholder="t(I18N_KEYS.SETTINGS.SAVE_PATH_PLACEHOLDER)"
-              @change="persistSavePath"
-            />
-          </label>
+        <!-- 保存位置：下载目录下的相对子目录，弹层是唯一编辑入口 -->
+        <label class="settings-field">
+          <span class="settings-field-label">{{ t(I18N_KEYS.SETTINGS.SAVE_PATH_LABEL) }}</span>
+          <input
+            v-model="downloadPath"
+            class="settings-control"
+            type="text"
+            spellcheck="false"
+            autocomplete="off"
+            :placeholder="t(I18N_KEYS.SETTINGS.SAVE_PATH_PLACEHOLDER)"
+            @change="persistSavePath"
+          />
+        </label>
 
-          <!--
+        <!--
             文件名规则：默认/自定义模板 + 变量 chips + 实时预览。存储只落模板字符串
             （settings.filenamePattern），background 在命名边界统一渲染。
           -->
-          <div class="settings-field">
-            <span class="settings-field-label">
-              {{ t(I18N_KEYS.SETTINGS.FILENAME_PATTERN_LABEL) }}
-            </span>
+        <div class="settings-field">
+          <span class="settings-field-label">
+            {{ t(I18N_KEYS.SETTINGS.FILENAME_PATTERN_LABEL) }}
+          </span>
+          <div
+            class="pattern-mode"
+            role="group"
+            :aria-label="t(I18N_KEYS.SETTINGS.FILENAME_PATTERN_LABEL)"
+          >
+            <button
+              type="button"
+              class="pattern-mode-button"
+              :class="{ 'pattern-mode-active': !customMode }"
+              @click="useDefaultPattern"
+            >
+              {{ t(I18N_KEYS.SETTINGS.FILENAME_PATTERN_MODE_DEFAULT) }}
+            </button>
+            <button
+              type="button"
+              class="pattern-mode-button"
+              :class="{ 'pattern-mode-active': customMode }"
+              @click="enableCustomPattern"
+            >
+              {{ t(I18N_KEYS.SETTINGS.FILENAME_PATTERN_MODE_CUSTOM) }}
+            </button>
+          </div>
+          <template v-if="customMode">
+            <input
+              ref="patternInput"
+              v-model="filenamePattern"
+              class="settings-control pattern-input"
+              type="text"
+              spellcheck="false"
+              autocomplete="off"
+              :placeholder="FILENAME_PATTERN_DEFAULT"
+              @change="persistFilenamePattern"
+            />
             <div
-              class="pattern-mode"
+              class="pattern-variables"
               role="group"
-              :aria-label="t(I18N_KEYS.SETTINGS.FILENAME_PATTERN_LABEL)"
+              :aria-label="t(I18N_KEYS.SETTINGS.FILENAME_PATTERN_VARIABLES_LABEL)"
             >
               <button
+                v-for="variable in FILENAME_VARIABLES"
+                :key="variable"
                 type="button"
-                class="pattern-mode-button"
-                :class="{ 'pattern-mode-active': !customMode }"
-                @click="useDefaultPattern"
+                class="pattern-variable-chip"
+                @click="insertVariable(variable)"
               >
-                {{ t(I18N_KEYS.SETTINGS.FILENAME_PATTERN_MODE_DEFAULT) }}
-              </button>
-              <button
-                type="button"
-                class="pattern-mode-button"
-                :class="{ 'pattern-mode-active': customMode }"
-                @click="enableCustomPattern"
-              >
-                {{ t(I18N_KEYS.SETTINGS.FILENAME_PATTERN_MODE_CUSTOM) }}
+                {{ variableToken(variable) }}
               </button>
             </div>
-            <template v-if="customMode">
-              <input
-                ref="patternInput"
-                v-model="filenamePattern"
-                class="settings-control pattern-input"
-                type="text"
-                spellcheck="false"
-                autocomplete="off"
-                :placeholder="FILENAME_PATTERN_DEFAULT"
-                @change="persistFilenamePattern"
-              />
-              <div
-                class="pattern-variables"
-                role="group"
-                :aria-label="t(I18N_KEYS.SETTINGS.FILENAME_PATTERN_VARIABLES_LABEL)"
-              >
-                <button
-                  v-for="variable in FILENAME_VARIABLES"
-                  :key="variable"
-                  type="button"
-                  class="pattern-variable-chip"
-                  @click="insertVariable(variable)"
-                >
-                  {{ variableToken(variable) }}
-                </button>
-              </div>
-              <button type="button" class="pattern-reset" @click="resetPattern">
-                {{ t(I18N_KEYS.SETTINGS.FILENAME_PATTERN_RESET) }}
-              </button>
-            </template>
-            <div class="pattern-preview">
-              <span class="pattern-preview-label">
-                {{ t(I18N_KEYS.SETTINGS.FILENAME_PATTERN_PREVIEW_LABEL) }}
-              </span>
-              <span class="pattern-preview-value">{{ previewFilename }}</span>
-            </div>
+            <button type="button" class="pattern-reset" @click="resetPattern">
+              {{ t(I18N_KEYS.SETTINGS.FILENAME_PATTERN_RESET) }}
+            </button>
+          </template>
+          <div class="pattern-preview">
+            <span class="pattern-preview-label">
+              {{ t(I18N_KEYS.SETTINGS.FILENAME_PATTERN_PREVIEW_LABEL) }}
+            </span>
+            <span class="pattern-preview-value">{{ previewFilename }}</span>
           </div>
-
-          <!-- 下载历史：唯一入口，进入全屏历史视图并收起本弹层 -->
-          <button type="button" class="settings-history-row" @click="handleOpenHistory">
-            <span class="settings-history-label">{{ t(I18N_KEYS.HISTORY.TITLE) }}</span>
-            <Icon
-              class="settings-history-chevron"
-              :name="IconName.CHEVRON_DOWN"
-              :size="IconSize.XS"
-            />
-          </button>
         </div>
+
+        <!-- 下载历史：唯一入口，进入全屏历史视图并收起本弹层 -->
+        <button type="button" class="settings-history-row" @click="handleOpenHistory">
+          <span class="settings-history-label">{{ t(I18N_KEYS.HISTORY.TITLE) }}</span>
+          <Icon
+            class="settings-history-chevron"
+            :name="IconName.CHEVRON_DOWN"
+            :size="IconSize.XS"
+          />
+        </button>
       </div>
-    </Transition>
+    </dialog>
   </Teleport>
 </template>
 
@@ -157,6 +147,7 @@ import { DEFAULT_DOWNLOAD_PATH, SettingsManager } from '@/core/storage/settings'
 import { LANGUAGE_AUTO, I18N_KEYS, type LanguageSetting } from '@/core/constants/i18n'
 import { closeSettingsModal, settingsModalVisible } from '@/core/composables/settingsModal'
 import { openHistoryView } from '@/core/composables/historyView'
+import { useNativeDialog } from '@/core/composables/nativeDialog'
 import {
   FILENAME_PATTERN_DEFAULT,
   FILENAME_VARIABLES,
@@ -170,6 +161,7 @@ import { COMMON_COLORS } from '@/core/constants/style'
 import { Icon, IconName, IconSize } from '@/core/components/icons'
 
 const { t } = useI18n()
+const dialog = useNativeDialog(settingsModalVisible)
 
 /** 覆盖层根节点显式级联的颜色变量（Teleport 子树拿不到 useCssVars 变量）。 */
 const colorVars = {
@@ -355,13 +347,25 @@ function handleOpenHistory(): void {
 .settings-overlay {
   position: fixed;
   inset: 0;
-  z-index: 2000;
-  display: flex;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  border: 0;
   align-items: center;
   justify-content: center;
   padding: 12px;
   background: rgba(15, 23, 42, 0.42);
   box-sizing: border-box;
+}
+
+.settings-overlay[open] {
+  display: flex;
+}
+
+.settings-overlay::backdrop {
+  background: transparent;
 }
 
 .settings-dialog {
@@ -560,22 +564,5 @@ select.settings-control {
   font-size: 12px;
   color: var(--settings-gray-900);
   word-break: break-all;
-}
-
-.settings-modal-fade-enter-active,
-.settings-modal-fade-leave-active {
-  transition: opacity 0.18s ease;
-}
-
-.settings-modal-fade-enter-from,
-.settings-modal-fade-leave-to {
-  opacity: 0;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .settings-modal-fade-enter-active,
-  .settings-modal-fade-leave-active {
-    transition: none;
-  }
 }
 </style>

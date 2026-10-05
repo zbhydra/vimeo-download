@@ -7,7 +7,7 @@
  *
  * - 进度经 background 通道回传（下载中 250ms 节流），不再派发页面 DOM 事件；
  * - 合成产物流式写入 OPFS（避免整份驻留内存），以 File 引用创建 blob URL 交 background
- *   落盘（chrome.downloads），落盘回执由 downloads.onChanged 确认后再 revoke 并删除临时文件；
+ *   落盘（chrome.downloads），落盘回执由 downloads.search 确认后再 revoke 并删除临时文件；
  * - 签名 URL 失效不再直接刷新页面 config，而是请求 background 重签，并按 track 一致性
  *   守卫续跑（分片游标按索引续）或以新快照整任务重跑；
  * - 任务全程持有 AbortController，下载阶段取消即时生效；remux 阶段的取消在交付边界生效。
@@ -59,7 +59,7 @@ const PROGRESS_THROTTLE_MS = 250
 /**
  * taskComplete 交付调用的独立超时（默认 30s 不够）。
  *
- * background 在应答前要等 downloads.onChanged 落盘回执：超大产物（数百 MB）在慢盘上落盘
+ * background 在应答前要查询 Chrome 落盘回执：超大产物（数百 MB）在慢盘上落盘
  * 可能远超默认 RPC 超时，误判失败会让执行侧撤销登记并 revoke 正在落盘的 blob，直接中断下载。
  */
 const TASK_COMPLETE_TIMEOUT_MS = 120_000
@@ -244,7 +244,7 @@ export class OffscreenTaskRunner {
 
     this.deliveredArtifacts.delete(taskId)
     URL.revokeObjectURL(blobUrl)
-    // 走到这里落盘已被 downloads.onChanged 确认，OPFS 临时文件可以安全删除；
+    // 走到这里落盘已被 background 确认，OPFS 临时文件可以安全删除；
     // 删除是尽力而为，失败由下次启动清扫兜底。
     void removeMuxArtifact(held.tempFileName)
     return true
@@ -273,9 +273,6 @@ export class OffscreenTaskRunner {
         }
       }
     } catch (error) {
-      this.tasks.delete(task.taskId)
-      this.syncHeartbeat()
-
       if (task.cancelRequested || error instanceof TaskCancelledError) {
         logger.info(
           `[OffscreenTaskRunner] 任务已取消: taskId=${task.taskId}, resourceId=${task.resource.id}`
@@ -292,6 +289,9 @@ export class OffscreenTaskRunner {
       this.client.taskFailed({ taskId: task.taskId, message }).catch(failure => {
         logger.error(`[OffscreenTaskRunner] taskFailed 回传失败: taskId=${task.taskId}`, failure)
       })
+    } finally {
+      this.tasks.delete(task.taskId)
+      this.syncHeartbeat()
     }
   }
 
@@ -409,7 +409,7 @@ export class OffscreenTaskRunner {
           throw error
         }
         // 按新签名 playlist 重建后原地重试同一位置。
-        playlist = await this.loadHlsMediaPlaylist(refreshed)
+        playlist = await this.loadHlsMediaPlaylist(refreshed, task.controller.signal)
         continue
       }
       if (isInit) {
@@ -455,7 +455,7 @@ export class OffscreenTaskRunner {
           throw error
         }
         // track 一致性守卫已在 background 通过：按新签名 playlist 重建同 track，游标不回退。
-        playlist = await this.loadDashPlaylist(refreshed)
+        playlist = await this.loadDashPlaylist(refreshed, task.controller.signal)
         track = this.requireDashTrack(task, playlist, kind)
       }
     }
@@ -470,31 +470,34 @@ export class OffscreenTaskRunner {
   /** 加载 DASH playlist；签名过期时重签一次。 */
   private async loadDashPlaylistWithRefresh(task: RunnerTask): Promise<VimeoDashPlaylist> {
     try {
-      return await this.loadDashPlaylist(task.descriptor)
+      return await this.loadDashPlaylist(task.descriptor, task.controller.signal)
     } catch (error) {
       const refreshed = await this.resolveRetryableRefresh(task, error)
       if (!refreshed) {
         throw error
       }
-      return this.loadDashPlaylist(refreshed)
+      return this.loadDashPlaylist(refreshed, task.controller.signal)
     }
   }
 
   /** 从 descriptor 恢复 HLS fMP4 media playlist；签名过期时重签一次。 */
   private async loadHlsMediaPlaylistWithRefresh(task: RunnerTask): Promise<VimeoHlsMediaPlaylist> {
     try {
-      return await this.loadHlsMediaPlaylist(task.descriptor)
+      return await this.loadHlsMediaPlaylist(task.descriptor, task.controller.signal)
     } catch (error) {
       const refreshed = await this.resolveRetryableRefresh(task, error)
       if (!refreshed) {
         throw error
       }
-      return this.loadHlsMediaPlaylist(refreshed)
+      return this.loadHlsMediaPlaylist(refreshed, task.controller.signal)
     }
   }
 
   /** 直接读取描述符中的 DASH playlist，过期时抛可重签错误。 */
-  private async loadDashPlaylist(descriptor: VimeoSourceDescriptor): Promise<VimeoDashPlaylist> {
+  private async loadDashPlaylist(
+    descriptor: VimeoSourceDescriptor,
+    signal: AbortSignal
+  ): Promise<VimeoDashPlaylist> {
     const playlistUrl = descriptor.dashPlaylistUrl
     if (!playlistUrl) {
       throw new Error(
@@ -505,7 +508,8 @@ export class OffscreenTaskRunner {
     this.assertMediaUrl(playlistUrl, descriptor.sourceId)
     const response = await fetch(playlistUrl, {
       credentials: 'omit',
-      referrerPolicy: 'no-referrer'
+      referrerPolicy: 'no-referrer',
+      signal
     })
     this.assertMediaUrl(response.url || playlistUrl, descriptor.sourceId)
 
@@ -533,7 +537,8 @@ export class OffscreenTaskRunner {
 
   /** 拉取并验证 HLS media playlist，不满足安全结构时抛错。 */
   private async loadHlsMediaPlaylist(
-    descriptor: VimeoSourceDescriptor
+    descriptor: VimeoSourceDescriptor,
+    signal: AbortSignal
   ): Promise<VimeoHlsMediaPlaylist> {
     const playlistUrl = descriptor.hlsPlaylistUrl
     if (!playlistUrl) {
@@ -545,7 +550,8 @@ export class OffscreenTaskRunner {
     this.assertMediaUrl(playlistUrl, 'hls-playlist')
     const response = await fetch(playlistUrl, {
       credentials: 'omit',
-      referrerPolicy: 'no-referrer'
+      referrerPolicy: 'no-referrer',
+      signal
     })
     this.assertMediaUrl(response.url || playlistUrl, 'hls-playlist')
 
@@ -615,12 +621,14 @@ export class OffscreenTaskRunner {
       )
     }
 
+    // 重签只更新来源，目标输出格式始终由用户选定的任务持有。
+    const resource = { ...response.resource, targetFormat: task.resource.targetFormat }
     if (response.mode === 'restart') {
-      throw new RestartTaskError(response.resource, descriptor)
+      throw new RestartTaskError(resource, descriptor)
     }
 
     // 续跑也同步更新任务资源，让最终交付的 filename/size 与新签名快照一致。
-    task.resource = response.resource
+    task.resource = resource
     task.descriptor = descriptor
     return descriptor
   }
@@ -809,12 +817,10 @@ export class OffscreenTaskRunner {
       this.assertNotCancelled(task)
       // 先登记后交付：background 在应答 taskComplete 之前就会（落盘回执确认后）发起
       // releaseTaskArtifact，释放请求到达时登记必须已就位，否则按 mismatch 拒绝、blob 永不 revoke。
-      this.tasks.delete(task.taskId)
       this.deliveredArtifacts.set(task.taskId, {
         blobUrl,
         tempFileName: artifact.tempFileName
       })
-      this.syncHeartbeat()
       // remux 完成、blob 交给 Chrome 下载后，执行侧进度已经到顶；落盘进度由 background 投影接管。
       this.sendProgress(task, 100, true)
       await this.client.taskComplete(

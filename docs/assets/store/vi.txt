@@ -1,13 +1,13 @@
-Vimeo Video Downloader — Lưu video, âm thanh và ảnh bìa Vimeo trong Chrome
+Vimeo Video Downloader — Lưu video, âm thanh, phụ đề và ảnh bìa Vimeo trong Chrome
 
-Tiện ích Chrome dành cho người xem Vimeo muốn có bản sao cục bộ của video mình đang xem, kèm bảng điều khiển ngay trên trang để tải video, âm thanh và ảnh bìa.
+Tiện ích Chrome dành cho người xem Vimeo muốn bản sao cục bộ của video đang xem, kèm bảng trên trang để tải video, âm thanh, phụ đề và ảnh bìa.
 
 
 ĐÂY LÀ GÌ
 
-Vimeo Video Downloader là tiện ích Chrome dành cho các trang Vimeo (vimeo.com, www.vimeo.com và player.vimeo.com). Tiện ích đọc thông tin phát lại mà trình phát Vimeo trên trang đã tải sẵn và biến nó thành các nút tải xuống cho video, rãnh âm thanh và ảnh bìa của video đó.
+Vimeo Video Downloader là tiện ích Chrome dành cho các trang video Vimeo được hỗ trợ (vimeo.com, www.vimeo.com và player.vimeo.com). Tiện ích phân tích thông tin phát lại và cung cấp nút tải video, âm thanh, phụ đề và ảnh bìa.
 
-Đây không phải ứng dụng khách Vimeo, không phải bot và không phải trình tải xuống độc lập. Tiện ích chạy hoàn toàn bên trong trang Vimeo mà bạn đã mở và chỉ xử lý video mà trang đó đang phát.
+Đây không phải ứng dụng khách Vimeo, không phải bot và không phải trình tải xuống độc lập. Tiện ích phát hiện tài nguyên trên trang Vimeo được hỗ trợ và chạy tải xuống trong nền trình duyệt.
 
 
 DÀNH CHO AI
@@ -23,8 +23,8 @@ Có thể bạn đến trang này vì muốn một trong những điều sau:
 3. Ảnh bìa
    Bạn muốn ảnh bìa của video thành một tệp riêng.
 
-4. Nhiều tệp mà không phải lặp lại thao tác
-   Bạn muốn tích nhiều mục trong danh sách ở cửa sổ bật lên và xếp hàng tải một lượt.
+4. Nhiều tệp trong hàng đợi
+   Bạn muốn thêm từng mục từ cửa sổ bật lên và tải theo thứ tự.
 
 Nếu không điều nào phù hợp, các tùy chọn lưu sẵn có của trình duyệt có thể đã đủ và bạn không cần tiện ích này.
 
@@ -32,13 +32,14 @@ Nếu không điều nào phù hợp, các tùy chọn lưu sẵn có của trì
 TÍNH NĂNG CHÍNH
 
 ### Bảng tải xuống trên trang
-Khi một trang video Vimeo tải xong, tiện ích thêm một bảng nhỏ bên cạnh khu vực tiêu đề video với ba dòng cố định:
+Trên trang video Vimeo được hỗ trợ, tiện ích thêm bảng nhỏ gần tiêu đề hoặc vùng điều khiển với bốn dòng:
 
 - Video — một nút cho mỗi chất lượng video khả dụng
 - Audio — một nút cho mỗi rãnh âm thanh khả dụng
+- Subtitle — các rãnh phụ đề khả dụng
 - Image — ảnh bìa
 
-Nếu loại tệp đó không khả dụng cho video hiện tại, dòng đó hiển thị dấu gạch ngang thay cho nút. Bảng được dựng lại khi bạn chuyển sang video khác mà không tải lại trang.
+Nếu loại tệp không khả dụng, dòng hiển thị mục giữ chỗ bị vô hiệu hóa. Bảng được dựng lại khi bạn chuyển sang video khác mà không tải lại trang.
 
 ### Tải video
 Lưu video thành tệp MP4. Tùy vào những gì trình phát Vimeo cung cấp cho video đó, bạn sẽ thấy:
@@ -48,10 +49,13 @@ Lưu video thành tệp MP4. Tùy vào những gì trình phát Vimeo cung cấp
 - Mục dự phòng "1080p HLS" cho video chỉ cung cấp cách truyền đó
 - Nút "Best" tự chọn chất lượng cao nhất khả dụng cho video đó
 
-Chỉ những chất lượng mà Vimeo thực sự cung cấp cho video đó mới được liệt kê. Tiện ích không tự tạo, không phóng to và không chuyển mã bất cứ thứ gì.
+Chỉ chất lượng đã phân tích được mới được liệt kê. Video được ghép không chuyển mã hay phóng to; đầu ra âm thanh MP3 dùng chuyển mã.
 
 ### Tải âm thanh
-Lưu riêng rãnh âm thanh thành tệp M4A. Các nút ghi tốc độ bit của âm thanh (ví dụ "128 kbps"), kèm nút "Best Audio" tự chọn tốc độ bit cao nhất khả dụng.
+Lưu rãnh âm thanh thành M4A, hoặc chọn MP3 trong cửa sổ bật lên để chuyển mã. Các nút ghi tốc độ bit (ví dụ "128 kbps"), và "Best Audio" chọn tốc độ bit cao nhất khả dụng.
+
+### Phụ đề, cắt đoạn và cài đặt
+Lưu phụ đề khả dụng thành VTT. Cửa sổ bật lên cho phép cắt video và âm thanh thích ứng; video không chuyển mã, độ chính xác theo khung hình chính. MP4 trực tiếp được lưu toàn bộ. Cắt đoạn vẫn tải nguồn đầy đủ. Cài đặt gồm thư mục con, mẫu tên tệp và ngôn ngữ. Lịch sử cục bộ lưu các lượt tải thành công và thất bại, có thể xuất CSV.
 
 ### Tải ảnh bìa
 Lưu ảnh bìa của video thành tệp JPEG.
@@ -59,16 +63,16 @@ Lưu ảnh bìa của video thành tệp JPEG.
 ### Danh sách tài nguyên trong cửa sổ bật lên
 Nhấp vào biểu tượng tiện ích để xem mọi mục có thể tải xuống mà thẻ hiện tại đã nhận diện được:
 
-- Nhóm theo loại, kèm số lượng video, âm thanh và hình ảnh
-- Tải một mục, các mục đã tích, hoặc toàn bộ danh sách
+- Các dòng video, âm thanh, phụ đề và hình ảnh; MP4 trực tiếp có dòng tải trực tiếp riêng
+- Chọn tùy chọn và tải từng mục từ dòng của nó
 - Tiến độ trực tiếp, tốc độ truyền và trạng thái từng mục
-- Xóa danh sách và quét lại trang
 
-### Tải hàng loạt
-Các lượt tải đi qua một hàng đợi duy nhất, nên bạn có thể xếp nhiều mục cùng lúc mà không phải mở thẻ mới cho từng tệp. Tệp được ghi xuống đĩa lần lượt.
+
+### Hàng đợi tải xuống
+Thêm từng mục vào hàng đợi FIFO chung cho mọi thẻ. Tệp được lưu theo thứ tự; chuyển trang hoặc đóng thẻ nguồn tự nó không làm gián đoạn tải xuống.
 
 ### Tệp lớn
-Những tệp mà Chrome tự lấy được sẽ được giao cho trình quản lý tải xuống của chính Chrome, nên quá trình truyền vẫn tiếp tục bất kể trang còn mở hay không. Video thích ứng (phân đoạn) phải được ghép bên trong trang, và đường đi này có một hạn mức bộ nhớ: mặc định, video phân đoạn lớn hơn 768 MB sẽ không được đưa ra để tải, và một lượt tải đang chạy sẽ bị dừng nếu vượt quá hạn mức đó.
+Tệp trực tiếp dùng trình quản lý tải xuống Chrome. Media thích ứng DASH/HLS được ghép trong tài liệu offscreen, với đầu ra tạm ghi vào bộ nhớ cục bộ của trình duyệt (OPFS). Đầu vào vẫn dùng bộ nhớ, hạn mức mặc định 768 MiB: mục đã biết vượt mức không được đưa ra, và tải xuống dừng nếu vượt hạn mức. Không hỗ trợ đầu vào streaming có kích thước không giới hạn.
 
 Hạn mức này điều chỉnh được từ cấu hình từ xa của tiện ích, nên có thể nâng lên hoặc hạ xuống mà không cần phát hành phiên bản mới.
 
@@ -83,8 +87,8 @@ CÁCH HOẠT ĐỘNG
 
 1. Cài tiện ích từ Chrome Web Store
 2. Ghim biểu tượng lên thanh công cụ để mở nhanh
-3. Mở bất kỳ trang video nào trên vimeo.com hoặc player.vimeo.com và bắt đầu phát
-4. Bảng tải xuống xuất hiện cạnh tiêu đề video với các dòng Video, Audio và Image
+3. Mở trang video được hỗ trợ trên vimeo.com hoặc player.vimeo.com và bắt đầu phát
+4. Bảng tải xuống xuất hiện với các dòng Video, Audio, Subtitle và Image
 5. Nhấp vào chất lượng bạn muốn, hoặc mở biểu tượng tiện ích để xem danh sách đầy đủ
 6. Tệp được trình duyệt ghi xuống đĩa cục bộ của bạn
 
@@ -94,15 +98,15 @@ CÁCH HOẠT ĐỘNG
 DÙNG ĐƯỢC CHO GÌ VÀ KHÔNG LÀM GÌ
 
 Dùng được cho:
-- Video phát được trong trình duyệt của chính bạn trên vimeo.com, www.vimeo.com và player.vimeo.com
+- Trang video cấp cao nhất được hỗ trợ trên vimeo.com, www.vimeo.com và player.vimeo.com; phát được không bảo đảm có tài nguyên tải được
 - Chọn chất lượng cụ thể hoặc rãnh âm thanh thay vì luồng mặc định
 - Lưu ảnh bìa
 - Xếp hàng nhiều mục từ cùng một trang
 
 Không làm:
-- Tải video Vimeo riêng tư, có mật khẩu, trả phí hoặc bị hạn chế truy cập bằng cách khác. Đó là các biện pháp kiểm soát truy cập của chính Vimeo và tiện ích không thể cũng không cố vượt qua chúng: nếu trình phát không phát được video trong trình duyệt của bạn thì tiện ích cũng không lưu được
+- Vượt kiểm soát truy cập. Không bảo đảm hỗ trợ video riêng tư, có mật khẩu hoặc trả phí dù bạn phát được
 - Gỡ bỏ hoặc vượt qua DRM
-- Đọc thông tin mà trang chưa tải
+- Hỗ trợ mọi định dạng HLS: không hỗ trợ MPEG-TS, ghi toàn bộ phát trực tiếp, rãnh âm thanh/phụ đề bên ngoài hoặc mã hóa chưa nhận diện
 - Hoạt động trên trang khác ngoài Vimeo
 - Hoạt động trên ứng dụng Vimeo cho máy tính hoặc di động — đây chỉ là tiện ích trình duyệt
 - Thu thập dữ liệu hay quét ngầm
@@ -114,19 +118,19 @@ H: Tôi có cần tài khoản để dùng tiện ích không?
 Đ: Không. Bạn có thể tải xuống mà không cần đăng nhập. Đăng nhập là tùy chọn và chỉ ảnh hưởng đến hạn mức tải xuống hằng ngày và trạng thái đăng ký của bạn.
 
 H: Có tải được video Vimeo riêng tư, có mật khẩu hoặc trả phí không?
-Đ: Không. Những hạn chế đó do Vimeo áp đặt, không phải tiện ích này. Tiện ích chỉ thấy thông tin phát lại mà Vimeo đã gửi đến trình duyệt của bạn cho một video mà bạn có thể phát. Nó không mở khóa, không đoán và không vượt qua bất cứ thứ gì.
+Đ: Không bảo đảm hỗ trợ. Tiện ích dùng thông tin phát lại trình duyệt có thể lấy được và không mở khóa hay vượt kiểm soát truy cập Vimeo.
 
 H: Tôi lấy được những chất lượng nào?
-Đ: Những gì Vimeo cung cấp cho đúng video đó. Các trang thông thường cung cấp vài độ phân giải MP4 trực tiếp và/hoặc một luồng thích ứng, và tùy chọn cao nhất khả dụng luôn được đưa ra dưới dạng "Best". Nếu danh sách không có độ phân giải cao hơn, nghĩa là Vimeo không cung cấp nó cho trình duyệt của bạn.
+Đ: Các chất lượng được hỗ trợ mà tiện ích phân tích được cho video đó. "Best" chọn chất lượng cao nhất khả dụng. Độ phân giải thiếu có thể do nguồn, hỗ trợ định dạng hoặc hạn mức đầu vào thích ứng.
 
 H: Vì sao một số lượt tải có giới hạn kích thước?
-Đ: Với những tệp Chrome lấy trực tiếp được, tiện ích không thêm giới hạn nào. Video thích ứng (phân đoạn) phải ghép bên trong trang, việc này tốn bộ nhớ, nên có một hạn mức áp dụng. Hạn mức điều chỉnh được từ cấu hình từ xa của tiện ích và mặc định là 768 MB.
+Đ: Tệp trực tiếp dùng trình quản lý Chrome. Đầu vào thích ứng vẫn chiếm bộ nhớ dù đầu ra ghi vào OPFS; hạn mức điều chỉnh từ xa mặc định là 768 MiB. Cắt đoạn không giảm lượng tải nguồn đầy đủ.
 
 H: Tiện ích có tải dữ liệu của tôi lên đâu đó không?
-Đ: Bản thân nội dung media không bao giờ đi qua bất kỳ máy chủ nào do nhà phát triển vận hành. Tệp video, âm thanh và hình ảnh đi từ máy chủ của Vimeo đến trình duyệt của bạn rồi xuống đĩa cục bộ. Tiện ích chỉ liên hệ API của nhà phát triển cho việc đăng nhập, hạn mức tải xuống hằng ngày, trạng thái đăng ký và một tệp cấu hình từ xa nhỏ.
+Đ: Media không đi qua máy chủ nhà phát triển. Video, âm thanh, phụ đề và hình ảnh đi từ Vimeo đến trình duyệt và đĩa cục bộ. Dịch vụ nhà phát triển còn được dùng cho tài khoản, hạn mức, đăng ký, cài đặt từ xa và báo cáo sử dụng, lỗi.
 
 H: Tiện ích cần những quyền gì?
-Đ: storage (lưu cài đặt và trạng thái đăng nhập của bạn), identity (đăng nhập Google qua cửa sổ cấp quyền của chính Chrome), downloads (ghi tệp xuống đĩa của bạn) và quyền truy cập các trang Vimeo cùng CDN media của Vimeo để hiển thị bảng và lấy tệp.
+Đ: storage (cài đặt, đăng nhập, lịch sử cục bộ), identity (đăng nhập Google), downloads (lưu tệp và đọc trạng thái), offscreen (xử lý media trong nền), notifications (tải thành công hoặc thất bại) và truy cập Vimeo cùng CDN media.
 
 H: Tiện ích có miễn phí không?
 Đ: Có hạn mức tải xuống miễn phí hằng ngày, và tài khoản hay thiết bị mới bắt đầu với ngày đầu tiên không giới hạn. Có gói Unlimited trả phí cho số lượt tải hằng ngày cao hơn hoặc không giới hạn. Danh sách đầy đủ nằm ở trang giá của website tiện ích.
@@ -135,10 +139,10 @@ H: Hỗ trợ những trình duyệt nào?
 Đ: Chrome và các trình duyệt dựa trên Chromium khác như Edge và Brave.
 
 H: Có dùng được trên mọi trang Vimeo không?
-Đ: Dùng được trên các trang video ở vimeo.com, www.vimeo.com và player.vimeo.com. Những trang không phát một video duy nhất (hồ sơ, bảng tin, kết quả tìm kiếm) không có gì để tiện ích đọc.
+Đ: Hỗ trợ một số trang video cấp cao nhất trên vimeo.com, www.vimeo.com và player.vimeo.com. Không bảo đảm hỗ trợ trình phát nhúng trên trang bên thứ ba hay mọi trang riêng tư, phát trực tiếp.
 
 H: Tạo ra những định dạng tệp nào?
-Đ: MP4 cho video, M4A cho âm thanh, JPEG cho ảnh bìa.
+Đ: MP4 cho video, M4A hoặc MP3 cho âm thanh, VTT cho phụ đề, JPEG cho ảnh bìa.
 
 
 GHI CHÚ KỸ THUẬT
@@ -146,8 +150,8 @@ GHI CHÚ KỸ THUẬT
 - Trình duyệt: Chrome, Edge, Brave và các trình duyệt dựa trên Chromium khác
 - Manifest V3
 - Quyền máy chủ: vimeo.com, www.vimeo.com, player.vimeo.com và các máy chủ CDN media của Vimeo
-- Tải xuống: tệp trực tiếp đi qua trình quản lý tải xuống của chính Chrome; video phân đoạn được ghép trong trang
-- Hạn mức bộ nhớ cho video thích ứng: mặc định 768 MB, cấu hình được từ xa
+- Tải xuống: hàng đợi FIFO toàn cục; tệp trực tiếp qua Chrome, DASH/HLS trong tài liệu offscreen
+- Hạn mức bộ nhớ đầu vào thích ứng: mặc định 768 MiB, điều chỉnh từ xa; OPFS chỉ lưu đầu ra
 - Ngôn ngữ giao diện: 14 ngôn ngữ
 
 

@@ -92,7 +92,7 @@ function assertVimeoDirectSource(source: BackgroundBrowserDownloadSource): void 
   }
 }
 
-/** 直连 URL 白名单按来源区分：字幕可以落在 player.vimeo.com 的 text track 端点。 */
+/** 直连 URL 白名单按来源区分：字幕可以落在 Vimeo 主站、播放器或 CDN 的 text track 端点。 */
 function isAllowedDirectUrl(source: {
   source_kind: BrowserManagedSourceKind
   url: string

@@ -8,7 +8,8 @@
 
 - Manifest V3；**manifest 写在 `vite.config.ts` 里**（非独立 manifest.json），改权限 / host / CSP 都改 `vite.config.ts`。
 - 构建链：`vue-tsc → vite build → zip-dist`（`pnpm build`）；`pnpm check` = type-check + lint + format:check + check:permissions 全套。
-- 两套构建：`pnpm build` = 商店包（连生产占位域名、开 SLS、额外产出 `dist.zip`）；`pnpm build:dev` = 开发包（连 `http://localhost:7900` + `http://localhost:7910`、关 SLS、不压缩带 sourcemap）。**两者都写 `dist/` 且 `emptyOutDir` 全量清空，后跑的覆盖先跑的**，`pnpm test:unit:run` 结束时 `dist/` 是生产包；对照表与加载口径见 `@../../feat/000.架构/tech-extension.md` §A6。
+- 两套构建：`pnpm build` = 商店包（连生产占位域名、开 SLS、额外产出 `dist.zip`）；`pnpm build:dev` = 开发包（连 `http://localhost:7900` + `http://localhost:7910`、关 SLS、不压缩带 sourcemap）。**两者都写 `dist/` 且 `emptyOutDir` 全量清空，后跑的覆盖先跑的**；单测不触发构建。对照表与加载口径见 `@../../feat/000.架构/tech-extension.md` §A6。
+- 必需页面样式与 `THIRD-PARTY-NOTICES.md` 复制失败时构建退出，不生成成功 ZIP。
 - `prebuild` / `pretype-check` 自动跑 `rpc-generate:check`，register 改了不重新生成会 **fail build**。
 - Tailwind 已移除（曾为未使用的僵尸依赖），新代码继续 scoped CSS，不要用 Tailwind。
 
@@ -69,7 +70,7 @@
 
 - manifest 静态字段：`chrome.i18n`（`_locales/<locale>/messages.json` + `__MSG_`）。
 - 业务 UI：vue-i18n（`src/locales/*.json`），翻译键走 `I18N_KEYS` 常量，禁硬编码字符串。
-- **新增 locale 必须同时改 `bootstrap.ts` 的 messages map**（目前只 import 5 种，locales 有 15 个）。
+- **新增 locale 必须同时改 `src/locales/messages.ts` 的 `TRANSLATIONS` 与 `src/core/constants/i18n.ts` 的 `SUPPORTED_LANGUAGES`**，`bootstrap.ts` 统一加载 `TRANSLATIONS`。
 - `Accept-Language` 由拦截器从 `I18nService.getCurrentLanguage()` 注入。
 
 ## 10. 错误与日志
@@ -82,6 +83,7 @@
 ## 11. 权限与环境
 
 - `pnpm check:permissions` 校验 manifest 权限都被代码用到（最小权限）。
+- 最低 Chrome 版本由 `vite.config.ts` 的 `minimum_chrome_version` 声明；下载对账依赖 `chrome.runtime.getContexts`，不提供旧版浏览器分支。
 - 环境判断用 `__DEV__` 全局（SW 不能用 `import.meta.env`），不要用 `import.meta.env` / `process.env`。
 
 ## 12. checklist

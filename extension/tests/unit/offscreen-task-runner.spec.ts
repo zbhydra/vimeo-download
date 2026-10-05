@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => ({
   refreshSignatureRequest: vi.fn(),
   keepAlive: vi.fn(),
   remuxAudio: vi.fn(),
+  transcodeMp3: vi.fn(),
   removeMuxArtifact: vi.fn(),
   sweepMuxArtifacts: vi.fn()
 }))
@@ -36,16 +37,22 @@ vi.mock('@/offscreen/rpc/background.rpc', () => ({
 }))
 
 vi.mock('@/offscreen/mux', async importOriginal => ({
-  ...(await importOriginal<Record<string, unknown>>()),
+  ...(await importOriginal<typeof import('@/offscreen/mux')>()),
   remuxVimeoAudioToM4a: mocks.remuxAudio
 }))
+
+vi.mock('@/offscreen/mp3', () => ({ transcodeMuxArtifactToMp3: mocks.transcodeMp3 }))
 
 vi.mock('@/offscreen/muxArtifactStore', () => ({
   sweepMuxArtifacts: mocks.sweepMuxArtifacts,
   removeMuxArtifact: mocks.removeMuxArtifact
 }))
 
-import { RESOURCE_SOURCE_KINDS, RESOURCE_TYPES } from '@/core/constants/resource'
+import {
+  AUDIO_TARGET_FORMATS,
+  RESOURCE_SOURCE_KINDS,
+  RESOURCE_TYPES
+} from '@/core/constants/resource'
 import type { MediaResource } from '@/core/types'
 import {
   encodeVimeoSourceDescriptor,
@@ -144,6 +151,11 @@ describe('OffscreenTaskRunner 交付闭环', () => {
         tempFileName: TEMP_FILE_NAME
       })
     )
+    mocks.transcodeMp3.mockImplementation(async () => ({
+      file: new File(['mp3'], 'audio.mp3', { type: 'audio/mpeg' }),
+      mimeType: 'audio/mpeg',
+      tempFileName: 'audio.mp3'
+    }))
     mocks.taskProgress.mockResolvedValue({ recorded: true })
     mocks.taskFailed.mockResolvedValue({ accepted: true })
     mocks.taskCancelled.mockResolvedValue({ accepted: true })
@@ -206,6 +218,73 @@ describe('OffscreenTaskRunner 交付闭环', () => {
     // 登记已撤销：迟到的释放请求不再命中，也不会二次删除
     expect(offscreenTaskRunner.releaseTaskArtifact('t2', attempted.blobUrl)).toBe(false)
     expect(mocks.removeMuxArtifact).toHaveBeenCalledTimes(1)
+    expect(offscreenTaskRunner.listActiveTasks()).toHaveLength(0)
+  })
+
+  it('交付 ACK 前保留活跃任务，重签 continue/restart 均保留 MP3 输出', async () => {
+    for (const mode of ['continue', 'restart'] as const) {
+      const taskId = `refresh-${mode}`
+      const resource = {
+        ...audioResourceFixture('vimeo:1196869805:audio:a1'),
+        targetFormat: AUDIO_TARGET_FORMATS.MP3
+      }
+      const refreshed = audioResourceFixture(resource.id)
+      mocks.refreshSignatureRequest.mockResolvedValue({ mode, resource: refreshed })
+      fetchMock.mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        url: PLAYLIST_URL,
+        headers: { get: (): string => 'application/json' },
+        json: async () => playlistPayload
+      })
+      let acknowledge: (() => void) | undefined
+      mocks.taskComplete.mockImplementation(
+        () =>
+          new Promise<{ accepted: boolean }>(resolve => {
+            acknowledge = () => resolve({ accepted: true })
+          })
+      )
+      offscreenTaskRunner.startTask(taskId, resource)
+      await vi.waitFor(() => expect(acknowledge).toBeDefined())
+      expect(offscreenTaskRunner.listActiveTasks()).toEqual([
+        expect.objectContaining({
+          taskId,
+          resource: expect.objectContaining({ targetFormat: 'mp3' })
+        })
+      ])
+      expect(mocks.taskComplete).toHaveBeenLastCalledWith(
+        expect.objectContaining({ mimeType: 'audio/mpeg' }),
+        { timeout: 120_000 }
+      )
+      const artifact = mocks.taskComplete.mock.calls.at(-1)?.[0] as { blobUrl: string }
+      offscreenTaskRunner.releaseTaskArtifact(taskId, artifact.blobUrl)
+      acknowledge?.()
+      await vi.waitFor(() => expect(offscreenTaskRunner.listActiveTasks()).toHaveLength(0))
+    }
+    expect(mocks.transcodeMp3).toHaveBeenCalledTimes(2)
+  })
+
+  it('playlist 使用任务 AbortSignal，取消中止尚未返回的 playlist 请求', async () => {
+    fetchMock.mockImplementationOnce(
+      (_input: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<never>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () =>
+            reject(new DOMException('cancelled', 'AbortError'))
+          )
+        })
+    )
+    offscreenTaskRunner.startTask(
+      'abort-playlist',
+      audioResourceFixture('vimeo:1196869805:audio:a1')
+    )
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      PLAYLIST_URL,
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
+    )
+    offscreenTaskRunner.cancelTask('abort-playlist')
+    await vi.waitFor(() =>
+      expect(mocks.taskCancelled).toHaveBeenCalledWith({ taskId: 'abort-playlist' })
+    )
     expect(offscreenTaskRunner.listActiveTasks()).toHaveLength(0)
   })
 })

@@ -1,4 +1,6 @@
 {
+  "downloadStatus.removeTask": "Hapus {filename}",
+  "videoPanel.clip.invalid": "Isi waktu mulai dan selesai. Waktu mulai harus 0 atau lebih, dan waktu selesai harus setelah waktu mulai.",
   "quota.loginMessage": "Batas unduhan harian tercapai. Masuk untuk memeriksa kuota dan langganan akun Anda.",
   "app.title": "Vimeo Video Downloader",
   "app.openOfficialWebsite": "Kunjungi Situs Web Resmi",

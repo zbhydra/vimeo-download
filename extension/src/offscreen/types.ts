@@ -51,7 +51,7 @@ export interface OffscreenActiveTaskInfo {
 
 /** offscreen 活跃任务清单响应。 */
 export interface OffscreenListActiveTasksResponse {
-  /** 仍在执行（未交付、未取消）的任务。 */
+  /** 仍在执行或等待交付确认的任务。 */
   tasks: OffscreenActiveTaskInfo[]
 }
 

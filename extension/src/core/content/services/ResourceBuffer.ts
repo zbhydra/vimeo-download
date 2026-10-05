@@ -37,6 +37,8 @@ export abstract class ResourceBuffer {
   /** 当前页面缓存键。 */
   private currentPageKey: string | null = null
 
+  private pageChangeHandler: (() => void) | null = null
+
   /** 页面检查定时器。 */
   private pageCheckTimer: number | null = null
 
@@ -55,6 +57,11 @@ export abstract class ResourceBuffer {
   /** 页面切换检查间隔。 */
   protected getCheckIntervalMs(): number {
     return DEFAULT_CHECK_INTERVAL_MS
+  }
+
+  /** 注册站点页面生命周期清理，与缓存共用同一次 URL 检测。 */
+  onPageChange(handler: () => void): void {
+    this.pageChangeHandler = handler
   }
 
   /** 启动缓冲区。 */
@@ -218,8 +225,13 @@ export abstract class ResourceBuffer {
 
   /** 页面已切换时同步 pageKey 并清空资源。 */
   resetForPageChange(): void {
-    this.currentPageKey = this.getPageKey()
+    const nextPageKey = this.getPageKey()
+    const changed = nextPageKey !== this.currentPageKey
+    this.currentPageKey = nextPageKey
     this.clear()
+    if (changed) {
+      this.pageChangeHandler?.()
+    }
   }
 
   /** 检测页面键变化。 */
@@ -232,8 +244,7 @@ export abstract class ResourceBuffer {
     logger.info(
       `[ResourceBuffer:${this.siteName}] 检测到页面切换: ${this.currentPageKey} -> ${nextPageKey}`
     )
-    this.currentPageKey = nextPageKey
-    this.clear()
+    this.resetForPageChange()
   }
 
   /** 来源排序，数字越大优先级越高。 */

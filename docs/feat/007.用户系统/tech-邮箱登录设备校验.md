@@ -176,6 +176,8 @@ POST /api/client/media/download-pre-v2
 - `parse-pre-v2`:在 IP 限流和节点选择前校验。
 - `download-pre-v2`:在用户短锁、resource token 校验和扣 Credits 前校验。
 
+显式 `X-Client-Product: extension` 的插件请求由 `require_trusted_client_device` 豁免网站图片可信关系；邮箱提交与持久化 owner 见 [账号与认证](./tech-账号与认证.md#81-邮箱验证码登录)。
+
 校验输入:
 
 - device_id:现有 `X-Device-Id` 请求头;媒体入口可回退使用 `UserContext.device_id`。

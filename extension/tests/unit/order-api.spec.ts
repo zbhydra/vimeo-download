@@ -1,20 +1,12 @@
-/** 订单 API 合同测试：请求形状、支付 URL 白名单、订单状态归类与错误归类。 */
+/** 订单纯协议测试：支付 URL 白名单、订单状态与错误归类；不请求项目 API。 */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-
-const mocks = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }))
-
-vi.mock('../../src/core/api/index', () => ({
-  httpClient: { get: mocks.get, post: mocks.post }
-}))
+import { describe, expect, it } from 'vitest'
 
 import { ApiError } from '../../src/core/api/client/types'
 import {
   buildCreateOrderRequest,
   classifyOrderStatus,
-  createOrder,
   getDefaultOrderPaymentChannel,
-  getOrderStatus,
   hasOrderPollingTimedOut,
   isPaymentGatewayError,
   isPaymentPriceUpdatedError,
@@ -43,45 +35,16 @@ function orderStatus(overrides: Partial<OrderStatusResponse>): OrderStatusRespon
 }
 
 describe('orderApi', () => {
-  beforeEach(() => {
-    mocks.get.mockReset()
-    mocks.post.mockReset()
-  })
-
-  it('createOrder 按 POST /api/client/order/create 合同传参', async () => {
-    mocks.post.mockResolvedValueOnce({
-      order_no: 'o_9',
-      amount: 50_000_000,
-      currency: 'USD',
-      expired_at: 123,
-      support_mail: 'support@example.com',
-      payment_data: { payment_url: 'https://checkout.clinkbill.com/pay' }
-    })
-
-    const request = {
-      product_class: 1,
-      product_id: 'unlimited_year',
-      payment_method: 'clink',
-      currency: 'USD',
-      amount: 50_000_000,
-      auto_renew: true,
-      period: 'year' as const
-    }
-    await expect(createOrder(request)).resolves.toMatchObject({ order_no: 'o_9' })
-    expect(mocks.post).toHaveBeenCalledWith('/api/client/order/create', request)
-  })
-
-  it('getOrderStatus 拼接订单号路径并转义', async () => {
-    mocks.get.mockResolvedValueOnce(orderStatus({}))
-    await getOrderStatus('o/1')
-    expect(mocks.get).toHaveBeenCalledWith('/api/client/order/status/o%2F1')
-  })
-
   it('buildCreateOrderRequest 从套餐快照与渠道取值', () => {
     expect(
       buildCreateOrderRequest(
         { product_class: 1, product_id: 'p1', auto_renew: false, period: 'lifetime' },
-        { payment_method: 'paypal', payment_method_name: 'PayPal', currency: 'USD', amount: 9_000_000 }
+        {
+          payment_method: 'paypal',
+          payment_method_name: 'PayPal',
+          currency: 'USD',
+          amount: 9_000_000
+        }
       )
     ).toEqual({
       product_class: 1,
@@ -96,9 +59,21 @@ describe('orderApi', () => {
 
   describe('readPaymentUrl', () => {
     it.each([
-      ['paypal', { approval_url: 'https://www.paypal.com/checkoutpay' }, 'https://www.paypal.com/checkoutpay'],
-      ['clink', { payment_url: 'https://checkout.clinkbill.com/pay' }, 'https://checkout.clinkbill.com/pay'],
-      ['clink', { url: 'https://uat-checkout.clinkbill.com/pay' }, 'https://uat-checkout.clinkbill.com/pay']
+      [
+        'paypal',
+        { approval_url: 'https://www.paypal.com/checkoutpay' },
+        'https://www.paypal.com/checkoutpay'
+      ],
+      [
+        'clink',
+        { payment_url: 'https://checkout.clinkbill.com/pay' },
+        'https://checkout.clinkbill.com/pay'
+      ],
+      [
+        'clink',
+        { url: 'https://uat-checkout.clinkbill.com/pay' },
+        'https://uat-checkout.clinkbill.com/pay'
+      ]
     ])('提取 %s 的可信收银台 URL', (method, paymentData, expected) => {
       expect(readPaymentUrl(paymentData, method)).toBe(expected)
     })
@@ -123,7 +98,9 @@ describe('orderApi', () => {
 
     it('已支付但履约失败或达到最大重试为 failed', () => {
       for (const callback_status of [4, 5] as const) {
-        expect(classifyOrderStatus(orderStatus({ order_status: 2, callback_status }))).toBe('failed')
+        expect(classifyOrderStatus(orderStatus({ order_status: 2, callback_status }))).toBe(
+          'failed'
+        )
       }
     })
 
@@ -135,14 +112,26 @@ describe('orderApi', () => {
 
     it('待支付与回调处理中都继续轮询', () => {
       for (const callback_status of [1, 2] as const) {
-        expect(classifyOrderStatus(orderStatus({ order_status: 1, callback_status }))).toBe('pending')
+        expect(classifyOrderStatus(orderStatus({ order_status: 1, callback_status }))).toBe(
+          'pending'
+        )
       }
     })
   })
 
   it('getDefaultOrderPaymentChannel 按 clink > paypal 优先并回退首个渠道', () => {
-    const clink = { payment_method: 'clink', payment_method_name: 'Clink', currency: 'USD', amount: 1 }
-    const paypal = { payment_method: 'paypal', payment_method_name: 'PayPal', currency: 'USD', amount: 2 }
+    const clink = {
+      payment_method: 'clink',
+      payment_method_name: 'Clink',
+      currency: 'USD',
+      amount: 1
+    }
+    const paypal = {
+      payment_method: 'paypal',
+      payment_method_name: 'PayPal',
+      currency: 'USD',
+      amount: 2
+    }
     expect(getDefaultOrderPaymentChannel([paypal, clink])).toBe(clink)
     expect(getDefaultOrderPaymentChannel([paypal])).toBe(paypal)
     expect(getDefaultOrderPaymentChannel([])).toBeNull()

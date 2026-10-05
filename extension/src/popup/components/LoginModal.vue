@@ -1,118 +1,112 @@
 <template>
   <Teleport to="body">
-    <Transition name="login-modal-fade">
-      <div
-        v-if="loginModalVisible"
-        class="login-modal-overlay"
-        :style="colorVars"
-        @click.self="closeLoginModal"
-      >
-        <div
-          class="login-modal-dialog"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="vdl-login-modal-title"
-          @click.stop
+    <dialog
+      ref="dialog"
+      class="login-modal-overlay"
+      aria-labelledby="vdl-login-modal-title"
+      :style="colorVars"
+      @click.self="closeLoginModal"
+      @close="closeLoginModal"
+    >
+      <div class="login-modal-dialog" @click.stop>
+        <button
+          type="button"
+          class="login-modal-close"
+          :aria-label="t(I18N_KEYS.AUTH.MODAL_CLOSE)"
+          @click="closeLoginModal"
         >
-          <button
-            type="button"
-            class="login-modal-close"
-            :aria-label="t(I18N_KEYS.AUTH.MODAL_CLOSE)"
-            @click="closeLoginModal"
-          >
-            <Icon :name="IconName.X_MARK" :size="IconSize.SM" />
-          </button>
+          <Icon :name="IconName.X_MARK" :size="IconSize.SM" />
+        </button>
 
-          <div class="login-modal-heading">
-            <h2 id="vdl-login-modal-title" class="login-modal-title">
-              {{ t(I18N_KEYS.AUTH.MODAL_TITLE) }}
-            </h2>
-            <p class="login-modal-description">{{ t(I18N_KEYS.AUTH.MODAL_DESCRIPTION) }}</p>
-          </div>
+        <div class="login-modal-heading">
+          <h2 id="vdl-login-modal-title" class="login-modal-title">
+            {{ t(I18N_KEYS.AUTH.MODAL_TITLE) }}
+          </h2>
+          <p class="login-modal-description">{{ t(I18N_KEYS.AUTH.MODAL_DESCRIPTION) }}</p>
+        </div>
+
+        <button
+          type="button"
+          class="login-google-button"
+          :disabled="busy"
+          @click="handleGoogleLogin"
+        >
+          {{ t(I18N_KEYS.AUTH.MODAL_CONTINUE_WITH_GOOGLE) }}
+        </button>
+        <p class="login-modal-divider">{{ t(I18N_KEYS.AUTH.MODAL_OR) }}</p>
+
+        <form class="login-modal-form" @submit.prevent="handleSubmit">
+          <label class="login-field">
+            <span class="login-field-label">{{ t(I18N_KEYS.AUTH.MODAL_EMAIL_LABEL) }}</span>
+            <input
+              v-model.trim="email"
+              type="email"
+              autocomplete="email"
+              class="login-input"
+              :placeholder="t(I18N_KEYS.AUTH.MODAL_EMAIL_PLACEHOLDER)"
+              :disabled="busy"
+            />
+          </label>
 
           <button
+            v-if="step === 'email'"
             type="button"
-            class="login-google-button"
+            class="login-primary-button"
             :disabled="busy"
-            @click="handleGoogleLogin"
+            @click="handleSendCode"
           >
-            {{ t(I18N_KEYS.AUTH.MODAL_CONTINUE_WITH_GOOGLE) }}
+            {{ t(I18N_KEYS.AUTH.MODAL_CONTINUE_WITH_EMAIL) }}
           </button>
-          <p class="login-modal-divider">{{ t(I18N_KEYS.AUTH.MODAL_OR) }}</p>
 
-          <form class="login-modal-form" @submit.prevent="handleSubmit">
+          <div v-else class="login-code-area">
             <label class="login-field">
-              <span class="login-field-label">{{ t(I18N_KEYS.AUTH.MODAL_EMAIL_LABEL) }}</span>
-              <input
-                v-model.trim="email"
-                type="email"
-                autocomplete="email"
-                class="login-input"
-                :placeholder="t(I18N_KEYS.AUTH.MODAL_EMAIL_PLACEHOLDER)"
-                :disabled="busy"
-              />
+              <span class="login-field-label">{{ t(I18N_KEYS.AUTH.MODAL_CODE_LABEL) }}</span>
+              <div class="login-code-row">
+                <input
+                  v-model.trim="code"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="one-time-code"
+                  maxlength="6"
+                  class="login-input login-code-input"
+                  :placeholder="t(I18N_KEYS.AUTH.MODAL_CODE_PLACEHOLDER)"
+                  :disabled="busy"
+                />
+                <button
+                  type="button"
+                  class="login-secondary-button"
+                  :disabled="busy"
+                  @click="handleSendCode"
+                >
+                  {{ t(I18N_KEYS.AUTH.MODAL_RESEND) }}
+                </button>
+              </div>
             </label>
 
-            <button
-              v-if="step === 'email'"
-              type="button"
-              class="login-primary-button"
-              :disabled="busy"
-              @click="handleSendCode"
-            >
-              {{ t(I18N_KEYS.AUTH.MODAL_CONTINUE_WITH_EMAIL) }}
+            <button type="submit" class="login-primary-button" :disabled="busy">
+              {{ t(I18N_KEYS.AUTH.MODAL_SIGN_IN) }}
             </button>
+          </div>
+        </form>
 
-            <div v-else class="login-code-area">
-              <label class="login-field">
-                <span class="login-field-label">{{ t(I18N_KEYS.AUTH.MODAL_CODE_LABEL) }}</span>
-                <div class="login-code-row">
-                  <input
-                    v-model.trim="code"
-                    type="text"
-                    inputmode="numeric"
-                    autocomplete="one-time-code"
-                    maxlength="6"
-                    class="login-input login-code-input"
-                    :placeholder="t(I18N_KEYS.AUTH.MODAL_CODE_PLACEHOLDER)"
-                    :disabled="busy"
-                  />
-                  <button
-                    type="button"
-                    class="login-secondary-button"
-                    :disabled="busy"
-                    @click="handleSendCode"
-                  >
-                    {{ t(I18N_KEYS.AUTH.MODAL_RESEND) }}
-                  </button>
-                </div>
-              </label>
+        <p v-if="statusMessage" class="login-modal-status" role="status" aria-live="polite">
+          {{ statusMessage }}
+        </p>
+        <p v-if="errorMessage" class="login-modal-error" role="alert">{{ errorMessage }}</p>
 
-              <button type="submit" class="login-primary-button" :disabled="busy">
-                {{ t(I18N_KEYS.AUTH.MODAL_SIGN_IN) }}
-              </button>
-            </div>
-          </form>
-
-          <p v-if="statusMessage" class="login-modal-status" role="status" aria-live="polite">
-            {{ statusMessage }}
-          </p>
-          <p v-if="errorMessage" class="login-modal-error" role="alert">{{ errorMessage }}</p>
-
-          <p class="login-modal-terms">
-            {{ t(I18N_KEYS.AUTH.MODAL_TERMS_NOTICE) }}
-            {{ ' ' }}
-            <button type="button" class="login-terms-link" @click="openTerms">
-              {{ t(I18N_KEYS.AUTH.MODAL_TERMS_LINK) }}
-            </button>
-            <span aria-hidden="true"> · </span>
-            <button type="button" class="login-terms-link" @click="openPrivacy">
-              {{ t(I18N_KEYS.AUTH.MODAL_PRIVACY_LINK) }}
-            </button>
-          </p>
-        </div>
+        <p class="login-modal-terms">
+          {{ t(I18N_KEYS.AUTH.MODAL_TERMS_NOTICE) }}
+          {{ ' ' }}
+          <button type="button" class="login-terms-link" @click="openTerms">
+            {{ t(I18N_KEYS.AUTH.MODAL_TERMS_LINK) }}
+          </button>
+          <span aria-hidden="true"> · </span>
+          <button type="button" class="login-terms-link" @click="openPrivacy">
+            {{ t(I18N_KEYS.AUTH.MODAL_PRIVACY_LINK) }}
+          </button>
+        </p>
       </div>
-    </Transition>
+    </dialog>
   </Teleport>
 </template>
 
@@ -128,6 +122,7 @@ import { ApiError } from '@/core/api/client/types'
 import { authApi } from '@/core/api/auth/api'
 import { openExternalPage } from '@/core/utils/navigation'
 import { BackgroundChannel } from '@/popup/rpc/background.rpc'
+import { useNativeDialog } from '@/core/composables/nativeDialog'
 import {
   closeLoginModal,
   completeLoginModal,
@@ -152,6 +147,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const dialog = useNativeDialog(loginModalVisible)
 
 /**
  * 覆盖层根节点显式级联的颜色变量。
@@ -244,7 +240,7 @@ async function handleSubmit(): Promise<void> {
   busy.value = true
   errorMessage.value = ''
   try {
-    await authApi.loginWithEmailCode(email.value, code.value)
+    await new BackgroundChannel().loginWithEmailCode({ email: email.value, code: code.value })
     finishLogin()
   } catch (error) {
     logger.error('[LoginModal] 邮箱验证码登录失败:', error)
@@ -332,13 +328,25 @@ function openPrivacy(): void {
 .login-modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 2000;
-  display: flex;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  border: 0;
   align-items: center;
   justify-content: center;
   padding: 12px;
   background: rgba(15, 23, 42, 0.42);
   box-sizing: border-box;
+}
+
+.login-modal-overlay[open] {
+  display: flex;
+}
+
+.login-modal-overlay::backdrop {
+  background: transparent;
 }
 
 .login-modal-dialog {
@@ -551,22 +559,5 @@ function openPrivacy(): void {
 
 .login-terms-link:hover {
   text-decoration: underline;
-}
-
-.login-modal-fade-enter-active,
-.login-modal-fade-leave-active {
-  transition: opacity 0.18s ease;
-}
-
-.login-modal-fade-enter-from,
-.login-modal-fade-leave-to {
-  opacity: 0;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .login-modal-fade-enter-active,
-  .login-modal-fade-leave-active {
-    transition: none;
-  }
 }
 </style>

@@ -1,20 +1,13 @@
 #!/usr/bin/env node
-import { connectPage, findListingPage } from './cdp-helper.mjs';
+/** 在显式目标条目的各后台页读取按钮状态。 */
+import { connectPage, findCwsPage, getCwsPageUrl } from './cdp-helper.mjs';
 
-const page = await findListingPage();
-if (!page) { console.error('no CWS page open'); process.exit(2); }
+const targetUrl = process.argv[2];
+const page = await findCwsPage(targetUrl, 'listing');
 const cdp = await connectPage(page.id);
 
-const parts = page.url.match(/\/devconsole\/([^/]+)\/([^/]+)\//);
-const urls = {
-  status:  `https://chrome.google.com/webstore/devconsole/${parts[1]}/${parts[2]}/edit/status`,
-  listing: `https://chrome.google.com/webstore/devconsole/${parts[1]}/${parts[2]}/edit/listing`,
-  privacy: `https://chrome.google.com/webstore/devconsole/${parts[1]}/${parts[2]}/edit/privacy`,
-  package: `https://chrome.google.com/webstore/devconsole/${parts[1]}/${parts[2]}/edit/package`,
-  distribution: `https://chrome.google.com/webstore/devconsole/${parts[1]}/${parts[2]}/edit/distribution`,
-};
-
-for (const [name, url] of Object.entries(urls)) {
+for (const name of ['status', 'listing', 'privacy', 'package', 'distribution']) {
+  const url = getCwsPageUrl(targetUrl, name);
   await cdp.send('Page.navigate', { url });
   await new Promise(r => setTimeout(r, 6000));
   const info = await cdp.evalJs(`(()=>{

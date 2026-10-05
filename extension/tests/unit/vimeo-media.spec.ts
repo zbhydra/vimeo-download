@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { RESOURCE_SOURCE_KINDS } from '@/core/constants/resource'
-import type { MediaResource } from '@/core/types'
+import { RESOURCE_SOURCE_KINDS, RESOURCE_TYPES } from '@/core/constants/resource'
+import type { DownloadTaskSnapshot, MediaResource } from '@/core/types'
 import {
   loadVimeoResourcesFromCapturedConfig,
   loadVimeoResourcesFromConfigUrl,
@@ -811,7 +811,7 @@ describe('Vimeo media parsing', () => {
     expect(bestButton?.getAttribute('data-vdl-source-id')).toBe('vimeo:1201819515:video:best')
 
     bestButton?.click()
-    expect(clicked).toEqual(['vimeo:1201819515:video:best'])
+    expect(clicked).toEqual([])
 
     expect(panel.beginDownload('1201819515', 'vimeo:1201819515:video:best')).toBe(true)
     expect(panel.beginDownload('1201819515', 'vimeo:1201819515:video:best')).toBe(false)
@@ -831,6 +831,44 @@ describe('Vimeo media parsing', () => {
     expect(bestButton?.textContent).toBe('Best')
     expect(bestButton?.disabled).toBe(false)
     expect(bestButton?.hasAttribute('aria-busy')).toBe(false)
+
+    panel.beginDownload('1201819515', 'vimeo:1201819515:video:best')
+    panel.clear()
+    panel.render('1201819515', resources)
+    expect(document.querySelector<HTMLButtonElement>('[data-vdl-choice="best"]')?.disabled).toBe(
+      true
+    )
+    const currentTask: DownloadTaskSnapshot = {
+      taskId: 'current-task',
+      resourceId: 'vimeo:1201819515:video:best',
+      filename: 'video.mp4',
+      type: RESOURCE_TYPES.VIDEO,
+      resourceIndex: 0,
+      status: 'downloading',
+      progress: 40,
+      receivedBytes: null,
+      totalBytes: null,
+      bytesPerSecond: null,
+      bytesAreEstimated: false
+    }
+    panel.applyQueueSnapshot([
+      { ...currentTask, taskId: 'old-failed-task', status: 'failed' },
+      currentTask
+    ])
+    expect(document.querySelector<HTMLButtonElement>('[data-vdl-choice="best"]')?.textContent).toBe(
+      '40%'
+    )
+    expect(document.querySelector<HTMLButtonElement>('[data-vdl-choice="best"]')?.disabled).toBe(
+      true
+    )
+    expect(
+      document.querySelector<HTMLButtonElement>('[data-vdl-choice="progressive:1080p:30"]')
+        ?.disabled
+    ).toBe(true)
+    panel.applyQueueSnapshot([])
+    expect(document.querySelector<HTMLButtonElement>('[data-vdl-choice="best"]')?.disabled).toBe(
+      false
+    )
   })
 
   it('falls back to inserting after h1 when action bar is missing', () => {
@@ -864,6 +902,17 @@ describe('Vimeo media parsing', () => {
 })
 
 describe('Vimeo HLS AES-128 加密解析', () => {
+  it('外置 AUDIO rendition 拒绝，无 URI 的内嵌组保留', () => {
+    const playlist = (external: boolean): string =>
+      [
+        '#EXTM3U',
+        `#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio",NAME="Main"${external ? ',URI="audio.m3u8"' : ''}`,
+        '#EXT-X-STREAM-INF:BANDWIDTH=2500000,RESOLUTION=1920x1080,CODECS="avc1.640028,mp4a.40.2",AUDIO="audio"',
+        HLS_MEDIA_URL
+      ].join('\n')
+    expect(parseVimeoHlsMasterPlaylist(playlist(true), HLS_MASTER_URL)).toEqual([])
+    expect(parseVimeoHlsMasterPlaylist(playlist(false), HLS_MASTER_URL)).toHaveLength(1)
+  })
   const KEY_URL = HLS_KEY_URL
 
   beforeEach(() => {
@@ -958,7 +1007,7 @@ describe('Vimeo HLS AES-128 加密解析', () => {
     expect(playlist?.segments[1]?.encryption).toBeUndefined()
   })
 
-  it('SAMPLE-AES 与非 identity KEYFORMAT 按明文跳过并记日志', () => {
+  it('SAMPLE-AES、非 identity KEYFORMAT 与缺少 key URI 拒绝整项并记日志', () => {
     const warnSpy = vi.spyOn(logger, 'warn')
 
     const sampleAes = parseVimeoHlsMediaPlaylist(
@@ -975,11 +1024,18 @@ describe('Vimeo HLS AES-128 加密解析', () => {
       hlsVariantFixture()
     )
 
-    expect(sampleAes?.segments[0]?.encryption).toBeUndefined()
-    expect(foreignFormat?.segments[0]?.encryption).toBeUndefined()
+    expect(sampleAes).toBeNull()
+    expect(foreignFormat).toBeNull()
     expect(warnSpy).toHaveBeenCalledTimes(2)
     expect(warnSpy.mock.calls[0][0]).toContain('SAMPLE-AES')
     expect(warnSpy.mock.calls[1][0]).toContain('com.apple.streamingkeydelivery')
+    expect(
+      parseVimeoHlsMediaPlaylist(
+        encryptedPlaylistText({ keyAttrs: 'METHOD=AES-128' }),
+        HLS_MEDIA_URL,
+        hlsVariantFixture()
+      )
+    ).toBeNull()
   })
 
   it('加密 media playlist 照常产出 HLS 下载选项，descriptor 契约不变', () => {
@@ -1270,4 +1326,3 @@ function expectFetchCredentialsOmit(fetchMock: ReturnType<typeof vi.fn>): void {
     })
   }
 }
-

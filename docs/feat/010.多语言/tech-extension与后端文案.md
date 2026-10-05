@@ -75,6 +75,8 @@ extension/src/locales/
 
 > 切换语言:改 `currentLanguage` → 写持久化 → 同步所有 vue-i18n 实例 locale → 通知 callbacks。即时生效,不刷新页面。
 
+独立 Shadow DOM 升级 Vue 实例由 `UpgradeModalManager` 注册到已有实例集合，销毁时解除注册。Vimeo controller 订阅已有语言 callback，用当前资源快照重绘按钮并保留活动下载 busy；语言变更不重新获取 config/playlist。
+
 ### 2.3 翻译文件格式
 
 - 14 个 JSON,顶层 key 为扁平或单层分组的翻译键(与 `I18N_KEYS` 的点分 value 对齐,vue-i18n 按需支持嵌套)。
@@ -104,17 +106,12 @@ extension/src/locales/
 
 ### 3.2 持久化
 
-- 语言偏好存在 `SettingsManager`(底层 `chrome.storage.local`),字段 `language: SupportedLanguage`,默认 `SUPPORTED_LANGUAGES.EN_US`。
-- `SettingsManager` 初始化时若 `language` 为空,会调 `LanguageService.detectLanguage()` 填充并持久化(bootstrap 阶段完成)。
+- 语言偏好存在 `SettingsManager.language`（底层 `chrome.storage.local`），类型为 `LanguageSetting`，保存 Auto 或具体 locale；实际显示语言由 `LanguageService` 解析。
+- bootstrap 与 `I18nService.initialize()` 读取该设置，变化通过已有存储监听传播。
 
-### 3.3 `LanguageSwitcher.vue`(`src/popup/components/`)
+### 3.3 设置弹层的语言入口
 
-popup 顶部语言切换器:
-
-- 当前语言按钮(`.language-btn`),显示 `currentLanguageLabel`(查 `LANGUAGES` 取 `label`),点击 `toggleDropdown` 展开/收起。
-- 下拉(`.language-dropdown`,`v-if="showDropdown"`),`v-for` 遍历 `LANGUAGES` 渲染语言项;当前语言项加 `active` class 高亮。
-- 点击语言项:`I18nService.setLanguage(langValue)`(即时生效),关闭下拉。
-- 动画:下拉 `dropdownFadeIn 0.2s ease` 淡入。
+`src/popup/components/SettingsModal.vue` 是唯一语言编辑入口，原生 select 提供 Auto 与已有 locale，写入 `SettingsManager.language` 后通过已有 `I18nService` 传播。Auto 每次读取时按浏览器语言解析，不持久化解析结果；具体设置合同见 [下载设置弹层 §12.7](../002.下载功能/tech-扩展端Vimeo本地下载.md)。
 
 ## 4. extension 出站请求语言注入
 
@@ -203,7 +200,7 @@ backend:
 | extension i18n 服务(vue-i18n 门面) | `extension/src/locales/index.ts` |
 | extension 14 语言消息装配 | `extension/src/locales/messages.ts` |
 | extension 翻译文件 | `extension/src/locales/{locale}.json`(×14) |
-| extension 切换器 UI | `extension/src/popup/components/LanguageSwitcher.vue` |
+| extension 语言设置 UI | `extension/src/popup/components/SettingsModal.vue` |
 | extension 语言持久化字段 | `extension/src/core/storage/settings.ts`(`language`) |
 | extension 出站语言注入 | `extension/src/core/api/client/interceptors.ts` |
 | extension Chrome 原生文案 | `extension/public/_locales/{lang}/messages.json`(×14) |

@@ -2,7 +2,7 @@
  * 下载历史存储服务。
  *
  * 下载任务到达成功/失败终态时由 background 编排器回写一条记录（与竞品「点击即写、完成
- * 不回写」的差异化语义），popup 历史视图直接读写同一键。单键全量存 `chrome.storage.local`，
+ * 不回写」的差异化语义），所有写入由 background 执行，popup 只读。单键全量存 `chrome.storage.local`，
  * 容量固定 DOWNLOAD_HISTORY_MAX_ENTRIES 条、超限按时间裁剪最旧；同键去重与竞品覆盖式
  * 语义对齐：同视频同类型同档位再次下载时更新时间与状态并移到最前，不产生重复条目。
  */
@@ -88,7 +88,7 @@ export async function removeDownloadHistoryEntry(key: string): Promise<void> {
   })
 }
 
-/** 清空全部历史；与终态回写同锁串行，防止清空后并发回写复活已删记录。失败只记日志。 */
+/** 清空全部历史；在 background 内与终态回写共用串行链。失败只记日志。 */
 export async function clearDownloadHistory(): Promise<void> {
   await withWriteLock(async () => {
     try {

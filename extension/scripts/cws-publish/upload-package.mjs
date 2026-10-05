@@ -1,51 +1,30 @@
 #!/usr/bin/env node
-// Upload dist.zip to the CWS package page via CDP.
-// Bypasses the native OS file chooser by using Page.setInterceptFileChooserDialog + DOM.setFileInputFiles.
-//
-// Usage:
-//   node scripts/cws-publish/upload-package.mjs
-//   node scripts/cws-publish/upload-package.mjs path/to/custom.zip
-//
-// Requirements: same CDP setup as other scripts here. The browser must have the extension's
-// devconsole /edit/package page open and signed in.
-//
-// Why it's trickier than `agent-browser upload`: CWS lazily creates the file input only after
-// the "上傳新套件" button is clicked, and clicking normally opens a native file chooser dialog.
-// The flow here:
-//   1. Intercept the chooser dialog (so it never actually opens).
-//   2. Trigger the button click via JS (creates the <input type=file> in the DOM).
-//   3. Wait for Page.fileChooserOpened OR poll the DOM for the new input.
-//   4. DOM.setFileInputFiles with the backendNodeId.
-//   5. Poll the draft version cell until it reflects dist/manifest.json's version.
+/**
+ * 核对 ZIP 与当前 dist 后，通过 CDP 上传到显式目标的套件页，并检查 ZIP 的草稿版本。
+ * 用法：node scripts/cws-publish/upload-package.mjs <目标后台URL> [ZIP路径]
+ * CWS 点击上传后才创建文件输入，需先拦截原生选择框，再用 DOM.setFileInputFiles 传入 ZIP。
+ */
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { connectPage, findPackagePage } from './cdp-helper.mjs';
+import { connectPage, findCwsPage, getCwsPageUrl } from './cdp-helper.mjs';
+import { checkUploadPackage } from './package-check.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 
-const ZIP = path.resolve(process.argv[2] || path.join(REPO_ROOT, 'dist.zip'));
+const targetUrl = process.argv[2];
+getCwsPageUrl(targetUrl, 'package');
+const ZIP = path.resolve(process.argv[3] || path.join(REPO_ROOT, 'dist.zip'));
 if (!fs.existsSync(ZIP)) { console.error(`zip not found: ${ZIP}`); process.exit(2); }
 
-const MANIFEST = path.join(REPO_ROOT, 'dist', 'manifest.json');
-let expectedVersion = null;
-if (fs.existsSync(MANIFEST)) {
-  try { expectedVersion = JSON.parse(fs.readFileSync(MANIFEST, 'utf-8')).version; } catch {}
-}
-console.log(`uploading ${ZIP} (expect draft version → ${expectedVersion ?? 'unknown'})`);
+const manifest = checkUploadPackage(ZIP, path.join(REPO_ROOT, 'dist'));
+const expectedVersion = manifest.version;
+console.log(`上传 ${ZIP}，目标=${getCwsPageUrl(targetUrl, 'package')}，包版本=${expectedVersion}`);
 
-const pkg = await findPackagePage();
-if (!pkg) { console.error('no CWS devconsole tab open'); process.exit(2); }
+const pkg = await findCwsPage(targetUrl, 'package');
 const cdp = await connectPage(pkg.id);
-
-if (!pkg.url.includes('/edit/package')) {
-  const parts = pkg.url.match(/\/devconsole\/([^/]+)\/([^/]+)\//);
-  if (!parts) { console.error('cannot derive package URL'); process.exit(2); }
-  await cdp.send('Page.navigate', { url: `https://chrome.google.com/webstore/devconsole/${parts[1]}/${parts[2]}/edit/package` });
-  await new Promise(r => setTimeout(r, 5000));
-}
 
 const btnState = await cdp.evalJs(`(()=>{const b=Array.from(document.querySelectorAll('button')).find(x=>x.textContent.trim()==='上傳新套件');if(!b)return {exists:false};return {exists:true,disabled:b.disabled||b.getAttribute('aria-disabled')==='true'}})()`);
 if (!btnState.exists) { console.error('「上傳新套件」button not found on page'); process.exit(1); }

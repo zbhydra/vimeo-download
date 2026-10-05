@@ -266,8 +266,8 @@ http://localhost:7900/api/client/auth/google/oauth/callback
 
 ### 插件登录入口与升级去向
 
-- 登录只在插件 popup 内完成（`LoginModal` 宿主挂在 popup 根组件），不再跳转官网登录页。
+- 插件 popup 的 `LoginModal` 承担登录界面；Google 授权/code 兑换与邮箱 code 兑换的后台完成不依赖 popup 存活。邮箱 owner 合同见 [账号与认证](./tech-账号与认证.md#81-邮箱验证码登录)。
 - 登录入口的业务归因取值固定为 `popup` / `popup_upgrade_now` / `popup_quota_counter` / `upgrade_modal`，其中 `popup_upgrade_now`、`popup_quota_counter` 与 `upgrade_modal` 同时保留升级意图。
 - **没有登录面的上下文（如 content 页面）打开登录时退回订阅页**，只记录 warning，保证页面入口仍有一条可用路径。
 - 登录取消、回跳缺 code、兑换或持久化失败都不打开 Pricing；登录成功后也不自动跳转 Pricing，升级仍由用户主动点击升级入口触发。
-- 升级入口统一走 `openPricingPage(source)`：`utm_source=extension` + `source=<入口>`，在新标签页打开官网 Pricing（页面见 `@../011.Pricing页/feat.md`）。打开失败只记录导航错误，不回滚登录态，也不新增登录失败事件。
+- 升级动作由宿主决定：popup 打开内嵌 `PremiumView`，content 页面经 `UpgradeModalManager` 打开官网 Pricing（`utm_source=extension` + `source=<入口>`，页面见 `@../011.Pricing页/feat.md`）。渲染位置参数不决定业务动作；导航失败只记录错误，不回滚登录态。

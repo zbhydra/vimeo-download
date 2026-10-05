@@ -10,7 +10,11 @@ import { logger } from '../utils/logger'
  * 下载文件落在浏览器下载目录下的这一层，用户可以改成别的子目录；空值或非法值同样回退到这里
  * （见 background `downloadFilename.ts` 的路径归一化）。
  */
-export const DEFAULT_DOWNLOAD_PATH = 'vimeo-video-downloader'
+export const DEFAULT_DOWNLOAD_PATH = 'vimeoMediaDownloader'
+
+/** 中间版本的默认值，仅用于读取时迁移，不作为新的用户可选默认值。 */
+const LEGACY_DOWNLOAD_PATH = 'vimeo-video-downloader'
+const LEGACY_FILENAME_PATTERN_DEFAULT = '{title}'
 
 // 内部类型定义
 interface AppSettings {
@@ -18,7 +22,7 @@ interface AppSettings {
   language: LanguageSetting
   /** 保存子目录，相对浏览器下载目录；不存绝对路径。 */
   downloadPath?: string
-  /** 下载文件名模板（`{title}_{quality}_{type}` 一类）；background 在命名边界统一渲染。 */
+  /** 下载文件名模板（默认 `{title}_{quality}_{type}`，可由用户自定义）；background 在命名边界统一渲染。 */
   filenamePattern: string
   maxConcurrent?: number
 }
@@ -57,6 +61,23 @@ export class SettingsManager {
     let settings = await storageManager.get<AppSettings>('settings')
     if (!settings) {
       settings = { ...DEFAULT_SETTINGS }
+    } else {
+      const migrated = {
+        ...settings,
+        ...(settings.downloadPath === LEGACY_DOWNLOAD_PATH
+          ? { downloadPath: DEFAULT_DOWNLOAD_PATH }
+          : {}),
+        ...(settings.filenamePattern === LEGACY_FILENAME_PATTERN_DEFAULT
+          ? { filenamePattern: FILENAME_PATTERN_DEFAULT }
+          : {})
+      }
+      if (
+        migrated.downloadPath !== settings.downloadPath ||
+        migrated.filenamePattern !== settings.filenamePattern
+      ) {
+        settings = migrated
+        await storageManager.set('settings', settings)
+      }
     }
     logger.info('getSettings', settings)
     return settings

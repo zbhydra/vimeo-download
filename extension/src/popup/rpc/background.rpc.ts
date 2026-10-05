@@ -23,6 +23,72 @@ export class BackgroundChannel {
     this.transport = new ChromeRpcTransport('background', options)
   }
 
+  /** 调用 createCheckoutOrder 能力。 */
+  createCheckoutOrder(
+    params: RpcMethodParams<BackgroundHandler, 'createCheckoutOrder'>,
+    options?: RpcCallOptions
+  ): Promise<RpcMethodResult<BackgroundHandler, 'createCheckoutOrder'>> {
+    return this.transport.call<
+      RpcMethodResult<BackgroundHandler, 'createCheckoutOrder'>,
+      RpcMethodParams<BackgroundHandler, 'createCheckoutOrder'>
+    >('createCheckoutOrder', params, options)
+  }
+
+  /** 调用 getLatestOrderReference 能力。 */
+  getLatestOrderReference(
+    options?: RpcCallOptions
+  ): Promise<RpcMethodResult<BackgroundHandler, 'getLatestOrderReference'>> {
+    return this.transport.call<RpcMethodResult<BackgroundHandler, 'getLatestOrderReference'>>(
+      'getLatestOrderReference',
+      undefined,
+      options
+    )
+  }
+
+  /** 调用 clearOrderReference 能力。 */
+  clearOrderReference(
+    params: RpcMethodParams<BackgroundHandler, 'clearOrderReference'>,
+    options?: RpcCallOptions
+  ): Promise<RpcMethodResult<BackgroundHandler, 'clearOrderReference'>> {
+    return this.transport.call<
+      RpcMethodResult<BackgroundHandler, 'clearOrderReference'>,
+      RpcMethodParams<BackgroundHandler, 'clearOrderReference'>
+    >('clearOrderReference', params, options)
+  }
+
+  /** 调用 loginWithEmailCode 能力。 */
+  loginWithEmailCode(
+    params: RpcMethodParams<BackgroundHandler, 'loginWithEmailCode'>,
+    options?: RpcCallOptions
+  ): Promise<RpcMethodResult<BackgroundHandler, 'loginWithEmailCode'>> {
+    return this.transport.call<
+      RpcMethodResult<BackgroundHandler, 'loginWithEmailCode'>,
+      RpcMethodParams<BackgroundHandler, 'loginWithEmailCode'>
+    >('loginWithEmailCode', params, options)
+  }
+
+  /** 调用 removeDownloadHistoryEntry 能力。 */
+  removeDownloadHistoryEntry(
+    params: RpcMethodParams<BackgroundHandler, 'removeDownloadHistoryEntry'>,
+    options?: RpcCallOptions
+  ): Promise<RpcMethodResult<BackgroundHandler, 'removeDownloadHistoryEntry'>> {
+    return this.transport.call<
+      RpcMethodResult<BackgroundHandler, 'removeDownloadHistoryEntry'>,
+      RpcMethodParams<BackgroundHandler, 'removeDownloadHistoryEntry'>
+    >('removeDownloadHistoryEntry', params, options)
+  }
+
+  /** 调用 clearDownloadHistory 能力。 */
+  clearDownloadHistory(
+    options?: RpcCallOptions
+  ): Promise<RpcMethodResult<BackgroundHandler, 'clearDownloadHistory'>> {
+    return this.transport.call<RpcMethodResult<BackgroundHandler, 'clearDownloadHistory'>>(
+      'clearDownloadHistory',
+      undefined,
+      options
+    )
+  }
+
   /** 调用 ping 能力。 */
   ping(options?: RpcCallOptions): Promise<RpcMethodResult<BackgroundHandler, 'ping'>> {
     return this.transport.call<RpcMethodResult<BackgroundHandler, 'ping'>>(

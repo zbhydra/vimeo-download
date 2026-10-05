@@ -23,17 +23,19 @@ vi.mock('@/core/storage/downloadHistory', async () => {
   )
   return {
     ...actual,
-    getDownloadHistory: mocks.getDownloadHistory,
-    removeDownloadHistoryEntry: mocks.removeDownloadHistoryEntry,
-    clearDownloadHistory: mocks.clearDownloadHistory
+    getDownloadHistory: mocks.getDownloadHistory
   }
 })
 
+vi.mock('@/popup/rpc/background.rpc', () => ({
+  BackgroundChannel: class {
+    removeDownloadHistoryEntry = mocks.removeDownloadHistoryEntry
+    clearDownloadHistory = mocks.clearDownloadHistory
+  }
+}))
+
 import { RESOURCE_TYPES } from '@/core/constants/resource'
-import {
-  buildHistoryKey,
-  type DownloadHistoryEntry
-} from '@/core/storage/downloadHistory'
+import { buildHistoryKey, type DownloadHistoryEntry } from '@/core/storage/downloadHistory'
 import { openHistoryView, historyViewVisible } from '@/core/composables/historyView'
 import HistoryView from '@/popup/components/HistoryView.vue'
 
@@ -56,7 +58,9 @@ async function mountOpened(): Promise<VueWrapper> {
   const wrapper = mount(HistoryView, {
     attachTo: document.body,
     global: {
-      plugins: [createI18n({ legacy: false, locale: 'en-US', messages: { 'en-US': TRANSLATIONS['en-US'] } })],
+      plugins: [
+        createI18n({ legacy: false, locale: 'en-US', messages: { 'en-US': TRANSLATIONS['en-US'] } })
+      ],
       stubs: { Icon: true, Teleport: true, Transition: false }
     }
   })
@@ -99,7 +103,10 @@ describe('HistoryView', () => {
   })
 
   it('搜索过滤标题；无结果展示搜索空态', async () => {
-    mocks.getDownloadHistory.mockResolvedValue([makeEntry(), makeEntry({ videoId: '2', title: 'Other' })])
+    mocks.getDownloadHistory.mockResolvedValue([
+      makeEntry(),
+      makeEntry({ videoId: '2', title: 'Other' })
+    ])
     wrapper = await mountOpened()
 
     await wrapper.get('.history-search').setValue('other')
@@ -112,9 +119,7 @@ describe('HistoryView', () => {
 
   it('单条删除：先出确认条，确认后调用删除并刷新', async () => {
     const entry = makeEntry()
-    mocks.getDownloadHistory
-      .mockResolvedValueOnce([entry])
-      .mockResolvedValueOnce([])
+    mocks.getDownloadHistory.mockResolvedValueOnce([entry]).mockResolvedValueOnce([])
 
     wrapper = await mountOpened()
     await wrapper.get('.history-item .is-danger').trigger('click')
@@ -124,7 +129,7 @@ describe('HistoryView', () => {
     await wrapper.get('.history-confirm-danger').trigger('click')
     await flushPromises()
 
-    expect(mocks.removeDownloadHistoryEntry).toHaveBeenCalledWith(buildHistoryKey(entry))
+    expect(mocks.removeDownloadHistoryEntry).toHaveBeenCalledWith({ key: buildHistoryKey(entry) })
     expect(mocks.clearDownloadHistory).not.toHaveBeenCalled()
     expect(wrapper.find('.history-confirm').exists()).toBe(false)
   })
@@ -172,6 +177,24 @@ describe('HistoryView', () => {
 
     expect(wrapper.find('.history-empty').exists()).toBe(true)
     expect(wrapper.text()).toContain('No downloads yet.')
+  })
+
+  it('原生关闭同步显示状态；重新打开后关闭按钮可再次收起', async () => {
+    mocks.getDownloadHistory.mockResolvedValue([])
+    wrapper = await mountOpened()
+    const dialog = wrapper.get('dialog').element as HTMLDialogElement
+    expect(dialog.open).toBe(true)
+
+    dialog.close()
+    await flushPromises()
+    expect(historyViewVisible.value).toBe(false)
+
+    openHistoryView()
+    await flushPromises()
+    expect(dialog.open).toBe(true)
+    await wrapper.get('.history-close').trigger('click')
+    await flushPromises()
+    expect(dialog.open).toBe(false)
   })
 
   it('导出 CSV：把当前可见记录交给 Chrome 下载管理器', async () => {

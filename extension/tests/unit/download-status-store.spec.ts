@@ -53,7 +53,7 @@ describe('downloadStatusStore', () => {
   })
 
   it('保留查询期间的新事件（同作用域最新者胜），并拒绝旧版本快照', async () => {
-    let resolveInitial!: ((snapshot: DownloadQueueSnapshot) => void)
+    let resolveInitial!: (snapshot: DownloadQueueSnapshot) => void
     mocks.getDownloadQueue.mockReturnValue(
       new Promise<DownloadQueueSnapshot>(resolve => {
         resolveInitial = resolve
@@ -65,7 +65,7 @@ describe('downloadStatusStore', () => {
     await vi.waitFor(() => expect(mocks.handler.value).not.toBeNull())
 
     const initial = snapshotFixture('background', 3, 30, true)
-    // 查询返回前到达的事件进单槽暂存，revision 更高者覆盖。
+    // 查询返回前先应用可信事件，较旧的初查结果不覆盖新版本。
     mocks.handler.value?.(snapshotFixture('background', 4, 40, true))
     mocks.handler.value?.(snapshotFixture('background', 5, 50, true))
     resolveInitial?.(initial)
@@ -84,10 +84,7 @@ describe('downloadStatusStore', () => {
     mocks.handler.value?.({
       scopeId: 'background',
       revision: 6,
-      tasks: [
-        activeTask('active-a', 20),
-        activeTask('active-b', null)
-      ]
+      tasks: [activeTask('active-a', 20), activeTask('active-b', null)]
     })
     expect(store.activeCount).toBe(2)
 
@@ -108,6 +105,32 @@ describe('downloadStatusStore', () => {
     expect(mocks.unsubscribe).toHaveBeenCalledOnce()
     expect(mocks.destroySubscriber).toHaveBeenCalledOnce()
     expect(mocks.destroyClient).toHaveBeenCalledOnce()
+  })
+
+  it('初查传输失败后，可信快照仍建立作用域并恢复队列', async () => {
+    mocks.getDownloadQueue.mockRejectedValueOnce(new Error('transport failed'))
+    const store = useDownloadStatusStore()
+    await store.initialize(tabFixture(72))
+    expect(store.scopeId).toBeNull()
+
+    mocks.handler.value?.(snapshotFixture('worker-a', 4, 40, false))
+    expect(store.scopeId).toBe('worker-a')
+    expect(store.revision).toBe(4)
+    expect(store.activeCount).toBe(1)
+  })
+
+  it('worker 更换作用域后接受较低 revision，随后仍拒绝同 scope 的旧版本', async () => {
+    mocks.getDownloadQueue.mockResolvedValueOnce(snapshotFixture('worker-a', 30, 90, false))
+    const store = useDownloadStatusStore()
+    await store.initialize(tabFixture(72))
+
+    mocks.handler.value?.(snapshotFixture('worker-b', 1, 10, true))
+    expect(store.scopeId).toBe('worker-b')
+    expect(store.revision).toBe(1)
+    expect(store.waitingCount).toBe(1)
+    mocks.handler.value?.(snapshotFixture('worker-b', 0, 0, false))
+    expect(store.revision).toBe(1)
+    expect(store.waitingCount).toBe(1)
   })
 })
 

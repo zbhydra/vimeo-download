@@ -1,4 +1,6 @@
 {
+  "downloadStatus.removeTask": "Retirer {filename}",
+  "videoPanel.clip.invalid": "Saisissez le début et la fin. Le début doit être au moins 0 et la fin doit être après le début.",
   "quota.loginMessage": "Limite quotidienne de téléchargements atteinte. Connectez-vous pour consulter votre quota et votre abonnement.",
   "app.title": "Vimeo Video Downloader",
   "app.openOfficialWebsite": "Visiter le site officiel",

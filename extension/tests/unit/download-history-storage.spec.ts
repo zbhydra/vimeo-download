@@ -17,6 +17,7 @@ import {
 } from '@/core/storage/downloadHistory'
 import { RESOURCE_TYPES } from '@/core/constants/resource'
 import { STORAGE_KEYS } from '@/core/api/config'
+import type { StorageValue } from '@/core/storage'
 
 /** 构造一条测试记录；同视频同类型同档位的键天然相同。 */
 function makeEntry(overrides: Partial<DownloadHistoryEntry> = {}): DownloadHistoryEntry {
@@ -32,14 +33,14 @@ function makeEntry(overrides: Partial<DownloadHistoryEntry> = {}): DownloadHisto
 }
 
 /** chrome.storage.local 的测试后备存储（与 setup.ts 的 get stub 解耦，需自行接管读写）。 */
-const storageData = new Map<string, unknown>()
+const storageData = new Map<string, StorageValue>()
 
 describe('downloadHistory 存储服务', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     storageData.clear()
     vi.spyOn(chrome.storage.local, 'get').mockImplementation(async keys => {
-      const result: Record<string, unknown> = {}
+      const result: Record<string, StorageValue> = {}
       const keyList =
         keys === null
           ? [...storageData.keys()]
@@ -50,14 +51,14 @@ describe('downloadHistory 存储服务', () => {
               : []
       for (const key of keyList) {
         if (storageData.has(key)) {
-          result[key] = storageData.get(key)
+          result[key] = storageData.get(key)!
         }
       }
       return result
     })
     vi.spyOn(chrome.storage.local, 'set').mockImplementation(async items => {
       for (const [key, value] of Object.entries(items)) {
-        storageData.set(key, value)
+        storageData.set(key, value as StorageValue)
       }
     })
     vi.spyOn(chrome.storage.local, 'remove').mockImplementation(async keys => {
@@ -87,7 +88,11 @@ describe('downloadHistory 存储服务', () => {
     const entries = await getDownloadHistory()
     expect(entries).toHaveLength(2)
     // 同键旧记录被覆盖：状态与时间更新，且移到最前。
-    expect(entries[0]).toMatchObject({ videoId: '1196869805', status: 'success', downloadedAt: 2000 })
+    expect(entries[0]).toMatchObject({
+      videoId: '1196869805',
+      status: 'success',
+      downloadedAt: 2000
+    })
     expect(entries[1]?.videoId).toBe('2')
   })
 
@@ -136,12 +141,23 @@ describe('downloadHistory 存储服务', () => {
         makeEntry(),
         { broken: true },
         // 故意的坏数据：downloadedAt 不是数字。
-        { ...makeEntry(), videoId: '2', downloadedAt: 'late' as unknown as number }
+        { ...makeEntry(), videoId: '2', downloadedAt: 'late' }
       ]
     })
 
     const entries = await getDownloadHistory()
     expect(entries).toHaveLength(1)
     expect(entries[0]?.videoId).toBe('1196869805')
+  })
+
+  it('同一后台串行链保持终态、单删和清空的顺序', async () => {
+    await Promise.all([
+      recordDownloadHistory(makeEntry()),
+      removeDownloadHistoryEntry(buildHistoryKey(makeEntry())),
+      recordDownloadHistory(makeEntry({ videoId: '2' })),
+      clearDownloadHistory(),
+      recordDownloadHistory(makeEntry({ videoId: '3' }))
+    ])
+    expect((await getDownloadHistory()).map(entry => entry.videoId)).toEqual(['3'])
   })
 })

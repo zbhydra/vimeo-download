@@ -1,12 +1,9 @@
 #!/usr/bin/env node
-import { connectPage, findListingPage } from './cdp-helper.mjs';
+/** 在显式目标条目的分发页读取阻止提交的原因。 */
+import { connectPage, findCwsPage } from './cdp-helper.mjs';
 
-const page = await findListingPage();
+const page = await findCwsPage(process.argv[2], 'distribution');
 const cdp = await connectPage(page.id);
-const parts = page.url.match(/\/devconsole\/([^/]+)\/([^/]+)\//);
-
-await cdp.send('Page.navigate', { url: `https://chrome.google.com/webstore/devconsole/${parts[1]}/${parts[2]}/edit/distribution` });
-await new Promise(r => setTimeout(r, 5000));
 
 // Scroll button into view and click it
 const btnRect = await cdp.evalJs(`(()=>{const b=Array.from(document.querySelectorAll('button')).find(x=>x.textContent.includes('為何無法提交'));if(!b)return null;b.scrollIntoView({block:'center'});const r=b.getBoundingClientRect();return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}})()`);

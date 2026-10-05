@@ -21,8 +21,8 @@ export const useQuotaStore = defineStore('quota', () => {
   const loading = ref<boolean>(false)
   /** 错误信息 */
   const error = ref<string | null>(null)
-  /** 初始化中标志（防止并发调用） */
-  let isInitializing = false
+  /** 每次消费通知都重新读取服务端，避免正在初查时丢掉刷新。 */
+  let refreshChain: Promise<void> = Promise.resolve()
 
   // ============================================================================
   // Getters
@@ -73,15 +73,14 @@ export const useQuotaStore = defineStore('quota', () => {
   /**
    * 刷新配额状态（通过订阅状态 API）
    */
-  async function refreshQuota(): Promise<void> {
-    // 防止并发调用
-    if (isInitializing) {
-      logger.debug('[QuotaStore] Already refreshing, skipping')
-      return
-    }
+  function refreshQuota(): Promise<void> {
+    const result = refreshChain.then(loadQuota)
+    refreshChain = result.catch(() => undefined)
+    return result
+  }
 
+  async function loadQuota(): Promise<void> {
     try {
-      isInitializing = true
       loading.value = true
       error.value = null
 
@@ -101,7 +100,6 @@ export const useQuotaStore = defineStore('quota', () => {
       throw err
     } finally {
       loading.value = false
-      isInitializing = false
     }
   }
 

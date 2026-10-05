@@ -1,42 +1,37 @@
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
+/** CWS 目标页选择与原生 WebSocket CDP 通信。 */
 
-function resolveWs() {
-  try { return require('ws'); } catch {}
-  const candidates = [
-    '/Users/hydra/.nvm/versions/node/v24.13.0/lib/node_modules/agent-browser/node_modules/ws',
-  ];
-  for (const p of candidates) {
-    try { return require(p); } catch {}
-  }
-  throw new Error('ws module not found; install via `pnpm add -D ws` or ensure agent-browser is installed globally');
-}
-const WebSocket = resolveWs();
-
+/** 连接指定本地 CDP page，返回命令、求值和事件接口。 */
 export async function connectPage(pageId, { cdpHost = '127.0.0.1', cdpPort = 9222 } = {}) {
   const ws = new WebSocket(`ws://${cdpHost}:${cdpPort}/devtools/page/${pageId}`);
   let idCounter = 0;
   const pending = new Map();
   const listeners = [];
 
-  ws.on('message', (data) => {
-    const msg = JSON.parse(data.toString());
+  ws.addEventListener('message', event => {
+    const msg = JSON.parse(event.data);
     if (msg.id && pending.has(msg.id)) {
-      const { resolve, reject } = pending.get(msg.id);
+      const { resolve, reject, timer } = pending.get(msg.id);
+      clearTimeout(timer);
       pending.delete(msg.id);
       if (msg.error) reject(new Error(JSON.stringify(msg.error))); else resolve(msg.result);
     }
     if (msg.method) listeners.forEach(l => l(msg));
   });
 
-  await new Promise(r => ws.once('open', r));
+  await new Promise((resolve, reject) => {
+    ws.addEventListener('open', resolve, { once: true });
+    ws.addEventListener('error', () => reject(new Error(`CDP 连接失败: pageId=${pageId}，请检查浏览器调试端口后重试`)), { once: true });
+  });
 
   function send(method, params = {}) {
     const id = ++idCounter;
     return new Promise((resolve, reject) => {
-      pending.set(id, { resolve, reject });
+      const timer = setTimeout(() => {
+        pending.delete(id);
+        reject(new Error(`CDP 请求超时: pageId=${pageId}, method=${method}`));
+      }, 30000);
+      pending.set(id, { resolve, reject, timer });
       ws.send(JSON.stringify({ id, method, params }));
-      setTimeout(() => { if (pending.has(id)) { pending.delete(id); reject(new Error(`cdp timeout: ${method}`)); } }, 30000);
     });
   }
 
@@ -59,18 +54,35 @@ export async function connectPage(pageId, { cdpHost = '127.0.0.1', cdpPort = 922
   return { send, evalJs, onEvent, close };
 }
 
-export async function listCwsPages({ cdpHost = '127.0.0.1', cdpPort = 9222 } = {}) {
+/** 从显式后台条目 URL 生成同一 publisher/extension 的指定页面。 */
+export function getCwsPageUrl(targetUrl, section) {
+  let url;
+  try { url = new URL(targetUrl); } catch {
+    throw new Error(`CWS 目标 URL 无效: ${targetUrl ?? '(未提供)'}，请传入目标扩展的完整后台 /edit/ 页面 URL`);
+  }
+  const match = /^\/webstore\/devconsole\/([A-Za-z0-9_-]+)\/([a-p]{32})\/edit\/(package|listing|privacy|distribution|status)\/?$/.exec(url.pathname);
+  if (url.origin !== 'https://chrome.google.com' || !match || url.username || url.password) {
+    throw new Error(`CWS 目标 URL 无效: ${targetUrl}，请使用 https://chrome.google.com/webstore/devconsole/<publisher-id>/<extension-id>/edit/<页面>`);
+  }
+  return `${url.origin}/webstore/devconsole/${match[1]}/${match[2]}/edit/${section}`;
+}
+
+/** 精确选择指定页面；未打开或有重复页时拒绝操作。 */
+export function selectCwsPage(pages, expectedUrl) {
+  const matches = pages.filter(page => {
+    const url = new URL(page.url);
+    return page.type === 'page' && `${url.origin}${url.pathname}` === expectedUrl;
+  });
+  if (matches.length !== 1) {
+    throw new Error(`CWS 目标页匹配 ${matches.length} 个: ${expectedUrl}，请只保留一个该页面后重试`);
+  }
+  return matches[0];
+}
+
+/** 查询本地 CDP，并仅返回显式目标条目的指定页面。 */
+export async function findCwsPage(targetUrl, section, { cdpHost = '127.0.0.1', cdpPort = 9222 } = {}) {
+  const expectedUrl = getCwsPageUrl(targetUrl, section);
   const res = await fetch(`http://${cdpHost}:${cdpPort}/json`);
   const tabs = await res.json();
-  return tabs.filter(t => t.type === 'page' && t.url.includes('chrome.google.com/webstore/devconsole'));
-}
-
-export async function findPackagePage(opts) {
-  const pages = await listCwsPages(opts);
-  return pages.find(p => p.url.includes('/edit/package')) || pages.find(p => p.url.includes('/edit')) || pages[0];
-}
-
-export async function findListingPage(opts) {
-  const pages = await listCwsPages(opts);
-  return pages.find(p => p.url.includes('/edit/listing')) || pages.find(p => p.url.includes('/edit')) || pages[0];
+  return selectCwsPage(tabs, expectedUrl);
 }

@@ -1,21 +1,15 @@
 /**
  * Background RPC 路由合同测试。
  *
- * 固定远端配置读取走 background API client、配额参数形状与运行时配置直读。
+ * 验证调用边界、运行时配置与 Vimeo 播放页协议。
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type {
-  JsonObject,
-  JsonValue,
-  RpcContext,
-  RpcServeHandlers
-} from '../../src/core/rpc/types'
+import type { JsonObject, JsonValue, RpcContext, RpcServeHandlers } from '../../src/core/rpc/types'
 
 const mocks = vi.hoisted(() => ({
   handlers: null as RpcServeHandlers | null,
-  getRemoteConfig: vi.fn(),
   getRuntimeConfig: vi.fn(),
   loggerInfo: vi.fn(),
   loggerWarn: vi.fn(),
@@ -31,12 +25,6 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('../../src/core/rpc/serve', () => ({
   serve: mocks.serve
-}))
-
-vi.mock('../../src/core/api/remote-config', () => ({
-  remoteConfigApi: {
-    getConfig: mocks.getRemoteConfig
-  }
 }))
 
 vi.mock('../../src/background/runtimeConfig', () => ({
@@ -115,22 +103,19 @@ describe('background rpc router', () => {
     vi.resetModules()
     mocks.handlers = null
     mocks.serve.mockClear()
-    mocks.getRemoteConfig.mockReset().mockResolvedValue({})
     mocks.getRuntimeConfig.mockReset().mockResolvedValue({ debugLogging: false })
     mocks.loggerInfo.mockReset()
     mocks.loggerWarn.mockReset()
     mocks.loggerError.mockReset()
 
-    const { BackgroundMessageRouter } = await import(
-      '../../src/background/services/BackgroundMessageRouter'
-    )
+    const { BackgroundMessageRouter } =
+      await import('../../src/background/services/BackgroundMessageRouter')
     new BackgroundMessageRouter().setupListener()
   })
 
   it('parseStartGoogleLoginRequest 只接受已声明的登录入口', async () => {
-    const { parseStartGoogleLoginRequest } = await import(
-      '../../src/background/services/BackgroundMessageRouter'
-    )
+    const { parseStartGoogleLoginRequest } =
+      await import('../../src/background/services/BackgroundMessageRouter')
     expect(parseStartGoogleLoginRequest({ source: 'popup' })).toEqual({ source: 'popup' })
     expect(parseStartGoogleLoginRequest({ source: 'popup_quota_counter' })).toEqual({
       source: 'popup_quota_counter'
@@ -146,16 +131,6 @@ describe('background rpc router', () => {
     for (const params of invalidParams) {
       expect(() => parseStartGoogleLoginRequest(params)).toThrow()
     }
-  })
-
-  it('通过独立 background API client 读取远端分组配置', async () => {
-    const config = { vimeo: { muxMaxBytes: 1024 } }
-    mocks.getRemoteConfig.mockResolvedValue(config)
-
-    await expect(
-      getHandler('getRemoteConfig')(undefined, createContentContext())
-    ).resolves.toEqual(config)
-    expect(mocks.getRemoteConfig).toHaveBeenCalledOnce()
   })
 
   it('返回扩展自有运行时配置', async () => {
@@ -192,9 +167,7 @@ describe('background rpc router', () => {
   it('getVimeoPlayerConfig 由 background 直连播放页取回内嵌 config', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(() =>
-        Promise.resolve(playerPageResponse(playerPageHtml(vimeoConfigFixture())))
-      )
+      vi.fn(() => Promise.resolve(playerPageResponse(playerPageHtml(vimeoConfigFixture()))))
     )
 
     await expect(

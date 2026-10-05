@@ -5,11 +5,31 @@
  */
 
 import type { LoginSource, MarkType } from '@/core/api/mark/types'
+import type { CreateOrderRequest, CreateOrderResponse } from '@/core/api/order/types'
 import type { RemoteConfig } from '@/core/api/remote-config/types'
 import type { BrowserManagedSourceKind, ResourceType } from '@/core/constants/resource'
 import type { RuntimeConfig } from '@/core/runtimeConfig'
 import type { DownloadQueueSnapshot, MediaResource } from '@/core/types'
 import type { VimeoCapturedConfigSnapshot, VimeoSourceDescriptor } from '@/sites/vimeo/shared'
+
+/** background 下单请求沿用服务端订单协议。 */
+export type BackgroundCreateCheckoutOrderRequest = CreateOrderRequest
+
+/** 一次性 RPC 结果保留既有错误分类，不保存客户端订单状态。 */
+export type BackgroundCreateCheckoutOrderResponse =
+  | { status: 'created'; order: CreateOrderResponse }
+  | { status: 'failed'; reason: 'auth' | 'priceUpdated' | 'gateway' | 'orderGone' | 'generic' }
+
+/** 最后一次插件订单定位；不会向其他用户返回。 */
+export interface BackgroundOrderReference {
+  userId: number
+  orderNo: string
+}
+
+/** 只清理当前用户且订单号匹配的引用。 */
+export interface BackgroundClearOrderReferenceRequest {
+  orderNo: string
+}
 
 /** background ping 响应。 */
 export interface BackgroundPingResponse {
@@ -61,6 +81,17 @@ export type BackgroundGetRemoteConfigResponse = RemoteConfig
 export interface BackgroundStartGoogleLoginRequest {
   /** 登录按钮的业务入口，用于打点归因。 */
   source: LoginSource
+}
+
+/** background 兑换邮箱验证码并保存登录态；不向 popup 回传令牌。 */
+export interface BackgroundEmailLoginRequest {
+  email: string
+  code: string
+}
+
+/** 按历史去重键删除记录。 */
+export interface BackgroundRemoveHistoryRequest {
+  key: string
 }
 
 /**

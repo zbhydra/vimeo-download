@@ -165,7 +165,13 @@ describe('ResourceBuffer', () => {
 
   it('单视频快照替换移除其他视频分组与本轮不存在的旧资源', () => {
     const buffer = new TestResourceBuffer()
-    const staleOther = createResource('other:video', 'https://cdn.example/other.m4s', 1, undefined, '20')
+    const staleOther = createResource(
+      'other:video',
+      'https://cdn.example/other.m4s',
+      1,
+      undefined,
+      '20'
+    )
     const oldVideo = createResource('old-video', 'https://vod-adaptive-ak.vimeocdn.com/old.m4s', 1)
     const currentThumbnail = createResource(
       'current-thumbnail',
@@ -212,6 +218,10 @@ describe('ResourceBuffer', () => {
   it('pageKey 变化时清空全部视频分组', () => {
     vi.useFakeTimers()
     const buffer = new TestResourceBuffer()
+    const pageChanged = vi.fn(() => {
+      expect(buffer.getVideoCount()).toBe(0)
+    })
+    buffer.onPageChange(pageChanged)
     buffer.start()
     buffer.mergeVideoResources('10', [
       createResource('v1:video', 'https://i.vimeocdn.com/video/a.jpg', 1)
@@ -225,6 +235,9 @@ describe('ResourceBuffer', () => {
     vi.advanceTimersByTime(500)
 
     expect(buffer.getVideoCount()).toBe(0)
+    expect(pageChanged).toHaveBeenCalledOnce()
+    vi.advanceTimersByTime(500)
+    expect(pageChanged).toHaveBeenCalledOnce()
     buffer.stop()
   })
 
@@ -249,9 +262,7 @@ describe('ResourceBuffer', () => {
 
   it('mergeVideoResources 元数据按字段补齐：已有非空值保留，空缺由后续轮补全', () => {
     const buffer = new TestResourceBuffer()
-    buffer.mergeVideoResources('10', [
-      createResource('v1:video', 'https://cdn.example/v1.m4s', 0)
-    ])
+    buffer.mergeVideoResources('10', [createResource('v1:video', 'https://cdn.example/v1.m4s', 0)])
     expect(buffer.getVideoGroups()).toEqual([{ videoId: '10', title: '' }])
 
     buffer.mergeVideoResources('10', [

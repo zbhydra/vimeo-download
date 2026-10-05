@@ -349,6 +349,12 @@ class OrderCheckProductParam:   # 下单前校验输入(api 层组装,service �
 
 排序 `order_by` 支持枚举:`created_at_asc / created_at_desc / updated_at_asc / updated_at_desc / id_asc / id_desc`,每个枚举映射到带 `id` 次级排序的元组,保证分页稳定。
 
+### 9.4 插件订单定位与恢复
+
+`extension/src/background/services/orderCheckout.ts` 的 `createCheckoutOrder` 在返回收银台前保存唯一 `{userId, orderNo}` 定位到 `latest_order_reference`；不在客户端保存交易阶段。`PremiumView.enterView` 重开时只取当前用户引用并查询服务端 status，轮询仅在 popup 存活期间运行。其他账号的引用不返回，也不因此删除。
+
+仅服务端终态或订单不存在时，按当前用户与订单号匹配清除引用；网络错误、超时、关闭视图或取消等待保留引用，用户可重开再查。价格更新拒绝经 background typed 结果保留为 `priceUpdated`，视图重新读取 checkout 配置。支付与履约仍由原服务端链路完成。
+
 ## 10. 事务边界
 
 - **api 层不直接调事务**:api 入口只做参数校验与编排(`order_client.py`),事务全在 service 层。

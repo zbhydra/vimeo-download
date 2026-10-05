@@ -1,4 +1,6 @@
 {
+  "downloadStatus.removeTask": "{filename} を削除",
+  "videoPanel.clip.invalid": "開始と終了を入力してください。開始は0以上、終了は開始より後にしてください。",
   "quota.loginMessage": "1日のダウンロード上限に達しました。ログインしてアカウントの残り回数とサブスクリプションを確認してください。",
   "app.title": "Vimeo Video Downloader",
   "app.openOfficialWebsite": "公式サイトを開く",

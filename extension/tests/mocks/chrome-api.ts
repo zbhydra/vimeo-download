@@ -260,6 +260,11 @@ const downloads = {
     addListener: vi.fn(),
     removeListener: vi.fn(),
     hasListener: vi.fn()
+  },
+  onDeterminingFilename: {
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    hasListener: vi.fn()
   }
 }
 

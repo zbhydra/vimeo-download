@@ -1,21 +1,12 @@
 #!/usr/bin/env node
 // Read-only probe of the CWS package page: reports current draft version, warnings, and submit button state.
-// Usage: node scripts/cws-publish/probe-package.mjs
+// 用法：node scripts/cws-publish/probe-package.mjs <目标后台URL>
 
-import { connectPage, findPackagePage } from './cdp-helper.mjs';
+import { connectPage, findCwsPage } from './cdp-helper.mjs';
 
-const pkg = await findPackagePage();
-if (!pkg) { console.error('no CWS devconsole page open'); process.exit(2); }
+const pkg = await findCwsPage(process.argv[2], 'package');
 
 const cdp = await connectPage(pkg.id);
-
-if (!pkg.url.includes('/edit/package')) {
-  const parts = pkg.url.match(/\/devconsole\/([^/]+)\/([^/]+)\//);
-  if (parts) {
-    await cdp.send('Page.navigate', { url: `https://chrome.google.com/webstore/devconsole/${parts[1]}/${parts[2]}/edit/package` });
-    await new Promise(r => setTimeout(r, 5000));
-  }
-}
 
 const info = await cdp.evalJs(`(()=>{
   const rows = Array.from(document.querySelectorAll('tr')).map(r => r.innerText.replace(/\\n/g,'|')).slice(0, 12);

@@ -15,7 +15,23 @@ import {
 } from '@/core/types'
 import { formatDownloadBytes } from '@/core/utils/downloadStatus'
 import { getVimeoResourceLabel, type VimeoLabelTranslator } from '@/sites/vimeo/media'
-import { decodeVimeoSourceDescriptor } from '@/sites/vimeo/shared'
+import {
+  decodeVimeoSourceDescriptor,
+  parseVimeoTimeRange,
+  type VimeoTimeRange
+} from '@/sites/vimeo/shared'
+
+/** 两空表示整片；已填区间必须完整且符合 Vimeo 裁剪合同。 */
+export function parseVideoPanelClipInputs(
+  start: string | number,
+  end: string | number
+): { range: VimeoTimeRange | null; invalid: boolean } {
+  const range =
+    start === '' || end === ''
+      ? null
+      : parseVimeoTimeRange({ startSeconds: Number(start), endSeconds: Number(end) })
+  return { range, invalid: (start !== '' || end !== '') && range === null }
+}
 
 /**
  * 面板各行；数组顺序即展示顺序。

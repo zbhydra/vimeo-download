@@ -110,7 +110,11 @@
           {{ t(I18N_KEYS.DOWNLOAD_STATUS.FAILED_COUNT, { count: store.failedCount }) }}
         </h3>
         <ul class="task-list">
-          <li v-for="task in store.failedTasks" :key="task.taskId" class="task-card">
+          <li
+            v-for="task in store.failedTasks"
+            :key="task.taskId"
+            class="task-card failed-task-card"
+          >
             <Icon
               :name="typePresentation(task).icon"
               :size="IconSize.SM"
@@ -135,6 +139,16 @@
               @click="store.retryTask(task.taskId)"
             >
               <Icon :name="IconName.ARROW_PATH" :size="IconSize.XS" />
+            </button>
+            <button
+              type="button"
+              class="task-action"
+              :disabled="isCancelDisabled(task)"
+              :aria-label="removeLabel(task)"
+              :title="removeLabel(task)"
+              @click="store.cancelTask(task.taskId)"
+            >
+              <Icon :name="IconName.X_MARK" :size="IconSize.XS" />
             </button>
           </li>
         </ul>
@@ -219,6 +233,11 @@ function cancelLabel(task: DownloadTaskSnapshot): string {
 /** 单任务重试按钮的本地化可访问名称。 */
 function retryLabel(task: DownloadTaskSnapshot): string {
   return t(I18N_KEYS.DOWNLOAD_STATUS.RETRY_TASK, { filename: taskName(task) })
+}
+
+/** 失败任务移除按钮的本地化可访问名称。 */
+function removeLabel(task: DownloadTaskSnapshot): string {
+  return t(I18N_KEYS.DOWNLOAD_STATUS.REMOVE_TASK, { filename: taskName(task) })
 }
 
 /** 取消 RPC 返回前禁止重复请求。 */
@@ -351,6 +370,10 @@ function taskProgressLabel(task: DownloadTaskSnapshot): string {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.failed-task-card {
+  grid-template-columns: 18px minmax(0, 1fr) auto auto;
 }
 
 .task-title-row {

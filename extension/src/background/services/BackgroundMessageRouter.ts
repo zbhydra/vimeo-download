@@ -26,6 +26,7 @@ import type { RemoteConfig } from '@/core/api/remote-config/types'
 import { recordBackgroundMark } from './ExtensionMarkReporter'
 import { LOGIN_SOURCES, MARK_TYPE, type LoginSource, type MarkType } from '@/core/api/mark/types'
 import type {
+  BackgroundCreateCheckoutOrderRequest,
   BackgroundStartGoogleLoginRequest,
   BackgroundTaskCompleteRequest,
   BackgroundTaskFailedRequest,
@@ -39,6 +40,9 @@ import { parseMediaResource } from '@/core/utils/mediaResource'
 import { loadVimeoCapturedConfigFromPlayerPage } from '@/sites/vimeo/config'
 import { isVimeoHostname, type VimeoSourceDescriptor } from '@/sites/vimeo/shared'
 import { getRuntimeConfig } from '../runtimeConfig'
+import { authApi } from '@/core/api/auth/api'
+import { clearDownloadHistory, removeDownloadHistoryEntry } from '@/core/storage/downloadHistory'
+import { clearOrderReference, createCheckoutOrder, getLatestOrderReference } from './orderCheckout'
 
 const MARK_TYPE_VALUES: readonly string[] = Object.values(MARK_TYPE)
 const LOGIN_SOURCE_VALUES: readonly string[] = LOGIN_SOURCES
@@ -56,6 +60,36 @@ export class BackgroundMessageRouter {
    */
   private createRpcHandlers(): RpcServeHandlers {
     return {
+      createCheckoutOrder: params => createCheckoutOrder(parseCreateCheckoutOrderRequest(params)),
+      getLatestOrderReference: () => getLatestOrderReference(),
+      clearOrderReference: async params => {
+        if (!isJsonObject(params)) {
+          throw new Error('[BackgroundMessageRouter] clearOrderReference 请求体必须是对象')
+        }
+        await clearOrderReference(requireString(params, 'orderNo', 'clearOrderReference'))
+        return null
+      },
+      loginWithEmailCode: async params => {
+        if (!isJsonObject(params)) {
+          throw new Error('[BackgroundMessageRouter] loginWithEmailCode 请求体必须是对象')
+        }
+        await authApi.loginWithEmailCode(
+          requireString(params, 'email', 'loginWithEmailCode'),
+          requireString(params, 'code', 'loginWithEmailCode')
+        )
+        return null
+      },
+      removeDownloadHistoryEntry: async params => {
+        if (!isJsonObject(params)) {
+          throw new Error('[BackgroundMessageRouter] removeDownloadHistoryEntry 请求体必须是对象')
+        }
+        await removeDownloadHistoryEntry(requireString(params, 'key', 'removeDownloadHistoryEntry'))
+        return null
+      },
+      clearDownloadHistory: async () => {
+        await clearDownloadHistory()
+        return null
+      },
       ping: () => this.ping(),
       getState: () => this.getState(),
       getRuntimeConfig: () => getRuntimeConfig(),
@@ -426,6 +460,36 @@ function parseTaskScopedRequest(params: JsonValue | undefined, method: string): 
   }
 
   return { taskId: requireString(params, 'taskId', method) }
+}
+
+/** 校验下单 RPC 的字段类型；商品、渠道与价格有效性由服务端判定。 */
+export function parseCreateCheckoutOrderRequest(
+  params: JsonValue | undefined
+): BackgroundCreateCheckoutOrderRequest {
+  if (
+    !isJsonObject(params) ||
+    typeof params.product_class !== 'number' ||
+    !Number.isFinite(params.product_class) ||
+    typeof params.amount !== 'number' ||
+    !Number.isFinite(params.amount) ||
+    typeof params.auto_renew !== 'boolean' ||
+    (params.period !== 'none' &&
+      params.period !== 'month' &&
+      params.period !== 'quarter' &&
+      params.period !== 'year' &&
+      params.period !== 'lifetime')
+  ) {
+    throw new Error('[BackgroundMessageRouter] createCheckoutOrder 字段类型不符合订单协议')
+  }
+  return {
+    product_class: params.product_class,
+    product_id: requireString(params, 'product_id', 'createCheckoutOrder'),
+    payment_method: requireString(params, 'payment_method', 'createCheckoutOrder'),
+    currency: requireString(params, 'currency', 'createCheckoutOrder'),
+    amount: params.amount,
+    auto_renew: params.auto_renew,
+    period: params.period
+  }
 }
 
 /** 要求 JSON 对象字段为非空字符串。 */

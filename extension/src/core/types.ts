@@ -159,9 +159,9 @@ export interface DownloadTaskSnapshot {
   bytesAreEstimated: boolean
 }
 
-/** 当前页面全部未完成下载任务的版本化快照。 */
+/** 全局未完成下载任务的版本化快照。 */
 export interface DownloadQueueSnapshot {
-  /** 页面 content 生命周期唯一 ID，用于隔离不同标签页和页面重载。 */
+  /** 当前 background worker 生命周期唯一 ID，重启后 revision 重新开始。 */
   scopeId: string
   /** 每次任务或进度变化递增，用于丢弃乱序事件。 */
   revision: number

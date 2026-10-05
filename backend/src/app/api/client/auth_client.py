@@ -13,8 +13,9 @@
    -> 确认或创建用户
    -> _complete_login_flow
    -> 返回 access_token、refresh_token 和 user。
-   插件在 popup 内直接调用 /send-email-code、/email-verify-login，Google 登录走
-   /google/oauth/* 三段接口（background 用 browser identity 打开授权窗口），
+   插件 popup 调用 /send-email-code；邮箱 code 兑换与认证三键保存由 background
+   RPC 完成。Google 登录走 /google/oauth/* 三段接口（background 用 browser
+   identity 打开授权窗口），
    两者都不需要 Website 会话，也不再经过跳转网站的 PKCE 桥接。
 2. Google 手动按钮登录
    /google/oauth/authorize 只创建短效 state 并跳 Google

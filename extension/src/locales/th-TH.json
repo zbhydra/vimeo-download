@@ -1,4 +1,6 @@
 {
+  "downloadStatus.removeTask": "นำ {filename} ออก",
+  "videoPanel.clip.invalid": "กรอกเวลาเริ่มและสิ้นสุด เวลาเริ่มต้องไม่น้อยกว่า 0 และเวลาสิ้นสุดต้องมากกว่าเวลาเริ่ม",
   "quota.loginMessage": "ถึงขีดจำกัดการดาวน์โหลดรายวันแล้ว เข้าสู่ระบบเพื่อตรวจสอบโควตาและการสมัครสมาชิกของบัญชี",
   "app.title": "Vimeo Video Downloader",
   "app.openOfficialWebsite": "ไปที่เว็บไซต์ทางการ",

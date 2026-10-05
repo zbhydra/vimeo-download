@@ -129,7 +129,7 @@
 - 作者与时长：`video.owner.name` / `video.duration` 进入 `VimeoParsedConfig`，经 option 透传到 `MediaResource` 的新字段 `author` 与既有 `duration`（同一视频所有档位一致，`/config/request` 刷新片段缺 `video` 时沿用刷新前值）；信息区新增作者行与时长行，站点没给就整行不渲染，时长用既有 `formatMediaDuration`。
 - 档位大小：档位标签在有真实字节数时追加 ` · {格式化大小}`。progressive 补读 config 的 `item.size`；DASH 沿用 init + segment 字节和，缺 segment 字节就不显示。大小不进 i18n（数字加单位的技术标识），也不写进 media 层的 `label` 字面量；页面按钮面板不追加。
 - 封面格式标识：封面行静态文本从 `Thumbnail` 词条改为技术标识 `JPG`（封面固定交付 jpg，大写格式名与 `MP4` / `HLS` 同类，不进词条表）；封面词条仍用于下载按钮的可访问名。
-- 保存位置：面板底部新增输入行（`videoPanel.savePath.label` / `videoPanel.savePath.placeholder`，14 语言），值存 `chrome.storage.local` 的 `settings.downloadPath`（默认 `vimeo-video-downloader`）；`chrome.downloads.download` 的 `filename` 由 background 拼成 `{保存子目录}/{文件名}`，目录段逐段丢弃绝对路径、盘符、`..`、`~`、空段与保留字符，文件名保持单段。作用范围只有经浏览器原生下载的交付（Progressive / 封面 / 字幕）；DASH/HLS 走页面内 mux 的 `anchor.download`，不受该设置影响。
+- 保存位置：面板底部新增输入行（`videoPanel.savePath.label` / `videoPanel.savePath.placeholder`，14 语言），值存 `chrome.storage.local` 的 `settings.downloadPath`（默认 `vimeoMediaDownloader`；中间版本默认 `vimeo-video-downloader` 仅在读取时迁移，其他自定义目录保留）；`chrome.downloads.download` 的 `filename` 由 background 拼成 `{保存子目录}/{文件名}`，目录段逐段丢弃绝对路径、盘符、`..`、`~`、空段与保留字符，文件名保持单段。作用范围是全部交付，DASH/HLS 产物也由 background 统一落盘。
 - 契约与 i18n：`I18N_KEYS.VIDEO_PANEL` 新增 `SAVE_PATH_LABEL` / `SAVE_PATH_PLACEHOLDER`；`MediaResource` 新增 `author` 并同步 `ResourceBuffer` 的同资源比较；`settings.ts` 导出 `DEFAULT_DOWNLOAD_PATH`。
 - 本次不做：Video 行的音量独立开关（当时带音轨 / 无音轨是两个并列档位；后由「扩展 Popup Video 行改为『画质下拉 + 音轨开关』」补上，`dash:{trackId}` / `:no-audio` 的身份规则不变）。
 - 文档：同步 `tech-扩展端Vimeo本地下载.md` 的 §5.2 / §8.1 / §11 / §12.1 / §12.4 / §12.5，新增 §12.7 保存位置并把原 §12.7 明确不做改为 §12.8。

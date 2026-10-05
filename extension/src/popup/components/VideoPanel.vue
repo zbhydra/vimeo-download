@@ -152,7 +152,7 @@
           <button
             type="button"
             class="row-download"
-            :disabled="!selectedIds[row.kind]"
+            :disabled="!selectedIds[row.kind] || (clipInvalid && rowSupportsClip(row))"
             :title="downloadTitle(row)"
             :aria-label="downloadTitle(row)"
             @click="handleDownload(row)"
@@ -189,6 +189,7 @@
               step="0.1"
               inputmode="decimal"
               :disabled="!clipAvailable"
+              @input="clipStartBadInput = ($event.target as HTMLInputElement).validity.badInput"
             />
           </label>
           <label class="clip-field">
@@ -201,10 +202,14 @@
               step="0.1"
               inputmode="decimal"
               :disabled="!clipAvailable"
+              @input="clipEndBadInput = ($event.target as HTMLInputElement).validity.badInput"
             />
           </label>
         </div>
-        <p class="clip-hint">
+        <p v-if="clipInvalid" class="clip-hint" role="alert">
+          {{ t(I18N_KEYS.VIDEO_PANEL.CLIP_INVALID) }}
+        </p>
+        <p v-else class="clip-hint">
           {{
             clipAvailable
               ? t(I18N_KEYS.VIDEO_PANEL.CLIP_HINT)
@@ -226,7 +231,6 @@ import type { MediaResource } from '@/core/types'
 import { formatMediaDuration } from '@/core/utils/downloadStatus'
 import { Icon, IconName, IconSize } from '@/core/components/icons'
 import { applyVimeoTimeRange, supportsVimeoTimeRange } from '@/sites/vimeo/media'
-import { parseVimeoTimeRange, type VimeoTimeRange } from '@/sites/vimeo/shared'
 import { useResourceStore } from '../stores/resourceStore'
 import TrimSlider from './TrimSlider.vue'
 import VideoSelector from './VideoSelector.vue'
@@ -234,6 +238,7 @@ import VideoThumb from './VideoThumb.vue'
 import { formatClipSecondsText } from '../utils/trimSlider'
 import {
   buildVideoPanelRows,
+  parseVideoPanelClipInputs,
   COVER_FORMAT_LABEL,
   buildDetectedVideos,
   resolveVideoSelection,
@@ -255,6 +260,9 @@ const emit = defineEmits<{
 /** 时间裁剪输入；空串表示不裁剪。 */
 const clipStart = ref('')
 const clipEnd = ref('')
+/** 原生不完整数字的 value 也为空，须保留其 badInput 与用户清空的区别。 */
+const clipStartBadInput = ref(false)
+const clipEndBadInput = ref(false)
 
 /**
  * 检测到的视频列表。
@@ -296,6 +304,8 @@ const selectedVideo = computed(
 watch(selectedVideoId, () => {
   clipStart.value = ''
   clipEnd.value = ''
+  clipStartBadInput.value = false
+  clipEndBadInput.value = false
 })
 
 const rows = computed(() =>
@@ -386,17 +396,11 @@ const clipAvailable = computed(() => {
   return resource !== undefined && supportsVimeoTimeRange(resource)
 })
 
-/** 生效的裁剪区间；未填、非法或当前档位不支持裁剪时为 null（整片下载）。 */
-const activeClipRange = computed<VimeoTimeRange | null>(() => {
-  if (!clipAvailable.value) {
-    return null
-  }
-
-  return parseVimeoTimeRange({
-    startSeconds: Number.parseFloat(clipStart.value),
-    endSeconds: Number.parseFloat(clipEnd.value)
-  })
-})
+/** 生效的裁剪区间；两端都空表示整片，其余非法输入在提交时阻止下载。 */
+const clipSelection = computed(() => parseVideoPanelClipInputs(clipStart.value, clipEnd.value))
+const clipInvalid = computed(
+  () => clipSelection.value.invalid || clipStartBadInput.value || clipEndBadInput.value
+)
 
 /**
  * 滑杆的时长上限：组元数据时长优先，缺失时取各档位资源时长的最大值；两者都没有时为 0
@@ -431,16 +435,20 @@ const sliderEndSeconds = computed(() => {
 /** 滑杆起点交互写回输入；终点为空时补全长，让一次拖动就生成完整区间。 */
 function handleSliderStart(seconds: number): void {
   clipStart.value = formatClipSecondsText(seconds)
+  clipStartBadInput.value = false
   if (!Number.isFinite(Number.parseFloat(clipEnd.value))) {
     clipEnd.value = formatClipSecondsText(clipMaxSeconds.value)
+    clipEndBadInput.value = false
   }
 }
 
 /** 滑杆终点交互写回输入；起点为空时补 0，语义同上。 */
 function handleSliderEnd(seconds: number): void {
   clipEnd.value = formatClipSecondsText(seconds)
+  clipEndBadInput.value = false
   if (!Number.isFinite(Number.parseFloat(clipStart.value))) {
     clipStart.value = formatClipSecondsText(0)
+    clipStartBadInput.value = false
   }
 }
 
@@ -461,6 +469,9 @@ function handleAudioToggle(): void {
 function handleDownload(row: VideoPanelRow): void {
   const resource = resourcesById.value.get(selectedResourceId(row.kind) ?? '')
   if (!resource) {
+    return
+  }
+  if (supportsVimeoTimeRange(resource) && clipInvalid.value) {
     return
   }
 
@@ -502,8 +513,14 @@ function optionDisplayLabel(option: VideoPanelOption): string {
  * 封面也不是分片交付，这三类保持整片下载。
  */
 function applyActiveClip(resource: MediaResource): MediaResource {
-  const range = activeClipRange.value
+  const range = clipSelection.value.range
   return range && supportsVimeoTimeRange(resource) ? applyVimeoTimeRange(resource, range) : resource
+}
+
+/** 每行按实际选中资源判断裁剪能力，直链、字幕和封面仍可下载整片。 */
+function rowSupportsClip(row: VideoPanelRow): boolean {
+  const resource = resourcesById.value.get(selectedResourceId(row.kind) ?? '')
+  return resource !== undefined && supportsVimeoTimeRange(resource)
 }
 
 /** 取某行当前选中的档位。 */
