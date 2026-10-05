@@ -13,7 +13,7 @@ Cloudflare 位置：
 表达式：
 
 ```text
-(http.host in {"vimeodownloader.app" "www.vimeodownloader.app" "test-vimeodownloader.app"} and (
+(http.host in {"vimeodownloader.app" "www.vimeodownloader.app" "test.vimeodownloader.app"} and (
   http.request.uri.path eq "/assets/icons/logo.svg" or
   http.request.uri.path eq "/assets/icons/credits.svg"
 ))
@@ -35,7 +35,7 @@ Cache eligibility: Bypass cache
 curl -I "https://vimeodownloader.app/assets/icons/logo.svg"
 curl -I "https://vimeodownloader.app/assets/icons/logo.svg?v=20260706"
 curl -I "https://vimeodownloader.app/assets/icons/credits.svg"
-curl -I "https://test-vimeodownloader.app/assets/icons/logo.svg?v=20260706"
+curl -I "https://test.vimeodownloader.app/assets/icons/logo.svg?v=20260706"
 ```
 
 预期响应头：
