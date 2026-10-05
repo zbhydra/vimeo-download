@@ -2,10 +2,10 @@
 /**
  * Pricing 产品页。
  *
- * Astro SSG 页面只负责 i18n、SEO 和 shared Pricing shell 装配；
- * 购买/登录交互放在 website-shared 的命令式 DOM controller。
+ * Astro SSG 页面只负责 i18n、SEO 和 Pricing shell 装配；
+ * 购买/登录交互放在 components/pricing 的命令式 DOM controller。
  */
-import PricingPageShell from '@website-shared/components/pricing/PricingPageShell.astro'
+import PricingPageShell from '../pricing/PricingPageShell.astro'
 import Layout from '../../layouts/Layout.astro'
 import { getContent, type Locale } from '../../i18n/content'
 import { CHROME_WEB_STORE_URL, DEVELOPER_EMAIL } from '../../lib/site.mjs'
@@ -13,12 +13,11 @@ import { getPricingPageCopy } from '../../i18n/pricing'
 
 interface Props {
   locale?: Locale
-  mode: 'credits' | 'subscription'
 }
 
-const { locale = 'en-US', mode } = Astro.props as Props
+const { locale = 'en-US' } = Astro.props as Props
 const t = getContent(locale)
-const pricing = getPricingPageCopy(t.pages.pricing, mode)
+const pricing = getPricingPageCopy(t.pages.pricing)
 const installUrl = CHROME_WEB_STORE_URL
 
 // 购买答疑 FAQPage 结构化数据：经 Layout 的 structuredData prop 注入 <head>
@@ -43,9 +42,7 @@ const faqSchema = {
   structuredData={[faqSchema]}
 >
   <PricingPageShell
-    mode={mode}
     copy={pricing}
-    workspaceCopy={t.pages.homepage.workspace}
     extensionInstallUrl={installUrl}
     supportEmail={DEVELOPER_EMAIL}
     showHero

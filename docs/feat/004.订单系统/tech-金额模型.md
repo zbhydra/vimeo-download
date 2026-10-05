@@ -292,8 +292,8 @@ human_amount = amount / 1_000_000
 
 ### 8.2 前端与后台
 
-- website-shared Credits 购买类型和请求删除 `display_amount_raw` / `amount_raw`。
-- Credits 商品价展示用 `display_amount / 1_000_000`。
+- website 订阅结算类型和请求不含 `display_amount_raw` / `amount_raw`（Credits 购买入口已从网站下线，后端 Credits 商品接口仍遵循本模型）。
+- 商品价展示用 `display_amount / 1_000_000`。
 - admin 订单类型和订单页删除 `amount_raw` / `paid_amount_raw`。
 - admin 订单页金额展示用 `amount` / `paid_amount`。
 

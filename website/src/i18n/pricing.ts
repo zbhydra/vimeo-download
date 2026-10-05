@@ -1,19 +1,13 @@
 /** Pricing 商品文案及按路由装配的页面内容。 */
 import type { PricingPageContent } from './schema'
 
-/** 按商品模式生成同源的首屏、SEO 与 FAQ 内容。 */
-export function getPricingPageCopy(copy: PricingPageContent, mode: 'credits' | 'subscription') {
-  const product = copy[mode]
-  const description = mode === 'credits' ? copy.credits.description : copy.subscription.pageDescription
+/** 生成 Pricing 页面的首屏与 SEO 内容，与订阅文案同源。 */
+export function getPricingPageCopy(copy: PricingPageContent) {
+  const { title, pageDescription, eyebrow } = copy.subscription
   return {
     ...copy,
-    seo: { title: `${product.title} | Vimeo Video Downloader`, description },
-    hero: { eyebrow: mode === 'credits' ? copy.credits.packageEyebrow : copy.subscription.eyebrow, title: product.title, description },
-    faq: {
-      title: copy.faq.title,
-      description: copy.faq.description,
-      items: mode === 'credits' ? copy.faq.creditsItems : copy.faq.subscriptionItems
-    }
+    seo: { title: `${title} | Vimeo Video Downloader`, description: pageDescription },
+    hero: { eyebrow, title, description: pageDescription }
   }
 }
 
@@ -346,7 +340,6 @@ export const pricingContent: PricingPageContent = {
     signedOutDescription: 'Sign in to continue with checkout.',
     signInCta: 'Sign in',
     signedInLabel: 'Signed in',
-    creditsLabel: 'Credits',
     subscriptionLabel: 'Plan',
     expiresLabel: 'Expires',
     statusLabel: 'Status',
@@ -360,14 +353,56 @@ export const pricingContent: PricingPageContent = {
     unlimited: 'Unlimited',
     loadFailed: 'Failed to load account. Sign in again or retry.'
   },
+  accountMenu: {
+    accountButtonLabel: 'Open account menu',
+    accountMenuLabel: 'Account menu'
+  },
+  auth: {
+    title: 'Sign in to continue',
+    eyebrow: 'Website Access',
+    continueWithGoogle: 'Continue with Google',
+    googleLoading: 'Opening Google...',
+    or: 'or',
+    emailLabel: 'Email',
+    emailPlaceholder: 'name@example.com',
+    continueWithEmail: 'Continue with email',
+    sendingCode: 'Sending...',
+    sendCodeSuccess: 'Verification code sent.',
+    sendAgain: 'Send again',
+    codeLabel: 'Verification code',
+    codePlaceholder: '123456',
+    signIn: 'Sign in',
+    termsNotice: 'By signing in, you agree to the',
+    termsLink: 'Terms',
+    privacyLink: 'Privacy Policy',
+    logout: 'Log out',
+    errors: {
+      enterEmailFirst: 'Please enter your email address first.',
+      enterEmailAndCode: 'Please enter both email and verification code.',
+      sendCodeFailed: 'Failed to send verification code.',
+      googleSignInFailed: 'Google sign-in failed.',
+      googleClientMissing: 'Google sign-in is not configured.',
+      signInFailed: 'Failed to sign in.'
+    }
+  },
+  checkout: {
+    paymentMethodLabel: 'Choose payment method',
+    paymentTitle: 'Choose payment method',
+    selectedPackageLabel: 'Selected package',
+    clinkMethods: 'Visa / Mastercard / Apple Pay / Google Pay / Amex / Discover',
+    confirmPurchase: 'Continue to payment',
+    backToProducts: 'Back',
+    agreementText: 'I agree to the purchase terms, Terms, and Privacy Policy.',
+    failed: 'Payment is not complete. You can retry or close this window.'
+  },
   subscriptionManagement: subscriptionManagementCopy.enUS,
   subscription: {
-    pageDescription: 'One subscription for unlimited downloads in the Vimeo Video Downloader extension — no daily quota, no credits.',
+    pageDescription: 'One subscription for unlimited downloads in the Vimeo Video Downloader extension — no daily quota.',
     title: 'Extension Unlimited',
     eyebrow: 'Extension access',
     benefits: [
       'Unlimited downloads in the extension',
-      'No daily quota or credits to manage',
+      'No daily quota to manage',
       'Extension only — works with Vimeo on desktop'
     ],
     trustNote: 'Secure checkout',
@@ -414,20 +449,6 @@ export const pricingContent: PricingPageContent = {
     installConfirmContinue: 'Continue',
     reviewReward: reviewRewardCopies.enUS
   },
-  credits: {
-    title: 'Credits',
-    description: 'One-time Credits for website downloads. Credits are added after payment is confirmed.',
-    loading: 'Loading Credits packages...',
-    loadFailed: 'Failed to load Credits packages. Retry later.',
-    noConfigs: 'No Credits packages are available right now.',
-    packageEyebrow: 'Pay as you go',
-    creditsAmount: '{credits} Credits',
-    oneTimeLabel: 'one-time',
-    buyNow: 'Buy Now',
-    loginToBuy: 'Sign in to buy',
-    noChannels: 'No payment method is available for this package.',
-    webOnlyNotice: 'Web only'
-  },
   extensionSource: {
     primaryCta: 'Upgrade to Unlimited',
     signedOutCta: 'Sign in to Upgrade',
@@ -437,37 +458,7 @@ export const pricingContent: PricingPageContent = {
   },
   faq: {
     title: 'Questions before you buy?',
-    creditsItems: [
-      {
-        question: 'What’s the difference between Credits and Extension Unlimited?',
-        answer: 'Credits are one-time purchases for downloads on this website — pay as you go, no commitment. Extension Unlimited is a subscription that unlocks unlimited downloads inside the Vimeo Video Downloader desktop browser extension.'
-      },
-      {
-        question: 'Do Credits expire?',
-        answer: 'No. One-time Credits stay in your account forever and are only deducted when you actually download.'
-      },
-      {
-        question: 'Where can I use Credits and Unlimited?',
-        answer: 'Credits work only on this website. Unlimited works only in the desktop browser extension. The two don’t overlap, so pick the one that matches how you download.'
-      },
-      {
-        question: 'When does my purchase take effect?',
-        answer: 'Immediately. Once payment completes, Credits or Unlimited are added to your account automatically — no activation code or manual step needed.'
-      },
-      {
-        question: 'What payment methods can I use?',
-        answer: 'PayPal and major credit and debit cards.'
-      },
-      {
-        question: 'What if my payment fails or I’m charged twice?',
-        answer: 'Failed or cancelled payments don’t produce Credits or subscriptions. If you were charged but received nothing, contact us with your order number and we’ll check it.'
-      }
-    ],
-    subscriptionItems: [
-      {
-        question: 'What’s the difference between Credits and Extension Unlimited?',
-        answer: 'Credits are one-time purchases for downloads on this website — pay as you go, no commitment. Extension Unlimited is a subscription that unlocks unlimited downloads inside the Vimeo Video Downloader desktop browser extension.'
-      },
+    items: [
       {
         question: 'Which plan should I choose — monthly or yearly?',
         answer: 'Monthly is the flexible way to start. Yearly is the better deal if you already know you’ll keep downloading — it works out clearly cheaper per month than paying month to month.'
@@ -477,12 +468,8 @@ export const pricingContent: PricingPageContent = {
         answer: 'Plans currently don’t charge you automatically — buy again whenever you want to extend your access. If a plan supports auto-renewal, it’s clearly badged on the card before checkout.'
       },
       {
-        question: 'Where can I use Credits and Unlimited?',
-        answer: 'Credits work only on this website. Unlimited works only in the desktop browser extension. The two don’t overlap, so pick the one that matches how you download.'
-      },
-      {
         question: 'When does my purchase take effect?',
-        answer: 'Immediately. Once payment completes, Credits or Unlimited are added to your account automatically — no activation code or manual step needed.'
+        answer: 'Immediately. Once payment completes, Unlimited is added to your account automatically — no activation code or manual step needed.'
       },
       {
         question: 'What payment methods can I use?',
@@ -501,7 +488,6 @@ export const zhCNPricingContent: PricingPageContent = {
     signedOutDescription: '购买会绑定到你的 Vimeo Video Downloader 账户。',
     signInCta: '登录',
     signedInLabel: '已登录',
-    creditsLabel: '积分',
     subscriptionLabel: '订阅',
     expiresLabel: '到期',
     statusLabel: '状态',
@@ -515,12 +501,54 @@ export const zhCNPricingContent: PricingPageContent = {
     unlimited: '无限制',
     loadFailed: '账户加载失败，请重新登录或稍后重试。'
   },
+  accountMenu: {
+    accountButtonLabel: '打开账户菜单',
+    accountMenuLabel: '账户菜单'
+  },
+  auth: {
+    title: '登录后继续',
+    eyebrow: '网页登录',
+    continueWithGoogle: '使用 Google 继续',
+    googleLoading: '正在打开 Google...',
+    or: '或',
+    emailLabel: '邮箱',
+    emailPlaceholder: 'name@example.com',
+    continueWithEmail: '使用邮箱继续',
+    sendingCode: '发送中...',
+    sendCodeSuccess: '验证码已发送。',
+    sendAgain: '重新发送',
+    codeLabel: '验证码',
+    codePlaceholder: '123456',
+    signIn: '登录',
+    termsNotice: '登录即表示你同意',
+    termsLink: '服务条款',
+    privacyLink: '隐私政策',
+    logout: '退出登录',
+    errors: {
+      enterEmailFirst: '请先输入邮箱地址。',
+      enterEmailAndCode: '请输入邮箱和验证码。',
+      sendCodeFailed: '发送验证码失败。',
+      googleSignInFailed: 'Google 登录失败。',
+      googleClientMissing: 'Google 登录尚未配置。',
+      signInFailed: '登录失败。'
+    }
+  },
+  checkout: {
+    paymentMethodLabel: '选择支付方式',
+    paymentTitle: '选择支付方式',
+    selectedPackageLabel: '已选商品',
+    clinkMethods: 'Visa / Mastercard / Apple Pay / Google Pay / Amex / Discover',
+    confirmPurchase: '继续支付',
+    backToProducts: '返回',
+    agreementText: '我已阅读并同意购买条款、服务条款和隐私政策。',
+    failed: '支付尚未完成，你可以重试或关闭弹窗。'
+  },
   subscriptionManagement: subscriptionManagementCopy.zhCN,
   subscription: {
-    pageDescription: '一次订阅，Vimeo Video Downloader 插件内无限下载——没有每日额度，也无需积分。',
+    pageDescription: '一次订阅，Vimeo Video Downloader 插件内无限下载——没有每日额度。',
     title: '无限下载',
     eyebrow: '插件订阅',
-    benefits: ['插件内无限下载', '没有每日额度，也不用管积分余额', '仅限插件——适用于电脑端 Vimeo'],
+    benefits: ['插件内无限下载', '没有每日额度限制', '仅限插件——适用于电脑端 Vimeo'],
     trustNote: '安全支付',
     monthlyLabel: '每月',
     yearlyLabel: '每年',
@@ -564,20 +592,6 @@ export const zhCNPricingContent: PricingPageContent = {
     installConfirmContinue: '继续',
     reviewReward: reviewRewardCopies.zhCN
   },
-  credits: {
-    title: '积分',
-    description: '用于网站下载的一次性积分，支付确认后到账。',
-    loading: '正在加载积分套餐...',
-    loadFailed: '加载积分套餐失败，请稍后重试。',
-    noConfigs: '当前没有可购买的积分套餐。',
-    packageEyebrow: '一次性积分包',
-    creditsAmount: '{credits} 积分',
-    oneTimeLabel: '一次性',
-    buyNow: '购买积分',
-    loginToBuy: '登录后购买',
-    noChannels: '该套餐暂无可用支付方式。',
-    webOnlyNotice: '仅限网页版使用'
-  },
   extensionSource: {
     primaryCta: '升级 Unlimited',
     signedOutCta: '登录后升级',
@@ -586,37 +600,7 @@ export const zhCNPricingContent: PricingPageContent = {
   },
   faq: {
     title: '购买前的常见问题',
-    creditsItems: [
-      {
-        question: '积分和插件 Unlimited 有什么区别？',
-        answer: '积分是一次性购买，只用于本网站下载，按量付费、没有任何绑定。插件 Unlimited 是订阅，解锁 Vimeo Video Downloader 桌面浏览器插件内的无限下载。'
-      },
-      {
-        question: '积分会过期吗？',
-        answer: '不会。一次性积分永久保留在账户中，只在实际下载时扣减。'
-      },
-      {
-        question: '积分和 Unlimited 分别在哪里使用？',
-        answer: '积分只在本网站使用；Unlimited 只在电脑版浏览器插件内使用。两者互不通用，按你的下载方式选择即可。'
-      },
-      {
-        question: '购买后多久生效？',
-        answer: '立即生效。支付完成后，积分或 Unlimited 会自动添加到你的账户，无需激活码或手动操作。'
-      },
-      {
-        question: '支持哪些支付方式？',
-        answer: 'PayPal、主流信用卡／借记卡。'
-      },
-      {
-        question: '支付失败或被重复扣款怎么办？',
-        answer: '支付失败或取消都不会产生积分或订阅。如果已被扣款却没有到账，请联系我们并提供订单号，我们会帮你核实。'
-      }
-    ],
-    subscriptionItems: [
-      {
-        question: '积分和插件 Unlimited 有什么区别？',
-        answer: '积分是一次性购买，只用于本网站下载，按量付费、没有任何绑定。插件 Unlimited 是订阅，解锁 Vimeo Video Downloader 桌面浏览器插件内的无限下载。'
-      },
+    items: [
       {
         question: '月卡和年卡怎么选？',
         answer: '想先试试就选月卡；如果确定会长期使用，年卡更划算——折算下来每月明显比按月购买便宜。'
@@ -626,12 +610,8 @@ export const zhCNPricingContent: PricingPageContent = {
         answer: '当前套餐不会自动扣款，到期后想继续再手动购买即可。若某套餐支持自动续费，购买前卡片上会有明确标注。'
       },
       {
-        question: '积分和 Unlimited 分别在哪里使用？',
-        answer: '积分只在本网站使用；Unlimited 只在电脑版浏览器插件内使用。两者互不通用，按你的下载方式选择即可。'
-      },
-      {
         question: '购买后多久生效？',
-        answer: '立即生效。支付完成后，积分或 Unlimited 会自动添加到你的账户，无需激活码或手动操作。'
+        answer: '立即生效。支付完成后，Unlimited 会自动添加到你的账户，无需激活码或手动操作。'
       },
       {
         question: '支持哪些支付方式？',
@@ -652,7 +632,6 @@ export const zhTWPricingContent: PricingPageContent = {
     signedOutDescription: '購買會綁定到你的 Vimeo Video Downloader 帳戶。',
     signInCta: '登入',
     signedInLabel: '已登入',
-    creditsLabel: '積分',
     subscriptionLabel: '訂閱',
     expiresLabel: '到期',
     statusLabel: '狀態',
@@ -666,13 +645,55 @@ export const zhTWPricingContent: PricingPageContent = {
     unlimited: '無限制',
     loadFailed: '帳戶載入失敗，請重新登入或稍後重試。'
   },
+  accountMenu: {
+    accountButtonLabel: '開啟帳戶選單',
+    accountMenuLabel: '帳戶選單'
+  },
+  auth: {
+    title: '登入後繼續',
+    eyebrow: '網頁登入',
+    continueWithGoogle: '使用 Google 繼續',
+    googleLoading: '正在開啟 Google...',
+    or: '或',
+    emailLabel: '電子郵件',
+    emailPlaceholder: 'name@example.com',
+    continueWithEmail: '使用電子郵件繼續',
+    sendingCode: '發送中...',
+    sendCodeSuccess: '驗證碼已發送。',
+    sendAgain: '重新發送',
+    codeLabel: '驗證碼',
+    codePlaceholder: '123456',
+    signIn: '登入',
+    termsNotice: '登入即表示你同意',
+    termsLink: '服務條款',
+    privacyLink: '隱私權政策',
+    logout: '登出',
+    errors: {
+      enterEmailFirst: '請先輸入電子郵件地址。',
+      enterEmailAndCode: '請輸入電子郵件與驗證碼。',
+      sendCodeFailed: '發送驗證碼失敗。',
+      googleSignInFailed: 'Google 登入失敗。',
+      googleClientMissing: 'Google 登入尚未設定。',
+      signInFailed: '登入失敗。'
+    }
+  },
+  checkout: {
+    paymentMethodLabel: '選擇付款方式',
+    paymentTitle: '選擇付款方式',
+    selectedPackageLabel: '已選商品',
+    clinkMethods: 'Visa / Mastercard / Apple Pay / Google Pay / Amex / Discover',
+    confirmPurchase: '繼續付款',
+    backToProducts: '返回',
+    agreementText: '我已閱讀並同意購買條款、服務條款和隱私政策。',
+    failed: '付款尚未完成，你可以重試或關閉彈窗。'
+  },
   subscriptionManagement: subscriptionManagementCopy.zhTW,
   subscription: {
     ...zhCNPricingContent.subscription,
-    pageDescription: '一次訂閱，Vimeo Video Downloader 外掛內無限下載——沒有每日額度，也無需積分。',
+    pageDescription: '一次訂閱，Vimeo Video Downloader 外掛內無限下載——沒有每日額度。',
     title: '無限下載',
     eyebrow: '外掛訂閱',
-    benefits: ['外掛內無限下載', '沒有每日額度，也不用管積分餘額', '僅限外掛——適用於電腦端 Vimeo'],
+    benefits: ['外掛內無限下載', '沒有每日額度限制', '僅限外掛——適用於電腦端 Vimeo'],
     trustNote: '安全支付',
     monthlyLabel: '每月',
     yearlyLabel: '每年',
@@ -716,21 +737,6 @@ export const zhTWPricingContent: PricingPageContent = {
     installConfirmContinue: '繼續',
     reviewReward: reviewRewardCopies.zhTW
   },
-  credits: {
-    ...zhCNPricingContent.credits,
-    title: '積分',
-    description: '用於網站下載的一次性積分，付款確認後到帳。',
-    loading: '正在載入積分套餐...',
-    loadFailed: '載入積分套餐失敗，請稍後重試。',
-    noConfigs: '目前沒有可購買的積分套餐。',
-    packageEyebrow: '一次性積分包',
-    creditsAmount: '{credits} 積分',
-    oneTimeLabel: '一次性',
-    buyNow: '購買積分',
-    loginToBuy: '登入後購買',
-    noChannels: '此套餐暫無可用付款方式。',
-    webOnlyNotice: '僅限網頁版使用'
-  },
   extensionSource: {
     ...zhCNPricingContent.extensionSource,
     primaryCta: '升級 Unlimited',
@@ -740,37 +746,7 @@ export const zhTWPricingContent: PricingPageContent = {
   },
   faq: {
     title: '購買前的常見問題',
-    creditsItems: [
-      {
-        question: '積分和插件 Unlimited 有什麼差別？',
-        answer: '積分是一次性購買，只用於官網下載，按量付費、沒有綁定。插件 Unlimited 是訂閱，解鎖 Vimeo Video Downloader 桌面瀏覽器外掛內的無限下載。'
-      },
-      {
-        question: '積分會過期嗎？',
-        answer: '不會。一次性積分永久保留在帳戶中，只在實際下載時扣減。'
-      },
-      {
-        question: '積分和 Unlimited 分別在哪裡使用？',
-        answer: '積分只能在本網站使用；Unlimited 只能在電腦版瀏覽器外掛內使用。兩者互不相通，依照你的下載方式選擇即可。'
-      },
-      {
-        question: '購買後多久生效？',
-        answer: '立即生效。付款完成後，積分或 Unlimited 會自動加入你的帳戶，不需要啟用碼或手動操作。'
-      },
-      {
-        question: '支援哪些付款方式？',
-        answer: 'PayPal、主要信用卡／簽帳卡。'
-      },
-      {
-        question: '付款失敗或被重複扣款怎麼辦？',
-        answer: '付款失敗或取消都不會產生積分或訂閱。若已被扣款卻沒有入帳，請提供訂單編號聯絡我們，我們會協助確認。'
-      }
-    ],
-    subscriptionItems: [
-      {
-        question: '積分和插件 Unlimited 有什麼差別？',
-        answer: '積分是一次性購買，只用於官網下載，按量付費、沒有綁定。插件 Unlimited 是訂閱，解鎖 Vimeo Video Downloader 桌面瀏覽器外掛內的無限下載。'
-      },
+    items: [
       {
         question: '月卡和年卡怎麼選？',
         answer: '想先試用就選月卡；如果確定會長期使用，年卡比較划算——換算下來每個月明顯比按月購買便宜。'
@@ -780,12 +756,8 @@ export const zhTWPricingContent: PricingPageContent = {
         answer: '目前方案不會自動扣款，到期後想繼續再手動購買即可。若某方案支援自動續訂，購買前卡片上會清楚標示。'
       },
       {
-        question: '積分和 Unlimited 分別在哪裡使用？',
-        answer: '積分只能在本網站使用；Unlimited 只能在電腦版瀏覽器外掛內使用。兩者互不相通，依照你的下載方式選擇即可。'
-      },
-      {
         question: '購買後多久生效？',
-        answer: '立即生效。付款完成後，積分或 Unlimited 會自動加入你的帳戶，不需要啟用碼或手動操作。'
+        answer: '立即生效。付款完成後，Unlimited 會自動加入你的帳戶，不需要啟用碼或手動操作。'
       },
       {
         question: '支援哪些付款方式？',
@@ -804,7 +776,6 @@ export const jaJPPricingContent: PricingPageContent = {
     signedOutDescription: 'チェックアウトを続けるにはログインしてください。',
     signInCta: 'ログイン',
     signedInLabel: 'ログイン済み',
-    creditsLabel: 'クレジット',
     subscriptionLabel: 'プラン',
     expiresLabel: '有効期限',
     statusLabel: 'ステータス',
@@ -818,14 +789,56 @@ export const jaJPPricingContent: PricingPageContent = {
     unlimited: '無制限',
     loadFailed: 'アカウントの読み込みに失敗しました。再ログインするか、もう一度お試しください。'
   },
+  accountMenu: {
+    accountButtonLabel: 'アカウントメニューを開く',
+    accountMenuLabel: 'アカウントメニュー'
+  },
+  auth: {
+    title: 'ログインして続行',
+    eyebrow: 'Web ログイン',
+    continueWithGoogle: 'Google で続行',
+    googleLoading: 'Google を開いています...',
+    or: 'または',
+    emailLabel: 'メールアドレス',
+    emailPlaceholder: 'name@example.com',
+    continueWithEmail: 'メールで続行',
+    sendingCode: '送信中...',
+    sendCodeSuccess: '認証コードを送信しました。',
+    sendAgain: '再送信',
+    codeLabel: '認証コード',
+    codePlaceholder: '123456',
+    signIn: 'ログイン',
+    termsNotice: 'ログインすると、以下に同意したものとみなされます',
+    termsLink: '利用規約',
+    privacyLink: 'プライバシーポリシー',
+    logout: 'ログアウト',
+    errors: {
+      enterEmailFirst: '先にメールアドレスを入力してください。',
+      enterEmailAndCode: 'メールアドレスと認証コードを入力してください。',
+      sendCodeFailed: '認証コードの送信に失敗しました。',
+      googleSignInFailed: 'Google ログインに失敗しました。',
+      googleClientMissing: 'Google ログインが設定されていません。',
+      signInFailed: 'ログインに失敗しました。'
+    }
+  },
+  checkout: {
+    paymentMethodLabel: '支払い方法を選択',
+    paymentTitle: '支払い方法を選択',
+    selectedPackageLabel: '選択した商品',
+    clinkMethods: 'Visa / Mastercard / Apple Pay / Google Pay / Amex / Discover',
+    confirmPurchase: '支払いへ進む',
+    backToProducts: '戻る',
+    agreementText: '購入条件、利用規約、プライバシーポリシーに同意します。',
+    failed: '支払いはまだ完了していません。再試行するか、このウィンドウを閉じられます。'
+  },
   subscriptionManagement: subscriptionManagementCopy.jaJP,
   subscription: {
-    pageDescription: '1つのサブスクリプションで Vimeo Video Downloader 拡張機能内のダウンロードが無制限 — 1日の上限もクレジットも不要。',
+    pageDescription: '1つのサブスクリプションで Vimeo Video Downloader 拡張機能内のダウンロードが無制限 — 1日の上限もありません。',
     title: '拡張機能 Unlimited',
     eyebrow: '拡張機能サブスクリプション',
     benefits: [
       '拡張機能内で無制限にダウンロード',
-      '1日の上限やクレジット残高の管理は不要',
+      '1日の上限を気にする必要なし',
       '拡張機能専用 — デスクトップの Vimeo で利用可能'
     ],
     trustNote: '安全な決済',
@@ -872,20 +885,6 @@ export const jaJPPricingContent: PricingPageContent = {
     installConfirmContinue: '続行',
     reviewReward: reviewRewardCopies.jaJP
   },
-  credits: {
-    title: 'クレジット',
-    description: 'Web ダウンロード用の買い切りクレジットです。支払い確認後に追加されます。',
-    loading: 'クレジットパッケージを読み込み中...',
-    loadFailed: 'クレジットパッケージの読み込みに失敗しました。後でもう一度お試しください。',
-    noConfigs: '現在購入できるクレジットパッケージはありません。',
-    packageEyebrow: '使った分だけ購入',
-    creditsAmount: '{credits} クレジット',
-    oneTimeLabel: '買い切り',
-    buyNow: '今すぐ購入',
-    loginToBuy: 'ログインして購入',
-    noChannels: 'このパッケージで利用できる支払い方法がありません。',
-    webOnlyNotice: 'Web 版のみ'
-  },
   extensionSource: {
     primaryCta: 'Unlimited にアップグレード',
     signedOutCta: 'ログインしてアップグレード',
@@ -895,37 +894,7 @@ export const jaJPPricingContent: PricingPageContent = {
   },
   faq: {
     title: '購入前のよくある質問',
-    creditsItems: [
-      {
-        question: 'クレジットと Extension Unlimited の違いは何ですか？',
-        answer: 'クレジットは本サイトのダウンロード用の買い切り購入で、使った分だけ支払い、縛りはありません。Extension Unlimited は、Vimeo Video Downloader デスクトップ拡張機能内の無制限ダウンロードを解放するサブスクリプションです。'
-      },
-      {
-        question: 'クレジットに有効期限はありますか？',
-        answer: 'ありません。買い切りクレジットはアカウントにずっと残り、実際にダウンロードしたときだけ消費されます。'
-      },
-      {
-        question: 'クレジットと Unlimited はどこで使えますか？',
-        answer: 'クレジットは本サイトのみ、Unlimited はデスクトップのブラウザー拡張機能のみで使えます。用途が重ならないため、自分のダウンロード方法に合う方を選んでください。'
-      },
-      {
-        question: '購入はいつ有効になりますか？',
-        answer: '即時です。支払いが完了すると、クレジットまたは Unlimited は自動でアカウントに追加されます。アクティベーションコードや手動操作は不要です。'
-      },
-      {
-        question: '利用できる支払い方法は？',
-        answer: 'PayPal、主要なクレジットカード／デビットカードに対応しています。'
-      },
-      {
-        question: '支払いに失敗した、または二重請求された場合は？',
-        answer: '失敗またはキャンセルされた支払いで、クレジットやサブスクリプションが発生することはありません。請求があったのに何も届かない場合は、注文番号を添えてご連絡ください。確認します。'
-      }
-    ],
-    subscriptionItems: [
-      {
-        question: 'クレジットと Extension Unlimited の違いは何ですか？',
-        answer: 'クレジットは本サイトのダウンロード用の買い切り購入で、使った分だけ支払い、縛りはありません。Extension Unlimited は、Vimeo Video Downloader デスクトップ拡張機能内の無制限ダウンロードを解放するサブスクリプションです。'
-      },
+    items: [
       {
         question: '月額プランと年額プラン、どちらを選ぶべき？',
         answer: 'まず試すなら月額が柔軟です。継続して使うと分かっているなら年額がお得で、月々の支払いより明確に割安になります。'
@@ -935,12 +904,8 @@ export const jaJPPricingContent: PricingPageContent = {
         answer: '現在のプランは自動請求されません。延長したいときに再度購入してください。自動更新に対応するプランは、購入前にカード上に明確に表示されます。'
       },
       {
-        question: 'クレジットと Unlimited はどこで使えますか？',
-        answer: 'クレジットは本サイトのみ、Unlimited はデスクトップのブラウザー拡張機能のみで使えます。用途が重ならないため、自分のダウンロード方法に合う方を選んでください。'
-      },
-      {
         question: '購入はいつ有効になりますか？',
-        answer: '即時です。支払いが完了すると、クレジットまたは Unlimited は自動でアカウントに追加されます。アクティベーションコードや手動操作は不要です。'
+        answer: '即時です。支払いが完了すると、Unlimited は自動でアカウントに追加されます。アクティベーションコードや手動操作は不要です。'
       },
       {
         question: '利用できる支払い方法は？',
@@ -959,7 +924,6 @@ export const koKRPricingContent: PricingPageContent = {
     signedOutDescription: '결제를 계속하려면 로그인하세요.',
     signInCta: '로그인',
     signedInLabel: '로그인됨',
-    creditsLabel: '크레딧',
     subscriptionLabel: '플랜',
     expiresLabel: '만료',
     statusLabel: '상태',
@@ -973,14 +937,56 @@ export const koKRPricingContent: PricingPageContent = {
     unlimited: '무제한',
     loadFailed: '계정을 불러오지 못했습니다. 다시 로그인하거나 재시도하세요.'
   },
+  accountMenu: {
+    accountButtonLabel: '계정 메뉴 열기',
+    accountMenuLabel: '계정 메뉴'
+  },
+  auth: {
+    title: '로그인하여 계속',
+    eyebrow: '웹 로그인',
+    continueWithGoogle: 'Google로 계속',
+    googleLoading: 'Google 여는 중...',
+    or: '또는',
+    emailLabel: '이메일',
+    emailPlaceholder: 'name@example.com',
+    continueWithEmail: '이메일로 계속',
+    sendingCode: '전송 중...',
+    sendCodeSuccess: '인증 코드를 보냈습니다.',
+    sendAgain: '다시 보내기',
+    codeLabel: '인증 코드',
+    codePlaceholder: '123456',
+    signIn: '로그인',
+    termsNotice: '로그인하면 다음에 동의하게 됩니다',
+    termsLink: '이용약관',
+    privacyLink: '개인정보 처리방침',
+    logout: '로그아웃',
+    errors: {
+      enterEmailFirst: '먼저 이메일 주소를 입력하세요.',
+      enterEmailAndCode: '이메일과 인증 코드를 모두 입력하세요.',
+      sendCodeFailed: '인증 코드 전송에 실패했습니다.',
+      googleSignInFailed: 'Google 로그인에 실패했습니다.',
+      googleClientMissing: 'Google 로그인이 설정되어 있지 않습니다.',
+      signInFailed: '로그인에 실패했습니다.'
+    }
+  },
+  checkout: {
+    paymentMethodLabel: '결제 수단 선택',
+    paymentTitle: '결제 수단 선택',
+    selectedPackageLabel: '선택한 상품',
+    clinkMethods: 'Visa / Mastercard / Apple Pay / Google Pay / Amex / Discover',
+    confirmPurchase: '결제 계속',
+    backToProducts: '뒤로',
+    agreementText: '구매 조건, 이용 약관 및 개인정보 처리방침에 동의합니다.',
+    failed: '결제가 아직 완료되지 않았습니다. 다시 시도하거나 이 창을 닫을 수 있습니다.'
+  },
   subscriptionManagement: subscriptionManagementCopy.koKR,
   subscription: {
-    pageDescription: '하나의 구독으로 Vimeo Video Downloader 확장 프로그램에서 무제한 다운로드 — 일일 한도도, 크레딧도 필요 없습니다.',
+    pageDescription: '하나의 구독으로 Vimeo Video Downloader 확장 프로그램에서 무제한 다운로드 — 일일 한도가 없습니다.',
     title: '확장 프로그램 Unlimited',
     eyebrow: '확장 프로그램 구독',
     benefits: [
       '확장 프로그램에서 무제한 다운로드',
-      '일일 한도나 크레딧 잔액 관리 불필요',
+      '일일 한도 걱정 없음',
       '확장 프로그램 전용 — 데스크톱 Vimeo에서 사용 가능'
     ],
     trustNote: '안전한 결제',
@@ -1027,20 +1033,6 @@ export const koKRPricingContent: PricingPageContent = {
     installConfirmContinue: '계속',
     reviewReward: reviewRewardCopies.koKR
   },
-  credits: {
-    title: '크레딧',
-    description: '웹 다운로드용 일회성 크레딧입니다. 결제가 확인되면 크레딧이 추가됩니다.',
-    loading: '크레딧 패키지를 불러오는 중...',
-    loadFailed: '크레딧 패키지를 불러오지 못했습니다. 나중에 다시 시도하세요.',
-    noConfigs: '현재 구매 가능한 크레딧 패키지가 없습니다.',
-    packageEyebrow: '필요할 때 구매',
-    creditsAmount: '{credits} 크레딧',
-    oneTimeLabel: '일회성',
-    buyNow: '지금 구매',
-    loginToBuy: '로그인 후 구매',
-    noChannels: '이 패키지에 사용할 수 있는 결제 수단이 없습니다.',
-    webOnlyNotice: '웹 전용'
-  },
   extensionSource: {
     primaryCta: 'Unlimited로 업그레이드',
     signedOutCta: '로그인 후 업그레이드',
@@ -1050,37 +1042,7 @@ export const koKRPricingContent: PricingPageContent = {
   },
   faq: {
     title: '구매 전 궁금한 점이 있으신가요?',
-    creditsItems: [
-      {
-        question: '크레딧과 Extension Unlimited의 차이점은 무엇인가요?',
-        answer: '크레딧은 이 웹사이트 다운로드에 쓰는 일회성 구매로, 사용한 만큼만 지불하며 약정이 없습니다. Extension Unlimited은 Vimeo Video Downloader 데스크톱 확장 프로그램에서 무제한 다운로드를 여는 구독입니다.'
-      },
-      {
-        question: '크레딧은 만료되나요?',
-        answer: '아니요. 일회성 크레딧은 계정에 계속 남아 있으며, 실제로 다운로드할 때만 차감됩니다.'
-      },
-      {
-        question: '크레딧과 Unlimited는 어디에서 사용할 수 있나요?',
-        answer: '크레딧은 이 웹사이트에서만, Unlimited은 데스크톱 브라우저 확장 프로그램에서만 사용할 수 있습니다. 두 제품은 겹치지 않으니 다운로드 방식에 맞게 고르세요.'
-      },
-      {
-        question: '구매는 언제 적용되나요?',
-        answer: '즉시입니다. 결제가 완료되면 크레딧 또는 Unlimited가 계정에 자동으로 추가됩니다. 활성화 코드나 수동 절차가 필요 없습니다.'
-      },
-      {
-        question: '사용할 수 있는 결제 수단은 무엇인가요?',
-        answer: 'PayPal, 주요 신용·체크카드를 지원합니다.'
-      },
-      {
-        question: '결제에 실패하거나 이중으로 결제됐다면 어떻게 하나요?',
-        answer: '실패하거나 취소된 결제로는 크레딧이나 구독이 생성되지 않습니다. 결제는 됐는데 아무것도 받지 못했다면 주문 번호와 함께 문의해 주세요. 확인해 드립니다.'
-      }
-    ],
-    subscriptionItems: [
-      {
-        question: '크레딧과 Extension Unlimited의 차이점은 무엇인가요?',
-        answer: '크레딧은 이 웹사이트 다운로드에 쓰는 일회성 구매로, 사용한 만큼만 지불하며 약정이 없습니다. Extension Unlimited은 Vimeo Video Downloader 데스크톱 확장 프로그램에서 무제한 다운로드를 여는 구독입니다.'
-      },
+    items: [
       {
         question: '월간 플랜과 연간 플랜 중 무엇을 골라야 하나요?',
         answer: '먼저 사용해 보려면 월간이 유연합니다. 계속 이용할 것을 안다면 연간이 더 유리하고, 월 단위로 환산하면 매달 결제하는 것보다 명확하게 저렴합니다.'
@@ -1090,12 +1052,8 @@ export const koKRPricingContent: PricingPageContent = {
         answer: '현재 플랜은 자동으로 결제하지 않습니다. 이용을 연장하고 싶을 때 다시 구매하세요. 자동 갱신을 지원하는 플랜은 결제 전 카드에 명확하게 표시됩니다.'
       },
       {
-        question: '크레딧과 Unlimited는 어디에서 사용할 수 있나요?',
-        answer: '크레딧은 이 웹사이트에서만, Unlimited은 데스크톱 브라우저 확장 프로그램에서만 사용할 수 있습니다. 두 제품은 겹치지 않으니 다운로드 방식에 맞게 고르세요.'
-      },
-      {
         question: '구매는 언제 적용되나요?',
-        answer: '즉시입니다. 결제가 완료되면 크레딧 또는 Unlimited가 계정에 자동으로 추가됩니다. 활성화 코드나 수동 절차가 필요 없습니다.'
+        answer: '즉시입니다. 결제가 완료되면 Unlimited가 계정에 자동으로 추가됩니다. 활성화 코드나 수동 절차가 필요 없습니다.'
       },
       {
         question: '사용할 수 있는 결제 수단은 무엇인가요?',
@@ -1114,7 +1072,6 @@ export const esESPricingContent: PricingPageContent = {
     signedOutDescription: 'Inicia sesión para continuar con el pago.',
     signInCta: 'Iniciar sesión',
     signedInLabel: 'Sesión iniciada',
-    creditsLabel: 'Créditos',
     subscriptionLabel: 'Plan',
     expiresLabel: 'Caduca',
     statusLabel: 'Estado',
@@ -1128,14 +1085,56 @@ export const esESPricingContent: PricingPageContent = {
     unlimited: 'Ilimitado',
     loadFailed: 'No se pudo cargar la cuenta. Inicia sesión de nuevo o reintenta.'
   },
+  accountMenu: {
+    accountButtonLabel: 'Abrir menú de cuenta',
+    accountMenuLabel: 'Menú de cuenta'
+  },
+  auth: {
+    title: 'Inicia sesión para continuar',
+    eyebrow: 'Acceso web',
+    continueWithGoogle: 'Continuar con Google',
+    googleLoading: 'Abriendo Google...',
+    or: 'o',
+    emailLabel: 'Correo electrónico',
+    emailPlaceholder: 'name@example.com',
+    continueWithEmail: 'Continuar con email',
+    sendingCode: 'Enviando...',
+    sendCodeSuccess: 'Código de verificación enviado.',
+    sendAgain: 'Enviar de nuevo',
+    codeLabel: 'Código de verificación',
+    codePlaceholder: '123456',
+    signIn: 'Iniciar sesión',
+    termsNotice: 'Al iniciar sesión aceptas los',
+    termsLink: 'Términos',
+    privacyLink: 'Política de privacidad',
+    logout: 'Cerrar sesión',
+    errors: {
+      enterEmailFirst: 'Primero introduce tu correo electrónico.',
+      enterEmailAndCode: 'Introduce el correo electrónico y el código de verificación.',
+      sendCodeFailed: 'No se pudo enviar el código de verificación.',
+      googleSignInFailed: 'No se pudo iniciar sesión con Google.',
+      googleClientMissing: 'El inicio de sesión con Google no está configurado.',
+      signInFailed: 'No se pudo iniciar sesión.'
+    }
+  },
+  checkout: {
+    paymentMethodLabel: 'Elige método de pago',
+    paymentTitle: 'Elige método de pago',
+    selectedPackageLabel: 'Producto seleccionado',
+    clinkMethods: 'Visa / Mastercard / Apple Pay / Google Pay / Amex / Discover',
+    confirmPurchase: 'Continuar al pago',
+    backToProducts: 'Volver',
+    agreementText: 'Acepto los términos de compra, los Términos y la Política de privacidad.',
+    failed: 'El pago no está completo. Puedes reintentar o cerrar esta ventana.'
+  },
   subscriptionManagement: subscriptionManagementCopy.esES,
   subscription: {
-    pageDescription: 'Una sola suscripción para descargas ilimitadas en la extensión Vimeo Video Downloader — sin límite diario ni créditos.',
+    pageDescription: 'Una sola suscripción para descargas ilimitadas en la extensión Vimeo Video Downloader — sin límite diario.',
     title: 'Unlimited para extensión',
     eyebrow: 'Suscripción para la extensión',
     benefits: [
       'Descargas ilimitadas en la extensión',
-      'Sin límite diario ni créditos que gestionar',
+      'Sin límite diario que gestionar',
       'Solo extensión — funciona con Vimeo en escritorio'
     ],
     trustNote: 'Pago seguro',
@@ -1182,20 +1181,6 @@ export const esESPricingContent: PricingPageContent = {
     installConfirmContinue: 'Continuar',
     reviewReward: reviewRewardCopies.esES
   },
-  credits: {
-    title: 'Créditos',
-    description: 'Créditos de un solo pago para descargas web. Se agregan después de confirmar el pago.',
-    loading: 'Cargando paquetes de créditos...',
-    loadFailed: 'No se pudieron cargar los paquetes de créditos. Reintenta más tarde.',
-    noConfigs: 'No hay paquetes de créditos disponibles ahora.',
-    packageEyebrow: 'Paga según uses',
-    creditsAmount: '{credits} créditos',
-    oneTimeLabel: 'pago único',
-    buyNow: 'Comprar ahora',
-    loginToBuy: 'Inicia sesión para comprar',
-    noChannels: 'No hay métodos de pago disponibles para este paquete.',
-    webOnlyNotice: 'Solo web'
-  },
   extensionSource: {
     primaryCta: 'Actualizar a Unlimited',
     signedOutCta: 'Inicia sesión para actualizar',
@@ -1205,37 +1190,7 @@ export const esESPricingContent: PricingPageContent = {
   },
   faq: {
     title: '¿Dudas antes de comprar?',
-    creditsItems: [
-      {
-        question: '¿Cuál es la diferencia entre Créditos y Extension Unlimited?',
-        answer: 'Los Créditos son compras únicas para descargas en este sitio web: pagas según usas, sin compromiso. Extension Unlimited es una suscripción que desbloquea descargas ilimitadas en la extensión de navegador de escritorio Vimeo Video Downloader.'
-      },
-      {
-        question: '¿Caducan los Créditos?',
-        answer: 'No. Los Créditos de pago único permanecen en tu cuenta para siempre y solo se descuentan cuando realmente descargas.'
-      },
-      {
-        question: '¿Dónde puedo usar Créditos y Unlimited?',
-        answer: 'Los Créditos solo funcionan en este sitio web. Unlimited solo funciona en la extensión de navegador de escritorio. No se solapan, así que elige la que coincida con tu forma de descargar.'
-      },
-      {
-        question: '¿Cuándo surte efecto mi compra?',
-        answer: 'Inmediatamente. Una vez completado el pago, los Créditos o Unlimited se añaden automáticamente a tu cuenta; no necesitas código de activación ni pasos manuales.'
-      },
-      {
-        question: '¿Qué métodos de pago puedo usar?',
-        answer: 'PayPal y las principales tarjetas de crédito o débito.'
-      },
-      {
-        question: '¿Qué pasa si el pago falla o me cobran dos veces?',
-        answer: 'Los pagos fallidos o cancelados no generan Créditos ni suscripciones. Si te cobraron pero no recibiste nada, contáctanos con tu número de pedido y lo revisaremos.'
-      }
-    ],
-    subscriptionItems: [
-      {
-        question: '¿Cuál es la diferencia entre Créditos y Extension Unlimited?',
-        answer: 'Los Créditos son compras únicas para descargas en este sitio web: pagas según usas, sin compromiso. Extension Unlimited es una suscripción que desbloquea descargas ilimitadas en la extensión de navegador de escritorio Vimeo Video Downloader.'
-      },
+    items: [
       {
         question: '¿Qué plan elijo: mensual o anual?',
         answer: 'El mensual es la forma flexible de empezar. El anual conviene más si ya sabes que seguirás descargando: sale claramente más barato por mes que pagar mes a mes.'
@@ -1245,12 +1200,8 @@ export const esESPricingContent: PricingPageContent = {
         answer: 'Actualmente los planes no te cobran automáticamente: vuelve a comprar cuando quieras ampliar el acceso. Si un plan admite renovación automática, se indica claramente en la tarjeta antes de pagar.'
       },
       {
-        question: '¿Dónde puedo usar Créditos y Unlimited?',
-        answer: 'Los Créditos solo funcionan en este sitio web. Unlimited solo funciona en la extensión de navegador de escritorio. No se solapan, así que elige la que coincida con tu forma de descargar.'
-      },
-      {
         question: '¿Cuándo surte efecto mi compra?',
-        answer: 'Inmediatamente. Una vez completado el pago, los Créditos o Unlimited se añaden automáticamente a tu cuenta; no necesitas código de activación ni pasos manuales.'
+        answer: 'Inmediatamente. Una vez completado el pago, Unlimited se añade automáticamente a tu cuenta; no necesitas código de activación ni pasos manuales.'
       },
       {
         question: '¿Qué métodos de pago puedo usar?',
@@ -1269,7 +1220,6 @@ export const ptBRPricingContent: PricingPageContent = {
     signedOutDescription: 'Entre para continuar com o checkout.',
     signInCta: 'Entrar',
     signedInLabel: 'Conectado',
-    creditsLabel: 'Créditos',
     subscriptionLabel: 'Plano',
     expiresLabel: 'Expira',
     statusLabel: 'Status',
@@ -1283,14 +1233,56 @@ export const ptBRPricingContent: PricingPageContent = {
     unlimited: 'Ilimitado',
     loadFailed: 'Não foi possível carregar a conta. Entre novamente ou tente de novo.'
   },
+  accountMenu: {
+    accountButtonLabel: 'Abrir menu da conta',
+    accountMenuLabel: 'Menu da conta'
+  },
+  auth: {
+    title: 'Entre para continuar',
+    eyebrow: 'Acesso web',
+    continueWithGoogle: 'Continuar com Google',
+    googleLoading: 'Abrindo o Google...',
+    or: 'ou',
+    emailLabel: 'E-mail',
+    emailPlaceholder: 'name@example.com',
+    continueWithEmail: 'Continuar com e-mail',
+    sendingCode: 'Enviando...',
+    sendCodeSuccess: 'Código de verificação enviado.',
+    sendAgain: 'Enviar novamente',
+    codeLabel: 'Código de verificação',
+    codePlaceholder: '123456',
+    signIn: 'Entrar',
+    termsNotice: 'Ao entrar, você aceita os',
+    termsLink: 'Termos',
+    privacyLink: 'Política de Privacidade',
+    logout: 'Sair',
+    errors: {
+      enterEmailFirst: 'Digite seu e-mail primeiro.',
+      enterEmailAndCode: 'Digite o e-mail e o código de verificação.',
+      sendCodeFailed: 'Não foi possível enviar o código de verificação.',
+      googleSignInFailed: 'Não foi possível entrar com o Google.',
+      googleClientMissing: 'O login com Google não está configurado.',
+      signInFailed: 'Não foi possível entrar.'
+    }
+  },
+  checkout: {
+    paymentMethodLabel: 'Escolha o método de pagamento',
+    paymentTitle: 'Escolha o método de pagamento',
+    selectedPackageLabel: 'Produto selecionado',
+    clinkMethods: 'Visa / Mastercard / Apple Pay / Google Pay / Amex / Discover',
+    confirmPurchase: 'Continuar para pagamento',
+    backToProducts: 'Voltar',
+    agreementText: 'Aceito os termos de compra, os Termos e a Política de Privacidade.',
+    failed: 'O pagamento não foi concluído. Você pode tentar novamente ou fechar esta janela.'
+  },
   subscriptionManagement: subscriptionManagementCopy.ptBR,
   subscription: {
-    pageDescription: 'Uma assinatura para downloads ilimitados na extensão Vimeo Video Downloader — sem cota diária, sem créditos.',
+    pageDescription: 'Uma assinatura para downloads ilimitados na extensão Vimeo Video Downloader — sem cota diária.',
     title: 'Unlimited para extensão',
     eyebrow: 'Assinatura para a extensão',
     benefits: [
       'Downloads ilimitados na extensão',
-      'Sem cota diária nem créditos para gerenciar',
+      'Sem cota diária para gerenciar',
       'Somente extensão — funciona com o Vimeo no desktop'
     ],
     trustNote: 'Checkout seguro',
@@ -1337,20 +1329,6 @@ export const ptBRPricingContent: PricingPageContent = {
     installConfirmContinue: 'Continuar',
     reviewReward: reviewRewardCopies.ptBR
   },
-  credits: {
-    title: 'Créditos',
-    description: 'Créditos avulsos para downloads no site. Eles são adicionados após a confirmação do pagamento.',
-    loading: 'Carregando pacotes de créditos...',
-    loadFailed: 'Não foi possível carregar os pacotes de créditos. Tente mais tarde.',
-    noConfigs: 'Nenhum pacote de créditos está disponível agora.',
-    packageEyebrow: 'Pague conforme usar',
-    creditsAmount: '{credits} créditos',
-    oneTimeLabel: 'pagamento único',
-    buyNow: 'Comprar agora',
-    loginToBuy: 'Entre para comprar',
-    noChannels: 'Nenhum método de pagamento está disponível para este pacote.',
-    webOnlyNotice: 'Somente web'
-  },
   extensionSource: {
     primaryCta: 'Fazer upgrade para Unlimited',
     signedOutCta: 'Entre para fazer upgrade',
@@ -1360,37 +1338,7 @@ export const ptBRPricingContent: PricingPageContent = {
   },
   faq: {
     title: 'Dúvidas antes de comprar?',
-    creditsItems: [
-      {
-        question: 'Qual é a diferença entre Créditos e Extension Unlimited?',
-        answer: 'Créditos são compras avulsas para downloads neste site — pague conforme usar, sem compromisso. Extension Unlimited é uma assinatura que libera downloads ilimitados na extensão do navegador desktop Vimeo Video Downloader.'
-      },
-      {
-        question: 'Os Créditos expiram?',
-        answer: 'Não. Créditos avulsos ficam na sua conta para sempre e só são descontados quando você realmente baixa algo.'
-      },
-      {
-        question: 'Onde posso usar Créditos e Unlimited?',
-        answer: 'Os Créditos funcionam apenas neste site. O Unlimited funciona apenas na extensão do navegador desktop. Os dois não se sobrepõem; escolha o que combinar com a sua forma de baixar.'
-      },
-      {
-        question: 'Quando minha compra entra em vigor?',
-        answer: 'Imediatamente. Assim que o pagamento é concluído, Créditos ou Unlimited são adicionados à sua conta automaticamente — sem código de ativação ou etapa manual.'
-      },
-      {
-        question: 'Quais métodos de pagamento posso usar?',
-        answer: 'PayPal e os principais cartões de crédito ou débito.'
-      },
-      {
-        question: 'E se o pagamento falhar ou eu for cobrado duas vezes?',
-        answer: 'Pagamentos falhos ou cancelados não geram Créditos nem assinaturas. Se você foi cobrado mas não recebeu nada, fale conosco com o número do pedido e vamos verificar.'
-      }
-    ],
-    subscriptionItems: [
-      {
-        question: 'Qual é a diferença entre Créditos e Extension Unlimited?',
-        answer: 'Créditos são compras avulsas para downloads neste site — pague conforme usar, sem compromisso. Extension Unlimited é uma assinatura que libera downloads ilimitados na extensão do navegador desktop Vimeo Video Downloader.'
-      },
+    items: [
       {
         question: 'Qual plano escolher: mensual ou anual?',
         answer: 'O mensal é a forma flexível de começar. O anual vale mais a pena se você já sabe que vai continuar baixando — sai claramente mais barato por mês do que pagar mês a mês.'
@@ -1400,12 +1348,8 @@ export const ptBRPricingContent: PricingPageContent = {
         answer: 'Atualmente os planos não cobram automaticamente — compre de novo quando quiser estender o acesso. Se um plano tiver renovação automática, isso fica indicado no cartão antes do checkout.'
       },
       {
-        question: 'Onde posso usar Créditos e Unlimited?',
-        answer: 'Os Créditos funcionam apenas neste site. O Unlimited funciona apenas na extensão do navegador desktop. Os dois não se sobrepõem; escolha o que combinar com a sua forma de baixar.'
-      },
-      {
         question: 'Quando minha compra entra em vigor?',
-        answer: 'Imediatamente. Assim que o pagamento é concluído, Créditos ou Unlimited são adicionados à sua conta automaticamente — sem código de ativação ou etapa manual.'
+        answer: 'Imediatamente. Assim que o pagamento é concluído, o Unlimited é adicionado à sua conta automaticamente — sem código de ativação ou etapa manual.'
       },
       {
         question: 'Quais métodos de pagamento posso usar?',
@@ -1424,7 +1368,6 @@ export const deDEPricingContent: PricingPageContent = {
     signedOutDescription: 'Melde dich an, um mit dem Checkout fortzufahren.',
     signInCta: 'Anmelden',
     signedInLabel: 'Angemeldet',
-    creditsLabel: 'Guthaben',
     subscriptionLabel: 'Plan',
     expiresLabel: 'Läuft ab',
     statusLabel: 'Status',
@@ -1438,14 +1381,56 @@ export const deDEPricingContent: PricingPageContent = {
     unlimited: 'Unbegrenzt',
     loadFailed: 'Konto konnte nicht geladen werden. Melde dich erneut an oder versuche es noch einmal.'
   },
+  accountMenu: {
+    accountButtonLabel: 'Kontomenü öffnen',
+    accountMenuLabel: 'Kontomenü'
+  },
+  auth: {
+    title: 'Anmelden, um fortzufahren',
+    eyebrow: 'Web-Zugang',
+    continueWithGoogle: 'Mit Google fortfahren',
+    googleLoading: 'Google wird geöffnet...',
+    or: 'oder',
+    emailLabel: 'E-Mail',
+    emailPlaceholder: 'name@example.com',
+    continueWithEmail: 'Mit E-Mail fortfahren',
+    sendingCode: 'Wird gesendet...',
+    sendCodeSuccess: 'Bestätigungscode wurde gesendet.',
+    sendAgain: 'Erneut senden',
+    codeLabel: 'Bestätigungscode',
+    codePlaceholder: '123456',
+    signIn: 'Anmelden',
+    termsNotice: 'Mit der Anmeldung akzeptierst du die',
+    termsLink: 'Bedingungen',
+    privacyLink: 'Datenschutzerklärung',
+    logout: 'Abmelden',
+    errors: {
+      enterEmailFirst: 'Bitte gib zuerst deine E-Mail-Adresse ein.',
+      enterEmailAndCode: 'Bitte gib E-Mail-Adresse und Bestätigungscode ein.',
+      sendCodeFailed: 'Der Bestätigungscode konnte nicht gesendet werden.',
+      googleSignInFailed: 'Google-Anmeldung fehlgeschlagen.',
+      googleClientMissing: 'Google-Anmeldung ist nicht konfiguriert.',
+      signInFailed: 'Anmeldung fehlgeschlagen.'
+    }
+  },
+  checkout: {
+    paymentMethodLabel: 'Zahlungsmethode wählen',
+    paymentTitle: 'Zahlungsmethode wählen',
+    selectedPackageLabel: 'Ausgewähltes Produkt',
+    clinkMethods: 'Visa / Mastercard / Apple Pay / Google Pay / Amex / Discover',
+    confirmPurchase: 'Weiter zur Zahlung',
+    backToProducts: 'Zurück',
+    agreementText: 'Ich stimme den Kaufbedingungen, den Nutzungsbedingungen und der Datenschutzrichtlinie zu.',
+    failed: 'Die Zahlung ist nicht abgeschlossen. Du kannst es erneut versuchen oder dieses Fenster schließen.'
+  },
   subscriptionManagement: subscriptionManagementCopy.deDE,
   subscription: {
-    pageDescription: 'Ein Abo für unbegrenzte Downloads in der Vimeo Video Downloader Erweiterung — kein Tageslimit, kein Guthaben.',
+    pageDescription: 'Ein Abo für unbegrenzte Downloads in der Vimeo Video Downloader Erweiterung — kein Tageslimit.',
     title: 'Erweiterung Unlimited',
     eyebrow: 'Erweiterungs-Abo',
     benefits: [
       'Unbegrenzte Downloads in der Erweiterung',
-      'Kein Tageslimit und kein Guthaben zu verwalten',
+      'Kein Tageslimit zu verwalten',
       'Nur Erweiterung — funktioniert mit Vimeo auf dem Desktop'
     ],
     trustNote: 'Sicherer Checkout',
@@ -1492,20 +1477,6 @@ export const deDEPricingContent: PricingPageContent = {
     installConfirmContinue: 'Weiter',
     reviewReward: reviewRewardCopies.deDE
   },
-  credits: {
-    title: 'Guthaben',
-    description: 'Einmaliges Guthaben für Website-Downloads. Guthaben wird nach bestätigter Zahlung hinzugefügt.',
-    loading: 'Guthabenpakete werden geladen...',
-    loadFailed: 'Guthabenpakete konnten nicht geladen werden. Versuche es später erneut.',
-    noConfigs: 'Derzeit sind keine Guthabenpakete verfügbar.',
-    packageEyebrow: 'Nach Bedarf zahlen',
-    creditsAmount: '{credits} Guthaben',
-    oneTimeLabel: 'einmalig',
-    buyNow: 'Jetzt kaufen',
-    loginToBuy: 'Zum Kaufen anmelden',
-    noChannels: 'Für dieses Paket ist keine Zahlungsmethode verfügbar.',
-    webOnlyNotice: 'Nur Web'
-  },
   extensionSource: {
     primaryCta: 'Auf Unlimited upgraden',
     signedOutCta: 'Zum Upgrade anmelden',
@@ -1515,37 +1486,7 @@ export const deDEPricingContent: PricingPageContent = {
   },
   faq: {
     title: 'Fragen vor dem Kauf?',
-    creditsItems: [
-      {
-        question: 'Was ist der Unterschied zwischen Guthaben und Extension Unlimited?',
-        answer: 'Guthaben sind einmalige Käufe für Downloads auf dieser Website — zahlen nach Bedarf, ohne Bindung. Extension Unlimited ist ein Abo, das unbegrenzte Downloads in der Vimeo Video Downloader-Browsererweiterung für den Desktop freischaltet.'
-      },
-      {
-        question: 'Läuft Guthaben ab?',
-        answer: 'Nein. Einmalig gekauftes Guthaben bleibt dauerhaft in deinem Konto und wird nur abgezogen, wenn du tatsächlich etwas herunterlädst.'
-      },
-      {
-        question: 'Wo kann ich Guthaben und Unlimited verwenden?',
-        answer: 'Guthaben funktionieren nur auf dieser Website. Unlimited funktioniert nur in der Desktop-Browsererweiterung. Beides überlappt sich nicht — wähle, wie du lädst.'
-      },
-      {
-        question: 'Wann wird mein Kauf wirksam?',
-        answer: 'Sofort. Nach Abschluss der Zahlung werden Guthaben oder Unlimited automatisch deinem Konto hinzugefügt — kein Aktivierungscode, kein manueller Schritt.'
-      },
-      {
-        question: 'Welche Zahlungsmethoden kann ich verwenden?',
-        answer: 'PayPal sowie gängige Kredit- und Debitkarten.'
-      },
-      {
-        question: 'Was passiert, wenn eine Zahlung fehlschlägt oder ich doppelt belastet werde?',
-        answer: 'Fehlgeschlagene oder abgebrochene Zahlungen erzeugen weder Guthaben noch Abos. Wenn Geld abgebucht wurde, aber nichts angekommen ist, melde dich mit deiner Bestellnummer — wir prüfen das.'
-      }
-    ],
-    subscriptionItems: [
-      {
-        question: 'Was ist der Unterschied zwischen Guthaben und Extension Unlimited?',
-        answer: 'Guthaben sind einmalige Käufe für Downloads auf dieser Website — zahlen nach Bedarf, ohne Bindung. Extension Unlimited ist ein Abo, das unbegrenzte Downloads in der Vimeo Video Downloader-Browsererweiterung für den Desktop freischaltet.'
-      },
+    items: [
       {
         question: 'Welchen Plan soll ich wählen — monatlich oder jährlich?',
         answer: 'Monatlich ist der flexible Einstieg. Jährlich lohnt sich, wenn du weißt, dass du weiterladen wirst — pro Monat ist das deutlich günstiger als Monat für Monat zu zahlen.'
@@ -1555,12 +1496,8 @@ export const deDEPricingContent: PricingPageContent = {
         answer: 'Aktuelle Pläne belasten dich nicht automatisch — kaufe einfach erneut, um deinen Zugang zu verlängern. Unterstützt ein Plan die automatische Verlängerung, ist das vor dem Kauf klar auf der Karte gekennzeichnet.'
       },
       {
-        question: 'Wo kann ich Guthaben und Unlimited verwenden?',
-        answer: 'Guthaben funktionieren nur auf dieser Website. Unlimited funktioniert nur in der Desktop-Browsererweiterung. Beides überlappt sich nicht — wähle, wie du lädst.'
-      },
-      {
         question: 'Wann wird mein Kauf wirksam?',
-        answer: 'Sofort. Nach Abschluss der Zahlung werden Guthaben oder Unlimited automatisch deinem Konto hinzugefügt — kein Aktivierungscode, kein manueller Schritt.'
+        answer: 'Sofort. Nach Abschluss der Zahlung wird Unlimited automatisch deinem Konto hinzugefügt — kein Aktivierungscode, kein manueller Schritt.'
       },
       {
         question: 'Welche Zahlungsmethoden kann ich verwenden?',
@@ -1579,7 +1516,6 @@ export const frFRPricingContent: PricingPageContent = {
     signedOutDescription: 'Connectez-vous pour continuer le paiement.',
     signInCta: 'Se connecter',
     signedInLabel: 'Connecté',
-    creditsLabel: 'Crédits',
     subscriptionLabel: 'Forfait',
     expiresLabel: 'Expire',
     statusLabel: 'État',
@@ -1593,14 +1529,56 @@ export const frFRPricingContent: PricingPageContent = {
     unlimited: 'Illimité',
     loadFailed: 'Impossible de charger le compte. Reconnectez-vous ou réessayez.'
   },
+  accountMenu: {
+    accountButtonLabel: 'Ouvrir le menu du compte',
+    accountMenuLabel: 'Menu du compte'
+  },
+  auth: {
+    title: 'Connectez-vous pour continuer',
+    eyebrow: 'Accès web',
+    continueWithGoogle: 'Continuer avec Google',
+    googleLoading: 'Ouverture de Google...',
+    or: 'ou',
+    emailLabel: 'E-mail',
+    emailPlaceholder: 'name@example.com',
+    continueWithEmail: 'Continuer avec l’e-mail',
+    sendingCode: 'Envoi...',
+    sendCodeSuccess: 'Code de vérification envoyé.',
+    sendAgain: 'Renvoyer',
+    codeLabel: 'Code de vérification',
+    codePlaceholder: '123456',
+    signIn: 'Se connecter',
+    termsNotice: 'En vous connectant, vous acceptez les',
+    termsLink: 'Conditions',
+    privacyLink: 'Politique de confidentialité',
+    logout: 'Se déconnecter',
+    errors: {
+      enterEmailFirst: 'Veuillez d’abord saisir votre adresse e-mail.',
+      enterEmailAndCode: 'Veuillez saisir l’e-mail et le code de vérification.',
+      sendCodeFailed: 'Impossible d’envoyer le code de vérification.',
+      googleSignInFailed: 'Connexion Google impossible.',
+      googleClientMissing: 'La connexion Google n’est pas configurée.',
+      signInFailed: 'Impossible de se connecter.'
+    }
+  },
+  checkout: {
+    paymentMethodLabel: 'Choisir le moyen de paiement',
+    paymentTitle: 'Choisir le moyen de paiement',
+    selectedPackageLabel: 'Produit sélectionné',
+    clinkMethods: 'Visa / Mastercard / Apple Pay / Google Pay / Amex / Discover',
+    confirmPurchase: 'Continuer vers le paiement',
+    backToProducts: 'Retour',
+    agreementText: 'J’accepte les conditions d’achat, les Conditions et la Politique de confidentialité.',
+    failed: 'Le paiement n’est pas terminé. Vous pouvez réessayer ou fermer cette fenêtre.'
+  },
   subscriptionManagement: subscriptionManagementCopy.frFR,
   subscription: {
-    pageDescription: 'Un seul abonnement pour des téléchargements illimités dans l’extension Vimeo Video Downloader — sans quota quotidien ni crédits.',
+    pageDescription: 'Un seul abonnement pour des téléchargements illimités dans l’extension Vimeo Video Downloader — sans quota quotidien.',
     title: 'Unlimited pour extension',
     eyebrow: 'Abonnement pour l’extension',
     benefits: [
       'Téléchargements illimités dans l’extension',
-      'Aucun quota quotidien ni crédits à gérer',
+      'Aucun quota quotidien à gérer',
       'Extension uniquement — fonctionne avec Vimeo sur ordinateur'
     ],
     trustNote: 'Paiement sécurisé',
@@ -1647,20 +1625,6 @@ export const frFRPricingContent: PricingPageContent = {
     installConfirmContinue: 'Continuer',
     reviewReward: reviewRewardCopies.frFR
   },
-  credits: {
-    title: 'Crédits',
-    description: 'Crédits ponctuels pour les téléchargements web. Ils sont ajoutés après confirmation du paiement.',
-    loading: 'Chargement des packs de crédits...',
-    loadFailed: 'Impossible de charger les packs de crédits. Réessayez plus tard.',
-    noConfigs: 'Aucun pack de crédits n’est disponible pour le moment.',
-    packageEyebrow: 'Payez selon vos besoins',
-    creditsAmount: '{credits} crédits',
-    oneTimeLabel: 'paiement unique',
-    buyNow: 'Acheter maintenant',
-    loginToBuy: 'Connectez-vous pour acheter',
-    noChannels: 'Aucun moyen de paiement n’est disponible pour ce pack.',
-    webOnlyNotice: 'Web uniquement'
-  },
   extensionSource: {
     primaryCta: 'Passer à Unlimited',
     signedOutCta: 'Connectez-vous pour passer à Unlimited',
@@ -1670,37 +1634,7 @@ export const frFRPricingContent: PricingPageContent = {
   },
   faq: {
     title: 'Des questions avant d’acheter ?',
-    creditsItems: [
-      {
-        question: 'Quelle est la différence entre Crédits et Extension Unlimited ?',
-        answer: 'Les Crédits sont des achats ponctuels pour les téléchargements sur ce site — vous payez au fil de l’eau, sans engagement. Extension Unlimited est un abonnement qui débloque les téléchargements illimités dans l’extension Vimeo Video Downloader pour ordinateur.'
-      },
-      {
-        question: 'Les crédits expirent-ils ?',
-        answer: 'Non. Les crédits ponctuels restent dans votre compte pour toujours et ne sont débités que lorsque vous téléchargez réellement.'
-      },
-      {
-        question: 'Où puis-je utiliser les Crédits et Unlimited ?',
-        answer: 'Les Crédits fonctionnent uniquement sur ce site. Unlimited fonctionne uniquement dans l’extension de navigateur pour ordinateur. Les deux ne se chevauchent pas : choisissez selon votre façon de télécharger.'
-      },
-      {
-        question: 'Quand mon achat prend-il effet ?',
-        answer: 'Immédiatement. Une fois le paiement finalisé, les Crédits ou Unlimited sont ajoutés automatiquement à votre compte — sans code d’activation ni étape manuelle.'
-      },
-      {
-        question: 'Quels moyens de paiement puis-je utiliser ?',
-        answer: 'PayPal et les principales cartes de crédit ou de débit.'
-      },
-      {
-        question: 'Que se passe-t-il si le paiement échoue ou si je suis facturé deux fois ?',
-        answer: 'Les paiements échoués ou annulés ne produisent ni Crédits ni abonnement. Si vous avez été débité sans rien recevoir, contactez-nous avec votre numéro de commande : nous vérifions.'
-      }
-    ],
-    subscriptionItems: [
-      {
-        question: 'Quelle est la différence entre Crédits et Extension Unlimited ?',
-        answer: 'Les Crédits sont des achats ponctuels pour les téléchargements sur ce site — vous payez au fil de l’eau, sans engagement. Extension Unlimited est un abonnement qui débloque les téléchargements illimités dans l’extension Vimeo Video Downloader pour ordinateur.'
-      },
+    items: [
       {
         question: 'Quel forfait choisir — mensuel ou annuel ?',
         answer: 'Le mensuel est la façon flexible de commencer. L’annuel est plus avantageux si vous savez déjà que vous continuerez à télécharger — il revient clairement moins cher par mois que le paiement au mois.'
@@ -1710,12 +1644,8 @@ export const frFRPricingContent: PricingPageContent = {
         answer: 'Actuellement, les forfaits ne prélèvent rien automatiquement — rachetez quand vous voulez pour prolonger l’accès. Si un forfait prend en charge le renouvellement automatique, c’est clairement indiqué sur la carte avant le paiement.'
       },
       {
-        question: 'Où puis-je utiliser les Crédits et Unlimited ?',
-        answer: 'Les Crédits fonctionnent uniquement sur ce site. Unlimited fonctionne uniquement dans l’extension de navigateur pour ordinateur. Les deux ne se chevauchent pas : choisissez selon votre façon de télécharger.'
-      },
-      {
         question: 'Quand mon achat prend-il effet ?',
-        answer: 'Immédiatement. Une fois le paiement finalisé, les Crédits ou Unlimited sont ajoutés automatiquement à votre compte — sans code d’activation ni étape manuelle.'
+        answer: 'Immédiatement. Une fois le paiement finalisé, Unlimited est ajouté automatiquement à votre compte — sans code d’activation ni étape manuelle.'
       },
       {
         question: 'Quels moyens de paiement puis-je utiliser ?',
@@ -1734,7 +1664,6 @@ export const ruRUPricingContent: PricingPageContent = {
     signedOutDescription: 'Войдите, чтобы продолжить оформление заказа.',
     signInCta: 'Войти',
     signedInLabel: 'Вы вошли',
-    creditsLabel: 'Кредиты',
     subscriptionLabel: 'План',
     expiresLabel: 'Истекает',
     statusLabel: 'Статус',
@@ -1748,14 +1677,56 @@ export const ruRUPricingContent: PricingPageContent = {
     unlimited: 'Безлимит',
     loadFailed: 'Не удалось загрузить аккаунт. Войдите снова или повторите попытку.'
   },
+  accountMenu: {
+    accountButtonLabel: 'Открыть меню аккаунта',
+    accountMenuLabel: 'Меню аккаунта'
+  },
+  auth: {
+    title: 'Войдите, чтобы продолжить',
+    eyebrow: 'Веб-доступ',
+    continueWithGoogle: 'Продолжить с Google',
+    googleLoading: 'Открываем Google...',
+    or: 'или',
+    emailLabel: 'Email',
+    emailPlaceholder: 'name@example.com',
+    continueWithEmail: 'Продолжить с email',
+    sendingCode: 'Отправка...',
+    sendCodeSuccess: 'Код подтверждения отправлен.',
+    sendAgain: 'Отправить снова',
+    codeLabel: 'Код подтверждения',
+    codePlaceholder: '123456',
+    signIn: 'Войти',
+    termsNotice: 'Входя, вы соглашаетесь с',
+    termsLink: 'Условиями',
+    privacyLink: 'Политикой конфиденциальности',
+    logout: 'Выйти',
+    errors: {
+      enterEmailFirst: 'Сначала введите адрес электронной почты.',
+      enterEmailAndCode: 'Введите email и код подтверждения.',
+      sendCodeFailed: 'Не удалось отправить код подтверждения.',
+      googleSignInFailed: 'Не удалось войти через Google.',
+      googleClientMissing: 'Вход через Google не настроен.',
+      signInFailed: 'Не удалось войти.'
+    }
+  },
+  checkout: {
+    paymentMethodLabel: 'Выберите способ оплаты',
+    paymentTitle: 'Выберите способ оплаты',
+    selectedPackageLabel: 'Выбранный товар',
+    clinkMethods: 'Visa / Mastercard / Apple Pay / Google Pay / Amex / Discover',
+    confirmPurchase: 'Перейти к оплате',
+    backToProducts: 'Назад',
+    agreementText: 'Я принимаю условия покупки, Условия использования и Политику конфиденциальности.',
+    failed: 'Оплата не завершена. Можно повторить попытку или закрыть это окно.'
+  },
   subscriptionManagement: subscriptionManagementCopy.ruRU,
   subscription: {
-    pageDescription: 'Одна подписка — безлимитные загрузки в расширении Vimeo Video Downloader: без дневного лимита и кредитов.',
+    pageDescription: 'Одна подписка — безлимитные загрузки в расширении Vimeo Video Downloader: без дневного лимита.',
     title: 'Unlimited для расширения',
     eyebrow: 'Подписка для расширения',
     benefits: [
       'Безлимитные загрузки в расширении',
-      'Никакого дневного лимита и кредитов',
+      'Никакого дневного лимита',
       'Только расширение — работает с Vimeo на компьютере'
     ],
     trustNote: 'Безопасная оплата',
@@ -1802,20 +1773,6 @@ export const ruRUPricingContent: PricingPageContent = {
     installConfirmContinue: 'Продолжить',
     reviewReward: reviewRewardCopies.ruRU
   },
-  credits: {
-    title: 'Кредиты',
-    description: 'Разовые кредиты для загрузок на сайте. Они начисляются после подтверждения оплаты.',
-    loading: 'Загрузка пакетов кредитов...',
-    loadFailed: 'Не удалось загрузить пакеты кредитов. Повторите попытку позже.',
-    noConfigs: 'Сейчас нет доступных пакетов кредитов.',
-    packageEyebrow: 'Платите по мере использования',
-    creditsAmount: '{credits} кредитов',
-    oneTimeLabel: 'разовая оплата',
-    buyNow: 'Купить сейчас',
-    loginToBuy: 'Войдите, чтобы купить',
-    noChannels: 'Для этого пакета нет доступного способа оплаты.',
-    webOnlyNotice: 'Только веб'
-  },
   extensionSource: {
     primaryCta: 'Перейти на Unlimited',
     signedOutCta: 'Войдите для перехода',
@@ -1825,37 +1782,7 @@ export const ruRUPricingContent: PricingPageContent = {
   },
   faq: {
     title: 'Вопросы перед покупкой?',
-    creditsItems: [
-      {
-        question: 'В чём разница между кредитами и Extension Unlimited?',
-        answer: 'Кредиты — разовые покупки для скачивания на этом сайте: платите по факту, без обязательств. Extension Unlimited — подписка, открывающая безлимитные скачивания в браузерном расширении Vimeo Video Downloader для компьютера.'
-      },
-      {
-        question: 'Истекает ли срок действия кредитов?',
-        answer: 'Нет. Разовые кредиты навсегда остаются в вашем аккаунте и списываются только при реальном скачивании.'
-      },
-      {
-        question: 'Где можно использовать кредиты и Unlimited?',
-        answer: 'Кредиты работают только на этом сайте. Unlimited работает только в браузерном расширении для компьютера. Они не пересекаются — выбирайте то, что подходит под ваш способ скачивания.'
-      },
-      {
-        question: 'Когда покупка вступает в силу?',
-        answer: 'Сразу. После завершения оплаты кредиты или Unlimited добавляются на аккаунт автоматически — без кодов активации и ручных шагов.'
-      },
-      {
-        question: 'Какие способы оплаты доступны?',
-        answer: 'PayPal, а также основные кредитные и дебетовые карты.'
-      },
-      {
-        question: 'Что делать, если платёж не прошёл или деньги списали дважды?',
-        answer: 'Неудавшиеся или отменённые платежи не дают ни кредитов, ни подписки. Если деньги списали, а ничего не пришло, напишите нам с номером заказа — мы разберёмся.'
-      }
-    ],
-    subscriptionItems: [
-      {
-        question: 'В чём разница между кредитами и Extension Unlimited?',
-        answer: 'Кредиты — разовые покупки для скачивания на этом сайте: платите по факту, без обязательств. Extension Unlimited — подписка, открывающая безлимитные скачивания в браузерном расширении Vimeo Video Downloader для компьютера.'
-      },
+    items: [
       {
         question: 'Какой тариф выбрать — месячный или годовой?',
         answer: 'Месячный — гибкий старт. Годовой выгоднее, если вы уже знаете, что будете скачивать дальше: в пересчёте на месяц он заметно дешевле помесячной оплаты.'
@@ -1865,12 +1792,8 @@ export const ruRUPricingContent: PricingPageContent = {
         answer: 'Сейчас тарифы не списывают деньги автоматически — продлевайте доступ повторной покупкой, когда захотите. Если у тарифа есть автопродление, это явно отмечено на карточке до оплаты.'
       },
       {
-        question: 'Где можно использовать кредиты и Unlimited?',
-        answer: 'Кредиты работают только на этом сайте. Unlimited работает только в браузерном расширении для компьютера. Они не пересекаются — выбирайте то, что подходит под ваш способ скачивания.'
-      },
-      {
         question: 'Когда покупка вступает в силу?',
-        answer: 'Сразу. После завершения оплаты кредиты или Unlimited добавляются на аккаунт автоматически — без кодов активации и ручных шагов.'
+        answer: 'Сразу. После завершения оплаты Unlimited добавляется на аккаунт автоматически — без кодов активации и ручных шагов.'
       },
       {
         question: 'Какие способы оплаты доступны?',
@@ -1889,7 +1812,6 @@ export const itITPricingContent: PricingPageContent = {
     signedOutDescription: 'Accedi per continuare con il checkout.',
     signInCta: 'Accedi',
     signedInLabel: 'Accesso effettuato',
-    creditsLabel: 'Crediti',
     subscriptionLabel: 'Piano',
     expiresLabel: 'Scade',
     statusLabel: 'Stato',
@@ -1903,14 +1825,56 @@ export const itITPricingContent: PricingPageContent = {
     unlimited: 'Illimitato',
     loadFailed: 'Impossibile caricare l’account. Accedi di nuovo o riprova.'
   },
+  accountMenu: {
+    accountButtonLabel: 'Apri menu account',
+    accountMenuLabel: 'Menu account'
+  },
+  auth: {
+    title: 'Accedi per continuare',
+    eyebrow: 'Accesso web',
+    continueWithGoogle: 'Continua con Google',
+    googleLoading: 'Apertura di Google...',
+    or: 'oppure',
+    emailLabel: 'Email',
+    emailPlaceholder: 'name@example.com',
+    continueWithEmail: 'Continua con email',
+    sendingCode: 'Invio in corso...',
+    sendCodeSuccess: 'Codice di verifica inviato.',
+    sendAgain: 'Invia di nuovo',
+    codeLabel: 'Codice di verifica',
+    codePlaceholder: '123456',
+    signIn: 'Accedi',
+    termsNotice: 'Accedendo accetti i',
+    termsLink: 'Termini',
+    privacyLink: 'Informativa sulla privacy',
+    logout: 'Esci',
+    errors: {
+      enterEmailFirst: 'Inserisci prima il tuo indirizzo email.',
+      enterEmailAndCode: 'Inserisci email e codice di verifica.',
+      sendCodeFailed: 'Impossibile inviare il codice di verifica.',
+      googleSignInFailed: 'Accesso con Google non riuscito.',
+      googleClientMissing: 'Accesso con Google non configurato.',
+      signInFailed: 'Accesso non riuscito.'
+    }
+  },
+  checkout: {
+    paymentMethodLabel: 'Scegli metodo di pagamento',
+    paymentTitle: 'Scegli metodo di pagamento',
+    selectedPackageLabel: 'Prodotto selezionato',
+    clinkMethods: 'Visa / Mastercard / Apple Pay / Google Pay / Amex / Discover',
+    confirmPurchase: 'Continua al pagamento',
+    backToProducts: 'Indietro',
+    agreementText: 'Accetto le condizioni di acquisto, i Termini e l’Informativa sulla privacy.',
+    failed: 'Il pagamento non è completo. Puoi riprovare o chiudere questa finestra.'
+  },
   subscriptionManagement: subscriptionManagementCopy.itIT,
   subscription: {
-    pageDescription: 'Un solo abbonamento per download illimitati nell’estensione Vimeo Video Downloader — senza limite giornaliero né crediti.',
+    pageDescription: 'Un solo abbonamento per download illimitati nell’estensione Vimeo Video Downloader — senza limite giornaliero.',
     title: 'Unlimited per estensione',
     eyebrow: 'Abbonamento per l’estensione',
     benefits: [
       'Download illimitati nell’estensione',
-      'Nessun limite giornaliero né crediti da gestire',
+      'Nessun limite giornaliero da gestire',
       'Solo estensione — funziona con Vimeo su desktop'
     ],
     trustNote: 'Pagamento sicuro',
@@ -1957,20 +1921,6 @@ export const itITPricingContent: PricingPageContent = {
     installConfirmContinue: 'Continua',
     reviewReward: reviewRewardCopies.itIT
   },
-  credits: {
-    title: 'Crediti',
-    description: 'Crediti una tantum per i download dal sito. Vengono aggiunti dopo la conferma del pagamento.',
-    loading: 'Caricamento pacchetti crediti...',
-    loadFailed: 'Impossibile caricare i pacchetti crediti. Riprova più tardi.',
-    noConfigs: 'Nessun pacchetto crediti è disponibile al momento.',
-    packageEyebrow: 'Paga in base all’uso',
-    creditsAmount: '{credits} crediti',
-    oneTimeLabel: 'una tantum',
-    buyNow: 'Acquista ora',
-    loginToBuy: 'Accedi per acquistare',
-    noChannels: 'Nessun metodo di pagamento è disponibile per questo pacchetto.',
-    webOnlyNotice: 'Solo web'
-  },
   extensionSource: {
     primaryCta: 'Passa a Unlimited',
     signedOutCta: 'Accedi per passare a Unlimited',
@@ -1980,37 +1930,7 @@ export const itITPricingContent: PricingPageContent = {
   },
   faq: {
     title: 'Domande prima dell’acquisto?',
-    creditsItems: [
-      {
-        question: 'Qual è la differenza tra Crediti ed Extension Unlimited?',
-        answer: 'I Crediti sono acquisti una tantum per i download su questo sito — paghi in base all’uso, senza impegno. Extension Unlimited è un abbonamento che sblocca download illimitati nell’estensione Vimeo Video Downloader per desktop.'
-      },
-      {
-        question: 'I crediti scadono?',
-        answer: 'No. I crediti puntuali restano nel tuo account per sempre e vengono scalati solo quando scarichi davvero.'
-      },
-      {
-        question: 'Dove posso usare Crediti e Unlimited?',
-        answer: 'I Crediti funzionano solo su questo sito. Unlimited funziona solo nell’estensione del browser per desktop. I due non si sovrappongono: scegli in base a come scarichi.'
-      },
-      {
-        question: 'Quando diventa effettivo il mio acquisto?',
-        answer: 'Subito. Una volta completato il pagamento, Crediti o Unlimited vengono aggiunti automaticamente al tuo account — senza codici di attivazione o passaggi manuali.'
-      },
-      {
-        question: 'Quali metodi di pagamento posso usare?',
-        answer: 'PayPal e le principali carte di credito o debito.'
-      },
-      {
-        question: 'Cosa succede se il pagamento fallisce o vengono addebitati due volte?',
-        answer: 'I pagamenti falliti o annullati non generano Crediti né abbonamenti. Se ti è stato addebitato qualcosa senza ricevere nulla, scrivici con il numero dell’ordine e verifichiamo.'
-      }
-    ],
-    subscriptionItems: [
-      {
-        question: 'Qual è la differenza tra Crediti ed Extension Unlimited?',
-        answer: 'I Crediti sono acquisti una tantum per i download su questo sito — paghi in base all’uso, senza impegno. Extension Unlimited è un abbonamento che sblocca download illimitati nell’estensione Vimeo Video Downloader per desktop.'
-      },
+    items: [
       {
         question: 'Quale piano scelgo — mensile o annuale?',
         answer: 'Il mensile è il modo flessibile di iniziare. L’annuale conviene se sai già che continuerai a scaricare: sul mese costa chiaramente meno del pagamento mese per mese.'
@@ -2020,12 +1940,8 @@ export const itITPricingContent: PricingPageContent = {
         answer: 'Al momento i piani non addebitano nulla in automatico — compra di nuovo quando vuoi estendere l’accesso. Se un piano supporta il rinnovo automatico, è indicato chiaramente sulla scheda prima del checkout.'
       },
       {
-        question: 'Dove posso usare Crediti e Unlimited?',
-        answer: 'I Crediti funzionano solo su questo sito. Unlimited funziona solo nell’estensione del browser per desktop. I due non si sovrappongono: scegli in base a come scarichi.'
-      },
-      {
         question: 'Quando diventa effettivo il mio acquisto?',
-        answer: 'Subito. Una volta completato il pagamento, Crediti o Unlimited vengono aggiunti automaticamente al tuo account — senza codici di attivazione o passaggi manuali.'
+        answer: 'Subito. Una volta completato il pagamento, Unlimited viene aggiunto automaticamente al tuo account — senza codici di attivazione o passaggi manuali.'
       },
       {
         question: 'Quali metodi di pagamento posso usare?',
@@ -2044,7 +1960,6 @@ export const viVNPricingContent: PricingPageContent = {
     signedOutDescription: 'Đăng nhập để tiếp tục thanh toán.',
     signInCta: 'Đăng nhập',
     signedInLabel: 'Đã đăng nhập',
-    creditsLabel: 'Điểm',
     subscriptionLabel: 'Gói',
     expiresLabel: 'Hết hạn',
     statusLabel: 'Trạng thái',
@@ -2058,14 +1973,56 @@ export const viVNPricingContent: PricingPageContent = {
     unlimited: 'Không giới hạn',
     loadFailed: 'Không thể tải tài khoản. Đăng nhập lại hoặc thử lại.'
   },
+  accountMenu: {
+    accountButtonLabel: 'Mở menu tài khoản',
+    accountMenuLabel: 'Menu tài khoản'
+  },
+  auth: {
+    title: 'Đăng nhập để tiếp tục',
+    eyebrow: 'Truy cập web',
+    continueWithGoogle: 'Tiếp tục với Google',
+    googleLoading: 'Đang mở Google...',
+    or: 'hoặc',
+    emailLabel: 'Email',
+    emailPlaceholder: 'name@example.com',
+    continueWithEmail: 'Tiếp tục với email',
+    sendingCode: 'Đang gửi...',
+    sendCodeSuccess: 'Đã gửi mã xác minh.',
+    sendAgain: 'Gửi lại',
+    codeLabel: 'Mã xác minh',
+    codePlaceholder: '123456',
+    signIn: 'Đăng nhập',
+    termsNotice: 'Khi đăng nhập, bạn đồng ý với',
+    termsLink: 'Điều khoản',
+    privacyLink: 'Chính sách quyền riêng tư',
+    logout: 'Đăng xuất',
+    errors: {
+      enterEmailFirst: 'Vui lòng nhập địa chỉ email trước.',
+      enterEmailAndCode: 'Vui lòng nhập email và mã xác minh.',
+      sendCodeFailed: 'Không thể gửi mã xác minh.',
+      googleSignInFailed: 'Không thể đăng nhập bằng Google.',
+      googleClientMissing: 'Chưa cấu hình đăng nhập Google.',
+      signInFailed: 'Không thể đăng nhập.'
+    }
+  },
+  checkout: {
+    paymentMethodLabel: 'Chọn phương thức thanh toán',
+    paymentTitle: 'Chọn phương thức thanh toán',
+    selectedPackageLabel: 'Sản phẩm đã chọn',
+    clinkMethods: 'Visa / Mastercard / Apple Pay / Google Pay / Amex / Discover',
+    confirmPurchase: 'Tiếp tục thanh toán',
+    backToProducts: 'Quay lại',
+    agreementText: 'Tôi đồng ý với điều khoản mua hàng, Điều khoản và Chính sách quyền riêng tư.',
+    failed: 'Thanh toán chưa hoàn tất. Bạn có thể thử lại hoặc đóng cửa sổ này.'
+  },
   subscriptionManagement: subscriptionManagementCopy.viVN,
   subscription: {
-    pageDescription: 'Một gói đăng ký để tải không giới hạn trong tiện ích Vimeo Video Downloader — không giới hạn hằng ngày, không cần điểm.',
+    pageDescription: 'Một gói đăng ký để tải không giới hạn trong tiện ích Vimeo Video Downloader — không giới hạn hằng ngày.',
     title: 'Unlimited cho tiện ích',
     eyebrow: 'Gói đăng ký tiện ích mở rộng',
     benefits: [
       'Tải không giới hạn trong tiện ích',
-      'Không giới hạn hằng ngày, không cần quản lý điểm',
+      'Không giới hạn hằng ngày',
       'Chỉ dùng trong tiện ích — hoạt động với Vimeo trên máy tính'
     ],
     trustNote: 'Thanh toán an toàn',
@@ -2112,20 +2069,6 @@ export const viVNPricingContent: PricingPageContent = {
     installConfirmContinue: 'Tiếp tục',
     reviewReward: reviewRewardCopies.viVN
   },
-  credits: {
-    title: 'Điểm',
-    description: 'Điểm mua một lần cho tải xuống trên web. Điểm được cộng sau khi thanh toán được xác nhận.',
-    loading: 'Đang tải các gói điểm...',
-    loadFailed: 'Không thể tải các gói điểm. Hãy thử lại sau.',
-    noConfigs: 'Hiện không có gói điểm nào khả dụng.',
-    packageEyebrow: 'Dùng đến đâu trả đến đó',
-    creditsAmount: '{credits} điểm',
-    oneTimeLabel: 'mua một lần',
-    buyNow: 'Mua ngay',
-    loginToBuy: 'Đăng nhập để mua',
-    noChannels: 'Không có phương thức thanh toán nào cho gói này.',
-    webOnlyNotice: 'Chỉ dùng trên web'
-  },
   extensionSource: {
     primaryCta: 'Nâng cấp Unlimited',
     signedOutCta: 'Đăng nhập để nâng cấp',
@@ -2135,37 +2078,7 @@ export const viVNPricingContent: PricingPageContent = {
   },
   faq: {
     title: 'Thắc mắc trước khi mua?',
-    creditsItems: [
-      {
-        question: 'Điểm (Credits) và Extension Unlimited khác nhau thế nào?',
-        answer: 'Điểm là giao dịch mua một lần chỉ dùng cho lượt tải trên website này — trả theo mức dùng, không ràng buộc. Extension Unlimited là gói đăng ký mở khoá tải không giới hạn trong tiện ích Vimeo Video Downloader trên máy tính.'
-      },
-      {
-        question: 'Điểm có hết hạn không?',
-        answer: 'Không. Điểm mua một lần tồn tại vĩnh viễn trong tài khoản và chỉ bị trừ khi bạn thực sự tải.'
-      },
-      {
-        question: 'Tôi có thể dùng Điểm và Unlimited ở đâu?',
-        answer: 'Điểm chỉ dùng trên website này. Unlimited chỉ dùng trong tiện ích trình duyệt cho máy tính. Hai loại không chồng lấn — hãy chọn theo cách bạn tải.'
-      },
-      {
-        question: 'Giao dịch của tôi bao giờ có hiệu lực?',
-        answer: 'Ngay lập tức. Sau khi thanh toán xong, Điểm hoặc Unlimited sẽ được thêm vào tài khoản tự động — không cần mã kích hoạt hay thao tác thủ công.'
-      },
-      {
-        question: 'Tôi có thể dùng phương thức thanh toán nào?',
-        answer: 'PayPal và các thẻ tín dụng hoặc ghi nợ phổ biến.'
-      },
-      {
-        question: 'Phải làm gì nếu thanh toán thất bại hoặc bị trừ tiền hai lần?',
-        answer: 'Thanh toán thất bại hoặc bị huỷ sẽ không tạo ra Điểm hay gói đăng ký. Nếu bạn đã bị trừ tiền nhưng không nhận được gì, hãy liên hệ kèm số đơn hàng để chúng tôi kiểm tra.'
-      }
-    ],
-    subscriptionItems: [
-      {
-        question: 'Điểm (Credits) và Extension Unlimited khác nhau thế nào?',
-        answer: 'Điểm là giao dịch mua một lần chỉ dùng cho lượt tải trên website này — trả theo mức dùng, không ràng buộc. Extension Unlimited là gói đăng ký mở khoá tải không giới hạn trong tiện ích Vimeo Video Downloader trên máy tính.'
-      },
+    items: [
       {
         question: 'Nên chọn gói theo tháng hay theo năm?',
         answer: 'Gói tháng linh hoạt để bắt đầu. Gói năm đáng hơn nếu bạn đã biết sẽ tiếp tục tải — tính theo tháng rẻ hơn rõ rệt so với trả từng tháng.'
@@ -2175,12 +2088,8 @@ export const viVNPricingContent: PricingPageContent = {
         answer: 'Hiện tại các gói không tự trừ tiền — mua lại bất cứ khi nào bạn muốn gia hạn. Nếu gói nào hỗ trợ tự động gia hạn, điều đó được ghi rõ trên thẻ trước khi thanh toán.'
       },
       {
-        question: 'Tôi có thể dùng Điểm và Unlimited ở đâu?',
-        answer: 'Điểm chỉ dùng trên website này. Unlimited chỉ dùng trong tiện ích trình duyệt cho máy tính. Hai loại không chồng lấn — hãy chọn theo cách bạn tải.'
-      },
-      {
         question: 'Giao dịch của tôi bao giờ có hiệu lực?',
-        answer: 'Ngay lập tức. Sau khi thanh toán xong, Điểm hoặc Unlimited sẽ được thêm vào tài khoản tự động — không cần mã kích hoạt hay thao tác thủ công.'
+        answer: 'Ngay lập tức. Sau khi thanh toán xong, Unlimited sẽ được thêm vào tài khoản tự động — không cần mã kích hoạt hay thao tác thủ công.'
       },
       {
         question: 'Tôi có thể dùng phương thức thanh toán nào?',
@@ -2199,7 +2108,6 @@ export const thTHPricingContent: PricingPageContent = {
     signedOutDescription: 'เข้าสู่ระบบเพื่อดำเนินการชำระเงินต่อ',
     signInCta: 'เข้าสู่ระบบ',
     signedInLabel: 'เข้าสู่ระบบแล้ว',
-    creditsLabel: 'เครดิต',
     subscriptionLabel: 'แผน',
     expiresLabel: 'หมดอายุ',
     statusLabel: 'สถานะ',
@@ -2213,14 +2121,56 @@ export const thTHPricingContent: PricingPageContent = {
     unlimited: 'ไม่จำกัด',
     loadFailed: 'โหลดบัญชีไม่สำเร็จ กรุณาเข้าสู่ระบบใหม่หรือลองอีกครั้ง'
   },
+  accountMenu: {
+    accountButtonLabel: 'เปิดเมนูบัญชี',
+    accountMenuLabel: 'เมนูบัญชี'
+  },
+  auth: {
+    title: 'เข้าสู่ระบบเพื่อดำเนินการต่อ',
+    eyebrow: 'การเข้าใช้เว็บ',
+    continueWithGoogle: 'ดำเนินการต่อด้วย Google',
+    googleLoading: 'กำลังเปิด Google...',
+    or: 'หรือ',
+    emailLabel: 'อีเมล',
+    emailPlaceholder: 'name@example.com',
+    continueWithEmail: 'ดำเนินการต่อด้วยอีเมล',
+    sendingCode: 'กำลังส่ง...',
+    sendCodeSuccess: 'ส่งรหัสยืนยันแล้ว',
+    sendAgain: 'ส่งอีกครั้ง',
+    codeLabel: 'รหัสยืนยัน',
+    codePlaceholder: '123456',
+    signIn: 'เข้าสู่ระบบ',
+    termsNotice: 'เมื่อเข้าสู่ระบบ ถือว่าคุณยอมรับ',
+    termsLink: 'ข้อกำหนด',
+    privacyLink: 'นโยบายความเป็นส่วนตัว',
+    logout: 'ออกจากระบบ',
+    errors: {
+      enterEmailFirst: 'กรุณากรอกอีเมลก่อน',
+      enterEmailAndCode: 'กรุณากรอกอีเมลและรหัสยืนยัน',
+      sendCodeFailed: 'ส่งรหัสยืนยันไม่สำเร็จ',
+      googleSignInFailed: 'เข้าสู่ระบบด้วย Google ไม่สำเร็จ',
+      googleClientMissing: 'ยังไม่ได้ตั้งค่าการเข้าสู่ระบบด้วย Google',
+      signInFailed: 'เข้าสู่ระบบไม่สำเร็จ'
+    }
+  },
+  checkout: {
+    paymentMethodLabel: 'เลือกวิธีชำระเงิน',
+    paymentTitle: 'เลือกวิธีชำระเงิน',
+    selectedPackageLabel: 'สินค้าที่เลือก',
+    clinkMethods: 'Visa / Mastercard / Apple Pay / Google Pay / Amex / Discover',
+    confirmPurchase: 'ไปชำระเงินต่อ',
+    backToProducts: 'กลับ',
+    agreementText: 'ฉันยอมรับเงื่อนไขการซื้อ ข้อกำหนด และนโยบายความเป็นส่วนตัว',
+    failed: 'การชำระเงินยังไม่เสร็จ คุณสามารถลองใหม่หรือปิดหน้าต่างนี้ได้'
+  },
   subscriptionManagement: subscriptionManagementCopy.thTH,
   subscription: {
-    pageDescription: 'สมัครเพียงครั้งเดียวเพื่อดาวน์โหลดไม่จำกัดในส่วนขยาย Vimeo Video Downloader — ไม่มีขีดจำกัดรายวัน ไม่ต้องใช้เครดิต',
+    pageDescription: 'สมัครเพียงครั้งเดียวเพื่อดาวน์โหลดไม่จำกัดในส่วนขยาย Vimeo Video Downloader — ไม่มีขีดจำกัดรายวัน',
     title: 'Unlimited สำหรับส่วนขยาย',
     eyebrow: 'การสมัครสมาชิกส่วนขยาย',
     benefits: [
       'ดาวน์โหลดไม่จำกัดในส่วนขยาย',
-      'ไม่มีขีดจำกัดรายวัน ไม่ต้องจัดการเครดิต',
+      'ไม่มีขีดจำกัดรายวัน',
       'ใช้ได้เฉพาะส่วนขยาย — ใช้งานร่วมกับ Vimeo บนคอมพิวเตอร์'
     ],
     trustNote: 'ชำระเงินปลอดภัย',
@@ -2267,20 +2217,6 @@ export const thTHPricingContent: PricingPageContent = {
     installConfirmContinue: 'ดำเนินการต่อ',
     reviewReward: reviewRewardCopies.thTH
   },
-  credits: {
-    title: 'เครดิต',
-    description: 'เครดิตแบบซื้อครั้งเดียวสำหรับการดาวน์โหลดบนเว็บ ระบบจะเพิ่มเครดิตหลังยืนยันการชำระเงิน',
-    loading: 'กำลังโหลดแพ็กเกจเครดิต...',
-    loadFailed: 'โหลดแพ็กเกจเครดิตไม่สำเร็จ โปรดลองใหม่ภายหลัง',
-    noConfigs: 'ยังไม่มีแพ็กเกจเครดิตให้ซื้อในขณะนี้',
-    packageEyebrow: 'จ่ายตามการใช้งาน',
-    creditsAmount: '{credits} เครดิต',
-    oneTimeLabel: 'ครั้งเดียว',
-    buyNow: 'ซื้อเลย',
-    loginToBuy: 'เข้าสู่ระบบเพื่อซื้อ',
-    noChannels: 'ไม่มีวิธีชำระเงินสำหรับแพ็กเกจนี้',
-    webOnlyNotice: 'ใช้ได้เฉพาะเว็บ'
-  },
   extensionSource: {
     primaryCta: 'อัปเกรดเป็น Unlimited',
     signedOutCta: 'เข้าสู่ระบบเพื่ออัปเกรด',
@@ -2290,37 +2226,7 @@ export const thTHPricingContent: PricingPageContent = {
   },
   faq: {
     title: 'มีคำถามก่อนซื้อไหม?',
-    creditsItems: [
-      {
-        question: 'เครดิตกับ Extension Unlimited ต่างกันอย่างไร?',
-        answer: 'เครดิตคือการซื้อครั้งเดียวสำหรับดาวน์โหลดบนเว็บไซต์นี้ จ่ายเท่าที่ใช้ ไม่มีข้อผูกมัด ส่วน Extension Unlimited คือการสมัครสมาชิกที่ปลดล็อกการดาวน์โหลดไม่จำกัดในส่วนขยาย Vimeo Video Downloader บนเดสก์ท็อป'
-      },
-      {
-        question: 'เครดิตหมดอายุหรือไม่?',
-        answer: 'ไม่ เครดิตแบบครั้งเดียวอยู่ในบัญชีของคุณตลอดไป และจะถูกหักเฉพาะเมื่อคุณดาวน์โหลดจริงเท่านั้น'
-      },
-      {
-        question: 'ใช้เครดิตและ Unlimited ได้ที่ไหน?',
-        answer: 'เครดิตใช้ได้เฉพาะบนเว็บไซต์นี้ ส่วน Unlimited ใช้ได้เฉพาะในส่วนขยายบนคอมพิวเตอร์ ทั้งสองไม่ทับซ้อนกัน เลือกตามวิธีดาวน์โหลดของคุณได้เลย'
-      },
-      {
-        question: 'การซื้อของฉันมีผลเมื่อไร?',
-        answer: 'ทันที เมื่อชำระเงินเสร็จ เครดิตหรือ Unlimited จะเข้าบัญชีของคุณโดยอัตโนมัติ ไม่ต้องใช้รหัสเปิดใช้งานหรือทำขั้นตอนเอง'
-      },
-      {
-        question: 'ใช้วิธีชำระเงินแบบใดได้บ้าง?',
-        answer: 'PayPal และบัตรเครดิตหรือเดบิตทั่วไป'
-      },
-      {
-        question: 'ถ้าชำระเงินไม่สำเร็จหรือถูกตัดเงินซ้ำต้องทำอย่างไร?',
-        answer: 'การชำระเงินที่ล้มเหลวหรือถูกยกเลิกจะไม่ได้รับเครดิตหรือสมาชิก หากถูกตัดเงินแล้วแต่ไม่ได้รับอะไรเลย ติดต่อมาพร้อมหมายเลขคำสั่งซื้อ เราจะช่วยตรวจสอบให้'
-      }
-    ],
-    subscriptionItems: [
-      {
-        question: 'เครดิตกับ Extension Unlimited ต่างกันอย่างไร?',
-        answer: 'เครดิตคือการซื้อครั้งเดียวสำหรับดาวน์โหลดบนเว็บไซต์นี้ จ่ายเท่าที่ใช้ ไม่มีข้อผูกมัด ส่วน Extension Unlimited คือการสมัครสมาชิกที่ปลดล็อกการดาวน์โหลดไม่จำกัดในส่วนขยาย Vimeo Video Downloader บนเดสก์ท็อป'
-      },
+    items: [
       {
         question: 'ควรเลือกแพ็กเกจรายเดือนหรือรายปี?',
         answer: 'รายเดือนเหมาะสำหรับเริ่มต้นอย่างยืดหยุ่น ส่วนรายปีคุ้มกว่าถ้ารู้ว่าจะใช้ต่อ — คิดเป็นรายเดือนแล้วถูกกว่าจ่ายรายเดือนชัดเจน'
@@ -2330,12 +2236,8 @@ export const thTHPricingContent: PricingPageContent = {
         answer: 'ปัจจุบันแพ็กเกจจะไม่ตัดเงินอัตโนมัติ ซื้อใหม่เมื่อไรก็ได้ที่ต้องการต่ออายุ หากแพ็กเกจใดรองรับการต่ออายุอัตโนมัติ จะมีป้ายกำกับชัดเจนบนการ์ดก่อนชำระเงิน'
       },
       {
-        question: 'ใช้เครดิตและ Unlimited ได้ที่ไหน?',
-        answer: 'เครดิตใช้ได้เฉพาะบนเว็บไซต์นี้ ส่วน Unlimited ใช้ได้เฉพาะในส่วนขยายบนคอมพิวเตอร์ ทั้งสองไม่ทับซ้อนกัน เลือกตามวิธีดาวน์โหลดของคุณได้เลย'
-      },
-      {
         question: 'การซื้อของฉันมีผลเมื่อไร?',
-        answer: 'ทันที เมื่อชำระเงินเสร็จ เครดิตหรือ Unlimited จะเข้าบัญชีของคุณโดยอัตโนมัติ ไม่ต้องใช้รหัสเปิดใช้งานหรือทำขั้นตอนเอง'
+        answer: 'ทันที เมื่อชำระเงินเสร็จ Unlimited จะเข้าบัญชีของคุณโดยอัตโนมัติ ไม่ต้องใช้รหัสเปิดใช้งานหรือทำขั้นตอนเอง'
       },
       {
         question: 'ใช้วิธีชำระเงินแบบใดได้บ้าง?',
@@ -2354,7 +2256,6 @@ export const idIDPricingContent: PricingPageContent = {
     signedOutDescription: 'Masuk untuk melanjutkan checkout.',
     signInCta: 'Masuk',
     signedInLabel: 'Sudah masuk',
-    creditsLabel: 'Kredit',
     subscriptionLabel: 'Paket',
     expiresLabel: 'Berakhir',
     statusLabel: 'Status',
@@ -2368,14 +2269,56 @@ export const idIDPricingContent: PricingPageContent = {
     unlimited: 'Tanpa batas',
     loadFailed: 'Gagal memuat akun. Masuk kembali atau coba lagi.'
   },
+  accountMenu: {
+    accountButtonLabel: 'Buka menu akun',
+    accountMenuLabel: 'Menu akun'
+  },
+  auth: {
+    title: 'Masuk untuk melanjutkan',
+    eyebrow: 'Akses web',
+    continueWithGoogle: 'Lanjutkan dengan Google',
+    googleLoading: 'Membuka Google...',
+    or: 'atau',
+    emailLabel: 'Email',
+    emailPlaceholder: 'name@example.com',
+    continueWithEmail: 'Lanjutkan dengan email',
+    sendingCode: 'Mengirim...',
+    sendCodeSuccess: 'Kode verifikasi telah dikirim.',
+    sendAgain: 'Kirim lagi',
+    codeLabel: 'Kode verifikasi',
+    codePlaceholder: '123456',
+    signIn: 'Masuk',
+    termsNotice: 'Dengan masuk, Anda menyetujui',
+    termsLink: 'Ketentuan',
+    privacyLink: 'Kebijakan Privasi',
+    logout: 'Keluar',
+    errors: {
+      enterEmailFirst: 'Masukkan alamat email Anda terlebih dahulu.',
+      enterEmailAndCode: 'Masukkan email dan kode verifikasi.',
+      sendCodeFailed: 'Gagal mengirim kode verifikasi.',
+      googleSignInFailed: 'Gagal masuk dengan Google.',
+      googleClientMissing: 'Login Google belum dikonfigurasi.',
+      signInFailed: 'Gagal masuk.'
+    }
+  },
+  checkout: {
+    paymentMethodLabel: 'Pilih metode pembayaran',
+    paymentTitle: 'Pilih metode pembayaran',
+    selectedPackageLabel: 'Produk terpilih',
+    clinkMethods: 'Visa / Mastercard / Apple Pay / Google Pay / Amex / Discover',
+    confirmPurchase: 'Lanjut ke pembayaran',
+    backToProducts: 'Kembali',
+    agreementText: 'Saya menyetujui ketentuan pembelian, Ketentuan, dan Kebijakan Privasi.',
+    failed: 'Pembayaran belum selesai. Anda dapat mencoba lagi atau menutup jendela ini.'
+  },
   subscriptionManagement: subscriptionManagementCopy.idID,
   subscription: {
-    pageDescription: 'Satu langganan untuk unduhan tanpa batas di ekstensi Vimeo Video Downloader — tanpa kuota harian, tanpa kredit.',
+    pageDescription: 'Satu langganan untuk unduhan tanpa batas di ekstensi Vimeo Video Downloader — tanpa kuota harian.',
     title: 'Unlimited untuk ekstensi',
     eyebrow: 'Langganan ekstensi',
     benefits: [
       'Unduhan tanpa batas di ekstensi',
-      'Tanpa kuota harian atau kredit yang harus dikelola',
+      'Tanpa kuota harian yang harus dikelola',
       'Hanya ekstensi — bekerja dengan Vimeo di desktop'
     ],
     trustNote: 'Checkout aman',
@@ -2422,20 +2365,6 @@ export const idIDPricingContent: PricingPageContent = {
     installConfirmContinue: 'Lanjutkan',
     reviewReward: reviewRewardCopies.idID
   },
-  credits: {
-    title: 'Kredit',
-    description: 'Kredit sekali bayar untuk unduhan web. Kredit ditambahkan setelah pembayaran dikonfirmasi.',
-    loading: 'Memuat paket kredit...',
-    loadFailed: 'Gagal memuat paket kredit. Coba lagi nanti.',
-    noConfigs: 'Belum ada paket kredit yang tersedia saat ini.',
-    packageEyebrow: 'Bayar sesuai penggunaan',
-    creditsAmount: '{credits} kredit',
-    oneTimeLabel: 'sekali bayar',
-    buyNow: 'Beli sekarang',
-    loginToBuy: 'Masuk untuk membeli',
-    noChannels: 'Tidak ada metode pembayaran untuk paket ini.',
-    webOnlyNotice: 'Hanya web'
-  },
   extensionSource: {
     primaryCta: 'Upgrade ke Unlimited',
     signedOutCta: 'Masuk untuk upgrade',
@@ -2445,37 +2374,7 @@ export const idIDPricingContent: PricingPageContent = {
   },
   faq: {
     title: 'Ada pertanyaan sebelum membeli?',
-    creditsItems: [
-      {
-        question: 'Apa perbedaan antara Kredit dan Extension Unlimited?',
-        answer: 'Kredit adalah pembelian sekali bayar untuk unduhan di situs ini — bayar sesuai pakai, tanpa komitmen. Extension Unlimited adalah langganan yang membuka unduhan tanpa batas di ekstensi Vimeo Video Downloader untuk desktop.'
-      },
-      {
-        question: 'Apakah Kredit kedaluwarsa?',
-        answer: 'Tidak. Kredit sekali bayar tetap di akun Anda selamanya dan hanya dipotong saat Anda benar-benar mengunduh.'
-      },
-      {
-        question: 'Di mana saya bisa memakai Kredit dan Unlimited?',
-        answer: 'Kredit hanya berfungsi di situs ini. Unlimited hanya berfungsi di ekstensi browser untuk desktop. Keduanya tidak tumpang-tindih — pilih sesuai cara Anda mengunduh.'
-      },
-      {
-        question: 'Kapan pembelian saya berlaku?',
-        answer: 'Segera. Setelah pembayaran selesai, Kredit atau Unlimited otomatis ditambahkan ke akun Anda — tanpa kode aktivasi maupun langkah manual.'
-      },
-      {
-        question: 'Metode pembayaran apa saja yang bisa saya gunakan?',
-        answer: 'PayPal, serta kartu kredit atau debit umum.'
-      },
-      {
-        question: 'Bagaimana jika pembayaran gagal atau saya tertagih dua kali?',
-        answer: 'Pembayaran yang gagal atau dibatalkan tidak menghasilkan Kredit maupun langganan. Jika saldo terpotong tetapi tidak ada yang diterima, hubungi kami dengan nomor pesanan dan akan kami periksa.'
-      }
-    ],
-    subscriptionItems: [
-      {
-        question: 'Apa perbedaan antara Kredit dan Extension Unlimited?',
-        answer: 'Kredit adalah pembelian sekali bayar untuk unduhan di situs ini — bayar sesuai pakai, tanpa komitmen. Extension Unlimited adalah langganan yang membuka unduhan tanpa batas di ekstensi Vimeo Video Downloader untuk desktop.'
-      },
+    items: [
       {
         question: 'Pilih paket bulanan atau tahunan?',
         answer: 'Bulanan fleksibel untuk memulai. Tahunan lebih menguntungkan jika Anda memang akan terus mengunduh — per bulan jelas lebih murah daripada membayar bulanan.'
@@ -2485,12 +2384,8 @@ export const idIDPricingContent: PricingPageContent = {
         answer: 'Saat ini paket tidak menagih otomatis — beli lagi kapan pun ingin memperpanjang. Jika ada paket yang mendukung perpanjangan otomatis, itu ditandai jelas di kartu sebelum checkout.'
       },
       {
-        question: 'Di mana saya bisa memakai Kredit dan Unlimited?',
-        answer: 'Kredit hanya berfungsi di situs ini. Unlimited hanya berfungsi di ekstensi browser untuk desktop. Keduanya tidak tumpang-tindih — pilih sesuai cara Anda mengunduh.'
-      },
-      {
         question: 'Kapan pembelian saya berlaku?',
-        answer: 'Segera. Setelah pembayaran selesai, Kredit atau Unlimited otomatis ditambahkan ke akun Anda — tanpa kode aktivasi maupun langkah manual.'
+        answer: 'Segera. Setelah pembayaran selesai, Unlimited otomatis ditambahkan ke akun Anda — tanpa kode aktivasi maupun langkah manual.'
       },
       {
         question: 'Metode pembayaran apa saja yang bisa saya gunakan?',

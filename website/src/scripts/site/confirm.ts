@@ -189,7 +189,7 @@ export function confirmSiteAction(options: SiteConfirmOptions): Promise<boolean>
 
 declare global {
   interface Window {
-    /** 全站通用确认框，供 website-shared 的命令式脚本调用。 */
+    /** 全站通用确认框，供命令式脚本调用。 */
     siteConfirmAction?: (options: SiteConfirmOptions) => Promise<boolean>
   }
 }

@@ -1,13 +1,14 @@
 # 009 · 签到活动后端(活动规则 + Credits 发放 + 接口)
 
-> 技术实现文档。覆盖:website 签到活动的后端数据模型、活动规则、Credits 发放接线、两个 POST 接口、时区与日切、并发与幂等。
+> 技术实现文档。覆盖:签到活动的后端数据模型、活动规则、Credits 发放接线、两个 POST 接口、时区与日切、并发与幂等。
 >
 > 来源:原 `feat.052 website签到活动与首页账户入口`(后端部分)+ `feat.052.001 签到后端与Credits发放`。
+>
+> **现状**:网站入口已于 2026-10-05 下线,网站不再调用;后端链路(接口、服务、数据、配置)保留,留待「积分 / 签到下线」任务处理(见 `@../000.架构/plans/004.官网改版-插件展示与免费网页下载.md` §8)。本文只保留后端合同。
 >
 > 关联:
 > - 本域产品:`@feat.md`
 > - 落地页/Sitemap/llms/导航:`@tech-落地页与Sitemap.md` `@tech-LLMs与增长入口.md`
-> - 前端账户入口与签到弹窗:`@../007.用户系统/feat.md`(账户按钮 UI)+ 本域 `@feat.md`(签到弹窗 UI)
 > - Credits 余额账户/流水/扣费底座:`@../003.积分系统/tech-数据模型与扣费.md`
 > - 后端通用规范(api 层 Depends/事务在 service 层/抛错带 msg):`@../../../AGENTS.md` `@../../references/specs/spec-code.md` `@../000.架构/tech-backend.md`
 
@@ -159,7 +160,6 @@ async def _claim_campaign_once(...) -> bool
 
 `enter_checkin_campaign()` 是普通用户首次创建正常签到活动的入口:
 
-- 只有首页下载工作区自动弹窗判定和用户手动点击 Credits 时,前端才允许调用这个入口。
 - 先读取用户最新一条 campaign;如果存在,直接返回这条记录的状态,即使已过期也不新建。
 - 正常活动的有效结束时间取落库 `end_at` 与按当前 14 天规则计算所得结束时间中的较早值;错误存量数据不能扩展出第 15 个可领取日。
 - 发现用户完全没有活动记录时**立刻创建正常活动**:
@@ -230,7 +230,7 @@ Credits 流水 metadata 最少包含:
 新增:
 
 ```
-backend/src/app/api/client/checkin_client.py    # APIRouter(prefix="/checkin", tags=["Website 签到"])
+backend/src/app/api/client/checkin_client.py    # APIRouter(prefix="/checkin", tags=["签到"])
 backend/src/app/schemas/checkin_schema.py
 ```
 
@@ -265,8 +265,6 @@ backend/src/app/schemas/checkin_schema.py
 规则:
 
 - 该接口是**唯一允许创建 campaign 的入口**;其他接口不应为了读取状态隐式创建 campaign。
-- 前端倒计时只能以后端返回的 `next_claim_at` / `next_claim_at_ts` 为准。
-- 今天未签到且当前可领时,前端不得展示未来倒计时,只展示"现在可领取"。
 - 未登录返回现有登录错误语义。
 
 ### 4.2 POST /api/client/checkin/claim
@@ -275,7 +273,7 @@ backend/src/app/schemas/checkin_schema.py
 
 鉴权:必须登录。
 
-请求体:空对象(`CheckinClaimRequest`,不要附加前端传入的日期、奖励值、day_index,全部由服务端计算)。
+请求体:空对象(`CheckinClaimRequest`,不要附加客户端传入的日期、奖励值、day_index,全部由服务端计算)。
 
 响应字段:
 
@@ -316,7 +314,6 @@ backend/src/app/schemas/checkin_schema.py
 
 - 不改造 `/subscription/status`。
 - 不复用 subscription 概念承载 Credits 或签到。
-- 不要求前端依赖任何 subscription 接口拿签到状态或余额。
 
 ## 6. 算法细节
 
@@ -329,7 +326,7 @@ day_index = (today_date - start_date).days + 1
 - `day_index <= 0` 理论上不出现。
 - 奖励按 `config_public.website_checkin_campaign.reward_rules` 命中。
 - `day_index > campaign_days` 后活动结束。
-- 对外响应的 `day_index` 封顶为 `campaign_days`,不向前端暴露第 15 天活动态。
+- 对外响应的 `day_index` 封顶为 `campaign_days`,不向客户端暴露第 15 天活动态。
 
 ### 6.2 结束日判断
 
@@ -344,35 +341,25 @@ day_index = (today_date - start_date).days + 1
 ```
 
 - `entry` 和 `claim` 都返回 `next_claim_at` 与 `next_claim_at_ts`。
-- 前端倒计时只基于该返回值做显示,不再自行推断服务器时区。
-- 前端使用 `next_claim_at_ts` 做倒计时刷新;弹窗打开期间如果 `Date.now() >= next_claim_at_ts`,触发一次 entry refresh(单飞 guard 避免每秒重复请求)。
 
 ## 7. 时区口径
 
 - 统一用后端服务器时区 **`America/New_York`**,按该时区本地 `00:00` 切天。
 - 本功能上线口径统一使用此后端业务时区;所有按天计算逻辑都以该时区的 `00:00` 切天。
 - 第 1 天到第 14 天按"活动开始后的自然日区间"判断,**不按累计签到次数判断**。
-- 前端本地关闭自动弹窗记录 key:`download_checkin_auto_dismissed:{user_id}:{server_today}`,其中 `server_today` 必须来自 entry 返回的 `today`(不能用前端本地日期)。
 
 ## 8. 边界和异常
 
 | 场景 | 行为 |
 | --- | --- |
-| 未登录用户 | 不请求签到状态,不展示账户按钮与 Credits 签到入口 |
 | 老用户首次进入签到系统 | 创建活动记录,从当天开始算第 1 天 |
 | 命中 IP 注册权益风控的新用户注册 | 注册阶段插入已过期活动,不发注册 Credits |
 | 命中 IP 注册权益风控的用户首次进入签到系统 | 读取注册阶段已插入的过期活动,返回活动已结束,不发 Credits |
 | 命中 IP 注册权益风控的用户直接 claim | 读取注册阶段已插入的过期活动后返回活动已结束错误 |
 | 活动第 14 天签到 | 允许签到 |
-| 活动第 15 天点击 Credits | 不打开签到弹窗 |
-| 今天已签到再次点击 Credits | 打开已签到状态弹窗 |
-| 今天关闭弹窗未签到 | 当天不再自动弹出,但允许手动打开 |
 | 漏掉某一天 | 直接错过,不补签 |
 | 多标签页同时签到 | 后端只允许成功一次,另一请求返回今日已签到(CAS 保证) |
 | Credits 发放失败 | 本次签到失败,不写签到成功记录,用户可重试 |
-| 签到状态查询失败 | 不自动弹窗,不阻断首页主下载流程 |
-| 前端本地关闭日期丢失 | 最多导致当天再次自动弹出,可接受 |
-| 用户看到倒计时 | 以前端使用后端返回的下一次可领取时间为准,不自行猜测时区 |
 | 未先 entry 直接 claim | 后端自动补创建 campaign 后继续领取,不 500 |
 
 ## 9. 验收/验证命令
@@ -399,18 +386,7 @@ uv run python src/app/init/sync_database_schema.py --dry-run
 - `next_claim_at` 在 `America/New_York` 夏令时与冬令时切换时仍指向正确的下一个本地零点。
 - 更新对应 real 测试文件顶部的写入端点覆盖矩阵。
 
-## 10. 数据埋点字段
-
-新增 website 埋点字段(不新增复杂事件体系):
-
-| 事件 | 字段 |
-| --- | --- |
-| 首页签到弹窗自动展示 | `checkin_day_index`、`checkin_reward_today`、`checkin_popup_source=auto` |
-| 用户手动点击 Credits 打开弹窗 | `checkin_day_index`、`checkin_popup_source=manual` |
-| 用户点击签到成功 | `checkin_day_index`、`checkin_reward_claimed`、`credits_balance` |
-| 用户关闭签到弹窗 | `checkin_day_index`、`checkin_popup_source` |
-
-## 11. 风险与回滚
+## 10. 风险与回滚
 
 风险:
 
@@ -420,5 +396,4 @@ uv run python src/app/init/sync_database_schema.py --dry-run
 回滚:
 
 - 下线 `/api/client/checkin/*` 路由入口。
-- 前端隐藏签到入口。
 - 保留签到历史表,不影响其他业务。

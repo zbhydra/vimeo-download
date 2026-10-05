@@ -31,10 +31,10 @@
 
 ### 1.2 计数口径
 
-- 上限值来自数据库配置 key `dl_active_download_limit`,`download-pre-v2` 读取；缺失或非正整数量直接返回 `MEDIA_DOWNLOAD_PRE_UNAVAILABLE`，不做静默兜底。
+- 上限值来自数据库配置 key `dl_active_download_limit`,下载授权入口（匿名与账号两个入口共用）读取；缺失或非正整数量直接返回 `MEDIA_DOWNLOAD_PRE_UNAVAILABLE`，不做静默兜底。
 - 上限写入并签名进 `media_download` token 的 `active_download_limit`，`download-v2` 只读 token，不查 DB、不查订阅、不查档位。
 - 只用进程内 dict(`media_active_download_service`)，不使用 Redis；进程重启后计数自然清空。
-- 身份键:登录用户为 `user:{id}`，匿名设备为 `device:{id}`。
+- 身份键:账号授权为 `user:{id}`，匿名设备为 `device:{id}`；网站只产生设备身份。
 - 超过上限直接返回 `RATE_LIMIT_EXCEEDED_MEDIA`，`data.reason = "active_download_limit_exceeded"`，不排队等待，前端不切节点。
 - 只在 `provider.policy.active_limited=True` 时生效；`download_mode` 不决定是否进入计数。
 
@@ -106,7 +106,7 @@ average_bps = floor(本次新增下载字节 / 本次有效下载耗时秒)
 ### 2.3 时间口径
 
 - 从开始读取下载响应 body 时算，到下载流结束或失败时停止。
-- 不计算 parse、download-pre-v2 授权、排队、重试等待、object URL 保存、浏览器原生保存弹窗时间。
+- 不计算 parse、下载授权、排队、重试等待、object URL 保存、浏览器原生保存弹窗时间。
 - 下载流中途没有新字节但未失败时，这段等待算进耗时。
 - 进度源里 `speedBytesPerSecond` 已按下载 helper 自己的 `startedAt` 计算:
   - `response-download.ts`:从进入 `createObjectUrlCompletionFromResponse()` 后开始算。
@@ -142,7 +142,7 @@ export function buildHomepageDownloadSuccessMarkMessage(
 - 字段名使用现有 `average_bps`，不新增 `avg_speed_bps`。
 - `mark_msg` 超长时，`download_stats` 保留;复杂错误信息按现有逻辑压缩。
 - `mark_msg` 必须保持低于 1000 字符(后端 API 与数据库上限 1024)。
-- mark 实现统一维护在 `website-shared/src/homepage-runtime/mark.ts`;website 本地路径仅作兼容 re-export。
+- mark 实现维护在 `website/src/scripts/runtime/mark.ts`。
 - mark-log / SLS 上报失败不影响下载。
 
 ### 2.6 非功能要求

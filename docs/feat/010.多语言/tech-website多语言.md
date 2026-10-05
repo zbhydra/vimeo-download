@@ -46,7 +46,9 @@
 website/src/i18n/
 ├── ui.ts          # 语言清单、默认语言、localeNames、localePaths、hreflangMap(常量唯一来源)
 ├── content.ts     # content 装配表:Record<Locale, SiteContent> + getContent(locale) 回退函数
-├── schema.ts      # SiteContent 及各业务模块的 TypeScript interface(类型约束)
+├── schema.ts      # SiteContent 及各业务模块的 TypeScript interface(类型约束,含下载工作区文案)
+├── pricing.ts     # Pricing 页文案:各语言 PricingPageContent + 页面 seo / hero 装配
+├── payment-return.ts  # PayPal / Clink 回跳页英文文案(仅英文,不进语言字典)
 ├── index.ts       # 统一 re-export 入口
 └── lang/
     ├── en-US.ts   # 各语言文案对象,按 schema 类型组织
@@ -57,8 +59,13 @@ website/src/i18n/
 
 ### 2.2 类型约束
 
-- `schema.ts` 定义 `SiteContent` interface(聚合各业务模块:`HomepageWorkspaceContent`、`DownloadWorkspaceContent`、`SolutionMessage` 等),每个业务子 interface 声明该模块全部文案字段及注释。
-- 每个语言的 `lang/{locale}.ts` 导出一个 `SiteContent` 对象,TS 编译期强制 14 语言字段齐全,缺字段编译失败(`pnpm tsc --noEmit` 能拦住)。
+- `schema.ts` 定义 `SiteContent` interface,每个业务子 interface 声明该模块全部文案字段及注释。当前顶层结构:
+  - `site.description`:站点级默认 meta description,与首页 `meta.description` 同一措辞;
+  - `layout.nav`(`brand` / `home` / `pricing`)、`layout.footer`(`resources` / `rights`)、`common.installCta`;
+  - `pages.homepage`(`HomepageContent`):`meta`(title / description)、`heroTrustPoints`(恰好 4 条)、`workspace`(`DownloadWorkspaceContent`,首屏下载器文案)、`softwareApplication`(结构化数据描述与能力清单),以及 8 个展示区块键 `intro` / `features` / `steps` / `comparison` / `scope` / `plans` / `faq` / `finalCta`(区块 `heading` 即该区块唯一的 H2);
+  - `pages.pricing`(`PricingPageContent`):Pricing 页、登录弹窗、订阅结算与好评赠送文案,由 `i18n/pricing.ts` 按语言提供。
+- 首页文案不含 Credits、签到、额度数字与价格;下载工作区文案不含登录、账户与积分购买。商店文案是首页展示区块的事实与术语来源(`docs/assets/store/`),映射见 `@../000.架构/plans/004.官网改版-插件展示与免费网页下载.md` §2.2。
+- 每个语言的 `lang/{locale}.ts` 导出一个 `SiteContent` 对象,TS 编译期强制 14 语言字段齐全,缺字段编译失败(`pnpm build` 里的 `astro check` 能拦住)。
 - 这是 website 端保证 14 语言翻译完整的机制:类型系统当契约,不靠运行时检查。
 
 ### 2.3 装配与回退
@@ -73,14 +80,13 @@ website/src/i18n/
 ```
 website/src/pages/
 ├── index.astro                     # 默认语言(en-US)首页,无前缀
-├── vimeo-downloader.astro          # Vimeo 平台落地页
-├── pricing.astro / ext-pricing.astro
+├── pricing.astro
 ├── about.astro / contact.astro
-├── privacy.astro / terms.astro / changelog.astro
+├── privacy.astro / terms.astro
+├── clink/ paypal/                  # 支付回跳页(success / cancel),仅英文,无语言镜像
 └── [lang]/                         # 其余 13 语言镜像,带前缀
     ├── index.astro
-    ├── vimeo-downloader.astro
-    └── ... (与默认语言一一对应)
+    └── ... (与默认语言一一对应:pricing / about / contact / privacy / terms)
 ```
 
 - 默认语言(en-US)页面在 `pages/` 根,**无 URL 前缀**。
@@ -105,9 +111,9 @@ export function getStaticPaths() {
 - 输出:13 条 `{ params: { lang: 前缀 }, props: { locale } }`,en-US 跳过。
 - 页面组件接收 `locale` prop,调 `getContent(locale)` 取文案对象传给业务组件(如 `<HomePage locale={locale} />`)。
 
-### 3.3 中间件(当前为空)
+### 3.3 无中间件、无运行时语言重定向
 
-- `website/src/middleware.ts` 当前是**空中间件**(只 `next()`),**不做运行时语言重定向**。
+- website 没有 middleware,**不做运行时语言重定向**。
 - 语言由 URL 路径静态决定,不靠运行时协商;落地页与站内链接负责引导用户到对应语言路径。
 - 多语言 Sitemap 的生成走 astro 集成 `languageSitemap`(`astro.config.mjs` 引入 `./src/sitemap/languageSitemap.mjs`),SEO 规则见 `@../009.SEO与增长/tech-落地页与Sitemap.md`。
 
@@ -128,7 +134,7 @@ export function getStaticPaths() {
 
 1. 在 `ui.ts` 的 `locales` 数组追加新 locale。
 2. 补 `localeNames` / `localePaths` / `hreflangMap` 三张表对应条目(`localePaths` 给出 URL 前缀;en-US 之外的默认语言前缀不可与现有冲突)。
-3. 在 `lang/` 加 `{locale}.ts`,导出符合 `SiteContent` 类型的文案对象(**必须填全所有 schema 字段,否则 tsc 失败**)。
+3. 在 `lang/` 加 `{locale}.ts`,导出符合 `SiteContent` 类型的文案对象(**必须填全所有 schema 字段,否则 `astro check` 失败**)。
 4. 在 `content.ts` 加 import 与装配表条目。
 5. `[lang]/*.astro` 自动经 `localePaths` 生成新语言路径,无需改路由代码。
 6. 同步 extension 与 backend(见 `@tech-extension与后端文案.md` §6)。

@@ -1,5 +1,16 @@
 # 009 · SEO 与增长 - 变更记录
 
+## 2026-10-05 官网改版：首页即工具页 + 8 个插件展示区块，下线平台落地页、更新日志与签到入口
+
+**Why**：网站定位改为「首屏免费网页下载 + 插件展示 + 插件订阅购买」。工具已在首页首屏，独立平台落地页与同一关键词重复；更新日志条目与插件真实版本无关；Credits 与签到不再在网站提供。决策基线见 `../000.架构/plans/004.官网改版-插件展示与免费网页下载.md`。
+
+**From → To**：
+- `feat.md`：重写。首页改为工具首屏 + 8 个区块（插件介绍、功能、使用步骤、网页版与插件对比、适用范围与边界、方案概览、FAQ、结尾 CTA）；导航只有 Home / Pricing / Install；页脚只有 Company 与 Resources(Terms / Privacy)；删除平台落地页、更新日志、首页账户入口、Credits 徽标与签到弹窗的描述，签到后端保留但网站不再调用。
+- `tech-落地页与Sitemap.md`：重写。平台落地页章节改为「不存在」；首页区块改为现组件（`components/homepage/Home*Section`），旧的情景表、HowTo、Solutions、卖点网格、排错、合规卡、方法对比、互链区块已删除；结构化数据只剩 FAQPage + SoftwareApplication（删除 WebApplication）；sitemap 页面族只剩首页 / Terms·Privacy / About·Contact / Pricing，删除 changelog、`-downloader/`、ext-pricing 三族与回跳页分支；源文件路径改到 `components/pricing/` 与 `components/order-checkout/`。
+- `tech-LLMs与增长入口.md`：重写。llms 文件结构改为 Pages / Sitemap / Key Facts（完整入口另有 Language Entrances 与 Sitemaps），只列真实存在的 6 个页面；测试约束与禁项删除 `vimeo-downloader`、`changelog`；`layout.nav` 字段为 brand / home / pricing；页脚 Resources 去掉 Changelog；Layout 里的 Solution 菜单残留已不存在。
+- `tech-签到活动.md`：删除网站前端合同，只保留后端合同，开头加下线说明（网站不再调用）。
+- 后端签到接口、数据与配置保留，后续处理见 004 计划 §8。
+
 ## 2026-09-18 整仓单平台转型：SEO 资产收敛到 Vimeo 单平台
 
 **Why**：产品只剩 Vimeo 一个平台，TikTok / X / Instagram / Threads 落地页、互链区块与禁下载频道 workaround 长尾页已全部删除；旧文档仍在描述 5 个平台落地页与 Solution 下拉分组。

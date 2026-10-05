@@ -1,0 +1,42 @@
+---
+/**
+ * 首页展示区块外壳：统一的纵向节奏、顶部分隔线和唯一的 H2。
+ * 各区块只管自己的内容布局，标题与间距由这里统一，避免每个区块各写一份。
+ */
+const { heading, id } = Astro.props as { heading: string; id: string }
+---
+
+<section class="home-section" aria-labelledby={`${id}-heading`}>
+  <div class="container">
+    <h2 id={`${id}-heading`} class="home-section-heading">{heading}</h2>
+    <slot />
+  </div>
+</section>
+
+<style>
+  .home-section {
+    padding: 64px 0;
+    border-top: 1px solid var(--gray-alpha-400);
+  }
+
+  .home-section-heading {
+    margin-bottom: 32px;
+    font-size: 32px;
+    font-weight: 600;
+    line-height: 40px;
+    letter-spacing: -1.28px;
+  }
+
+  @media (max-width: 960px) {
+    .home-section {
+      padding: 40px 0;
+    }
+
+    .home-section-heading {
+      margin-bottom: 24px;
+      font-size: 24px;
+      line-height: 32px;
+      letter-spacing: -0.96px;
+    }
+  }
+</style>

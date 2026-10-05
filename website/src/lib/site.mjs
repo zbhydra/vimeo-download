@@ -3,7 +3,7 @@
  *
  * 站点域名、Chrome 插件地址、公开邮箱与官方 X 账号只在这里定义一次。
  * `astro.config.mjs`（canonical / hreflang / sitemap）、Layout 结构化数据、
- * sitemap XSL、公司页与法务页、website-shared 的插件入口都从这里取值，
+ * sitemap XSL、公司页与法务页、下载工作区的插件入口都从这里取值，
  * 避免同一个地址散落在多个文件里。
  *
  * 用 `.mjs` 而不是 `.ts`：Astro 配置文件只能直接 import 纯 ESM 模块。

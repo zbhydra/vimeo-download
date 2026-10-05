@@ -1,0 +1,149 @@
+---
+/** PayPal / Clink 支付回跳页（success / cancel）。 */
+import Layout from '../../layouts/Layout.astro'
+import { paymentReturnContent } from '../../i18n/payment-return'
+import { PRODUCT_NAME } from '../../lib/site.mjs'
+
+interface Props {
+  /** 支付渠道。 */
+  provider: 'paypal' | 'clink'
+  /** 支付结果。 */
+  status: 'success' | 'cancel'
+}
+
+const { provider, status } = Astro.props
+const providerLabel = provider === 'paypal' ? 'PayPal' : 'Clink'
+const iconSrc =
+  provider === 'paypal' ? '/payment-icons/paypal-monogram.png' : '/payment-icons/clinkbill.png'
+const { success, cancel } = paymentReturnContent
+const initial = status === 'success' ? success.waiting : cancel
+---
+
+<Layout
+  locale="en-US"
+  title={`${initial.title} | ${PRODUCT_NAME}`}
+  description={initial.description}
+  includeSoftwareApplicationSchema={false}
+  includeAlternateLanguageLinks={false}
+  includeLanguageSwitcher={false}
+  robots="noindex, nofollow, noarchive"
+>
+  <section
+    class="payment-return-page"
+    data-payment-return
+    data-payment-return-provider={provider}
+    data-payment-return-status={status}
+    data-payment-return-state={status === 'success' ? 'waiting' : 'cancelled'}
+  >
+    {
+      status === 'success' &&
+        (['waiting', 'confirmed', 'failed', 'submitted'] as const).map((state) => (
+          <span
+            data-payment-return-copy={state}
+            data-title={success[state].title}
+            data-description={success[state].description}
+            hidden
+          />
+        ))
+    }
+    <div class="payment-return-card" aria-live="polite">
+      <img src={iconSrc} alt="" aria-hidden="true" width="32" height="32" />
+      <p class="payment-return-eyebrow">{providerLabel}</p>
+      <h1 data-payment-return-title>{initial.title}</h1>
+      <p data-payment-return-description>{initial.description}</p>
+      <a class="btn-primary payment-return-pricing" href="/pricing/">{paymentReturnContent.backToPricing}</a>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { initPaymentReturnPage } from './payment-return'
+
+  const root = document.querySelector<HTMLElement>('[data-payment-return]')
+  const provider = root?.dataset.paymentReturnProvider
+  const status = root?.dataset.paymentReturnStatus
+  if ((provider === 'paypal' || provider === 'clink') && (status === 'success' || status === 'cancel')) {
+    initPaymentReturnPage({ provider, status })
+  } else {
+    console.error(
+      new Error(`payment return page: invalid provider=${String(provider)} status=${String(status)}`)
+    )
+  }
+</script>
+
+<style>
+  .payment-return-page {
+    display: grid;
+    min-height: 68vh;
+    place-items: center;
+    padding: 96px 16px 64px;
+    background: var(--background-200);
+  }
+
+  .payment-return-card {
+    width: min(560px, 100%);
+    padding: 32px;
+    border: 1px solid var(--gray-alpha-400);
+    border-radius: var(--radius-md);
+    background: var(--background-100);
+    box-shadow: var(--shadow-card);
+    text-align: center;
+  }
+
+  [data-payment-return-copy][hidden] {
+    display: none;
+  }
+
+  [data-payment-return-state='confirmed'] .payment-return-card {
+    border-color: var(--green-900);
+  }
+
+  [data-payment-return-state='failed'] .payment-return-card {
+    border-color: var(--red-900);
+  }
+
+  .payment-return-card img {
+    display: block;
+    margin: 0 auto 8px;
+  }
+
+  .payment-return-eyebrow {
+    margin: 0 0 8px;
+    color: var(--gray-900);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 18px;
+  }
+
+  .payment-return-card h1 {
+    margin: 0;
+    color: var(--gray-1000);
+    font-size: 32px;
+    font-weight: 600;
+    letter-spacing: -1.28px;
+    line-height: 40px;
+  }
+
+  [data-payment-return-description] {
+    margin: 16px 0 0;
+    color: var(--gray-900);
+    font-size: 16px;
+    line-height: 24px;
+  }
+
+  .payment-return-pricing {
+    margin-top: 24px;
+  }
+
+  @media (max-width: 560px) {
+    .payment-return-card {
+      padding: 24px 16px;
+    }
+
+    .payment-return-card h1 {
+      font-size: 24px;
+      line-height: 32px;
+      letter-spacing: -0.96px;
+    }
+  }
+</style>

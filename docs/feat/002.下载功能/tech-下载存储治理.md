@@ -51,7 +51,7 @@ OPFS 真实 write/read/delete 成功但资源不可校验续传         -> stora
 
 ### 3.3 下载前容量预检
 
-用户点击单文件下载或 Download all 后,在登录校验通过、调用 `download-pre-v2` 之前执行浏览器存储预检。预检失败时不授权、不扣 Credits、不进入下载队列,展示“浏览器存储空间不足”提示并引导用户使用插件下载；`proxy` 下线后不再存在预检 fallback 机制（`storagePreflightFallback` 字段已从方法定义删除）。
+用户点击单文件下载或 Download all 后,在身份一致性校验通过、申请下载授权之前执行浏览器存储预检。预检失败时不授权、不消耗匿名次数、不进入下载队列,展示“浏览器存储空间不足”提示并引导用户使用插件下载；`proxy` 下线后不再存在预检 fallback 机制（`storagePreflightFallback` 字段已从方法定义删除）。
 
 预检编排不按 `download_mode` 名称硬编码,统一读取 `DownloadMethodDefinition.requiresStoragePreflight`。`direct` / `client_mux` 都执行预检,失败即阻断。
 
@@ -109,7 +109,7 @@ direct 模式降级时保留同一授权与当前 `downloadUrl`,不重新请求 
 
 | 事件 | 触发 |
 | --- | --- |
-| `web_download_storage_preflight_blocked` | 下载前容量预检阻断,不进入 `download-pre-v2` |
+| `web_download_storage_preflight_blocked` | 下载前容量预检阻断,不申请下载授权 |
 
 `web_download_storage_preflight_fallback` 随 `proxy` 与预检 fallback 机制一起下线，前端不再上报（后端 mark 字典保留历史值）。
 
@@ -142,13 +142,13 @@ direct 模式降级时保留同一授权与当前 `downloadUrl`,不重新请求 
 6. 恢复失效只清恢复记录,解析结果与播放恢复保持稳定。
 7. direct 下载 URL 过期刷新逻辑保持原行为(`@tech-下载方法与续传.md` §8.5)。
 8. `web_download_failed` 只代表真实传输失败或最终文件生成失败,不把 checkpoint 失败计入。
-9. `direct` / `client_mux` 容量预检失败时提示用户浏览器存储不足并引导插件下载,不发起 `download-pre-v2`（`proxy` 自动 GET fallback 已随 `proxy` 下线删除）。
+9. `direct` / `client_mux` 容量预检失败时提示用户浏览器存储不足并引导插件下载,不申请下载授权（`proxy` 自动 GET fallback 已随 `proxy` 下线删除）。
 10. 存储预检 blocked 埋点只保留事件专用字段,不记录无消费方的浏览器指纹字段或重复错误内容,且入库后仍可解析为完整 JSON。
 
 ## 9. 源码结构
 
 ```text
-website-shared/src/download/scripts/
+website/src/scripts/download/
   download-storage-preflight.ts  # 下载前 origin quota 与 OPFS 可写预检
   download-resume-store.ts       # OPFS/IndexedDB 后端、能力探测、Memory fallback、恢复记录加载
   download-temp-storage.ts       # 临时写入器抽象
@@ -157,4 +157,4 @@ website-shared/src/download/scripts/
   workspace-render.ts            # 恢复提示渲染
 ```
 
-> 下载运行源码统一在 `website-shared/src/download/scripts/`,站点目录不承载运行源码(见 `@tech-下载方法与续传.md` §10)。
+> 下载运行源码统一在 `website/src/scripts/download/`(见 `@tech-下载方法与续传.md` §10)。

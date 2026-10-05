@@ -5,11 +5,11 @@
 
 ## 1. 组件边界
 
-主站订阅页装配 Pricing 专用订阅确认弹窗。积分页不装配或初始化该弹窗,但保留账号摘要与订阅管理。路由与旧入口转向见[购买页路由合同](./tech-实现与配置.md#购买页路由合同)。全站通用确认框保持无状态布尔确认,下载等现有调用不受活动逻辑影响。
+`/pricing/` 装配 Pricing 专用订阅确认弹窗。路由与来源识别见[购买页路由合同](./tech-实现与配置.md#购买页路由合同)。全站通用确认框保持无状态布尔确认,下载等现有调用不受活动逻辑影响。
 
-专用弹窗显示插件使用范围、安装链接、取消和继续购买。只有活动开关启用且资格状态位为 `0`(未领取)时,在安装提示下增加好评赠送区域;直接访问订阅页同样适用。插件来源的订阅页另提供独立紧凑入口,直接打开评价页并复用同一弹窗的检测、领取与结果视图。
+专用弹窗显示插件使用范围、安装链接、取消和继续购买。只有活动开关启用且资格状态位为 `0`(未领取)时,在安装提示下增加好评赠送区域;直接访问 Pricing 页同样适用。插件来源的 Pricing 页另提供独立紧凑入口,直接打开评价页并复用同一弹窗的检测、领取与结果视图。
 
-不新增页面路由,不修改 Extension,不把该弹窗复用到 Credits 购买。
+不新增页面路由,不修改 Extension;网站不再出售 Credits,弹窗只服务订阅购买。
 
 ## 2. UI 元素
 
@@ -117,21 +117,21 @@ POST /api/client/subscription/review-reward/claim
 ## 9. 文件责任
 
 ```text
-website-shared/src/components/pricing/PricingSubscriptionConfirmModal.astro
-website-shared/src/components/pricing/pricing-subscription-confirm-controller.ts
-website-shared/src/components/pricing/pricing-checkout.ts
-website-shared/src/components/pricing/pricing-page-controller.ts
-website-shared/src/components/pricing/PricingPageShell.astro
+website/src/components/pricing/PricingSubscriptionConfirmModal.astro
+website/src/components/pricing/pricing-subscription-confirm-controller.ts
+website/src/components/pricing/pricing-checkout.ts
+website/src/components/pricing/pricing-page-controller.ts
+website/src/components/pricing/PricingPageShell.astro
 website/src/i18n/schema.ts
 website/src/i18n/pricing.ts
-website/e2e/website.spec.ts
+website/e2e/pricing-review-reward-smoke.spec.ts
 ```
 
-删除 `pricing-page-controller.ts` 对订阅安装确认的 `siteConfirmAction` 调用;全站 `SiteConfirmModal` 与 `site/confirm.ts` 不改。
+删除 `pricing-page-controller.ts` 对订阅安装确认的 `siteConfirmAction` 调用;全站 `components/site/SiteConfirmModal.astro` 与 `scripts/site/confirm.ts` 保持无状态布尔确认。
 
 ## 10. 测试与验收
 
-默认 E2E 使用 mock API 覆盖页面资格与入口交互;领取合同继续使用真实 Backend、MySQL、Redis 与唯一测试账号验证:
+验证只使用本地启动的真实 Backend、MySQL、Redis 与唯一测试账号(不使用 mock 后端)。真实浏览器 smoke 用例为 `website/e2e/pricing-review-reward-smoke.spec.ts`,命令为 `pnpm test:e2e:pricing-review-reward-smoke`(见 `website/package.json`);下列其余条目是验收口径,按改动影响选择验证方式:
 
 - 未领取账号看到赠送说明和“去好评”;已领取账号不看到。
 - 活动关闭时页面入口与确认弹窗好评区域均隐藏,继续购买仍可用。
@@ -149,4 +149,4 @@ website/e2e/website.spec.ts
 - 桌面与移动视口无文本溢出、重叠或布局跳动;键盘焦点、Escape 和返回焦点正确。
 - 所有 locale 的类型合同、必需文案和构建通过。
 
-验证包含 `pnpm test:module-scripts`、目标真实浏览器 smoke、`pnpm tsc --noEmit`、`pnpm build` 和 website 启动无异常。
+验证包含 `pnpm test:module-scripts`、上述真实浏览器 smoke、`pnpm build`(含 `astro check`)和 website 启动无异常。

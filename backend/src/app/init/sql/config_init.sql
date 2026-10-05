@@ -9,10 +9,10 @@
 -- 公共策略与开关：下载额度、首日免费、设备校验、注册与签到活动、支持邮箱
 INSERT IGNORE INTO config_public (c_key, g_value) VALUES
 ('dl_active_download_limit', '3'),
-('dl_anonymous_immediate_count', '2'),
-('dl_anonymous_total_count', '3'),
-('dl_anonymous_max_size_bytes', '314572800'),
-('dl_anonymous_wait_seconds', '300'),
+('dl_anonymous_immediate_count', '2147483647'),
+('dl_anonymous_total_count', '2147483647'),
+('dl_anonymous_max_size_bytes', '4294967295'),
+('dl_anonymous_wait_seconds', '0'),
 ('dl_anonymous_dedup_seconds', '10800'),
 ('extension_first_day_free_enabled', 'true'),
 ('device_trust', '{"verify_device_id":true}'),

@@ -1,0 +1,90 @@
+---
+/** 区块 6：方案概览。只写定位，不写额度数字与价格（两者来自后端配置），按钮都进 Pricing。 */
+import HomeSection from './HomeSection.astro'
+import type { HomepageContent } from '../../i18n/schema'
+
+const { copy, pricingPath } = Astro.props as {
+  copy: HomepageContent['plans']
+  pricingPath: string
+}
+---
+
+<HomeSection id="home-plans" heading={copy.heading}>
+  <div class="home-plan-grid">
+    <div class="home-plan-card">
+      <h3>{copy.free.name}</h3>
+      <p>{copy.free.description}</p>
+      <a
+        class="btn-secondary"
+        href={pricingPath}
+        data-ga-event="internal_workflow_click"
+        data-ga-source="homepage_plans_free"
+        data-ga-target="pricing"
+      >{copy.free.cta}</a>
+    </div>
+    <div class="home-plan-card">
+      <h3>{copy.unlimited.name}</h3>
+      <p>{copy.unlimited.description}</p>
+      <a
+        class="btn-primary"
+        href={pricingPath}
+        data-ga-event="internal_workflow_click"
+        data-ga-source="homepage_plans_unlimited"
+        data-ga-target="pricing"
+      >{copy.unlimited.cta}</a>
+    </div>
+  </div>
+</HomeSection>
+
+<style>
+  .home-plan-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .home-plan-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 32px;
+    border: 1px solid var(--gray-alpha-400);
+    border-radius: var(--radius-md);
+    background: var(--background-100);
+    box-shadow: var(--shadow-card);
+  }
+
+  .home-plan-card h3 {
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 32px;
+    letter-spacing: -0.96px;
+  }
+
+  .home-plan-card p {
+    flex: 1;
+    margin-bottom: 16px;
+    color: var(--gray-900);
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .home-plan-card a {
+    height: auto;
+    min-height: 40px;
+    padding: 10px 14px;
+    white-space: normal;
+    text-align: center;
+  }
+
+  @media (max-width: 960px) {
+    .home-plan-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .home-plan-card {
+      padding: 24px;
+    }
+  }
+</style>

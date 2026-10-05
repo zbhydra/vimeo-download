@@ -5,15 +5,14 @@
 
 ## 1. 各端职责
 
-monorepo，各前端子项目独立用 pnpm 管理（无根 workspace），后端用 uv。共 4 个应用 + 2 个辅助目录：
+monorepo，各前端子项目独立用 pnpm 管理（无根 workspace），后端用 uv。共 4 个应用 + 2 个辅助目录（`scripts/`、`docs/`）；`website/` 自包含，无共享源码包：
 
 | 端 | 目录 | 技术栈 | 职责 |
 | --- | --- | --- | --- |
 | **backend** | `backend/` | Python 3 + FastAPI + SQLAlchemy(async) + aiomysql + Redis | 业务服务器（`business` 角色）；同一份代码另有 `download` 执行角色，本项目只部署 `business`。API、调度、crons、支付、节点管理全在这。详见 `@tech-backend.md` |
-| **website** | `website/` | Astro 5（SSG）+ Vue 3 岛屿 + 原生 TS 命令式 DOM，nginx 部署 | 面向终端用户的多语言站点（14 locale），提供 Vimeo 链接解析、下载工作区、Credits 购买与 Pricing。站点源集中在 `website/src/lib/site.mjs`；生产域当前仍是占位值 `vimeo-video-downloader.example`，上线前必须替换。详见 `@tech-website.md` |
+| **website** | `website/` | Astro 5（SSG）+ 原生 TS 命令式 DOM（无 Vue / React），nginx 部署 | 面向终端用户的多语言站点（14 locale）：首屏免费网页下载器 + 插件展示区块，以及插件订阅（Unlimited）购买页。网站不再提供 Credits 购买与展示、签到入口、下载工作区登录 / 账户；后端对应接口与数据仍在，网站不再调用（见 `@plans/004.官网改版-插件展示与免费网页下载.md` §8）。站点源集中在 `website/src/lib/site.mjs`；生产域当前仍是占位值，上线前必须替换。详见 `@tech-website.md` |
 | **extension** | `extension/` | Vue 3 + Pinia + vue-i18n，**Chrome Manifest V3** | 跑在 `vimeo.com` / `www.vimeo.com` / `player.vimeo.com` 的浏览器插件，页面内三行下载面板 + Popup 单视频操作面板、跨上下文 RPC、与 backend 同一套 HTTP 契约。详见 `@tech-extension.md` |
 | **admin** | `admin/` | Vue 3 + Naive UI + vue-router + Pinia | 独立 SPA 管理后台（节点 / 订单 / 渠道 / 远端配置 / mark-log 诊断），走 `/api/admin/*`。详见 `@tech-extension.md` 末尾 |
-| `website-shared/` | — | 纯源码包（无 package.json） | website 共享的下载 / 积分 / 首页运行时代码（`@website-shared` alias 指向 `website-shared/src`） |
 | `scripts/` | — | Node | 仓库级构建脚本（Playwright 浏览器身份等） |
 
 > 产品名统一为 **Vimeo Video Downloader**。仓库内不再有第二个站点或第二个插件产品；`website-tgd-pro/`、`extension-pro/` 已随产品转型整体删除，文档中不得再引用（历史 changelog 与已标注作废/补注的条目除外——那里的词形是历史记录，不再描述现状）。
@@ -35,7 +34,7 @@ extension 常规开发命令执行 watch 构建，不监听 HTTP 端口；显式
 ## 2. 技术栈速查
 
 - **后端**：Python（uv 管理）、FastAPI、SQLAlchemy 2.x async（aiomysql 驱动）、Redis（redis.asyncio）、Pydantic、click。唯一 ORM/DB 引擎是 MySQL。
-- **网站**：Astro（SSG）+ Vue 3 岛屿 + mediabunny（下载引擎），无 Tailwind（原生 CSS + scoped）；Playwright e2e。
+- **网站**：Astro（SSG）+ 原生 TS 命令式 DOM + mediabunny（下载引擎），无 Vue / React、无 Tailwind（原生 CSS + scoped）；Playwright e2e。
 - **插件**：Vue 3 + Pinia + vite-plugin-web-extension（MV3）+ vue-i18n；Playwright e2e。
 - **后台**：Vue 3 + Naive UI + axios + vue-router。
 - **包管理**：前端各子项目独立 pnpm（**无根 workspace**，各自 `package.json` + lockfile），后端 uv（`backend/uv.lock`）。
@@ -46,11 +45,11 @@ extension 常规开发命令执行 watch 构建，不监听 HTTP 端口；显式
 用户
  │
  ├─ 浏览器 ─→ website (Astro 静态站, 14 locale)
- │             │  解析/下载/计费 调 backend business (HTTP)
+ │             │  解析/匿名下载授权/订阅购买 调 backend business (HTTP)
  │             │  mark-log 双写: backend /api/client/mark + 阿里云 SLS WebTracking (后端不可用时逃生)
  │             ▼
  │      backend (business 角色, FastAPI)
- │        ├─ /api/client/*    互联网客户端接口 (解析/下载/积分/计数/订单/登录/签到/远端配置)
+ │        ├─ /api/client/*    互联网客户端接口 (解析/下载/积分/计数/订单/登录/签到/远端配置；website 现只调用解析、匿名下载、订阅、订单、登录与 mark)
  │        ├─ /api/admin/*     admin 后台接口
  │        ├─ /api/system/*    健康检查/看板
  │        ├─ /api/internal/*  节点内部接口 (无业务 DB 依赖)
@@ -96,7 +95,7 @@ extension 常规开发命令执行 watch 构建，不监听 HTTP 端口；显式
 | **011 Pricing页** | | | | | | | | | | — |
 
 观察（用于判断地基归属）：
-- **002 下载功能**被绝大多数域引用，是核心业务链路；**003 积分系统**是现行计费权威，被 002/004/005/006/008/009/011 引用。
+- **002 下载功能**被绝大多数域引用，是核心业务链路；**003 积分系统**是后端积分账户权威（插件订阅额度走 006，网站已不再消费 Credits），被 002/004/005/006/008/009/011 引用。
 - **007 用户系统**（账号 / 会话 / 第三方登录）是横切底座，所有面向用户的域都隐含依赖它，即使部分域未显式加链接。
 - **000 架构域**不参与该矩阵：它是所有业务域之下的技术地基（DB / 后端分层 / crons / 配置 / 多语言 / 跨端通信），被需要时由各域 `@` 回引。000 不描述任何业务实现。
 
@@ -108,7 +107,7 @@ extension 常规开发命令执行 watch 构建，不监听 HTTP 端口；显式
 | --- | --- |
 | MySQL / 时区 / 结构同步 / 索引规则 | `@tech-数据库.md` |
 | FastAPI 分层 / 异常中间件 / 配置 / crons / Redis / SLS | `@tech-backend.md` |
-| Astro 目录 / 多语言 / Sitemap / SEO | `@tech-website.md` |
+| Astro 目录 / 多语言 / Sitemap / SEO / SLS 双写 | `@tech-website.md` |
 | 插件上下文 / RPC / store / quota / 与后端通信 + admin 后台 | `@tech-extension.md` |
 | 插件跨上下文 RPC 协议 | `@tech-插件RPC.md` |
 | 计数器基础设施 | `@tech-counter.md` |

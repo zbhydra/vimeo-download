@@ -1,0 +1,332 @@
+---
+/**
+ * Pricing Unlimited 购买确认与好评赠送弹窗。
+ *
+ * 原生 dialog 提供模态焦点约束；控制器只在当前打开周期内维护倒计时和领取状态。
+ */
+
+interface ReviewRewardCopy {
+  /** 未领取账号看到的赠送说明。 */
+  offerMessage: string
+  /** 打开商店评价页的按钮。 */
+  reviewButton: string
+  /** 倒计时视图标题。 */
+  checkingTitle: string
+  /** 倒计时视图说明。 */
+  checkingMessage: string
+  /** 含 {seconds} 的剩余时间文案。 */
+  countdown: string
+  /** 领取请求中的标题。 */
+  claimingTitle: string
+  /** 领取请求中的说明。 */
+  claimingMessage: string
+  /** 领取成功标题。 */
+  successTitle: string
+  /** 领取成功说明。 */
+  successMessage: string
+  /** 已领取结果标题。 */
+  alreadyClaimedTitle: string
+  /** 已领取结果说明。 */
+  alreadyClaimedMessage: string
+  /** 领取失败标题。 */
+  failedTitle: string
+  /** 普通领取失败说明。 */
+  failedMessage: string
+  /** 服务器繁忙说明。 */
+  busyMessage: string
+  /** 直接重试领取按钮。 */
+  retry: string
+  /** 关闭弹窗按钮。 */
+  close: string
+}
+
+interface SubscriptionConfirmCopy {
+  /** 初始确认标题。 */
+  installConfirmTitle: string
+  /** 含 {link} 的插件使用范围说明。 */
+  installConfirmMessage: string
+  /** 安装链接文案。 */
+  installConfirmLinkLabel: string
+  /** 取消购买按钮。 */
+  installConfirmCancel: string
+  /** 继续购买按钮。 */
+  installConfirmContinue: string
+  /** 好评赠送流程文案。 */
+  reviewReward: ReviewRewardCopy
+}
+
+const { copy, extensionInstallUrl } = Astro.props as {
+  /** 当前语言的订阅确认文案。 */
+  copy: SubscriptionConfirmCopy
+  /** Chrome Web Store 插件详情页。 */
+  extensionInstallUrl: string
+}
+const [installMessageBeforeLink, installMessageAfterLink = ''] = copy.installConfirmMessage.split('{link}')
+---
+
+<dialog
+  class="pricing-subscription-confirm"
+  data-pricing-subscription-confirm
+  data-extension-review-url={`${extensionInstallUrl}/reviews`}
+  data-failed-message={copy.reviewReward.failedMessage}
+  data-busy-message={copy.reviewReward.busyMessage}
+  aria-labelledby="pricing-subscription-confirm-title-confirm"
+  aria-describedby="pricing-subscription-confirm-description-confirm"
+>
+  <div class="pricing-subscription-confirm-panel">
+    <button
+      type="button"
+      class="pricing-subscription-confirm-close"
+      data-pricing-subscription-confirm-close
+      aria-label={copy.reviewReward.close}
+    >
+      <span aria-hidden="true">×</span>
+    </button>
+
+    <section data-pricing-subscription-confirm-view="confirm">
+      <h2 id="pricing-subscription-confirm-title-confirm" tabindex="-1" data-pricing-subscription-confirm-title>
+        {copy.installConfirmTitle}
+      </h2>
+      <p id="pricing-subscription-confirm-description-confirm" class="pricing-subscription-confirm-description">
+        {installMessageBeforeLink}<a href={extensionInstallUrl} target="_blank" rel="noopener noreferrer">{copy.installConfirmLinkLabel}</a>{installMessageAfterLink}
+      </p>
+      <div class="pricing-review-reward-offer" data-pricing-review-reward-offer>
+        <p>{copy.reviewReward.offerMessage}</p>
+        <button type="button" class="btn-primary pricing-review-button" data-pricing-review-button>
+          {copy.reviewReward.reviewButton}
+        </button>
+      </div>
+      <div class="pricing-subscription-confirm-actions">
+        <button type="button" class="btn-secondary pricing-dialog-secondary" data-pricing-subscription-confirm-close>
+          {copy.installConfirmCancel}
+        </button>
+        <button type="button" class="btn-primary pricing-dialog-primary" data-pricing-subscription-confirm-continue>
+          {copy.installConfirmContinue}
+        </button>
+      </div>
+    </section>
+
+    <section data-pricing-subscription-confirm-view="countdown" hidden>
+      <h2 id="pricing-subscription-confirm-title-countdown" tabindex="-1" data-pricing-subscription-confirm-title>{copy.reviewReward.checkingTitle}</h2>
+      <p id="pricing-subscription-confirm-description-countdown" class="pricing-subscription-confirm-description">{copy.reviewReward.checkingMessage}</p>
+      <p
+        class="pricing-review-countdown"
+        data-pricing-review-countdown
+        data-template={copy.reviewReward.countdown}
+        aria-live="off"
+      ></p>
+      <div class="pricing-subscription-confirm-actions">
+        <button type="button" class="btn-secondary pricing-dialog-secondary" data-pricing-subscription-confirm-close>
+          {copy.reviewReward.close}
+        </button>
+      </div>
+    </section>
+
+    <section data-pricing-subscription-confirm-view="claiming" hidden>
+      <h2 id="pricing-subscription-confirm-title-claiming" tabindex="-1" data-pricing-subscription-confirm-title>{copy.reviewReward.claimingTitle}</h2>
+      <p id="pricing-subscription-confirm-description-claiming" class="pricing-subscription-confirm-description">{copy.reviewReward.claimingMessage}</p>
+      <div class="pricing-subscription-confirm-actions">
+        <button type="button" class="btn-secondary pricing-dialog-secondary" data-pricing-subscription-confirm-close>
+          {copy.reviewReward.close}
+        </button>
+      </div>
+    </section>
+
+    <section data-pricing-subscription-confirm-view="success" hidden>
+      <h2 id="pricing-subscription-confirm-title-success" tabindex="-1" data-pricing-subscription-confirm-title>{copy.reviewReward.successTitle}</h2>
+      <p id="pricing-subscription-confirm-description-success" class="pricing-subscription-confirm-description">{copy.reviewReward.successMessage}</p>
+      <div class="pricing-subscription-confirm-actions">
+        <button type="button" class="btn-primary pricing-dialog-primary" data-pricing-subscription-confirm-close>
+          {copy.reviewReward.close}
+        </button>
+      </div>
+    </section>
+
+    <section data-pricing-subscription-confirm-view="already_claimed" hidden>
+      <h2 id="pricing-subscription-confirm-title-already-claimed" tabindex="-1" data-pricing-subscription-confirm-title>{copy.reviewReward.alreadyClaimedTitle}</h2>
+      <p id="pricing-subscription-confirm-description-already-claimed" class="pricing-subscription-confirm-description">{copy.reviewReward.alreadyClaimedMessage}</p>
+      <div class="pricing-subscription-confirm-actions">
+        <button type="button" class="btn-primary pricing-dialog-primary" data-pricing-subscription-confirm-close>
+          {copy.reviewReward.close}
+        </button>
+      </div>
+    </section>
+
+    <section data-pricing-subscription-confirm-view="failed" hidden>
+      <h2 id="pricing-subscription-confirm-title-failed" tabindex="-1" data-pricing-subscription-confirm-title>{copy.reviewReward.failedTitle}</h2>
+      <p id="pricing-subscription-confirm-description-failed" class="pricing-subscription-confirm-description" data-pricing-review-error></p>
+      <div class="pricing-subscription-confirm-actions">
+        <button type="button" class="btn-secondary pricing-dialog-secondary" data-pricing-subscription-confirm-close>
+          {copy.reviewReward.close}
+        </button>
+        <button type="button" class="btn-primary pricing-dialog-primary" data-pricing-review-retry>
+          {copy.reviewReward.retry}
+        </button>
+      </div>
+    </section>
+
+    <p class="pricing-review-live" data-pricing-review-live aria-live="polite" aria-atomic="true"></p>
+  </div>
+</dialog>
+
+<script>
+  import './pricing-subscription-confirm-controller'
+</script>
+
+<style>
+  .pricing-subscription-confirm {
+    width: min(480px, calc(100% - 32px));
+    max-width: none;
+    margin: auto;
+    padding: 0;
+    overflow: visible;
+    border: 1px solid var(--gray-alpha-400);
+    border-radius: var(--radius-md);
+    background: var(--background-100);
+    color: var(--gray-1000);
+    box-shadow: var(--shadow-modal);
+  }
+
+  .pricing-subscription-confirm::backdrop {
+    background: rgba(0, 0, 0, 0.4);
+  }
+
+  .pricing-subscription-confirm-panel {
+    position: relative;
+    padding: 24px;
+  }
+
+  [data-pricing-subscription-confirm-view] {
+    display: grid;
+    gap: 16px;
+  }
+
+  [data-pricing-subscription-confirm-view][hidden] {
+    display: none;
+  }
+
+  .pricing-subscription-confirm h2 {
+    margin: 0;
+    padding-right: 40px;
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 26px;
+    letter-spacing: -0.4px;
+  }
+
+  .pricing-subscription-confirm-description,
+  .pricing-review-reward-offer p,
+  .pricing-review-countdown {
+    margin: 0;
+    color: var(--gray-900);
+    font-size: 14px;
+    line-height: 20px;
+    overflow-wrap: anywhere;
+  }
+
+  .pricing-subscription-confirm-description a {
+    color: var(--blue-700);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .pricing-subscription-confirm-description a:hover {
+    color: var(--blue-800);
+  }
+
+  .pricing-review-reward-offer {
+    display: grid;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid var(--blue-400);
+    border-radius: var(--radius-sm);
+    background: var(--blue-100);
+  }
+
+  .pricing-review-reward-offer[hidden] {
+    display: none;
+  }
+
+  .pricing-review-countdown {
+    min-height: 40px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    background: var(--gray-100);
+    color: var(--gray-1000);
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+  }
+
+  .pricing-subscription-confirm-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--gray-900);
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .pricing-subscription-confirm-close:hover {
+    background: var(--gray-100);
+    color: var(--gray-1000);
+  }
+
+  .pricing-subscription-confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-top: 4px;
+  }
+
+  /* 按钮外观来自共享 .btn-primary / .btn-secondary，这里只允许长文案换行。 */
+  .pricing-dialog-primary,
+  .pricing-dialog-secondary,
+  .pricing-review-button {
+    height: auto;
+    min-height: 40px;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .pricing-review-button {
+    justify-self: start;
+  }
+
+  .pricing-review-live {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 560px) {
+    .pricing-subscription-confirm {
+      width: calc(100% - 24px);
+    }
+
+    .pricing-subscription-confirm-panel {
+      padding: 20px;
+    }
+
+    .pricing-subscription-confirm-actions {
+      display: grid;
+    }
+
+    .pricing-dialog-primary,
+    .pricing-dialog-secondary,
+    .pricing-review-button {
+      width: 100%;
+    }
+  }
+</style>

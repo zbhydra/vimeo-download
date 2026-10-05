@@ -7,11 +7,13 @@
 import { expect, test } from '@playwright/test'
 
 import { registerE2eBrowserIdentity } from '../../scripts/playwright-browser-identity.mjs'
+import { CHROME_WEB_STORE_URL } from '../src/lib/site.mjs'
 
 registerE2eBrowserIdentity(test)
 test.setTimeout(60_000)
 
-const REVIEW_EXTENSION_ID = 'lflkobgaibapekhjnfhkaeagdnojjnla'
+// 好评页跟随站点配置的商店地址；上架前是占位 ID，上架后随 site.mjs 自动变化。
+const REVIEW_EXTENSION_ID = new URL(CHROME_WEB_STORE_URL).pathname.split('/').filter(Boolean).at(-1)
 const REVIEW_REWARD_DURATION_MS = 7 * 24 * 60 * 60 * 1000
 
 interface ReviewRewardClaimEnvelope {
@@ -64,11 +66,15 @@ test('真实账号完成桌面与移动端 30 秒好评赠送领取', async ({ p
   })
 
   await page.setViewportSize({ width: 1440, height: 900 })
-  const response = await page.goto('/zh-cn/ext-pricing/')
+  const response = await page.goto('/zh-cn/pricing/')
   expect(response?.ok()).toBe(true)
   await expect(page.locator('[data-pricing-account-signed-in]')).toBeVisible()
 
-  const buyButton = page.locator('[data-pricing-subscription-buy]')
+  // 商品库有多张订阅卡，每张卡一个购买按钮；取列表首张主推卡。
+  const buyButton = page
+    .locator('[data-pricing-subscription-card]')
+    .first()
+    .locator('[data-pricing-subscription-buy]')
   await expect(buyButton).toBeEnabled()
   await buyButton.click()
 

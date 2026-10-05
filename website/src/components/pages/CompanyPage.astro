@@ -76,10 +76,10 @@ const companyPageSchema = {
           <time datetime={COMPANY_PAGES_PUBLISHED_DATE}>{page.updatedAt}</time>
         </p>
         <div class="company-actions" aria-label={page.eyebrow}>
-          <a class="company-primary-link" href={primaryHref}>{primaryLabel}</a>
+          <a class="btn-primary company-primary-link" href={primaryHref}>{primaryLabel}</a>
           {pageKind === 'about' && (
             <a
-              class="company-secondary-link"
+              class="btn-secondary company-secondary-link"
               href={CHROME_WEB_STORE_URL}
               target="_blank"
               rel="noopener"
@@ -90,7 +90,7 @@ const companyPageSchema = {
           {pageKind === 'contact' && (
             <>
               <a
-                class="company-secondary-link company-social-link"
+                class="btn-secondary company-secondary-link company-social-link"
                 href={OFFICIAL_X_URL}
                 target="_blank"
                 rel="me noopener noreferrer"
@@ -143,54 +143,53 @@ const companyPageSchema = {
 
 <style>
   .company-page {
-    color: var(--color-gray-900);
+    color: var(--gray-1000);
   }
 
   .company-hero {
-    border-bottom: 1px solid var(--color-gray-200);
-    background: var(--color-surface);
+    border-bottom: 1px solid var(--gray-alpha-400);
+    background: var(--background-100);
   }
 
   .company-hero-content {
-    padding-top: 72px;
-    padding-bottom: 72px;
+    padding-top: 64px;
+    padding-bottom: 64px;
   }
 
   .company-eyebrow {
     margin: 0 0 16px;
-    color: var(--color-primary);
+    color: var(--gray-900);
     font-size: 14px;
-    font-weight: 700;
+    font-weight: 500;
     line-height: 20px;
   }
 
   h1 {
     max-width: 820px;
     margin: 0;
-    color: var(--color-gray-900);
-    font-family: var(--font-display);
+    color: var(--gray-1000);
     font-size: 48px;
-    font-weight: 700;
-    line-height: 1.12;
-    letter-spacing: 0;
+    font-weight: 600;
+    line-height: 56px;
+    letter-spacing: -2.88px;
   }
 
   .company-intro {
     max-width: 760px;
     margin: 24px 0 0;
-    color: var(--color-gray-600);
+    color: var(--gray-900);
     font-size: 18px;
-    line-height: 30px;
+    line-height: 28px;
   }
 
   .company-date {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    margin: 20px 0 0;
-    color: var(--color-gray-500);
+    margin: 16px 0 0;
+    color: var(--gray-900);
     font-size: 13px;
-    line-height: 20px;
+    line-height: 18px;
   }
 
   .company-actions {
@@ -201,40 +200,14 @@ const companyPageSchema = {
     margin-top: 32px;
   }
 
+  /* 按钮外观来自共享 .btn-primary / .btn-secondary，这里只允许长文案换行。 */
   .company-primary-link,
   .company-secondary-link {
-    display: inline-flex;
-    min-height: 44px;
-    align-items: center;
-    justify-content: center;
-    padding: 0 18px;
-    border-radius: 6px;
-    font-size: 15px;
-    font-weight: 600;
-    line-height: 20px;
-    text-decoration: none;
-  }
-
-  .company-primary-link {
-    border: 1px solid var(--color-primary);
-    background: var(--color-primary);
-    color: #ffffff;
-  }
-
-  .company-primary-link:hover {
-    border-color: var(--color-primary-dark);
-    background: var(--color-primary-dark);
-  }
-
-  .company-secondary-link {
-    border: 1px solid var(--color-gray-300);
-    background: #ffffff;
-    color: var(--color-gray-800);
-  }
-
-  .company-secondary-link:hover {
-    border-color: var(--color-gray-400);
-    color: var(--color-primary);
+    height: auto;
+    min-height: 40px;
+    padding-block: 0;
+    white-space: normal;
+    text-align: center;
   }
 
   .company-social-link {
@@ -242,35 +215,24 @@ const companyPageSchema = {
   }
 
   .company-social-handle {
-    color: var(--color-gray-500);
+    color: var(--gray-900);
     font-size: 13px;
-    font-weight: 500;
-  }
-
-  .company-social-link:hover .company-social-handle {
-    color: inherit;
-  }
-
-  .company-primary-link:focus-visible,
-  .company-secondary-link:focus-visible,
-  .company-related a:focus-visible {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 3px;
+    font-weight: 400;
   }
 
   .company-email {
     overflow-wrap: anywhere;
-    color: var(--color-gray-600);
-    font-size: 15px;
+    color: var(--gray-900);
+    font-size: 14px;
   }
 
   .company-section {
-    border-bottom: 1px solid var(--color-gray-200);
-    background: #ffffff;
+    border-bottom: 1px solid var(--gray-alpha-400);
+    background: var(--background-100);
   }
 
   .company-section:nth-child(even) {
-    background: var(--color-gray-50);
+    background: var(--background-200);
   }
 
   .company-section-layout {
@@ -283,12 +245,11 @@ const companyPageSchema = {
 
   .company-section h2 {
     margin: 0;
-    color: var(--color-gray-900);
-    font-family: var(--font-display);
+    color: var(--gray-1000);
     font-size: 24px;
-    font-weight: 700;
+    font-weight: 600;
     line-height: 32px;
-    letter-spacing: 0;
+    letter-spacing: -0.96px;
   }
 
   .company-section-copy {
@@ -297,9 +258,9 @@ const companyPageSchema = {
 
   .company-section-copy p {
     margin: 0;
-    color: var(--color-gray-600);
+    color: var(--gray-900);
     font-size: 16px;
-    line-height: 27px;
+    line-height: 24px;
   }
 
   .company-section-copy p + p {
@@ -316,10 +277,10 @@ const companyPageSchema = {
 
   .company-section-copy li {
     position: relative;
-    padding-left: 22px;
-    color: var(--color-gray-700);
-    font-size: 15px;
-    line-height: 24px;
+    padding-left: 20px;
+    color: var(--gray-900);
+    font-size: 14px;
+    line-height: 22px;
   }
 
   .company-section-copy li::before {
@@ -329,56 +290,59 @@ const companyPageSchema = {
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: var(--color-primary);
+    background: var(--gray-1000);
     content: '';
   }
 
   .company-related {
-    background: var(--color-gray-900);
+    border-bottom: 1px solid var(--gray-alpha-400);
+    background: var(--background-100);
   }
 
   .company-related-links {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px 28px;
-    padding-top: 28px;
-    padding-bottom: 28px;
+    gap: 12px 24px;
+    padding-top: 24px;
+    padding-bottom: 24px;
   }
 
   .company-related a {
-    color: #ffffff;
+    border-radius: var(--radius-sm);
+    color: var(--blue-700);
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 500;
     line-height: 20px;
-    text-decoration: none;
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 
   .company-related a:hover {
-    text-decoration: underline;
-    text-underline-offset: 4px;
+    color: var(--blue-800);
   }
 
   @media (max-width: 960px) {
     .company-hero-content {
-      padding-top: 48px;
-      padding-bottom: 48px;
+      padding-top: 40px;
+      padding-bottom: 40px;
     }
 
     h1 {
-      font-size: 36px;
-      line-height: 1.2;
+      font-size: 32px;
+      line-height: 40px;
+      letter-spacing: -1.28px;
     }
 
     .company-intro {
       font-size: 16px;
-      line-height: 26px;
+      line-height: 24px;
     }
 
     .company-section-layout {
       grid-template-columns: minmax(0, 1fr);
-      gap: 20px;
-      padding-top: 36px;
-      padding-bottom: 36px;
+      gap: 16px;
+      padding-top: 32px;
+      padding-bottom: 32px;
     }
   }
 

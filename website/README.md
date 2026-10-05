@@ -1,12 +1,14 @@
 # Vimeo Video Downloader Official Website
 
-Official website for the Vimeo Video Downloader browser extension.
+Official website for the Vimeo Video Downloader browser extension: a free in-browser
+download tool on the home page, an overview of the extension, and the extension's
+Unlimited subscription at `/pricing/`.
 
 ## Tech Stack
 
-- **Astro** - Modern static site generator
-- **Vue 3** - For interactive components
-- **TypeScript** - Type-safe development
+- **Astro** - static site generator (SSG), no UI framework integration
+- **Native TypeScript** - imperative DOM scripts inside `.astro` components
+- **mediabunny** - in-browser muxing engine for the download workspace
 
 ## Development
 
@@ -14,41 +16,52 @@ Official website for the Vimeo Video Downloader browser extension.
 # Install dependencies
 pnpm install
 
-# Start development server
+# Start development server (port 7910)
 pnpm dev
 
-# Build for production
+# Type-check and build for production
 pnpm build
 
 # Preview production build
 pnpm preview
+
+# Module script tests
+pnpm test:module-scripts
 ```
+
+End-to-end tests (`pnpm test:e2e`) run against a locally started real backend; there is
+no mock API.
 
 ## Project Structure
 
 ```
 website/
-├── public/              # Static assets
-│   ├── favicon.png
-│   └── robots.txt
+├── public/                  # Static assets: favicon, og-image, manifest, robots, llms*.txt
 ├── src/
-│   ├── i18n/            # Internationalization
-│   │   ├── ui.ts        # Locale configurations
-│   │   └── content.ts   # Content translations
-│   ├── layouts/         # Layout components
-│   │   └── Layout.astro # Main layout with SEO
-│   ├── lib/site.mjs     # 品牌与外部地址的唯一配置点
-│   ├── pages/           # Page routes
-│   │   ├── index.astro           # English home page
-│   │   ├── [lang]/               # Localized pages
-│   │   ├── vimeo-downloader.astro # Vimeo downloader landing page
-│   │   ├── pricing.astro         # Website Credits pricing
-│   │   ├── ext-pricing.astro     # Extension subscription pricing
-│   │   └── about / contact / changelog / terms / privacy
-│   └── styles/         # Global styles
-├── astro.config.mjs    # Astro configuration
-├── tsconfig.json       # TypeScript configuration
-└── package.json        # Dependencies
+│   ├── components/
+│   │   ├── download/        # Download workspace UI
+│   │   ├── homepage/        # Home page showcase sections
+│   │   ├── pricing/         # Pricing page shell, login / confirm modals, controllers
+│   │   ├── order-checkout/  # Subscription checkout modal and order protocol
+│   │   ├── payment-return/  # PayPal / Clink return pages
+│   │   ├── pages/           # Page assembly: Home / Pricing / Company / Legal
+│   │   └── site/            # Site-level: confirm modal, brand icon
+│   ├── i18n/                # schema.ts, ui.ts, content.ts, pricing.ts, lang/* (14 locales)
+│   ├── layouts/Layout.astro # Only layout: SEO, design tokens, nav, footer
+│   ├── lib/site.mjs         # 品牌与外部地址的唯一配置点
+│   ├── pages/               # index / pricing / about / contact / terms / privacy,
+│   │                        # [lang]/ mirrors, clink/ and paypal/ return pages
+│   ├── scripts/
+│   │   ├── download/        # Download state machine and download methods
+│   │   ├── runtime/         # api / auth / device / mark / sls-mark / ga4 / error capture
+│   │   └── site/            # confirm / language-switcher
+│   └── sitemap/             # languageSitemap integration
+├── deploy/                  # nginx configs and deploy.sh
+├── cloudflare/              # CDN cache rules
+├── e2e/ tests/              # Playwright (real backend) / module script tests
+├── astro.config.mjs         # Astro configuration
+├── tsconfig.json            # Extends astro/tsconfigs/strict
+└── package.json             # Dependencies
 ```
 
 ## Configuration

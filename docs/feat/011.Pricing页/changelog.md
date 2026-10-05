@@ -1,5 +1,16 @@
 # 011 · Pricing 页 - 变更记录
 
+## 2026-10-05 官网改版：`/pricing/` 只保留 Unlimited 订阅购买
+
+**Why**：网站定位改为插件展示站 + 插件订阅购买，Credits 积分包页、余额展示、`/ext-pricing/` 与旧入口转向一并下线；Pricing 组件随 `website-shared` 并入 `website/src`。决策基线见 `../000.架构/plans/004.官网改版-插件展示与免费网页下载.md` §2.4。
+
+**变更**：
+- `feat.md`：只描述 Unlimited 一类套餐；删除积分页、Credits 套餐与购买流程、账号区的 Credits 余额、旧入口转向与双页导航；插件升级入口直接打开 `/pricing/` 并带来源参数；网页下载免费，与订阅无关。
+- `tech-实现与配置.md`：前端结构改为 `website/src/components/pricing/`、`components/order-checkout/`；购买页路由合同改为单页，删除 `/ext-pricing/`、旧入口转向与积分商品模式；接口表删除 Credits 商品配置，Credits 余额字段网站不使用。
+- `tech-pricing与自动续费.md`、`tech-好评赠送.md`：去掉 Credits 相关描述；文件清单改到 `website/src`；验收改为真实后端 smoke（`pricing-review-reward-smoke`），不再提 mock。
+- 保持不变：来源识别（`utm_source=extension`、`source=quota_counter`）、好评赠送、有效订阅置灰、订阅管理入口、Google 回跳后续购、埋点事件。
+- 后端 Credits 商品配置接口与订单充值分支保留，网站不再调用，见 004 计划 §8。
+
 ## 2026-09-12 Free 档上限改为 3 次/天并新增首日免费
 
 **Why**: Free 档每日 5 次对新用户不友好;首日免费让新账号/新设备当天可无限制试用,同时把档位上限收敛到 3 次。

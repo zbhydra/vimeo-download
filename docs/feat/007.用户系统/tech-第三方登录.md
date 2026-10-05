@@ -117,13 +117,13 @@ return value
 
 ### 5.6 前端收尾
 
-**website 下载工作区**：`handleGoogleRedirectResult()` 在下载工作区初始化时执行(唯一读取这些参数的地方)：
+**website Pricing 页**：`handleGoogleRedirectResult()` 在 Pricing 页登录控制器初始化时执行(唯一读取这些参数的地方；下载工作区没有登录入口)：
 
 | URL 参数 | 处理 |
 | --- | --- |
 | `google_email_verification` | 打开弹窗，预填邮箱，跳到验证码子界面，启动发送冷却 |
 | `google_login_error` 或无 code | 重置弹窗到 Google-first，展示 `googleSignInFailed` 错误 |
-| `google_login_code` | `POST /api/client/auth/google/exchange` 换正式 token，存 token，刷新用户与签到状态 |
+| `google_login_code` | `POST /api/client/auth/google/exchange` 换正式 token，存 token，刷新用户状态 |
 
 处理完立即清掉三个参数（先读后清，避免刷新重复消费）。
 
@@ -148,11 +148,11 @@ return value
   -> 后端校验 id_token:
      - 权威邮箱:查/建用户(register_method=google),走完整登录,返回 LoginResponse
      - 非权威邮箱:发邮箱验证码,返回 {requires_email_verification:true, email}(不签发项目 token)
-  -> 前端权威邮箱成功后刷新用户与签到状态
+  -> 前端权威邮箱成功后刷新用户状态
   -> 前端非权威邮箱:预填 email 并展开验证码区,用户走 email-verify-login
 ```
 
-One Tap 失败、被浏览器拦截或超时**不阻断**用户继续点击手动 Google 按钮。下载工作区在认证失败时也会静默触发 One Tap(`silentFailure: true`)。
+One Tap 失败、被浏览器拦截或超时**不阻断**用户继续点击手动 Google 按钮。Pricing 页在认证失败时也会静默触发 One Tap(`silentFailure: true`)。
 
 ## 7. 接口规格
 
@@ -243,9 +243,9 @@ http://localhost:7900/api/client/auth/google/oauth/callback
 - extension Google 授权登录服务（打窗口 / 解析回跳 / 兑换 / 终态打点）：`@extension/src/background/services/GoogleLoginService.ts`
 - extension 登录态写入与 API：`@extension/src/core/api/auth/api.ts`
 - extension Popup 登录入口：`@extension/src/popup/components/LoginModal.vue` `@extension/src/popup/components/AppHeader.vue`
-- website 前端 Google（Identity 加载 / One Tap / 自定义按钮）：`@website-shared/src/homepage-runtime/auth.ts`
-- website 工作区 redirect 收尾：`@website-shared/src/download/scripts/workspace.ts`（`handleGoogleRedirectResult`）
-- website 认证弹窗：`@website-shared/src/download/components/DownloadAuthModal.astro`
+- website 前端 Google（Identity 加载 / One Tap / 自定义按钮）：`@website/src/scripts/runtime/auth.ts`
+- website Pricing 页 redirect 收尾与登录控制：`@website/src/components/pricing/pricing-auth-controller.ts`（`handleGoogleRedirectResult`）
+- website 认证弹窗：`@website/src/components/pricing/PricingAuthModal.astro`
 
 ## 11. 非功能要求
 

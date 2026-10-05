@@ -1,16 +1,16 @@
 /**
- * Playwright globalSetup：真实 smoke 跑前注入 e2e 登录态。
+ * Playwright globalSetup：需要真实账号的 smoke 跑前注入 e2e 登录态。
  *
- * 仅当 process.env.E2E_REAL_API_BASE_URL 存在时执行（即跑真实 smoke 时）；
- * 否则直接 return，对 mock/UI 跑零影响。
+ * 仅当 E2E_REAL_API_BASE_URL 与 E2E_SEED_SCENARIO 同时存在时执行；
+ * 匿名下载 smoke 不设场景，直接 return。
  *
  * 职责：
  * - spawn 后端 seed 脚本（backend/scripts/e2e_seed_user.py --action seed），
- *   并用 E2E_SEED_SCENARIO 显式选择账号业务状态；未指定时保持 parse-download。
+ *   并用 E2E_SEED_SCENARIO 显式选择账号业务状态。
  *   脚本会建对应 e2e 用户、签 token 并 store 进 Redis，
  *   把 {token, user_id, email, device_id} 单行 JSON 打到 stdout。
  * - 解析 stdout 最后一行 JSON，写入 process.env.E2E_ACCESS_TOKEN /
- *   E2E_DEVICE_ID，供 parse-download-smoke.spec.ts 注入 localStorage。
+ *   E2E_DEVICE_ID，供需要账号的 smoke 注入 localStorage。
  *
  * 设计取舍：
  * - website→backend 的路径耦合集中在此处一个常量，便于维护。
@@ -33,7 +33,7 @@ const BACKEND_PYTHON = process.env.E2E_BACKEND_PYTHON || path.join(BACKEND_DIR, 
 /** seed 脚本相对 backend 根目录路径。 */
 const SEED_SCRIPT = 'scripts/e2e_seed_user.py';
 /** 后端 seed 场景；Pricing smoke 必须显式选择其专用领取前状态。 */
-const SEED_SCENARIO = process.env.E2E_SEED_SCENARIO || 'parse-download';
+const SEED_SCENARIO = process.env.E2E_SEED_SCENARIO || '';
 
 /** seed 脚本 stdout 的结果结构。 */
 interface SeedResult {
@@ -101,10 +101,12 @@ function runSeed(): SeedResult {
 /**
  * globalSetup 入口。
  *
- * 未设 E2E_REAL_API_BASE_URL 时 no-op（保护 mock 跑）；设了则注入登录态 env。
+ * 未设 E2E_REAL_API_BASE_URL 或 E2E_SEED_SCENARIO 时 no-op；否则注入登录态 env。
  */
 async function globalSetup(): Promise<void> {
-  if (!process.env.E2E_REAL_API_BASE_URL) {
+  // 只有显式选择 seed 场景（需要真实账号的 smoke，如 Pricing 好评赠送）才建号；
+  // 匿名下载 smoke 不依赖登录态。
+  if (!process.env.E2E_REAL_API_BASE_URL || !process.env.E2E_SEED_SCENARIO) {
     return;
   }
 

@@ -319,10 +319,10 @@ POST /api/client/media/download-pre-v2
 | --- | --- | --- | --- |
 | 设备可信关系缺失或过期 | 200 | `AUTH_PAGE_REFRESH_REQUIRED` | 刷新页面后重试 |
 | `resource_token`/`preferred_node_id` 缺失或非法 | 400 | `MEDIA_DOWNLOAD_PRE_INVALID_REQUEST` | 展示下载失败 |
-| 缺登录或登录 token 无效 | 401 | `AUTH_INVALID_TOKEN` / `MEDIA_DOWNLOAD_PRE_INVALID_CLIENT_IDENTITY` | 打开登录弹窗 |
+| 缺登录或登录 token 无效 | 401 | `AUTH_INVALID_TOKEN` / `MEDIA_DOWNLOAD_PRE_INVALID_CLIENT_IDENTITY` | 展示下载失败；网站与插件当前都不调用本接口，不再有登录弹窗 |
 | 没有任何可返回节点 | 503 | `MEDIA_SERVICE_NODE_UNAVAILABLE` | 展示下载暂不可用 |
 | 资源 size > 4GiB | 413 | `MEDIA_DOWNLOAD_FILE_TOO_LARGE` | 展示文件过大 |
-| Credits 不足 | 200 | `CREDIT_INSUFFICIENT` | 展示购买积分弹窗 |
+| Credits 不足 | 200 | `CREDIT_INSUFFICIENT` | 展示下载失败；网站已下线 Credits 购买，不再有购买积分弹窗 |
 | 同一用户已有 `download-pre-v2` 正在处理 | 200 | `RATE_LIMIT_EXCEEDED_MEDIA` | 展示请求过于频繁 |
 | Redis 锁基础设施暂不可用 | 503 | `MEDIA_DOWNLOAD_PRE_UNAVAILABLE` | 展示下载暂不可用 |
 

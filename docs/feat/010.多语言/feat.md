@@ -55,7 +55,7 @@
 
 - **语言清单 14 种**:已从早期 5 种(en/zh-CN/zh-TW/ja/ko)分批扩展到 14 种(plan.008 第一批加 es/pt/de,后续加 fr/ru/it/vi/th/id)。三端(website ui.ts、extension i18n.ts、backend dependencies.py)清单一致。
 - **extension 用 vue-i18n**:界面文案基于 vue-i18n 实例,`I18nService` 是其上的静态门面;Chrome 原生 `_locales/` 只管扩展元信息(名称/描述/action)。
-- **website 通过页头切换语言**:静态构建,语言仍由 URL 路径决定;页头切换器只负责导航到目标语言路径并保留当前查询参数,`middleware` 不做语言重定向。
+- **website 通过页头切换语言**:静态构建,语言仍由 URL 路径决定;页头切换器只负责导航到目标语言路径并保留当前查询参数,站点没有 middleware,不做语言重定向。
 - **backend 无 `get_locale` 在 i18n 包**:`get_locale` 实际位于 `app/utils/common.py`(不是源文档所写的 `app/i18n/dependencies.py`),i18n 包只定义类型、映射、默认值;详见 `@tech-extension与后端文案.md`。
 - **backend 文案分两类**:`resp_code`(HTTP 错误码消息)与 `email`(邮件标题/正文),按 JSON 文件按语言组织。
 
@@ -92,8 +92,8 @@
 
 ### website 多语言页面访问
 
-1. 访问默认语言页面:无前缀路径(如 `/`、`/x-downloader/`),渲染 en-US 内容。
-2. 访问其他语言页面:带路径前缀(如 `/zh-cn/`、`/ja/x-downloader/`),`[lang]` 动态路由 `getStaticPaths` 枚举 14 语言的 `localePaths` 生成静态页(en-US 跳过前缀)。
+1. 访问默认语言页面:无前缀路径(如 `/`、`/pricing/`),渲染 en-US 内容。
+2. 访问其他语言页面:带路径前缀(如 `/zh-cn/`、`/ja/pricing/`),`[lang]` 动态路由 `getStaticPaths` 枚举 14 语言的 `localePaths` 生成静态页(en-US 跳过前缀)。
 3. 页面按 locale 取 `content[locale]` 文案对象渲染;locale 不在清单时回退默认语言。
 
 ### website 用户切换语言

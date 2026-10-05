@@ -1,0 +1,61 @@
+---
+/** 区块 5：适用范围与边界（works for / does not do / 合规声明）。 */
+import HomeSection from './HomeSection.astro'
+import type { HomepageContent } from '../../i18n/schema'
+
+const { copy } = Astro.props as { copy: HomepageContent['scope'] }
+const groups = [copy.worksFor, copy.doesNot, copy.compliance]
+---
+
+<HomeSection id="home-scope" heading={copy.heading}>
+  <div class="home-scope-grid">
+    {groups.map(group => (
+      <div class="home-scope-card">
+        <h3>{group.heading}</h3>
+        <ul>
+          {group.items.map(item => <li>{item}</li>)}
+        </ul>
+      </div>
+    ))}
+  </div>
+</HomeSection>
+
+<style>
+  .home-scope-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .home-scope-card {
+    padding: 24px;
+    border: 1px solid var(--gray-alpha-400);
+    border-radius: var(--radius-md);
+    background: var(--background-100);
+  }
+
+  .home-scope-card h3 {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 24px;
+    letter-spacing: -0.32px;
+  }
+
+  .home-scope-card ul {
+    margin-top: 12px;
+    padding-left: 20px;
+    color: var(--gray-900);
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .home-scope-card li + li {
+    margin-top: 8px;
+  }
+
+  @media (max-width: 960px) {
+    .home-scope-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

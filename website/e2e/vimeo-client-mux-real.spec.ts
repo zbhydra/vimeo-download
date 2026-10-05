@@ -1,7 +1,7 @@
 /** 真实网站授权、跨出口 CDN 下载与 OPFS 合并验收；不替换项目 API。 */
 import { expect, test } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { statSync, writeFileSync } from 'node:fs';
 import { registerE2eBrowserIdentity } from '../../scripts/playwright-browser-identity.mjs';
 
@@ -45,10 +45,8 @@ test('真实网站下载与 OPFS 生命周期', async ({ page, context }, testIn
   page.setDefaultNavigationTimeout(90_000);
   const targetUrl = process.env.E2E_MEDIA_URL ?? 'https://vimeo.com/1196869805';
   const failCdn = process.env.E2E_FAIL_CDN === '1';
-  const token = process.env.E2E_ACCESS_TOKEN;
-  const deviceId = process.env.E2E_DEVICE_ID;
-  expect(token).toBeTruthy();
-  expect(deviceId).toBeTruthy();
+  // 网页下载固定走匿名授权：每次运行使用全新设备，不依赖登录态。
+  const deviceId = randomUUID();
   const apiBase = new URL(process.env.E2E_REAL_API_BASE_URL ?? '');
   expect(['localhost', '127.0.0.1', '[::1]']).toContain(apiBase.hostname);
   const apiEvents: { path: string; status: number; code?: number }[] = [];
@@ -123,8 +121,7 @@ test('真实网站下载与 OPFS 生命周期', async ({ page, context }, testIn
     }
     await route.continue();
   });
-  await context.addInitScript(({ token, deviceId }) => {
-    localStorage.setItem('homepage_access_token', token);
+  await context.addInitScript(({ deviceId }) => {
     localStorage.setItem('homepage_device_id_v2', deviceId);
     const evidence: StorageEvidence = { created: [], removed: [], active: [], maxActive: 0, writes: 0, maxWriteBytes: 0 };
     window.muxStorageEvidence = evidence;
@@ -154,7 +151,7 @@ test('真实网站下载与 OPFS 生命周期', async ({ page, context }, testIn
       evidence.maxWriteBytes = Math.max(evidence.maxWriteBytes, size);
       await write.call(this, data);
     };
-  }, { token: token!, deviceId: deviceId! });
+  }, { deviceId });
 
   let exits: { parser: string; browser: string } | undefined;
   if (process.env.E2E_CDN_PROXY) {
@@ -172,10 +169,6 @@ test('真实网站下载与 OPFS 生命周期', async ({ page, context }, testIn
   const logo = page.waitForResponse(response => response.url().includes('/assets/icons/logo.svg') && response.ok());
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   await logo;
-  const closeCheckin = page.locator('[data-download-checkin-modal] .download-checkin-close[data-download-checkin-close]');
-  await closeCheckin.waitFor({ state: 'visible', timeout: 5_000 }).catch(() => {});
-  if (await closeCheckin.isVisible()) await closeCheckin.click();
-  await expect(page.locator('[data-download-checkin-modal]')).toBeHidden();
   await page.fill('[data-download-parse-input]', targetUrl);
   const parseResponse = page.waitForResponse(response => new URL(response.url()).pathname === '/api/client/media/parse-v2', { timeout: 90_000 });
   await page.click('[data-download-parse-submit]');
@@ -245,7 +238,8 @@ test('真实网站下载与 OPFS 生命周期', async ({ page, context }, testIn
   const evidence = { targetUrl, exits, failCdn, blockedCdn, finishedCdn, apiEvents, materials, cdnHosts: [...cdnHosts], cdnResponses, cdnFailures, storage, pageErrors };
   writeFileSync(testInfo.outputPath('evidence.json'), JSON.stringify(evidence, null, 2));
   console.log(JSON.stringify({ phase: 'complete', ...evidence }));
-  expect(apiEvents.some(event => event.path.endsWith('/download-pre-v2') && event.code === 10000)).toBe(true);
+  expect(apiEvents.some(event => event.path.endsWith('/download-anonymous-pre-v2') && event.code === 10000)).toBe(true);
+  expect(apiEvents.some(event => event.path.endsWith('/download-pre-v2') && !event.path.endsWith('/download-anonymous-pre-v2'))).toBe(false);
   expect(apiEvents.some(event => event.path.endsWith('/download-v2') && event.code === 10000)).toBe(true);
   if (!failCdn && targetUrl.includes('vimeo.com')) expect(cdnResponses).toBeGreaterThan(0);
   if (targetUrl.includes('vimeo.com')) expect(materials[0]).toMatchObject({ mode: 'client_mux', videoDelivery: 'segments', audioDelivery: 'segments', hasInit: true });

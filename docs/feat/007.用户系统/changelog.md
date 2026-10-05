@@ -1,5 +1,16 @@
 # 007 · 用户系统 - 变更记录
 
+## 2026-10-05 登录入口只在 Pricing；设备校验路径对齐
+
+**Why**：下载工作区不再有登录与账户入口，网页下载匿名；页脚品牌图标是设备校验与匿名下载的前置依赖，文档仍写旧 Credits 图标路径。
+
+**变更**：
+- `feat.md`：认证弹窗归属改为 Pricing 页，弹窗文案按现状（eyebrow 与标题，无副标题）；设备校验相关描述改为页脚品牌图标；媒体控制面保护改为匿名授权口径。
+- `tech-第三方登录.md`：redirect 收尾与 One Tap 改为 Pricing 页控制器，源码路径改为 `website/src/...`。
+- `tech-邮箱登录设备校验.md`：挂载点、图片路径与源码路径改为现状，写明改版页脚必须保留 `data-footer-brand-icon`。
+
+**说明**：后端旧路径 `/assets/icons/credits.svg` 仅作兼容保留。
+
 ## 2026-09-19 删除网站 → 插件登录态同步链路
 
 **Why**：`notifyWebAuthChanged()` 向两个写死的扩展 ID 发 `TG_DOWNLOAD_WEB_AUTH_CHANGED`（页面 `postMessage`）与 `TG_DOWNLOAD_EXTENSION_AUTH_CHANGED_V2`（普通网页 `chrome.runtime.sendMessage`），但插件已改为 popup 内 `chrome.identity.launchWebAuthFlow` 自建登录：manifest 无 `externally_connectable`、构建无 `key`、全仓 `TG_DOWNLOAD` 零命中——这条链路没有接收方，属旧方案残留。

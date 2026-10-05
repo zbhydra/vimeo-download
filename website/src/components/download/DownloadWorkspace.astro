@@ -1,31 +1,429 @@
 ---
-/**
- * Vimeo Video Downloader 站点的下载工作区轻包装。
- *
- * 站点层只负责 locale 和品牌 skin；实际下载 DOM 与状态机来自
- * website-shared，站点层不重复维护下载状态机。
- */
-import SharedDownloadWorkspace from '@website-shared/download/components/SharedDownloadWorkspace.astro'
+import DownloadAnonymousModal from './DownloadAnonymousModal.astro'
+import DownloadParseResults from './DownloadParseResults.astro'
 import type { DownloadWorkspaceContent } from '../../i18n/schema'
 
 const {
   copy,
   installUrl,
-  headingLevel = 'h1',
-  showLargeFileExtensionGuideByDefault = false
+  showLargeFileExtensionGuideByDefault = false,
+  deferRuntime = false
 } = Astro.props as {
   copy: DownloadWorkspaceContent
   installUrl: string
-  headingLevel?: 'h1' | 'h2' | 'p'
   showLargeFileExtensionGuideByDefault?: boolean
+  /** 匿名首屏是否延迟完整下载状态机，直到交互或发现可恢复本地状态。 */
+  deferRuntime?: boolean
 }
 ---
 
-<SharedDownloadWorkspace
-  copy={copy}
-  installUrl={installUrl}
-  headingLevel={headingLevel}
-  showLargeFileExtensionGuideByDefault={showLargeFileExtensionGuideByDefault}
-  skinClass="vimeo-download-workspace"
-  deferRuntime
-/>
+<div
+  class="download-workspace"
+  data-download-workspace
+  data-defer-download-runtime={deferRuntime ? 'true' : undefined}
+>
+  <script is:inline type="application/json" data-download-copy set:html={JSON.stringify(copy)} />
+
+  <div class="download-workspace-shell" data-download-workspace-shell>
+    <DownloadParseResults
+      copy={copy}
+      installUrl={installUrl}
+      showLargeFileExtensionGuideByDefault={showLargeFileExtensionGuideByDefault}
+    />
+  </div>
+
+  <DownloadAnonymousModal copy={copy} />
+</div>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-download-workspace]')
+  const runtimeImport = root?.dataset.deferDownloadRuntime === 'true'
+    ? import('../../scripts/download/workspace-loader')
+    : import('../../scripts/download/workspace')
+
+  void runtimeImport.catch(error => {
+    console.error(
+      new Error('[download-workspace] Failed to load the workspace entry module.', {
+        cause: error
+      })
+    )
+  })
+</script>
+
+<style is:global>
+  /* 下载工作区：Geist 亮色。按钮、焦点环用 Layout 全局的 .btn-* 与 :focus-visible，这里只管布局与工作区专属控件。 */
+  .download-workspace {
+    position: relative;
+  }
+
+  .download-workspace-shell {
+    display: grid;
+    gap: 16px;
+    min-width: 0;
+    padding: 32px;
+    border: 1px solid var(--gray-alpha-400);
+    border-radius: var(--radius-md);
+    background: var(--background-100);
+    box-shadow: var(--shadow-card);
+  }
+
+  .download-results-panel {
+    min-width: 0;
+  }
+
+  .download-panel-title {
+    font-size: 40px;
+    font-weight: 600;
+    line-height: 48px;
+    letter-spacing: -2.4px;
+  }
+
+  .download-results-title {
+    margin: 0;
+  }
+
+  .download-results-heading {
+    margin-bottom: 24px;
+  }
+
+  .download-results-helper {
+    margin-top: 16px;
+    color: var(--gray-900);
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .download-field {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .download-input {
+    width: 100%;
+    height: 48px;
+    padding: 0 12px;
+    border: 1px solid var(--gray-alpha-400);
+    border-radius: var(--radius-sm);
+    background: var(--background-100);
+    color: var(--gray-1000);
+    font-size: 16px;
+    line-height: 20px;
+  }
+
+  .download-input::placeholder {
+    color: var(--gray-700);
+  }
+
+  .download-input:hover {
+    border-color: var(--gray-alpha-500);
+  }
+
+  .download-parse-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .download-parse-input-shell {
+    position: relative;
+    min-width: 0;
+  }
+
+  .download-parse-input-shell .download-parse-input {
+    padding-right: 44px;
+  }
+
+  /* 工作区按钮复用 .btn-*（40px），解析提交与批量下载是视图主操作，升到 large（48px）。 */
+  .download-workspace .download-parse-submit,
+  .download-workspace .download-all-button {
+    height: 48px;
+    padding: 0 14px;
+    font-size: 16px;
+  }
+
+  .download-parse-clear-button[hidden] {
+    display: none;
+  }
+
+  .download-parse-clear-button {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: var(--radius-sm);
+    color: var(--gray-900);
+    transform: translateY(-50%);
+  }
+
+  .download-parse-clear-button:hover {
+    background: var(--gray-alpha-100);
+  }
+
+  .download-parse-clear-button:disabled {
+    cursor: not-allowed;
+    color: var(--gray-700);
+  }
+
+  .download-parse-clear-button svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  .download-pending-resume-actions[hidden] {
+    display: none;
+  }
+
+  .download-pending-resume-actions {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+    max-width: 100%;
+    padding: 16px;
+    border-radius: var(--radius-sm);
+    background: var(--gray-100);
+  }
+
+  .download-pending-resume-hint {
+    margin: 0;
+    min-width: 0;
+    color: var(--gray-1000);
+    font-size: 14px;
+    line-height: 20px;
+    overflow-wrap: anywhere;
+  }
+
+  .download-pending-resume-buttons {
+    display: flex;
+    gap: 8px;
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  .download-inline-status,
+  .download-inline-error {
+    min-height: 20px;
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  .download-inline-status {
+    color: var(--gray-900);
+  }
+
+  .download-inline-error {
+    color: var(--red-900);
+    white-space: pre-line;
+  }
+
+  .download-results-list {
+    display: grid;
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .download-results-actions[hidden] {
+    display: none;
+  }
+
+  .download-results-actions {
+    margin-top: 16px;
+  }
+
+  .download-all-button {
+    width: 100%;
+  }
+
+  .download-result-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px;
+    border: 1px solid var(--gray-alpha-400);
+    border-radius: var(--radius-sm);
+    background: var(--background-100);
+  }
+
+  .download-result-meta {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .download-result-thumbnail {
+    width: 96px;
+    height: 54px;
+    border-radius: var(--radius-sm);
+    object-fit: cover;
+    flex-shrink: 0;
+    background: var(--gray-100);
+  }
+
+  .download-result-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .download-resource-button-label {
+    min-width: 0;
+  }
+
+  .download-result-name {
+    min-width: 0;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  .download-result-detail {
+    margin-top: 4px;
+    min-width: 0;
+    color: var(--gray-900);
+    font-size: 13px;
+    line-height: 18px;
+    overflow-wrap: anywhere;
+  }
+
+  .download-large-file-extension-inline[hidden] {
+    display: none;
+  }
+
+  .download-large-file-extension-inline {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+  }
+
+  .download-large-file-extension-card {
+    display: grid;
+    justify-items: center;
+    align-content: start;
+    gap: 8px;
+    padding: 24px;
+    border: 1px solid var(--gray-alpha-400);
+    border-radius: var(--radius-md);
+    background: var(--background-100);
+    box-shadow: var(--shadow-card);
+    text-align: center;
+  }
+
+  .download-large-file-extension-logo {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+  }
+
+  .download-large-file-extension-title {
+    margin: 0;
+    color: var(--gray-1000);
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 24px;
+    letter-spacing: -0.32px;
+  }
+
+  .download-large-file-extension-card p.download-large-file-extension-description {
+    max-width: 320px;
+    margin: 0 0 8px;
+    color: var(--gray-900);
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  /* 本地化文案可能很长，允许按钮换行而不是撑破卡片。 */
+  .download-large-file-extension-card a {
+    width: min(100%, 258px);
+    height: auto;
+    min-height: 40px;
+    padding: 10px 14px;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .download-large-file-extension-card a svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  @media (max-width: 960px) {
+    .download-workspace-shell {
+      padding: 16px;
+    }
+
+    .download-panel-title {
+      font-size: 32px;
+      line-height: 40px;
+      letter-spacing: -1.28px;
+    }
+
+    .download-parse-row {
+      grid-template-columns: 1fr;
+    }
+
+    .download-pending-resume-buttons {
+      flex-direction: column;
+    }
+
+    .download-result-card {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .download-result-thumbnail {
+      width: 100%;
+      height: auto;
+      aspect-ratio: 16 / 9;
+    }
+
+    .download-result-actions {
+      width: 100%;
+      justify-content: stretch;
+    }
+
+    .download-result-actions .btn-primary,
+    .download-pending-resume-buttons .btn-primary,
+    .download-pending-resume-buttons .btn-secondary {
+      width: 100%;
+    }
+
+    .download-large-file-extension-inline {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

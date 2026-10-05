@@ -1,7 +1,7 @@
 /**
  * 订单协议类型定义。
  *
- * 与 website-shared `order-checkout-api.ts` 消费同一套后端合同
+ * 与 website `components/order-checkout/order-checkout-api.ts` 消费同一套后端合同
  * （/api/client/order/create 与 /api/client/order/status/{order_no}），字段不增不减。
  */
 

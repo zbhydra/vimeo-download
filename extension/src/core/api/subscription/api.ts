@@ -101,7 +101,7 @@ function isJsonObject(value: JsonValue | undefined): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-/** 运行时校验订阅套餐配置，规则与 website-shared pricing-checkout 一致。 */
+/** 运行时校验订阅套餐配置，规则与 website `components/pricing/pricing-checkout.ts` 一致。 */
 function isSubscriptionCheckoutPlan(
   value: JsonValue
 ): value is JsonObject & SubscriptionCheckoutPlan {

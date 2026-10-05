@@ -147,18 +147,26 @@ POST /api/client/order/cancel
 
 规则:只能取消当前用户自己的 `PENDING` 订单;已支付 / 已取消 / 已退款返回 `ORDER_CANNOT_CANCEL`(`20005`);并发抢占失败也返回 `ORDER_CANNOT_CANCEL`。
 
-### 1.6 PayPal 回跳展示页
+### 1.6 支付回跳展示页
+
+PayPal 与 Clink 各有 success / cancel 两页，共 4 个路径（后端回跳合同，路径不变；仅英文、noindex，不进语言切换与 sitemap）：
 
 ```text
 GET /paypal/success/?order_no=<local_order_no>
 GET /paypal/cancel/?order_no=<local_order_no>
+GET /clink/success/?order_no=<local_order_no>
+GET /clink/cancel/?order_no=<local_order_no>
 ```
 
-- success 页展示"支付已提交",通过 `BroadcastChannel` / `postMessage` 通知原购买弹窗立刻查一次订单状态,并在该页按 3 秒间隔轮询 `/api/client/order/status/{order_no}`;只有本地订单达到 `PAID + CALLBACK SUCCESS` 才把回跳页文案更新为到账成功。
-- cancel 页展示取消提示,登录态存在时先查一次 `/api/client/order/status/{order_no}` 识别商品类别,再调用现有 `/api/client/order/cancel` 把本地 `PENDING` 订单置为 `CANCELLED`,最后通知原购买弹窗查订单状态。
-- success/cancel 页都用订单状态响应里的 `product_class` 改写「返回价格页」按钮:`SUBSCRIPTION(1)` 指向订阅价格页 `/ext-pricing/`,`RECHARGE(2)` 或查询失败(未登录、订单缺失)保持默认积分价格页 `/pricing/`;多语言回跳页按 locale 前缀拼对应路径。
-- success/cancel 页都不触发发货、不调用 PayPal capture;到账展示只认 `/api/client/order/status/{order_no}` 的本地订单状态。
-- 原购买弹窗轮询到 `PAID + CALLBACK SUCCESS` 才显示到账成功;轮询到 `CANCELLED / EXPIRED / REFUNDED / PAID + CALLBACK FAILED` 显示对应失败或取消态。
+4 个页面是薄壳，共用 1 个组件 `website/src/components/payment-return/PaymentReturnPage.astro`、1 个脚本 `payment-return.ts` 与 1 份英文文案 `website/src/i18n/payment-return.ts`；不再有页内硬编码文案。
+
+- success 页：先展示"支付已提交"等待态，通过 `BroadcastChannel` / `postMessage` 通知原结算弹窗立刻查一次订单状态，并在该页按 3 秒间隔轮询 `/api/client/order/status/{order_no}`。
+  - 本地订单达到 `PAID + CALLBACK SUCCESS` 才更新为到账确认并停止轮询；后端明确的取消 / 过期 / 失败显示失败态。
+  - 本页无法确认订单时显示中性「已提交」：URL 缺少 `order_no`、没有网站登录态（插件内购买的常态）、网站 token 失效（401）、订单不属于当前网站账号（后端返回订单不存在）。提示用户回到发起购买的地方查看，在插件内购买的重新打开插件即可看到套餐。
+- cancel 页：展示取消提示；有 `order_no` 且有登录态时调用 `/api/client/order/cancel` 把本地 `PENDING` 订单置为 `CANCELLED`，最后通知原结算弹窗查订单状态；无登录态只通知。
+- 「返回价格页」按钮固定指向 `/pricing/`，不再按订单商品类别改写，也不查询订单类别。
+- success/cancel 页都不触发发货、不调用 PayPal capture；到账展示只认 `/api/client/order/status/{order_no}` 的本地订单状态。
+- 原结算弹窗（`/pricing/` 页的订单结算弹窗）轮询到 `PAID + CALLBACK SUCCESS` 才显示到账成功；轮询到 `CANCELLED / EXPIRED / REFUNDED / PAID + CALLBACK FAILED` 显示对应失败或取消态。
 
 ### 1.7 PayPal webhook 回调
 
@@ -294,8 +302,8 @@ async def check_product(self, param: OrderCheckProductParam) -> OrderCreateParam
 
 ### 3.3 客户端价格刷新契约
 
-- 收到 `PAYMENT_PRICE_UPDATED` 后**不局部修补 UI**;必须重新请求对应域的 checkout-configs(订阅:`/api/client/subscription/checkout-configs`;积分包:`/api/client/credit/checkout-configs`),以最新商品配置整体刷新界面。
-- Credits 与订阅商品卡都使用商品默认展示价;只有订阅支付弹窗在选择渠道后显示渠道实际结算价。前端必须通过重新拉取 checkout-configs 刷新完整配置。
+- 收到 `PAYMENT_PRICE_UPDATED` 后**不局部修补 UI**;必须重新请求对应域的 checkout-configs(订阅:`/api/client/subscription/checkout-configs`;积分包:`/api/client/credit/checkout-configs`,仅后端合同,网站与插件当前都不调用),以最新商品配置整体刷新界面。
+- 商品卡使用商品默认展示价(网站只有订阅商品卡,Credits 商品卡已随购买入口下线);只有订阅支付弹窗在选择渠道后显示渠道实际结算价。前端必须通过重新拉取 checkout-configs 刷新完整配置。
 
 ## 4. 支付 provider 接口
 
@@ -472,7 +480,7 @@ webhook 找回本地订单:
 
 调用边界:
 
-- website success/cancel 回跳页只做展示和通知原购买弹窗,不调用 PayPal capture。
+- website 回跳页只做展示和通知原结算弹窗,不调用 PayPal capture。
 - PayPal `CHECKOUT.ORDER.APPROVED` webhook 在入口验签通过后调用 provider 内部 capture;该流程用 PayPal order id 查回本地订单,不要求用户登录。
 - PayPal `PAYMENT.CAPTURE.COMPLETED` webhook 按已完成 capture 结果进入同一个 `order_success` 收口。
 
@@ -487,7 +495,7 @@ webhook 找回本地订单:
 
 capture 失败:
 
-- PayPal 仍未完成支付或用户取消 → webhook 入口返回失败响应并记录原始日志;原购买弹窗继续按本地订单状态展示。
+- PayPal 仍未完成支付或用户取消 → webhook 入口返回失败响应并记录原始日志;原结算弹窗继续按本地订单状态展示。
 - PayPal API 超时 / 连接失败 → webhook 入口抛支付网关错误,依赖 PayPal 后续 webhook 或用户重试购买。
 - 本地订单已成功履约 → `order_success` 返回幂等成功。
 
@@ -731,7 +739,7 @@ raise AppCommonException(
 - 支付回调只用 `orders.currency + orders.amount` 校验金额,不查当前价格配置。
 - PayPal webhook capture 成功、PayPal `PAYMENT.CAPTURE.COMPLETED` 与 Clink 回调都统一进入 `order_success`；重复到达不重复加 Credits。
 - PayPal `CHECKOUT.ORDER.APPROVED` webhook 能触发服务端 capture。
-- PayPal cancel 回跳页调用现有 `/api/client/order/cancel` 取消本地待支付订单;原购买弹窗通过订单状态看到 `CANCELLED` 后显示取消态。
+- PayPal cancel 回跳页调用现有 `/api/client/order/cancel` 取消本地待支付订单;原结算弹窗通过订单状态看到 `CANCELLED` 后显示取消态。
 - 支付成功履约在同事务内完成 `callback_status=SUCCESS` 与业务发货(积分加余额)。
 - 履约成功后异步发送 Feishu 成功告警,内容包含应用名、用户、时间、商品、金额、渠道与订单号。
 - 重复 webhook 不重复发货。
@@ -741,7 +749,7 @@ raise AppCommonException(
 - 履约超时(> 10 秒)返回失败,不主动标 `FAILED`,由补偿任务下轮重试。
 - webhook 请求头密钥缺失或不一致时验签失败,不触发 `order_success`;PayPal 签名校验失败同样不触发。
 - 渠道密钥只存在数据库渠道配置与后端环境配置里,不写入前端公开配置、日志或错误输出。
-- PayPal success 回跳页按 3 秒间隔轮询本地订单状态;必须由 webhook 让本地订单进入 `PAID + SUCCESS` 后,前端才显示 Credits 到账。
+- PayPal success 回跳页按 3 秒间隔轮询本地订单状态;必须由 webhook 让本地订单进入 `PAID + SUCCESS` 后,前端才显示到账确认。
 
 ## 13. 验证命令
 

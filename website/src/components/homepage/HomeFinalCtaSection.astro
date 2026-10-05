@@ -1,0 +1,41 @@
+---
+/** 区块 8：结尾 CTA，唯一动作是 Add to Chrome。 */
+import HomeSection from './HomeSection.astro'
+import type { HomepageContent } from '../../i18n/schema'
+
+const { copy, installUrl } = Astro.props as {
+  copy: HomepageContent['finalCta']
+  installUrl: string
+}
+---
+
+<HomeSection id="home-final-cta" heading={copy.heading}>
+  <p class="home-cta-description">{copy.description}</p>
+  <a
+    class="btn-primary home-cta-button"
+    href={installUrl}
+    target="_blank"
+    rel="noopener"
+    data-ga-event="outbound_chrome_store_click"
+    data-ga-source="homepage_final_cta"
+  >{copy.primaryCta}</a>
+</HomeSection>
+
+<style>
+  .home-cta-description {
+    max-width: 560px;
+    margin-bottom: 24px;
+    color: var(--gray-900);
+    font-size: 18px;
+    line-height: 28px;
+  }
+
+  .home-cta-button {
+    height: auto;
+    min-height: 48px;
+    padding: 12px 14px;
+    font-size: 16px;
+    white-space: normal;
+    text-align: center;
+  }
+</style>

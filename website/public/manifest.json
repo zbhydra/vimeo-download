@@ -1,11 +1,11 @@
 {
   "name": "Vimeo Video Downloader",
   "short_name": "Vimeo Downloader",
-  "description": "Download videos from public Vimeo links in your browser. Pick a resolution and save the MP4 locally without an account.",
+  "description": "Free online Vimeo video downloader in your browser, plus a Chrome extension for audio, subtitles, cover images, and queued downloads.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#2563eb",
+  "theme_color": "#ffffff",
   "orientation": "portrait-primary",
   "icons": [
     {

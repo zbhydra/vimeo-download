@@ -32,7 +32,7 @@ const GOOGLE_TEST_REQUEST_CONTEXT = {
 /** 预置到假 localStorage 的首次打开时间；固定值让注册归因请求体可精确比对。 */
 const GOOGLE_TEST_FIRST_OPENED_AT = 1788000000000
 
-/** 注册归因三字段由 website-shared/src/homepage-runtime/auth.ts 的 getRegistrationContext 统一提供。 */
+/** 注册归因三字段由 src/scripts/runtime/auth.ts 的 getRegistrationContext 统一提供。 */
 const GOOGLE_TEST_REGISTRATION_BODY = {
   registration_entry: null,
   register_device_id: GOOGLE_TEST_REQUEST_CONTEXT.deviceId,
@@ -220,6 +220,94 @@ test('homepage keeps fonts and route CSS off the critical path while preserving 
   assert.equal((html.match(/xyfmieibkw/g) ?? []).length, 1)
   assert.equal(/<link\b[^>]+rel="stylesheet"/i.test(html), false)
   assert.equal(html.includes('data-defer-download-runtime="true"'), true)
+})
+
+test('every locale homepage has one H1, eight ordered sections and valid structured data', async () => {
+  const sectionIds = [
+    'home-intro',
+    'home-features',
+    'home-steps',
+    'home-comparison',
+    'home-scope',
+    'home-plans',
+    'home-faq',
+    'home-final-cta'
+  ]
+  // 展示区文案不得出现的内容：积分 / 签到 / 额度数字 / 价格（两者都来自后端配置，不写进静态文案）。
+  const forbiddenCopy = /credits?\b|check-?in|积分|積分|签到|簽到|[$€£¥￥₩₫฿₽]|\b(USD|EUR|GBP|JPY|CNY)\b/i
+
+  for (const language of LANGUAGE_SITEMAP_LOCALES) {
+    const languagePath = language.pathPrefix ? `${language.pathPrefix}/` : ''
+    const html = await readFile(path.join(distDir, languagePath, 'index.html'), 'utf8')
+    const label = language.locale
+
+    assert.equal((html.match(/<h1[\s>]/g) ?? []).length, 1, `${label}: expected exactly one H1`)
+
+    const positions = sectionIds.map((id) => html.indexOf(`id="${id}-heading"`))
+    for (const [index, position] of positions.entries()) {
+      assert.notEqual(position, -1, `${label}: missing section ${sectionIds[index]}`)
+    }
+    assert.deepEqual(
+      [...positions].sort((a, b) => a - b),
+      positions,
+      `${label}: sections are out of order`
+    )
+    // 8 个展示区块各一个 H2；弹窗标题（等待窗、确认窗）不属于展示区块，不计入。
+    assert.equal(
+      (html.match(/<h2\b[^>]*class="home-section-heading"/g) ?? []).length,
+      sectionIds.length,
+      `${label}: expected one section H2 per section`
+    )
+
+    const schemas = Array.from(
+      html.matchAll(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)
+    ).map((match) => JSON.parse(match[1]))
+    const types = schemas.map((schema) => schema['@type'])
+    assert.equal(types.includes('WebApplication'), false, `${label}: WebApplication must not be emitted`)
+
+    const software = schemas.find((schema) => schema['@type'] === 'SoftwareApplication')
+    assert.ok(software, `${label}: missing SoftwareApplication`)
+    assert.equal(software.applicationCategory, 'BrowserExtension')
+    assert.ok(software.featureList.length >= 8 && software.featureList.every((item) => item.trim()))
+
+    const faq = schemas.find((schema) => schema['@type'] === 'FAQPage')
+    assert.ok(faq, `${label}: missing FAQPage`)
+    assert.ok(faq.mainEntity.length > 0)
+    for (const question of faq.mainEntity) {
+      assert.equal(question['@type'], 'Question')
+      assert.ok(question.name.trim() && question.acceptedAnswer.text.trim())
+      // 可见 FAQ 与 JSON-LD 同源：每个问题都要出现在页面正文里。
+      assert.equal(html.includes(question.name.replace(/&/g, '&#38;')) || html.includes(question.name), true)
+    }
+
+    // 展示区块范围：从第一个区块的 <section> 起到 </main>；其中不得有任何脚本，保持纯静态。
+    const sectionsHtml = html.slice(html.lastIndexOf('<section', positions[0]), html.indexOf('</main>'))
+    assert.equal(/<script\b/i.test(sectionsHtml), false, `${label}: display sections must not contain <script>`)
+
+    const toText = (fragment) =>
+      fragment
+        .replace(/<(script|style)\b[\s\S]*?<\/\1>/gi, ' ')
+        .replace(/<[^>]+>/g, ' ')
+    // 整页（含工具首屏 workspace 与 trust points）文案不得出现积分 / 签到 / 价格。
+    const pageText = toText(html.slice(html.indexOf('<main'), html.indexOf('</main>')))
+    assert.equal(forbiddenCopy.test(pageText), false, `${label}: homepage mentions a forbidden term`)
+    assert.equal(forbiddenCopy.test(JSON.stringify(software.featureList)), false)
+    assert.equal(forbiddenCopy.test(software.description), false)
+    assert.equal(forbiddenCopy.test(JSON.stringify(faq)), false)
+
+    // 展示区块除格式词外不出现数字（次数、大小、价格都来自后端配置，不写进静态文案）。
+    const sectionsText = toText(sectionsHtml)
+      .replace(/\b(MP3|MP4|M4A|VTT|JPEG|HLS|DRM|CSV)\b/gi, ' ')
+      .replace(/\b(720|1080)p\b/gi, ' ')
+      .replace(/&#\d+;|&#x[0-9a-f]+;/gi, ' ')
+    assert.equal(
+      /[0-9０-９]/.test(sectionsText),
+      false,
+      `${label}: display sections contain digits: ${(sectionsText.match(/.{0,16}[0-9０-９]+.{0,16}/) ?? [''])[0]}`
+    )
+    // SoftwareApplication 描述的是插件，不得写成「不需要插件」。
+    assert.equal(/extension|拡張|확장|扩展|擴充|расширен|ส่วนขยาย|tiện ích|ekstensi|erweiterung|extensión|extensão|estensione/i.test(software.description), true)
+  }
 })
 
 test('localized Pricing subscription copy defines renewal states', async () => {
@@ -449,16 +537,14 @@ test('LLMs text indexes reference existing built website paths', async () => {
   const requiredShortIndexUrls = [
     `${siteUrl}/`,
     `${siteUrl}/pricing/`,
-    `${siteUrl}/vimeo-downloader/`,
     `${siteUrl}/about/`,
     `${siteUrl}/contact/`,
     `${siteUrl}/llms-full.txt`,
-    `${siteUrl}/changelog/`,
     `${siteUrl}/sitemap.xml`
   ]
 
   // 单平台站点：索引不得再出现已删除的平台落地页。
-  const retiredPlatformRoutes = ['tiktok-downloader', 'x-downloader', 'instagram-downloader', 'threads-downloader']
+  const retiredPlatformRoutes = ['tiktok-downloader', 'x-downloader', 'instagram-downloader', 'threads-downloader', 'vimeo-downloader', 'changelog']
   for (const retiredRoute of retiredPlatformRoutes) {
     assert.equal(llmsTxt.includes(retiredRoute), false, `Expected llms.txt to drop retired route: ${retiredRoute}`)
     assert.equal(llmsFullTxt.includes(retiredRoute), false, `Expected llms-full.txt to drop retired route: ${retiredRoute}`)
@@ -471,11 +557,9 @@ test('LLMs text indexes reference existing built website paths', async () => {
   const requiredFullIndexUrls = [
     `${siteUrl}/`,
     `${siteUrl}/pricing/`,
-    `${siteUrl}/vimeo-downloader/`,
     `${siteUrl}/about/`,
     `${siteUrl}/contact/`,
     `${siteUrl}/llms.txt`,
-    `${siteUrl}/changelog/`,
     `${siteUrl}/sitemap.xml`,
     `${siteUrl}/sitemap_index.xml`,
     `${siteUrl}/sitemap-0.xml`
@@ -636,7 +720,7 @@ async function importWorkspaceSnapshotModule() {
   const tempDir = await createTempDir('workspace-snapshot-')
   const snapshotSource = path.resolve(
     repoDir,
-    '../website-shared/src/download/scripts/snapshot.ts'
+    'src/scripts/download/snapshot.ts'
   )
   const tsconfigPath = path.join(tempDir, 'tsconfig.json')
   await writeFile(
@@ -679,7 +763,7 @@ async function importWorkspaceSnapshotModule() {
 
 async function importSharedDownloadUrlModule() {
   return importCompiledTypescriptModule(
-    path.resolve(repoDir, '../website-shared/src/download/scripts/url.ts'),
+    path.resolve(repoDir, 'src/scripts/download/url.ts'),
     'url.js',
     'shared-download-url-'
   )
@@ -687,7 +771,7 @@ async function importSharedDownloadUrlModule() {
 
 async function importDownloadResumeStoreModule() {
   return importCompiledTypescriptModule(
-    path.resolve(repoDir, '../website-shared/src/download/scripts/download-resume-store.ts'),
+    path.resolve(repoDir, 'src/scripts/download/download-resume-store.ts'),
     'download-resume-store.js',
     'download-resume-store-'
   )
@@ -695,7 +779,7 @@ async function importDownloadResumeStoreModule() {
 
 async function importDownloadRangeStreamModule() {
   return importCompiledTypescriptModule(
-    path.resolve(repoDir, '../website-shared/src/download/scripts/download-range-stream.ts'),
+    path.resolve(repoDir, 'src/scripts/download/download-range-stream.ts'),
     'download-range-stream.js',
     'download-range-stream-'
   )
@@ -703,7 +787,7 @@ async function importDownloadRangeStreamModule() {
 
 async function importDownloadStoragePreflightModule() {
   return importCompiledTypescriptModule(
-    path.resolve(repoDir, '../website-shared/src/download/scripts/download-storage-preflight.ts'),
+    path.resolve(repoDir, 'src/scripts/download/download-storage-preflight.ts'),
     'download-storage-preflight.js',
     'download-storage-preflight-'
   )
@@ -711,7 +795,7 @@ async function importDownloadStoragePreflightModule() {
 
 async function importMediaDownloadAllowlistModule() {
   return importCompiledTypescriptModule(
-    path.resolve(repoDir, '../website-shared/src/download/scripts/media-download-allowlist.ts'),
+    path.resolve(repoDir, 'src/scripts/download/media-download-allowlist.ts'),
     'media-download-allowlist.js',
     'media-download-allowlist-'
   )
@@ -719,7 +803,7 @@ async function importMediaDownloadAllowlistModule() {
 
 async function importWorkspaceErrorsModule() {
   const tempDir = await createTempDir('workspace-errors-')
-  const sourceFile = path.resolve(repoDir, '../website-shared/src/download/scripts/workspace-errors.ts')
+  const sourceFile = path.resolve(repoDir, 'src/scripts/download/workspace-errors.ts')
   const tsconfigPath = path.join(tempDir, 'tsconfig.json')
   await writeFile(
     tsconfigPath,
@@ -750,7 +834,7 @@ async function importWorkspaceErrorsModule() {
 
 async function importWorkspaceDownloadModuleWithMockedDispatcher() {
   const tempDir = await createTempDir('workspace-download-')
-  const sourceFile = path.resolve(repoDir, '../website-shared/src/download/scripts/workspace-download.ts')
+  const sourceFile = path.resolve(repoDir, 'src/scripts/download/workspace-download.ts')
   const tsconfigPath = path.join(tempDir, 'tsconfig.json')
   await writeFile(
     tsconfigPath,
@@ -805,7 +889,7 @@ async function importWorkspaceDownloadModuleWithMockedDispatcher() {
 
 async function importWorkspaceRenderModule() {
   const tempDir = await createTempDir('workspace-render-')
-  const sourceFile = path.resolve(repoDir, '../website-shared/src/download/scripts/workspace-render.ts')
+  const sourceFile = path.resolve(repoDir, 'src/scripts/download/workspace-render.ts')
   const tsconfigPath = path.join(tempDir, 'tsconfig.json')
   await writeFile(
     tsconfigPath,
@@ -841,7 +925,7 @@ async function importHomepageApiModule() {
     [
       'exec',
       'tsc',
-      'src/scripts/homepage/api.ts',
+      'src/scripts/runtime/api.ts',
       '--target',
       'ES2022',
       '--module',
@@ -876,7 +960,7 @@ async function importHomepageMarkModule() {
     [
       'exec',
       'tsc',
-      'src/scripts/homepage/mark.ts',
+      'src/scripts/runtime/mark.ts',
       '--target',
       'ES2022',
       '--module',
@@ -910,7 +994,7 @@ async function importHomepageMarkModule() {
 
 async function importSharedHomepageMarkModule() {
   return importCompiledTypescriptModule(
-    path.resolve(repoDir, '../website-shared/src/homepage-runtime/mark.ts'),
+    path.resolve(repoDir, 'src/scripts/runtime/mark.ts'),
     'mark.js',
     'shared-homepage-mark-'
   )
@@ -960,23 +1044,15 @@ async function importGlobalClickEventsModule() {
 
 async function importHomepageMarkSanitizerModule() {
   return importCompiledTypescriptModule(
-    'src/scripts/homepage/mark-sanitizer.ts',
+    'src/scripts/runtime/mark-sanitizer.ts',
     'mark-sanitizer.js',
     'homepage-mark-sanitizer-'
   )
 }
 
-async function importSharedCheckinModule() {
-  return importCompiledTypescriptModule(
-    path.resolve(repoDir, '../website-shared/src/homepage-runtime/checkin.ts'),
-    'checkin.js',
-    'shared-checkin-'
-  )
-}
-
 async function importSharedDeviceModule() {
   return importCompiledTypescriptModule(
-    path.resolve(repoDir, '../website-shared/src/homepage-runtime/device.ts'),
+    path.resolve(repoDir, 'src/scripts/runtime/device.ts'),
     'device.js',
     'shared-device-'
   )
@@ -984,7 +1060,7 @@ async function importSharedDeviceModule() {
 
 async function importSharedFirstOpenedMarkModule() {
   const imported = await importCompiledTypescriptModule(
-    path.resolve(repoDir, '../website-shared/src/homepage-runtime/first-opened-mark.ts'),
+    path.resolve(repoDir, 'src/scripts/runtime/first-opened-mark.ts'),
     'first-opened-mark.js',
     'shared-first-opened-mark-'
   )
@@ -1000,7 +1076,7 @@ async function importSharedFirstOpenedMarkModule() {
 
 async function importSharedMediaApiModule() {
   const tempDir = await createTempDir('shared-media-api-')
-  const sourceFile = path.resolve(repoDir, '../website-shared/src/download/scripts/media-api.ts')
+  const sourceFile = path.resolve(repoDir, 'src/scripts/download/media-api.ts')
   const tsconfigPath = path.join(tempDir, 'tsconfig.json')
   await writeFile(
     tsconfigPath,
@@ -1069,7 +1145,7 @@ async function importPricingPageControllerModule() {
   const tempDir = await createTempDir('pricing-page-loader-')
   const sourceFile = path.resolve(
     repoDir,
-    '../website-shared/src/components/pricing/pricing-page-controller.ts'
+    'src/components/pricing/pricing-page-controller.ts'
   )
   const confirmSource = path.resolve(repoDir, 'src/scripts/site/confirm.ts')
   const tsconfigPath = path.join(tempDir, 'tsconfig.json')
@@ -1104,19 +1180,11 @@ async function importHomepageAuthModule(sourceFile, tempPrefix) {
   return importCompiledTypescriptModule(sourceFile, 'auth.js', tempPrefix)
 }
 
-async function importPayPalReturnModule() {
+async function importPaymentReturnModule() {
   return importCompiledTypescriptModule(
-    path.resolve(repoDir, '../website-shared/src/components/credit-purchase/paypal-return.ts'),
-    'paypal-return.js',
-    'paypal-return-'
-  )
-}
-
-async function importSiteToastModule(tempPrefix) {
-  return importCompiledTypescriptModule(
-    'src/scripts/site/toast.ts',
-    'toast.js',
-    tempPrefix
+    path.resolve(repoDir, 'src/components/payment-return/payment-return.ts'),
+    'payment-return.js',
+    'payment-return-'
   )
 }
 
@@ -2196,22 +2264,22 @@ async function assertSlsMarkBuildsWebTrackingUrl(sourceFile, tempPrefix, expecte
 
 test('homepage SLS mark builds WebTracking URL for website', async () => {
   await assertSlsMarkBuildsWebTrackingUrl(
-    'src/scripts/homepage/sls-mark.ts',
+    'src/scripts/runtime/sls-mark.ts',
     'homepage-sls-mark-',
     'website',
-    `${SITE_ORIGIN}/vimeo-downloader/`
+    `${SITE_ORIGIN}/pricing/`
   )
   await assertSlsMarkBuildsWebTrackingUrl(
-    path.resolve(repoDir, '../website-shared/src/homepage-runtime/sls-mark.ts'),
+    path.resolve(repoDir, 'src/scripts/runtime/sls-mark.ts'),
     'shared-homepage-sls-mark-',
     'website',
-    `${SITE_ORIGIN}/vimeo-downloader/`
+    `${SITE_ORIGIN}/pricing/`
   )
 })
 
 test('homepage SLS mark_msg strips user URL query and secret fields', async () => {
   const { module, cleanup } = await importHomepageSlsMarkModule(
-    'src/scripts/homepage/sls-mark.ts',
+    'src/scripts/runtime/sls-mark.ts',
     'homepage-sls-mark-sanitize-'
   )
   const restoreBrowser = installSlsBrowserGlobals()
@@ -2246,7 +2314,7 @@ test('homepage SLS mark_msg strips user URL query and secret fields', async () =
 
 test('homepage SLS keeps oversized structured mark_msg as valid JSON', async () => {
   const { module, cleanup } = await importHomepageSlsMarkModule(
-    'src/scripts/homepage/sls-mark.ts',
+    'src/scripts/runtime/sls-mark.ts',
     'homepage-sls-mark-json-limit-'
   )
   const restoreBrowser = installSlsBrowserGlobals()
@@ -2278,7 +2346,7 @@ test('homepage SLS keeps oversized structured mark_msg as valid JSON', async () 
 
 test('frontend error capture dispatches uncaught Error to callback', async () => {
   const { module, cleanup } = await importFrontendErrorCaptureModule(
-    'src/scripts/homepage/frontend-error-capture.ts',
+    'src/scripts/runtime/frontend-error-capture.ts',
     'frontend-error-capture-'
   )
   const browser = installFrontendErrorBrowserGlobals()
@@ -2316,7 +2384,7 @@ test('frontend error capture dispatches uncaught Error to callback', async () =>
 
 test('frontend captured error SLS callback sends uncaught Error to SLS only', async () => {
   const { module, cleanup } = await importHomepageSlsMarkModule(
-    'src/scripts/homepage/sls-mark.ts',
+    'src/scripts/runtime/sls-mark.ts',
     'frontend-captured-error-sls-'
   )
   const browser = installFrontendErrorBrowserGlobals()
@@ -2371,11 +2439,11 @@ test('frontend captured error SLS callback sends uncaught Error to SLS only', as
 
 test('shared frontend error capture dispatches unhandled rejection to callback', async () => {
   const { module, cleanup } = await importFrontendErrorCaptureModule(
-    path.resolve(repoDir, '../website-shared/src/homepage-runtime/frontend-error-capture.ts'),
+    path.resolve(repoDir, 'src/scripts/runtime/frontend-error-capture.ts'),
     'shared-frontend-error-capture-'
   )
   const browser = installFrontendErrorBrowserGlobals({
-    href: `${SITE_ORIGIN}/vimeo-downloader/`
+    href: `${SITE_ORIGIN}/pricing/`
   })
   const capturedErrors = []
 
@@ -2395,7 +2463,7 @@ test('shared frontend error capture dispatches unhandled rejection to callback',
     assert.equal(capturedErrors[0].errorKind, 'unhandled_rejection')
     assert.equal(capturedErrors[0].errorName, 'Error')
     assert.equal(capturedErrors[0].errorMessage, 'Async failed with access_token=secret-token')
-    assert.equal(capturedErrors[0].pagePath, '/vimeo-downloader/')
+    assert.equal(capturedErrors[0].pagePath, '/pricing/')
   } finally {
     browser.restore()
     await cleanup()
@@ -2404,11 +2472,11 @@ test('shared frontend error capture dispatches unhandled rejection to callback',
 
 test('shared frontend captured error SLS callback reports website site', async () => {
   const { module, cleanup } = await importHomepageSlsMarkModule(
-    path.resolve(repoDir, '../website-shared/src/homepage-runtime/sls-mark.ts'),
+    path.resolve(repoDir, 'src/scripts/runtime/sls-mark.ts'),
     'shared-frontend-captured-error-sls-'
   )
   const browser = installFrontendErrorBrowserGlobals({
-    href: `${SITE_ORIGIN}/vimeo-downloader/`
+    href: `${SITE_ORIGIN}/pricing/`
   })
   const previousFetch = globalThis.fetch
   const calls = []
@@ -2427,7 +2495,7 @@ test('shared frontend captured error SLS callback reports website site', async (
       errorKind: 'unhandled_rejection',
       errorName: 'Error',
       errorMessage: 'Async failed with access_token=secret-token',
-      pagePath: '/vimeo-downloader/',
+      pagePath: '/pricing/',
       sourceFile: '',
       line: 0,
       column: 0
@@ -2444,7 +2512,7 @@ test('shared frontend captured error SLS callback reports website site', async (
     assert.equal(markMsg.error_kind, 'unhandled_rejection')
     assert.equal(markMsg.error_name, 'Error')
     assert.equal(markMsg.error_message.includes('secret-token'), false)
-    assert.equal(markMsg.page_path, '/vimeo-downloader/')
+    assert.equal(markMsg.page_path, '/pricing/')
   } finally {
     if (previousFetch === undefined) {
       delete globalThis.fetch
@@ -2458,7 +2526,7 @@ test('shared frontend captured error SLS callback reports website site', async (
 
 test('frontend error capture ignores resource errors and deduplicates same error', async () => {
   const { module, cleanup } = await importFrontendErrorCaptureModule(
-    'src/scripts/homepage/frontend-error-capture.ts',
+    'src/scripts/runtime/frontend-error-capture.ts',
     'frontend-error-capture-dedupe-'
   )
   const browser = installFrontendErrorBrowserGlobals()
@@ -2773,7 +2841,7 @@ test('global install CTA click sends SLS and keepalive mark', async () => {
 test('Google SDK 未加载完整时取消登录不抛异常', async () => {
   const previousWindow = globalThis.window
   const { module, cleanup } = await importHomepageAuthModule(
-    path.resolve(repoDir, '../website-shared/src/homepage-runtime/auth.ts'),
+    path.resolve(repoDir, 'src/scripts/runtime/auth.ts'),
     'google-partial-sdk-'
   )
   try {
@@ -3203,10 +3271,6 @@ test('workspace errors maps media download allowlist rejection to extension guid
   try {
     assert.equal(module.isUnsafeFileTypeError(error), true)
     assert.equal(module.mapErrorToCopy(copy, error, 'fallback'), unsafeCopy)
-    assert.deepEqual(module.mapDownloadErrorToViewModel(copy, error), {
-      kind: 'message',
-      message: unsafeCopy
-    })
   } finally {
     await cleanup()
   }
@@ -3225,8 +3289,6 @@ test('workspace download all shows unsafe guidance when backend rejects an allow
   let scrollTarget = null
   let confirmCallCount = 0
   let confirmOptions = null
-  let authInvalidCount = 0
-  let creditsInsufficientCount = 0
 
   const createElement = (textContent = '') => ({
     hidden: false,
@@ -3242,7 +3304,6 @@ test('workspace download all shows unsafe guidance when backend rejects an allow
   largeFileExtensionGuide.hidden = true
   const elements = {
     root: createElement(),
-    authModal: createElement(),
     downloadAllButton: createElement('Download all (2)'),
     largeFileExtensionGuide,
     parseError,
@@ -3280,8 +3341,7 @@ test('workspace download all shows unsafe guidance when backend rejects an allow
         unsafeFileTypeConfirmTitle: 'Use the browser extension',
         unsafeFileTypeConfirmViewExtension: 'View extension download',
         unsafeFileTypeConfirmCancel: 'Cancel',
-        downloadFailed: 'Failed to download this file.',
-        quotaExceeded: 'Not enough Credits.'
+        downloadFailed: 'Failed to download this file.'
       },
       downloadAll: {
         allSuccess: 'All files downloaded.',
@@ -3292,13 +3352,6 @@ test('workspace download all shows unsafe guidance when backend rejects an allow
     deviceId: 'device-1',
     pendingDownloadTask: null,
     resources,
-    checkin: null,
-    token: 'token-1',
-    user: {
-      user_id: 1001,
-      email: 'user@example.com',
-      credits_balance: 10
-    }
   }
 
   globalThis.window = {
@@ -3341,13 +3394,6 @@ test('workspace download all shows unsafe guidance when backend rejects an allow
 
   try {
     await module.handleDownloadAllClick(elements, state, {
-      onAuthInvalid() {
-        authInvalidCount += 1
-      },
-      onCreditsInsufficient() {
-        creditsInsufficientCount += 1
-      },
-      onCreditsBalanceChanged() {},
       onRenderResults() {}
     })
     await flushBrowserTasks()
@@ -3365,8 +3411,6 @@ test('workspace download all shows unsafe guidance when backend rejects an allow
     assert.equal(largeFileExtensionGuide.hidden, false)
     assert.equal(scrollCount, 1)
     assert.deepEqual(scrollTarget, { top: 400, behavior: 'smooth' })
-    assert.equal(authInvalidCount, 0)
-    assert.equal(creditsInsufficientCount, 0)
     assert.equal(state.activeDownload, false)
     assert.equal(elements.downloadAllButton.textContent, 'Download all (2)')
   } finally {
@@ -3420,7 +3464,6 @@ test('workspace storage preflight blocks download all and guides to the extensio
   largeFileExtensionGuide.hidden = true
   const elements = {
     root: createElement(),
-    authModal: createElement(),
     downloadAllButton: createElement('Download all (2)'),
     largeFileExtensionGuide,
     parseError,
@@ -3459,8 +3502,7 @@ test('workspace storage preflight blocks download all and guides to the extensio
         browserStorageInsufficientConfirmTitle: 'Not enough browser storage',
         browserStorageInsufficientConfirmViewExtension: 'View extension download',
         browserStorageInsufficientConfirmCancel: 'Cancel',
-        downloadFailed: 'Failed to download this file.',
-        quotaExceeded: 'Not enough Credits.'
+        downloadFailed: 'Failed to download this file.'
       },
       downloadAll: {
         allSuccess: 'All files downloaded.',
@@ -3471,13 +3513,6 @@ test('workspace storage preflight blocks download all and guides to the extensio
     deviceId: 'device-1',
     pendingDownloadTask: null,
     resources,
-    checkin: null,
-    token: 'token-1',
-    user: {
-      user_id: 1001,
-      email: 'user@example.com',
-      credits_balance: 10
-    }
   }
 
   console.warn = () => {}
@@ -3577,15 +3612,11 @@ test('workspace storage preflight blocks download all and guides to the extensio
       filename: 'resource.mp4',
       revokeAfterMs: 1000
     },
-    retryCount: 0,
-    latestCreditsBalance: 8
+    retryCount: 0
   }
 
   try {
     await module.handleDownloadAllClick(elements, state, {
-      onAuthInvalid() {},
-      onCreditsInsufficient() {},
-      onCreditsBalanceChanged() {},
       onRenderResults() {}
     })
     await flushBrowserTasks()
@@ -3778,131 +3809,6 @@ test('shared media api reports node network failure to SLS only', async () => {
     }
     console.error = previousConsoleError
     restoreBrowser()
-    await cleanup()
-  }
-})
-
-test('shared checkin client posts entry and claim endpoints without subscription status', async () => {
-  const { module, cleanup } = await importSharedCheckinModule()
-  const previousFetch = globalThis.fetch
-  const previousDocument = globalThis.document
-  const previousNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator')
-  const fetchCalls = []
-
-  globalThis.document = { documentElement: { lang: 'en-US' } }
-  Object.defineProperty(globalThis, 'navigator', {
-    configurable: true,
-    value: { language: 'en-US' }
-  })
-  globalThis.fetch = async (url, init = {}) => {
-    const parsedUrl = new URL(String(url))
-    fetchCalls.push({
-      path: parsedUrl.pathname,
-      method: init.method,
-      body: init.body ? JSON.parse(String(init.body)) : null
-    })
-    if (parsedUrl.pathname === '/api/client/checkin/entry') {
-      return new Response(
-        JSON.stringify({
-          code: 10000,
-          data: {
-            campaign_ended: false,
-            start_date: '2026-06-18',
-            end_date: '2026-07-01',
-            today: '2026-06-18',
-            day_index: 1,
-            today_reward_credits: 6,
-            today_claimed: false,
-            total_claim_days: 0,
-            credits_balance: 18,
-            next_claim_at: null,
-            next_claim_at_ts: null
-          }
-        }),
-        { status: 200, headers: { 'content-type': 'application/json' } }
-      )
-    }
-    return new Response(
-      JSON.stringify({
-        code: 10000,
-        data: {
-          claim_date: '2026-06-18',
-          day_index: 1,
-          reward_credits: 6,
-          credits_balance: 24,
-          today_claimed: true,
-          campaign_ended: false,
-          next_claim_at: '2026-06-19T00:00:00-04:00',
-          next_claim_at_ts: 1781841600000
-        }
-      }),
-      { status: 200, headers: { 'content-type': 'application/json' } }
-    )
-  }
-
-  try {
-    const entry = await module.enterCheckinCampaign(GOOGLE_TEST_REQUEST_CONTEXT)
-    const claim = await module.claimDailyCheckin(GOOGLE_TEST_REQUEST_CONTEXT)
-
-    assert.equal(entry.credits_balance, 18)
-    assert.equal(claim.credits_balance, 24)
-    assert.deepEqual(fetchCalls, [
-      { path: '/api/client/checkin/entry', method: 'POST', body: {} },
-      { path: '/api/client/checkin/claim', method: 'POST', body: {} }
-    ])
-  } finally {
-    if (previousFetch === undefined) {
-      delete globalThis.fetch
-    } else {
-      globalThis.fetch = previousFetch
-    }
-    if (previousDocument === undefined) {
-      delete globalThis.document
-    } else {
-      globalThis.document = previousDocument
-    }
-    if (previousNavigator) {
-      Object.defineProperty(globalThis, 'navigator', previousNavigator)
-    } else {
-      delete globalThis.navigator
-    }
-    await cleanup()
-  }
-})
-
-test('shared checkin stale helper expires only after backend next claim timestamp', async () => {
-  const { module, cleanup } = await importSharedCheckinModule()
-
-  try {
-    assert.equal(
-      module.isHomepageCheckinEntryStale(
-        { today_claimed: true, next_claim_at_ts: 2_000 },
-        1_999
-      ),
-      false
-    )
-    assert.equal(
-      module.isHomepageCheckinEntryStale(
-        { today_claimed: true, next_claim_at_ts: 2_000 },
-        2_000
-      ),
-      true
-    )
-    assert.equal(
-      module.isHomepageCheckinEntryStale(
-        { today_claimed: false, next_claim_at_ts: null },
-        3_000
-      ),
-      false
-    )
-    assert.equal(
-      module.isHomepageCheckinEntryStale(
-        { today_claimed: true, next_claim_at_ts: null },
-        3_000
-      ),
-      false
-    )
-  } finally {
     await cleanup()
   }
 })
@@ -4248,7 +4154,7 @@ test('homepage download success mark message includes download stats', async () 
 
 test('workspace download source reports start after used node and annotates failed stats', async () => {
   const source = await readFile(
-    path.resolve(repoDir, '../website-shared/src/download/scripts/workspace-download.ts'),
+    path.resolve(repoDir, 'src/scripts/download/workspace-download.ts'),
     'utf8'
   )
 
@@ -4273,9 +4179,9 @@ test('workspace download source reports start after used node and annotates fail
   )
 })
 
-test('workspace download source blocks unsafe file types before login or download-pre-v2', async () => {
+test('workspace download source blocks unsafe file types before starting any download', async () => {
   const source = await readFile(
-    path.resolve(repoDir, '../website-shared/src/download/scripts/workspace-download.ts'),
+    path.resolve(repoDir, 'src/scripts/download/workspace-download.ts'),
     'utf8'
   )
   const singleDownloadIndex = source.indexOf('export async function handleDownloadClick')
@@ -4284,26 +4190,26 @@ test('workspace download source blocks unsafe file types before login or downloa
   const singleDownloadSource = source.slice(singleDownloadIndex, downloadAllIndex)
   const downloadAllSource = source.slice(downloadAllIndex, resumeIndex)
   const unsafeCheckIndex = singleDownloadSource.indexOf('!isWebDownloadMediaAllowed(resource)')
-  const loginIndex = singleDownloadSource.indexOf('ensureDownloadIdentity(state, callbacks)')
+  const startIndex = singleDownloadSource.indexOf('state.activeDownload = true')
   const allPlansIndex = downloadAllSource.indexOf('const allPlans = state.resources.map')
   const allowedPlansIndex = downloadAllSource.indexOf(
     'allPlans.filter(plan => isWebDownloadMediaAllowed(plan.resource))'
   )
   const queuePlanIndex = downloadAllSource.indexOf('buildDownloadQueuePlan(allowedPlans)')
   const allSkippedIndex = downloadAllSource.indexOf('confirmUnsafeFileTypeExtensionGuide(elements, state)')
-  const batchLoginIndex = downloadAllSource.indexOf('ensureDownloadIdentity(state, callbacks)')
+  const batchStartIndex = downloadAllSource.indexOf('state.activeDownload = true')
 
   assert.notEqual(singleDownloadIndex, -1)
   assert.notEqual(downloadAllIndex, -1)
   assert.notEqual(resumeIndex, -1)
   assert.ok(unsafeCheckIndex >= 0)
-  assert.ok(loginIndex >= 0)
-  assert.ok(unsafeCheckIndex < loginIndex)
+  assert.ok(startIndex >= 0)
+  assert.ok(unsafeCheckIndex < startIndex)
   assert.ok(allPlansIndex >= 0)
   assert.ok(allowedPlansIndex > allPlansIndex)
   assert.ok(queuePlanIndex > allowedPlansIndex)
   assert.ok(allSkippedIndex > queuePlanIndex)
-  assert.ok(batchLoginIndex > allSkippedIndex)
+  assert.ok(batchStartIndex > allSkippedIndex)
   assert.match(source, /siteConfirmAction/)
   assert.match(source, /window\.confirm\(message\)/)
   assert.match(source, /setHidden\(elements\.largeFileExtensionGuide,\s*false\)/)
@@ -4314,7 +4220,7 @@ test('workspace download source blocks unsafe file types before login or downloa
 
 test('workspace download source annotates single-task success stats without changing download all', async () => {
   const source = await readFile(
-    path.resolve(repoDir, '../website-shared/src/download/scripts/workspace-download.ts'),
+    path.resolve(repoDir, 'src/scripts/download/workspace-download.ts'),
     'utf8'
   )
   const singleDownloadIndex = source.indexOf('export async function handleDownloadClick')
@@ -4336,7 +4242,7 @@ test('workspace download source annotates single-task success stats without chan
 
 test('direct download source reports used node before direct URL fetch can fail', async () => {
   const source = await readFile(
-    path.resolve(repoDir, '../website-shared/src/download/scripts/direct-download.ts'),
+    path.resolve(repoDir, 'src/scripts/download/direct-download.ts'),
     'utf8'
   )
   const functionIndex = source.indexOf('async function runDirectDownloadFromStart')
@@ -4353,7 +4259,7 @@ test('direct download source reports used node before direct URL fetch can fail'
 
 test('direct download source persists refreshed URL before retrying OPFS download', async () => {
   const source = await readFile(
-    path.resolve(repoDir, '../website-shared/src/download/scripts/direct-download.ts'),
+    path.resolve(repoDir, 'src/scripts/download/direct-download.ts'),
     'utf8'
   )
   const functionIndex = source.indexOf('async function runDirectDownloadToOpfsWithAutoResume')
@@ -4404,55 +4310,53 @@ test('homepage mark sanitizer redacts JSON and dict-like secret fields', async (
 
 test('Google Identity script loader retries after a failed load', async () => {
   await assertGoogleScriptLoadRetriesAfterError(
-    'src/scripts/homepage/auth.ts',
+    'src/scripts/runtime/auth.ts',
     'homepage-auth-'
   )
   await assertGoogleScriptLoadRetriesAfterError(
-    path.resolve(repoDir, '../website-shared/src/homepage-runtime/auth.ts'),
+    path.resolve(repoDir, 'src/scripts/runtime/auth.ts'),
     'shared-homepage-auth-'
   )
 })
 
 test('Google Identity initializes once per page runtime', async () => {
   await assertGoogleIdentityInitializesOnce(
-    'src/scripts/homepage/auth.ts',
+    'src/scripts/runtime/auth.ts',
     'homepage-auth-init-once-'
   )
   await assertGoogleIdentityInitializesOnce(
-    path.resolve(repoDir, '../website-shared/src/homepage-runtime/auth.ts'),
+    path.resolve(repoDir, 'src/scripts/runtime/auth.ts'),
     'shared-homepage-auth-init-once-'
   )
 })
 
 test('Google manual button uses backend OAuth authorize and return_to', async () => {
   await assertGoogleRedirectButtonUsesOAuthAuthorize(
-    'src/scripts/homepage/auth.ts',
+    'src/scripts/runtime/auth.ts',
     'homepage-auth-redirect-button-'
   )
   await assertGoogleRedirectButtonUsesOAuthAuthorize(
-    path.resolve(repoDir, '../website-shared/src/homepage-runtime/auth.ts'),
+    path.resolve(repoDir, 'src/scripts/runtime/auth.ts'),
     'shared-homepage-auth-redirect-button-'
   )
 })
 
 test('Google One Tap callback posts credential to backend login', async () => {
   await assertGoogleOneTapCallbackPostsCredential(
-    'src/scripts/homepage/auth.ts',
+    'src/scripts/runtime/auth.ts',
     'homepage-auth-one-tap-callback-'
   )
   await assertGoogleOneTapCallbackPostsCredential(
-    path.resolve(repoDir, '../website-shared/src/homepage-runtime/auth.ts'),
+    path.resolve(repoDir, 'src/scripts/runtime/auth.ts'),
     'shared-homepage-auth-one-tap-callback-'
   )
 })
 
 test('插件订阅曝光只要求 utm_source=extension，并保留实际 source', async () => {
-  const previousDocument = globalThis.document
   const previousWindow = globalThis.window
-  globalThis.document = { querySelector: () => null }
   globalThis.window = { location: { search: '' } }
   const { module, cleanup } = await importCompiledTypescriptModule(
-    path.resolve(repoDir, '../website-shared/src/components/pricing/pricing-entry.ts'),
+    path.resolve(repoDir, 'src/components/pricing/pricing-entry.ts'),
     'pricing-entry.js',
     'pricing-entry-'
   )
@@ -4470,7 +4374,6 @@ test('插件订阅曝光只要求 utm_source=extension，并保留实际 source'
       assert.equal(module.readPricingEntryFlags().extensionEntryMarkMsg, null)
     }
   } finally {
-    globalThis.document = previousDocument
     globalThis.window = previousWindow
     await cleanup()
   }
@@ -4478,46 +4381,18 @@ test('插件订阅曝光只要求 utm_source=extension，并保留实际 source'
 
 test('Google redirect result reader clears only Google URL params', async () => {
   await assertGoogleRedirectResultCanBeCleared(
-    'src/scripts/homepage/auth.ts',
+    'src/scripts/runtime/auth.ts',
     'homepage-auth-redirect-clear-'
   )
   await assertGoogleRedirectResultCanBeCleared(
-    path.resolve(repoDir, '../website-shared/src/homepage-runtime/auth.ts'),
+    path.resolve(repoDir, 'src/scripts/runtime/auth.ts'),
     'shared-homepage-auth-redirect-clear-'
   )
 })
 
-test('Credits checkout formats product display data', async () => {
-  const { module, cleanup } = await importCompiledTypescriptModule(
-    path.resolve(repoDir, '../website-shared/src/components/credit-purchase/credit-checkout.ts'),
-    'credit-checkout.js',
-    'credit-checkout-'
-  )
-
-  try {
-    const creditPlan = {
-      product_class: 2,
-      product_id: 'credit_800',
-      product_name: '800 Credits',
-      credits_amount: 800,
-      display_currency: 'USD',
-      display_amount: 14990000,
-      payment_channels: []
-    }
-    assert.equal(module.formatCreditDisplayPrice(creditPlan), '$14.99')
-    assert.equal(module.formatCreditUnitLabel('{credits} Credits'), 'Credits')
-    assert.equal(
-      module.formatCreditDisplayUnitPrice(creditPlan, module.formatCreditUnitLabel('{credits} Credits')),
-      '$0.0187/Credits'
-    )
-  } finally {
-    await cleanup()
-  }
-})
-
 test('Order checkout builds billing identity and accepts only official payment URLs', async () => {
   const { module, cleanup } = await importCompiledTypescriptModule(
-    path.resolve(repoDir, '../website-shared/src/components/order-checkout/order-checkout-api.ts'),
+    path.resolve(repoDir, 'src/components/order-checkout/order-checkout-api.ts'),
     'order-checkout-api.js',
     'order-checkout-api-'
   )
@@ -4598,81 +4473,9 @@ test('Order checkout builds billing identity and accepts only official payment U
   }
 })
 
-test('Credits checkout client loads Credits configs', async () => {
-  const { module, cleanup } = await importCompiledTypescriptModule(
-    path.resolve(repoDir, '../website-shared/src/components/credit-purchase/credit-checkout.ts'),
-    'credit-checkout.js',
-    'credit-checkout-api-'
-  )
-  const fetchCalls = []
-  const previousFetch = globalThis.fetch
-  const previousNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator')
-  globalThis.document = { documentElement: { lang: 'en-US' } }
-  Object.defineProperty(globalThis, 'navigator', {
-    configurable: true,
-    value: { language: 'en-US' }
-  })
-  globalThis.fetch = async (url, init = {}) => {
-    const parsedUrl = new URL(String(url))
-    fetchCalls.push({ path: parsedUrl.pathname, method: init.method ?? 'GET' })
-    if (parsedUrl.pathname === '/api/client/credit/checkout-configs') {
-      return new Response(JSON.stringify({
-        code: 10000,
-        msg: 'success',
-        data: {
-          checkout_configs: [
-            {
-              product_class: 2,
-              product_id: 'credit_50',
-              product_name: '50 Credits',
-              credits_amount: 50,
-              display_currency: 'USD',
-              display_amount: 6300000,
-              payment_channels: [
-                {
-                  payment_method: 'paypal',
-                  payment_method_name: 'PayPal',
-                  currency: 'USD',
-                  amount: 6300000,
-                  provider_sku: 'credit-50-paypal'
-                },
-                {
-                  payment_method: 'clink',
-                  payment_method_name: 'Credit or debit card',
-                  currency: 'USD',
-                  amount: 6300000,
-                  provider_sku: 'credit-50-clink'
-                }
-              ]
-            }
-          ]
-        }
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } })
-    }
-    throw new Error('Unexpected Credits checkout test request: ' + parsedUrl.pathname)
-  }
-
-  try {
-    const context = { deviceId: 'test-device', token: 'token' }
-    const plans = await module.listCreditCheckoutConfigs(context)
-    assert.equal(plans.length, 1)
-    assert.equal(plans[0].payment_channels[0].payment_method, 'paypal')
-    assert.deepEqual(fetchCalls.map(call => call.path), ['/api/client/credit/checkout-configs'])
-  } finally {
-    globalThis.fetch = previousFetch
-    delete globalThis.document
-    if (previousNavigator) {
-      Object.defineProperty(globalThis, 'navigator', previousNavigator)
-    } else {
-      delete globalThis.navigator
-    }
-    await cleanup()
-  }
-})
-
 test('Pricing checkout client loads general subscription price options', async () => {
   const { module, cleanup } = await importCompiledTypescriptModule(
-    path.resolve(repoDir, '../website-shared/src/components/pricing/pricing-checkout.ts'),
+    path.resolve(repoDir, 'src/components/pricing/pricing-checkout.ts'),
     'pricing-checkout.js',
     'pricing-checkout-api-'
   )
@@ -4876,6 +4679,13 @@ test('Pricing subscription loader rejects bad configs and ignores stale anonymou
       content: {
         firstElementChild: Object.assign(new FakePricingElement(), {
           cloneNode: () => cardElement
+        })
+      }
+    },
+    skeletonTemplate: {
+      content: {
+        firstElementChild: Object.assign(new FakePricingElement(), {
+          cloneNode: () => makeElement()
         })
       }
     }
@@ -5119,7 +4929,7 @@ test('Pricing review reward failure retries immediately and close clears timer a
   }
 
   const { module, cleanup } = await importCompiledTypescriptModule(
-    path.resolve(repoDir, '../website-shared/src/components/pricing/pricing-subscription-confirm-controller.ts'),
+    path.resolve(repoDir, 'src/components/pricing/pricing-subscription-confirm-controller.ts'),
     'pricing-subscription-confirm-controller.js',
     'pricing-review-controller-'
   )
@@ -5200,7 +5010,7 @@ test('Pricing review reward failure retries immediately and close clears timer a
 })
 
 test('Clink success return page polls subscription order until paid', async () => {
-  const { module, cleanup } = await importPayPalReturnModule()
+  const { module, cleanup } = await importPaymentReturnModule()
   const previousFetch = globalThis.fetch
   const previousWindow = globalThis.window
   const previousDocument = globalThis.document
@@ -5217,7 +5027,7 @@ test('Clink success return page polls subscription order until paid', async () =
         return { dataset: { title: 'Payment confirmed', description: 'Purchase ready' } }
       }
       if (selector === '[data-payment-return-copy="failed"]') {
-        return { dataset: { title: 'Payment needs attention', description: 'Try again' } }
+        return { dataset: { title: 'Payment not completed', description: 'Try again' } }
       }
       if (selector === '[data-payment-return-title]') {
         return titleElement
@@ -5307,14 +5117,13 @@ test('Clink success return page polls subscription order until paid', async () =
   try {
     module.initPaymentReturnPage({
       provider: 'clink',
-      status: 'success',
-      orderNo: null
+      status: 'success'
     })
     await flushBrowserTasks()
 
     assert.equal(intervals.length, 1)
-    assert.equal(intervals[0].intervalMs, module.PAYPAL_SUCCESS_POLL_INTERVAL_MS)
-    assert.equal(module.PAYPAL_SUCCESS_POLL_INTERVAL_MS, 3000)
+    assert.equal(intervals[0].intervalMs, module.PAYMENT_RETURN_POLL_INTERVAL_MS)
+    assert.equal(module.PAYMENT_RETURN_POLL_INTERVAL_MS, 3000)
     assert.equal(fetchCalls.length, 1)
     assert.equal(titleElement.textContent, 'Payment submitted')
 
@@ -5351,12 +5160,154 @@ test('Clink success return page polls subscription order until paid', async () =
   }
 })
 
+/** 搭建支付回跳页的浏览器环境，返回可观察的页面状态与清理函数。 */
+function installPaymentReturnEnvironment({ token, search, fetchImpl }) {
+  const previous = {
+    fetch: globalThis.fetch,
+    window: globalThis.window,
+    document: globalThis.document,
+    navigator: Object.getOwnPropertyDescriptor(globalThis, 'navigator')
+  }
+  const copies = {
+    waiting: { title: 'Payment submitted', description: 'Confirming payment' },
+    confirmed: { title: 'Payment confirmed', description: 'Purchase ready' },
+    failed: { title: 'Payment not completed', description: 'Try again' },
+    submitted: { title: 'Payment submitted', description: 'Check where you started' }
+  }
+  const titleElement = { textContent: '' }
+  const messageElement = { textContent: '' }
+  const rootElement = {
+    dataset: {},
+    querySelector(selector) {
+      const match = selector.match(/^\[data-payment-return-copy="(\w+)"\]$/)
+      if (match) {
+        return { dataset: copies[match[1]] }
+      }
+      if (selector === '[data-payment-return-title]') return titleElement
+      if (selector === '[data-payment-return-description]') return messageElement
+      return null
+    }
+  }
+  const storageValues = new Map([['homepage_device_id_v2', '01234567-89ab-4def-8123-456789abcdef']])
+  if (token) {
+    storageValues.set('homepage_access_token', token)
+  }
+  const intervals = []
+  const fetchCalls = []
+
+  globalThis.window = {
+    localStorage: {
+      getItem: (key) => storageValues.get(key) ?? null,
+      setItem: (key, value) => storageValues.set(key, String(value)),
+      removeItem: (key) => storageValues.delete(key)
+    },
+    location: { origin: SITE_ORIGIN, search },
+    opener: null,
+    setInterval(callback, intervalMs) {
+      intervals.push({ callback, intervalMs })
+      return intervals.length
+    },
+    clearInterval() {}
+  }
+  globalThis.document = {
+    documentElement: { lang: 'en-US' },
+    querySelector: (selector) => (selector === '[data-payment-return]' ? rootElement : null)
+  }
+  Object.defineProperty(globalThis, 'navigator', {
+    configurable: true,
+    value: { language: 'en-US' }
+  })
+  globalThis.fetch = async (url, init = {}) => {
+    const parsedUrl = new URL(String(url))
+    fetchCalls.push({ path: parsedUrl.pathname, method: init.method ?? 'GET' })
+    return fetchImpl(parsedUrl, init)
+  }
+
+  return {
+    titleElement,
+    rootElement,
+    intervals,
+    fetchCalls,
+    restore() {
+      globalThis.fetch = previous.fetch
+      for (const key of ['window', 'document']) {
+        if (previous[key] === undefined) {
+          delete globalThis[key]
+        } else {
+          globalThis[key] = previous[key]
+        }
+      }
+      if (previous.navigator) {
+        Object.defineProperty(globalThis, 'navigator', previous.navigator)
+      } else {
+        delete globalThis.navigator
+      }
+    }
+  }
+}
+
+function jsonResponse(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' }
+  })
+}
+
+test('payment return success page shows neutral submitted when the order cannot be confirmed', async () => {
+  const { module, cleanup } = await importPaymentReturnModule()
+  const cases = [
+    { name: 'no login state', token: null, response: null },
+    { name: 'token rejected', token: 'stale-token', response: jsonResponse({ code: 10001, msg: 'unauthorized', data: null }, 401) },
+    { name: 'order not owned', token: 'test-token', response: jsonResponse({ code: 20001, msg: 'order not found', data: null }, 200) }
+  ]
+
+  try {
+    for (const item of cases) {
+      const env = installPaymentReturnEnvironment({
+        token: item.token,
+        search: '?order_no=ORD-NEUTRAL',
+        fetchImpl: async () => item.response
+      })
+      try {
+        module.initPaymentReturnPage({ provider: 'paypal', status: 'success' })
+        await flushBrowserTasks()
+        assert.equal(env.rootElement.dataset.paymentReturnState, 'submitted', item.name)
+        assert.equal(env.titleElement.textContent, 'Payment submitted', item.name)
+        assert.equal(env.fetchCalls.length, item.token ? 1 : 0, item.name)
+      } finally {
+        env.restore()
+      }
+    }
+  } finally {
+    await cleanup()
+  }
+})
+
+test('payment return cancel page cancels the local order', async () => {
+  const { module, cleanup } = await importPaymentReturnModule()
+  const env = installPaymentReturnEnvironment({
+    token: 'test-token',
+    search: '?order_no=ORD-CANCEL',
+    fetchImpl: async () => jsonResponse({ code: 10000, msg: 'success', data: null })
+  })
+
+  try {
+    module.initPaymentReturnPage({ provider: 'clink', status: 'cancel' })
+    await flushBrowserTasks()
+    assert.deepEqual(env.fetchCalls, [{ path: '/api/client/order/cancel', method: 'POST' }])
+    assert.equal(env.intervals.length, 0)
+  } finally {
+    env.restore()
+    await cleanup()
+  }
+})
+
 test('workspace snapshot validates owner, expiry, size and privacy whitelist', async () => {
   installLocalStorage()
   const { module, cleanup } = await importWorkspaceSnapshotModule()
 
   try {
-    const owner = module.buildDownloadWorkspaceOwner('device-1', 42)
+    const owner = module.buildDownloadWorkspaceOwner('device-1')
     const resource = {
       sourceId: 'source-video-1',
       resourceToken: 'snapshot-resource-token',
@@ -5403,7 +5354,7 @@ test('workspace snapshot validates owner, expiry, size and privacy whitelist', a
     assert.equal(raw.includes('downloadRequests'), false)
 
     const loaded = module.loadDownloadWorkspaceSnapshot(Date.now(), 'device-1')
-    assert.equal(loaded.owner.sub, 'user:42')
+    assert.equal(loaded.owner.sub, 'device:device-1')
 
     assert.equal(module.loadDownloadWorkspaceSnapshot(Date.now(), 'device-2'), null)
     assert.equal(window.localStorage.getItem(module.DOWNLOAD_WORKSPACE_SNAPSHOT_STORAGE_KEY), null)
@@ -5869,7 +5820,7 @@ test('client mux storage preflight requires double space and OPFS for unknown or
 
 test('download temporary OPFS files clean only their own input and deferred output', async () => {
   const { module, cleanup } = await importCompiledTypescriptModule(
-    path.resolve(repoDir, '../website-shared/src/download/scripts/download-temp-storage.ts'),
+    path.resolve(repoDir, 'src/scripts/download/download-temp-storage.ts'),
     'download-temp-storage.js',
     'download-temp-storage-'
   )
@@ -6045,31 +5996,6 @@ test('pending resume prompt renders filename and progress placeholders', async (
     assert.equal(
       module.formatPendingResumeText('Detected "{filename}" ({progress}).', 'price-$1.mp4', null),
       'Detected "price-$1.mp4" (unknown).'
-    )
-  } finally {
-    await cleanup()
-  }
-})
-
-test('checkin countdown formats backend next claim timestamp', async () => {
-  const { module, cleanup } = await importWorkspaceRenderModule()
-  try {
-    assert.equal(module.formatCheckinCountdown(1_000 + 3_661_000, 1_000), '1h 01m')
-    assert.equal(module.formatCheckinCountdown(1_000 + 61_000, 1_000), '1m 01s')
-    assert.equal(module.formatCheckinCountdown(1_000, 2_000), '0s')
-  } finally {
-    await cleanup()
-  }
-})
-
-test('checkin next claim time formats in website default timezone', async () => {
-  const { module, cleanup } = await importWorkspaceRenderModule()
-  try {
-    const timestamp = Date.UTC(2026, 5, 19, 4, 0, 0)
-
-    assert.equal(
-      module.formatCheckinNextAt(timestamp, '(Next refresh: {time} EST)'),
-      '(Next refresh: 12:00 AM EST)'
     )
   } finally {
     await cleanup()
@@ -6392,7 +6318,7 @@ test('download range stream cancels invalid resumed response before appending by
 
 test('download methods register only direct and client_mux without a storage fallback', async () => {
   const source = await readFile(
-    path.resolve(repoDir, '../website-shared/src/download/scripts/download-methods.ts'),
+    path.resolve(repoDir, 'src/scripts/download/download-methods.ts'),
     'utf8'
   )
   const directStart = source.indexOf('direct: {')
@@ -6411,7 +6337,7 @@ test('download methods register only direct and client_mux without a storage fal
 
 test('download methods allow zero-byte OPFS resume records', async () => {
   const directSource = await readFile(
-    path.resolve(repoDir, '../website-shared/src/download/scripts/direct-download.ts'),
+    path.resolve(repoDir, 'src/scripts/download/direct-download.ts'),
     'utf8'
   )
 
@@ -6421,7 +6347,7 @@ test('download methods allow zero-byte OPFS resume records', async () => {
 
 test('download completion executes the object_url transfer contract', async () => {
   const workspaceSource = await readFile(
-    path.resolve(repoDir, '../website-shared/src/download/scripts/workspace-download.ts'),
+    path.resolve(repoDir, 'src/scripts/download/workspace-download.ts'),
     'utf8'
   )
   const completionExecutorStart = workspaceSource.indexOf('function executeDownloadCompletion')
@@ -6450,11 +6376,11 @@ test('download completion executes the object_url transfer contract', async () =
 
 test('download Range auto resume budget is three and exhausted records stay resumable', async () => {
   const directSource = await readFile(
-    path.resolve(repoDir, '../website-shared/src/download/scripts/direct-download.ts'),
+    path.resolve(repoDir, 'src/scripts/download/direct-download.ts'),
     'utf8'
   )
   const workspaceSource = await readFile(
-    path.resolve(repoDir, '../website-shared/src/download/scripts/workspace-download.ts'),
+    path.resolve(repoDir, 'src/scripts/download/workspace-download.ts'),
     'utf8'
   )
 
@@ -6481,7 +6407,7 @@ test('client mux enforces resource and memory limits without OPFS', async (t) =>
     extends: path.join(repoDir, 'tsconfig.json'),
     compilerOptions: { outDir: tempDir, noEmit: false, allowImportingTsExtensions: false },
     include: [],
-    files: [path.resolve(repoDir, '../website-shared/src/download/scripts/client-mux.ts')]
+    files: [path.resolve(repoDir, 'src/scripts/download/client-mux.ts')]
   }))
   await execFileAsync('pnpm', ['exec', 'tsc', '--project', configPath], { cwd: repoDir })
   await patchCompiledBrowserModuleFiles(tempDir)
@@ -6521,7 +6447,7 @@ test('client mux enforces resource and memory limits without OPFS', async (t) =>
 
 test('注册归因使用网站当前设备与首次打开时间', async () => {
   const { module, cleanup } = await importHomepageAuthModule(
-    path.resolve(repoDir, '../website-shared/src/homepage-runtime/auth.ts'),
+    path.resolve(repoDir, 'src/scripts/runtime/auth.ts'),
     'registration-context-'
   )
   const originalWindow = globalThis.window
@@ -6543,7 +6469,7 @@ test('注册归因使用网站当前设备与首次打开时间', async () => {
 
 test('网站 SLS 的 user_id 为数字，缺少或无法识别账号时为 0', async () => {
   const { module, cleanup } = await importHomepageSlsMarkModule(
-    path.resolve(repoDir, '../website-shared/src/homepage-runtime/sls-mark.ts'),
+    path.resolve(repoDir, 'src/scripts/runtime/sls-mark.ts'),
     'sls-user-id-'
   )
   const restore = installSlsBrowserGlobals({ href: `${SITE_ORIGIN}/` })

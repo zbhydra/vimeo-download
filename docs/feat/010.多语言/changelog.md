@@ -1,5 +1,14 @@
 # 010 · 多语言 - 变更记录
 
+## 2026-10-05 官网改版：website 文案结构与路由集合同步
+
+**Why**：官网改版后首页文案改为「工具首屏 + 8 个插件展示区块」，旧首页专属键、平台落地页、更新日志与插件定价页文案随页面删除，下载工作区文案去掉登录 / 账户 / 积分购买；`middleware.ts` 已删除。
+
+**Changes**：
+- `tech-website多语言.md`：文件布局补 `pricing.ts`、`payment-return.ts`；`SiteContent` 顶层结构按 `schema.ts` 现状重写（`site` / `layout.nav` 仅 brand·home·pricing / `layout.footer` / `common` / `pages.homepage` 的 meta·heroTrustPoints·workspace·softwareApplication 与 8 个区块键 / `pages.pricing`）；路由树删除 `vimeo-downloader`、`ext-pricing`、`changelog`，补回跳页目录；中间件一节改为「无中间件」；类型校验命令改为 `pnpm build` 中的 `astro check`。
+- `feat.md`：只订正「站点没有 middleware」的表述。
+- 14 语言清单、URL 前缀映射、切换机制与新增语言步骤不变。
+
 ## 2026-09-20 清理 Telegram 时代死键并补上 14 语言一致性检查
 
 **Why**:单平台转型后界面文案表里仍留着一批无任何代码引用的键,其中 `options.*` / `subscription.*` / `sidebar.*` 的文案是 Telegram 多平台时代的产品口径(提到 "chat or channel"、"public groups and channels"),与 Vimeo 单平台定位不符;而「14 文件同步」这条约定此前没有任何机器检查,漏翻只会静默回退英文。

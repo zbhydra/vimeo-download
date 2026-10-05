@@ -2,7 +2,7 @@
  * 订单 API。
  *
  * 负责创建通用订单、查询订单状态，以及支付 URL 提取与订单状态归类等纯协议逻辑；
- * 与 website-shared `order-checkout-api.ts` 消费同一套后端合同，协议细节以对方为准。
+ * 与 website `components/order-checkout/order-checkout-api.ts` 消费同一套后端合同，协议细节以对方为准。
  */
 
 import { httpClient } from '../index'

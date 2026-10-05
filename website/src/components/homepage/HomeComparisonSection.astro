@@ -1,0 +1,119 @@
+---
+/**
+ * 区块 4：网页版与插件对比。桌面端是三列表格；窄屏把每行折成一张卡，
+ * 单元格用 data-label 回显列名，避免横向滚动。
+ */
+import HomeSection from './HomeSection.astro'
+import type { HomepageContent } from '../../i18n/schema'
+
+const { copy } = Astro.props as { copy: HomepageContent['comparison'] }
+---
+
+<HomeSection id="home-comparison" heading={copy.heading}>
+  <table class="home-table">
+    <thead>
+      <tr>
+        <th scope="col">{copy.columns.dimension}</th>
+        <th scope="col">{copy.columns.web}</th>
+        <th scope="col">{copy.columns.extension}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {copy.rows.map(row => (
+        <tr>
+          <th scope="row">{row.dimension}</th>
+          <td data-label={copy.columns.web}>{row.web}</td>
+          <td data-label={copy.columns.extension}>{row.extension}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</HomeSection>
+
+<style>
+  .home-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid var(--gray-alpha-400);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    table-layout: fixed;
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .home-table th,
+  .home-table td {
+    padding: 16px;
+    text-align: left;
+    vertical-align: top;
+    border-top: 1px solid var(--gray-alpha-400);
+    overflow-wrap: anywhere;
+  }
+
+  .home-table thead th {
+    border-top: 0;
+    background: var(--gray-100);
+    font-weight: 600;
+  }
+
+  .home-table tbody th {
+    width: 20%;
+    font-weight: 600;
+  }
+
+  .home-table td {
+    color: var(--gray-900);
+  }
+
+  @media (max-width: 960px) {
+    .home-table,
+    .home-table tbody,
+    .home-table tr,
+    .home-table th,
+    .home-table td {
+      display: block;
+      width: auto;
+    }
+
+    .home-table {
+      border: 0;
+      border-radius: 0;
+      overflow: visible;
+    }
+
+    .home-table thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+    }
+
+    .home-table tr {
+      margin-bottom: 16px;
+      border: 1px solid var(--gray-alpha-400);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+
+    .home-table th,
+    .home-table td {
+      border-top: 0;
+      padding: 12px 16px;
+    }
+
+    .home-table tbody th {
+      width: auto;
+      background: var(--gray-100);
+    }
+
+    .home-table td::before {
+      content: attr(data-label);
+      display: block;
+      color: var(--gray-1000);
+      font-weight: 600;
+    }
+  }
+</style>

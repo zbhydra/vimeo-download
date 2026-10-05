@@ -301,14 +301,6 @@ function getRouteSourceFiles(routePath) {
     ]
   }
 
-  if (normalized === '/changelog/') {
-    return [
-      'src/pages/changelog.astro',
-      'src/pages/[lang]/changelog.astro',
-      'src/i18n/content.ts'
-    ]
-  }
-
   if (normalized === '/terms/' || normalized === '/privacy/') {
     const pageName = normalized.split('/').filter(Boolean)[0]
     return [
@@ -329,32 +321,16 @@ function getRouteSourceFiles(routePath) {
     ]
   }
 
-  if (normalized === '/pricing/' || normalized === '/ext-pricing/') {
-    const pageName = normalized.split('/').filter(Boolean)[0]
+  if (normalized === '/pricing/') {
     return [
-      `src/pages/${pageName}.astro`,
-      `src/pages/[lang]/${pageName}.astro`,
+      'src/pages/pricing.astro',
+      'src/pages/[lang]/pricing.astro',
       'src/components/pages/PricingPage.astro',
       'src/i18n/pricing.ts',
-      '../website-shared/src/components/pricing/PricingPageShell.astro',
-      '../website-shared/src/components/pricing/pricing-page-controller.ts'
-    ]
-  }
-
-  if (normalized === '/paypal/success/' || normalized === '/paypal/cancel/') {
-    const pageName = normalized.split('/').filter(Boolean).join('/')
-    return [
-      `src/pages/${pageName}.astro`,
-      '../website-shared/src/components/credit-purchase/paypal-return.ts'
-    ]
-  }
-
-  if (normalized.endsWith('-downloader/')) {
-    const pageName = normalized.split('/').filter(Boolean)[0]
-    return [
-      `src/pages/${pageName}.astro`,
-      `src/pages/[lang]/${pageName}.astro`,
-      'src/components/pages/PlatformDownloaderPage.astro'
+      'src/components/pricing/PricingPageShell.astro',
+      'src/components/pricing/PricingAuthModal.astro',
+      'src/components/pricing/pricing-page-controller.ts',
+      'src/components/order-checkout/OrderCheckoutModal.astro'
     ]
   }
 

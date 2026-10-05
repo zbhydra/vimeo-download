@@ -1,5 +1,17 @@
 # 000 · 架构 · 变更记录
 
+## 2026-10-05 官网改版：网站收敛为插件展示站 + 免费网页下载，website-shared 并入 website
+
+**Why**：网站定位改为「首屏免费网页下载 + 插件展示 + 插件订阅购买」，Credits 购买与展示、签到入口、下载工作区登录 / 账户下线；`website-shared` 与未使用的 Vue 集成属结构遗留。决策与范围见 `plans/004.官网改版-插件展示与免费网页下载.md`。
+
+**变更**：
+
+- `overview.md`：各端职责表删除 `website-shared/` 行，website 改为 Astro + 原生 TS（无 Vue），职责改为免费网页下载、插件展示与订阅购买；数据流与技术栈同步。
+- `tech-website.md`：按现状重写。目录改为 `components/{download,homepage,pricing,order-checkout,payment-return,pages,site}` 与 `scripts/{download,runtime,site}`；页面集合只剩首页 / Pricing / About / Contact / Terms / Privacy 与四个回跳页；删除 Vue、`@website-shared` alias、`middleware.ts`、`/vimeo-downloader/`、`/changelog/`、`/ext-pricing/` 的描述；新增运行时与下载工作区边界一节。
+- `tech-extension.md`：Pricing 回退路径常量 `WEBSITE.PRICING_PATH` 为 `/pricing/`；三端关系改为互不共享源码。
+- `tech-可观测与SLS.md`：website 实现与覆盖入口路径改到 `website/src/scripts/runtime/`、`website/src/scripts/download/`、`website/src/components/pricing/`。
+- 后端签到 / 积分 / 扣费下载授权接口与数据保留，网站不再调用，后续处理见 004 计划 §8。
+
 ## 2026-09-20 删除 download 节点部署链路、生产端口迁到 7900、替换旧 tg_download 的 Google client id 与 secret
 
 **Why**：本仓库由旧 `tg_download` 项目复制而来，`download` 节点的整套部署配置（指向 `51.81.87.195`、节点名 `us-e-dl1` / `pro-us-e-dl1`）与 Google OAuth client id 都是上一代项目的残留，本项目不部署该节点、也不该继续用旧项目的 OAuth 应用。另外上一轮只统一了本地端口，生产侧 `.env.prod` / 部署脚本 / 网站 nginx 仍是 `9600`，「本地 7900、生产 9600」的分叉会让发版后的监听端口与本机验证口径不一致。

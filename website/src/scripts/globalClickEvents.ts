@@ -64,11 +64,11 @@ async function dispatchInstallClickMark(target: HTMLElement): Promise<void> {
   }
 
   const [markModule, authModule, deviceModule, apiModule, slsModule] = await Promise.all([
-    import('./homepage/mark'),
-    import('./homepage/auth'),
-    import('./homepage/device'),
-    import('./homepage/api'),
-    import('./homepage/sls-mark')
+    import('./runtime/mark'),
+    import('./runtime/auth'),
+    import('./runtime/device'),
+    import('./runtime/api'),
+    import('./runtime/sls-mark')
   ])
   const deviceId = await deviceModule.ensureDeviceId()
   const context = {

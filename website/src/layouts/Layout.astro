@@ -42,7 +42,7 @@ const BASE = '/';
 const {
   locale,
   title = 'Vimeo Video Download | Vimeo Video Downloader',
-  description = 'Paste a public Vimeo link and save the video in the resolution you need — no app, no account, straight from your browser.',
+  description: descriptionProp,
   ogType = 'website',
   ogImage = `${BASE}og-image.png`,
   includeSoftwareApplicationSchema = true,
@@ -54,6 +54,7 @@ const {
 } = Astro.props;
 
 const t = getContent(locale);
+const description = descriptionProp ?? t.site.description;
 const companyContent = getCompanyContent(locale);
 const legalContent = getLegalContent(locale);
 const currentPath = Astro.url.pathname;
@@ -111,7 +112,7 @@ const softwareApplicationSchema: JsonLd = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
   name: schemaName,
-  description: t.site.description,
+  description: t.pages.homepage.softwareApplication.description,
   applicationCategory: 'BrowserExtension',
   operatingSystem: 'Chrome, Edge, Brave, and all Chromium-based browsers',
   browserRequirements: 'Requires JavaScript. Requires HTML5.',
@@ -123,12 +124,7 @@ const softwareApplicationSchema: JsonLd = {
   author: {
     '@id': organizationId
   },
-  featureList: [
-    'Vimeo video download from public Vimeo links in the browser',
-    'Resolution selection for the Vimeo renditions the video exposes',
-    'MP4 output that plays on any device or player',
-    'No account, no install, and no browser extension required'
-  ]
+  featureList: t.pages.homepage.softwareApplication.featureList
 };
 const organizationSchema: JsonLd = {
   '@context': 'https://schema.org',
@@ -177,7 +173,7 @@ const structuredDataItems = [
     </script>
     -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#2563eb" />
+    <meta name="theme-color" content="#ffffff" />
     <link rel="icon" type="image/png" sizes="128x128" href="/favicon.png" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="canonical" href={canonicalURL} />
@@ -218,30 +214,45 @@ const structuredDataItems = [
       <script type="application/ld+json" is:inline set:html={JSON.stringify(item)} />
     ))}
     <style is:inline is:global>
+      /*
+        Geist 亮色 token（取自 docs/references/specs/design.md，命名对齐，只收录用到的子集）。
+      */
       :root {
-        --color-primary: #2563eb;
-        --color-primary-dark: #1d4ed8;
-        --color-accent: #f97316;
-        --color-bg: #f6f7fb;
-        --color-surface: rgba(255, 255, 255, 0.92);
-        --color-gray-50: #f8fafc;
-        --color-gray-100: #eef2f8;
-        --color-gray-200: #dbe4f0;
-        --color-gray-300: #c3d0df;
-        --color-gray-400: #94a3b8;
-        --color-gray-500: #64748b;
-        --color-gray-600: #475569;
-        --color-gray-700: #334155;
-        --color-gray-800: #1e293b;
-        --color-gray-900: #0f172a;
-        --color-error: #ef4444;
-        --font-display: 'Avenir Next', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        --font-body: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        --spacing-sm: 8px;
-        --spacing-md: 16px;
-        --spacing-lg: 24px;
-        --spacing-xl: 40px;
-        --spacing-2xl: 72px;
+        --background-100: #ffffff;
+        --gray-100: #f2f2f2;
+        --gray-700: #8f8f8f;
+        --gray-900: #4d4d4d;
+        --gray-1000: #171717;
+        --gray-alpha-100: #0000000d;
+        --gray-alpha-400: #00000014;
+        --gray-alpha-500: #00000036;
+        --gray-alpha-600: #0000003d;
+        --blue-700: #006bff;
+        --blue-800: #0059ec;
+        --amber-100: #fff6de;
+        --amber-900: #aa4d00;
+        --background-200: #fafafa;
+        --blue-100: #f0f7ff;
+        --blue-200: #e9f4ff;
+        --blue-400: #cae7ff;
+        --blue-500: #94ccff;
+        --red-100: #ffeeef;
+        --red-400: #ffd7d6;
+        --red-900: #d8001b;
+        --green-100: #ecfdec;
+        --green-400: #b9f5bc;
+        --green-900: #107d32;
+
+        --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+
+        --radius-sm: 6px;
+        --radius-md: 12px;
+
+        --shadow-card: 0 2px 2px rgba(0, 0, 0, 0.04);
+        --shadow-popover: 0 1px 1px rgba(0, 0, 0, 0.02), 0 4px 8px -4px rgba(0, 0, 0, 0.04), 0 16px 24px -8px rgba(0, 0, 0, 0.06);
+        --shadow-modal: 0 1px 1px rgba(0, 0, 0, 0.02), 0 8px 16px -4px rgba(0, 0, 0, 0.04), 0 24px 32px -8px rgba(0, 0, 0, 0.06);
+
+        --focus-ring: 0 0 0 2px #fff, 0 0 0 4px #006bff;
         --transition-fast: 160ms;
         --transition-normal: 220ms;
       }
@@ -258,14 +269,11 @@ const structuredDataItems = [
 
       body {
         min-height: 100vh;
-        font-family: var(--font-body);
+        font-family: var(--font-sans);
         font-size: 14px;
         line-height: 1.6;
-        color: var(--color-gray-800);
-        background:
-          radial-gradient(circle at top left, rgba(37, 99, 235, 0.09), transparent 28%),
-          radial-gradient(circle at top right, rgba(249, 115, 22, 0.08), transparent 28%),
-          var(--color-bg);
+        color: var(--gray-1000);
+        background: var(--background-100);
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
       }
@@ -273,7 +281,7 @@ const structuredDataItems = [
       a {
         color: inherit;
         text-decoration: none;
-        transition: color var(--transition-normal), border-color var(--transition-normal), transform var(--transition-normal);
+        transition: color var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast);
       }
 
       button {
@@ -296,8 +304,77 @@ const structuredDataItems = [
       h2,
       h3,
       h4 {
-        font-family: var(--font-display);
-        color: var(--color-gray-900);
+        font-family: var(--font-sans);
+        color: var(--gray-1000);
+      }
+
+      /* 全站焦点环：特异性 0,4,0，组件覆盖规则见 spec-website §4；tabindex="-1"（脚本聚焦）不显示。 */
+      :root :is(a, button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+        outline: none;
+        box-shadow: var(--focus-ring);
+      }
+
+      /* 全站按钮：主按钮 gray-1000 实底，次按钮白底加 gray-alpha-400 描边。 */
+      .btn-primary,
+      .btn-secondary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        height: 40px;
+        padding: 0 10px;
+        border: 1px solid transparent;
+        border-radius: var(--radius-sm);
+        font-size: 14px;
+        font-weight: 500;
+        line-height: 20px;
+        white-space: nowrap;
+        transition: color var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast);
+      }
+
+      .btn-primary {
+        color: var(--background-100);
+        background: var(--gray-1000);
+      }
+
+      .btn-primary:hover {
+        background: var(--gray-900);
+      }
+
+      .btn-secondary {
+        color: var(--gray-1000);
+        background: var(--background-100);
+        border-color: var(--gray-alpha-400);
+      }
+
+      .btn-secondary:hover {
+        background: var(--gray-100);
+        border-color: var(--gray-alpha-500);
+      }
+
+      .btn-primary:disabled,
+      .btn-secondary:disabled {
+        color: var(--gray-700);
+        background: var(--gray-100);
+        border-color: transparent;
+        cursor: not-allowed;
+      }
+
+      .btn-primary-icon {
+        width: 18px;
+        height: 18px;
+        flex: 0 0 18px;
+      }
+
+      /* 全站链接：accent blue-700 只用于链接与焦点。 */
+      .text-link {
+        color: var(--blue-700);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+
+      .text-link:hover {
+        color: var(--blue-800);
       }
 
       .container,
@@ -311,204 +388,82 @@ const structuredDataItems = [
         position: sticky;
         top: 0;
         z-index: 100;
-        padding: 16px 0 0;
+        background: var(--background-100);
+        border-bottom: 1px solid var(--gray-alpha-400);
       }
 
       .nav {
-        height: 72px;
-        padding: 0 18px;
+        height: 64px;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        border: 1px solid rgba(15, 23, 42, 0.08);
-        border-radius: 24px;
-        background: rgba(255, 255, 255, 0.82);
-        backdrop-filter: blur(18px);
-        box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+        gap: 16px;
       }
 
       .logo {
         display: flex;
         align-items: center;
-        gap: 12px;
-        font-weight: 700;
-        letter-spacing: -0.02em;
+        gap: 8px;
+        min-width: 0;
+        color: var(--gray-1000);
       }
 
       .logo span {
-        font-family: var(--font-display);
-        font-size: 18px;
+        overflow: hidden;
+        font-size: 16px;
+        font-weight: 600;
+        letter-spacing: -0.32px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .logo img {
-        flex: 0 0 40px;
+        width: 32px;
+        height: 32px;
+        flex: 0 0 32px;
+        border-radius: var(--radius-sm);
       }
 
       .nav-links {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 4px;
+        margin-right: auto;
+        margin-left: 24px;
       }
 
-      .nav-links a,
-      .nav-menu-trigger {
-        padding: 10px 14px;
-        border-radius: 999px;
-        color: var(--color-gray-600);
+      .nav-links a {
+        padding: 6px 12px;
+        border-radius: var(--radius-sm);
+        color: var(--gray-900);
         font-size: 14px;
-        font-weight: 700;
+        font-weight: 500;
+        line-height: 20px;
       }
 
       .nav-links a:hover,
-      .nav-links a.active,
-      .nav-menu-trigger:hover,
-      .nav-menu-trigger.active,
-      .nav-menu.is-open .nav-menu-trigger {
-        color: var(--color-gray-900);
-        background: rgba(15, 23, 42, 0.05);
-      }
-
-      .nav-menu {
-        position: relative;
-      }
-
-      .nav-menu-trigger {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-      }
-
-      .nav-menu-trigger:focus-visible,
-      .nav-menu-panel a:focus-visible,
-      .nav-install-link:focus-visible,
-      .lang-btn:focus-visible,
-      .lang-option:focus-visible,
-      .mobile-menu-btn:focus-visible,
-      .mobile-nav a:focus-visible,
-      .footer-link-group a:focus-visible,
-      .footer-meta a:focus-visible {
-        outline: 2px solid var(--color-primary);
-        outline-offset: 3px;
-      }
-
-      .nav-menu-trigger svg {
-        width: 12px;
-        height: 12px;
-        flex: 0 0 12px;
-      }
-
-      .nav-menu-panel {
-        position: absolute;
-        top: calc(100% + 10px);
-        left: 0;
-        z-index: 20;
-        width: min(320px, calc(100vw - 48px));
-        padding: 8px;
-        border: 1px solid rgba(15, 23, 42, 0.08);
-        border-radius: 8px;
-        background: white;
-        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
-        opacity: 0;
-        visibility: hidden;
-        pointer-events: none;
-        transform: translateY(-8px);
-        transition: opacity var(--transition-normal), visibility var(--transition-normal), transform var(--transition-normal);
-      }
-
-      .nav-menu.is-open .nav-menu-panel {
-        opacity: 1;
-        visibility: visible;
-        pointer-events: auto;
-        transform: translateY(0);
-      }
-
-      .nav-menu-panel a {
-        display: block;
-        min-height: 40px;
-        padding: 10px 12px;
-        border-radius: 6px;
-        color: var(--color-gray-700);
-        font-size: 13px;
-        font-weight: 800;
-        line-height: 1.35;
-        overflow-wrap: anywhere;
-      }
-
-      .nav-menu-panel a:hover,
-      .nav-menu-panel a.active {
-        color: var(--color-gray-900);
-        background: rgba(15, 23, 42, 0.05);
+      .nav-links a.active {
+        color: var(--gray-1000);
+        background: var(--gray-100);
       }
 
       .nav-actions {
         display: flex;
         align-items: center;
-        gap: 10px;
+        flex: 0 0 auto;
+        gap: 8px;
       }
 
       .nav-install-link {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
         gap: 8px;
-        height: 44px;
-        padding: 0 16px 0 12px;
-        border-radius: 999px;
-        border: 1px solid rgba(15, 23, 42, 0.08);
-        color: var(--color-gray-900);
-        background: rgba(255, 255, 255, 0.76);
-        font-size: 14px;
-        font-weight: 800;
-        letter-spacing: 0;
-        white-space: nowrap;
-        transition: transform var(--transition-normal);
-      }
-
-      .nav-install-link:hover {
-        background: rgba(15, 23, 42, 0.04);
-        transform: translateY(-1px);
+        height: 32px;
+        padding: 0 10px 0 8px;
       }
 
       .nav-install-icon {
-        width: 24px;
-        height: 24px;
-        flex: 0 0 24px;
-      }
-
-      .btn-primary,
-      .btn-secondary {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        min-height: 48px;
-        padding: 0 18px;
-        border-radius: 999px;
-        font-size: 14px;
-        font-weight: 800;
-        letter-spacing: -0.01em;
-      }
-
-      .btn-primary {
-        color: white;
-        background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
-        box-shadow: 0 18px 30px rgba(37, 99, 235, 0.18);
-      }
-
-      .btn-primary:hover {
-        transform: translateY(-1px);
-      }
-
-      .btn-primary-icon {
-        width: 18px;
-        height: 18px;
-        flex: 0 0 18px;
-      }
-
-      .btn-secondary {
-        color: var(--color-gray-900);
-        background: rgba(15, 23, 42, 0.04);
-        border: 1px solid rgba(15, 23, 42, 0.08);
+        width: 20px;
+        height: 20px;
+        flex: 0 0 20px;
       }
 
       .lang-switcher {
@@ -519,35 +474,37 @@ const structuredDataItems = [
         display: flex;
         align-items: center;
         gap: 8px;
-        min-height: 44px;
-        padding: 0 14px;
-        border-radius: 999px;
-        border: 1px solid rgba(15, 23, 42, 0.08);
-        color: var(--color-gray-700);
-        background: rgba(255, 255, 255, 0.76);
-        font-size: 13px;
-        font-weight: 700;
+        height: 32px;
+        max-width: 160px;
+        padding: 0 10px;
+        border: 1px solid var(--gray-alpha-400);
+        border-radius: var(--radius-sm);
+        color: var(--gray-1000);
+        background: var(--background-100);
+        font-size: 14px;
+        font-weight: 500;
+        white-space: nowrap;
       }
 
-      .nav-actions .lang-btn {
-        height: 44px;
-        min-height: 44px;
+      .lang-btn:hover {
+        background: var(--gray-100);
+        border-color: var(--gray-alpha-500);
       }
 
       .lang-dropdown {
         position: absolute;
-        top: calc(100% + 10px);
+        top: calc(100% + 8px);
         right: 0;
         min-width: 160px;
-        background: white;
-        border: 1px solid rgba(15, 23, 42, 0.08);
-        border-radius: 18px;
-        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+        padding: 4px;
+        background: var(--background-100);
+        border: 1px solid var(--gray-alpha-400);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-popover);
         opacity: 0;
         visibility: hidden;
-        transform: translateY(-8px);
-        transition: all var(--transition-normal);
-        overflow: hidden;
+        transform: translateY(-4px);
+        transition: opacity var(--transition-fast), transform var(--transition-fast), visibility var(--transition-fast);
       }
 
       .lang-dropdown.show {
@@ -559,78 +516,89 @@ const structuredDataItems = [
       .lang-dropdown .lang-option {
         display: block;
         width: 100%;
-        padding: 10px 14px;
+        padding: 8px 12px;
+        border-radius: var(--radius-sm);
         text-align: left;
-        font-size: 13px;
-        color: var(--color-gray-600);
+        font-size: 14px;
+        color: var(--gray-900);
       }
 
       .lang-dropdown .lang-option:hover,
       .lang-dropdown .lang-option.current {
-        background: rgba(15, 23, 42, 0.04);
-        color: var(--color-gray-900);
+        background: var(--gray-100);
+        color: var(--gray-1000);
       }
 
       .mobile-menu-btn {
         display: none;
         flex-direction: column;
         justify-content: center;
-        gap: 5px;
-        width: 40px;
-        height: 40px;
-        border-radius: 999px;
-        background: rgba(15, 23, 42, 0.04);
+        gap: 4px;
+        width: 32px;
+        height: 32px;
+        border: 1px solid var(--gray-alpha-400);
+        border-radius: var(--radius-sm);
+        background: var(--background-100);
+      }
+
+      .mobile-menu-btn:hover {
+        background: var(--gray-100);
       }
 
       .hamburger {
         display: block;
-        width: 18px;
-        height: 2px;
+        width: 14px;
+        height: 1.5px;
         margin: 0 auto;
-        background: var(--color-gray-900);
+        background: var(--gray-1000);
         border-radius: 1px;
-        transition: all var(--transition-normal);
+        transition: transform var(--transition-fast), opacity var(--transition-fast);
       }
 
       .mobile-nav {
         position: absolute;
-        top: calc(100% + 8px);
-        left: 16px;
-        right: 16px;
-        background: rgba(255, 255, 255, 0.94);
-        border-radius: 24px;
-        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--background-100);
+        border-bottom: 1px solid var(--gray-alpha-400);
+        box-shadow: var(--shadow-popover);
         max-height: 0;
         overflow: hidden;
-        transition: max-height var(--transition-normal) ease-out;
+        visibility: hidden;
+        transition: max-height var(--transition-normal) ease-out, visibility var(--transition-normal);
       }
 
       .mobile-nav.open {
         max-height: 320px;
+        visibility: visible;
       }
 
       .mobile-nav-inner {
         display: flex;
         flex-direction: column;
-        padding: 16px;
-        gap: 6px;
+        width: min(1200px, calc(100vw - 32px));
+        margin: 0 auto;
+        padding: 8px 0 16px;
+        gap: 4px;
       }
 
       .mobile-nav a {
-        padding: 12px 14px;
-        border-radius: 16px;
-        font-weight: 700;
-        color: var(--color-gray-700);
+        padding: 10px 12px;
+        border-radius: var(--radius-sm);
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--gray-900);
       }
 
       .mobile-nav a:hover,
       .mobile-nav a.active {
-        background: rgba(15, 23, 42, 0.05);
-        color: var(--color-gray-900);
+        background: var(--gray-100);
+        color: var(--gray-1000);
       }
 
       .header.menu-open .mobile-menu-btn .hamburger:nth-child(1) {
-        transform: translateY(7px) rotate(45deg);
+        transform: translateY(5.5px) rotate(45deg);
       }
 
       .header.menu-open .mobile-menu-btn .hamburger:nth-child(2) {
@@ -638,48 +606,7 @@ const structuredDataItems = [
       }
 
       .header.menu-open .mobile-menu-btn .hamburger:nth-child(3) {
-        transform: translateY(-7px) rotate(-45deg);
-      }
-
-      .main {
-        padding-top: 6px;
-      }
-
-      .site-toast[hidden] {
-        display: none;
-      }
-
-      .site-toast {
-        position: fixed;
-        top: 84px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 150;
-        width: min(420px, calc(100vw - 32px));
-        padding: 14px 16px;
-        border: 1px solid rgba(15, 23, 42, 0.08);
-        border-radius: 8px;
-        background: rgba(255, 255, 255, 0.98);
-        color: var(--color-gray-800);
-        box-shadow: 0 20px 60px rgba(15, 23, 42, 0.18);
-        font-size: 14px;
-        font-weight: 700;
-        line-height: 1.5;
-      }
-
-      .site-toast[data-toast-type='error'] {
-        border-color: rgba(220, 38, 38, 0.2);
-        color: #991b1b;
-      }
-
-      .site-toast[data-toast-type='success'] {
-        border-color: rgba(22, 163, 74, 0.22);
-        color: #166534;
-      }
-
-      .site-toast[data-toast-type='info'] {
-        border-color: rgba(37, 99, 235, 0.2);
-        color: #1d4ed8;
+        transform: translateY(-5.5px) rotate(-45deg);
       }
 
       .page-hero h1 {
@@ -690,8 +617,8 @@ const structuredDataItems = [
 
       .footer {
         margin-top: 80px;
-        border-top: 1px solid rgba(15, 23, 42, 0.08);
-        background: rgba(255, 255, 255, 0.72);
+        border-top: 1px solid var(--gray-alpha-400);
+        background: var(--background-100);
       }
 
       .footer-content {
@@ -701,7 +628,7 @@ const structuredDataItems = [
 
       .footer-link-groups {
         display: grid;
-        grid-template-columns: minmax(280px, 2fr) repeat(2, minmax(160px, 1fr));
+        grid-template-columns: repeat(2, minmax(160px, 240px));
         gap: 48px;
         padding-bottom: 32px;
         text-align: left;
@@ -711,15 +638,15 @@ const structuredDataItems = [
         display: flex;
         flex-direction: column;
         align-items: flex-start;
-        gap: 10px;
+        gap: 8px;
         min-width: 0;
       }
 
       .footer-link-title {
-        margin-bottom: 2px;
-        color: var(--color-gray-800);
-        font-size: 13px;
-        font-weight: 800;
+        margin-bottom: 4px;
+        color: var(--gray-1000);
+        font-size: 14px;
+        font-weight: 600;
         line-height: 20px;
       }
 
@@ -728,13 +655,13 @@ const structuredDataItems = [
         align-items: center;
         min-height: 56px;
         padding-top: 16px;
-        border-top: 1px solid rgba(15, 23, 42, 0.08);
+        border-top: 1px solid var(--gray-alpha-400);
       }
 
       .footer-brand-row {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 8px;
       }
 
       .footer-brand-icon {
@@ -742,25 +669,25 @@ const structuredDataItems = [
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 32px;
-        height: 32px;
-        flex: 0 0 32px;
+        width: 24px;
+        height: 24px;
+        flex: 0 0 24px;
         background: url('/favicon.png') center / contain no-repeat;
       }
 
       .footer-brand-icon img {
         position: absolute;
         inset: 0;
-        width: 32px;
-        height: 32px;
-        flex: 0 0 32px;
-        border-radius: 8px;
+        width: 24px;
+        height: 24px;
+        flex: 0 0 24px;
+        border-radius: var(--radius-sm);
       }
 
       .footer-link-group a,
       .footer-meta p {
-        color: var(--color-gray-600);
-        font-size: 13px;
+        color: var(--gray-900);
+        font-size: 14px;
       }
 
       .footer-link-group a {
@@ -772,18 +699,28 @@ const structuredDataItems = [
       .footer-link-group .footer-social-link {
         display: inline-flex;
         align-items: center;
-        gap: 7px;
+        gap: 8px;
       }
 
       .footer-link-group a:hover {
-        color: var(--color-primary);
+        color: var(--gray-1000);
+        text-decoration: underline;
+        text-underline-offset: 3px;
       }
 
       @media (max-width: 960px) {
         .nav-links,
-        .lang-switcher,
         .nav-actions > .nav-install-link {
           display: none;
+        }
+
+        .lang-btn {
+          max-width: 128px;
+        }
+
+        .lang-btn span {
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         .mobile-menu-btn {
@@ -792,11 +729,7 @@ const structuredDataItems = [
 
         .footer-link-groups {
           grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 32px 40px;
-        }
-
-        .footer-link-group:first-child {
-          grid-column: 1 / -1;
+          gap: 32px 24px;
         }
       }
 
@@ -809,29 +742,11 @@ const structuredDataItems = [
           padding-top: 32px;
           padding-bottom: 20px;
         }
-
-        .footer-link-groups {
-          grid-template-columns: minmax(0, 1fr);
-          gap: 28px;
-          padding-bottom: 28px;
-        }
-
-        .footer-link-group:first-child {
-          grid-column: auto;
-        }
       }
     </style>
 
   </head>
   <body>
-    <div
-      class="site-toast"
-      role="alert"
-      aria-live="assertive"
-      data-site-toast
-      hidden
-    ></div>
-
     {!standalone && <header class="header">
       <nav class="nav">
         <a href={currentLocalePath} class="logo">
@@ -860,7 +775,7 @@ const structuredDataItems = [
             href={chromeWebStoreUrl}
             target="_blank"
             rel="noopener"
-            class="nav-install-link"
+            class="btn-secondary nav-install-link"
             aria-label={t.common.installCta}
             data-ga-event="outbound_chrome_store_click"
             data-ga-source="nav"
@@ -879,7 +794,7 @@ const structuredDataItems = [
           {includeLanguageSwitcher && (
             <div class="lang-switcher">
               <button class="lang-btn" aria-label="Language switcher">
-                {localeNames[locale]}
+                <span>{localeNames[locale]}</span>
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                   <path d="M2 4L6 8L10 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
@@ -925,6 +840,15 @@ const structuredDataItems = [
           >
             {t.layout.nav.pricing}
           </a>
+          <a
+            href={chromeWebStoreUrl}
+            target="_blank"
+            rel="noopener"
+            data-ga-event="outbound_chrome_store_click"
+            data-ga-source="mobile_nav"
+          >
+            {t.common.installCta}
+          </a>
         </div>
       </div>
     </header>}
@@ -937,7 +861,7 @@ const structuredDataItems = [
       <div class="footer-content">
         <nav
           class="footer-link-groups"
-          aria-label={`${t.layout.nav.solutions} / ${companyContent.footerGroupLabel} / ${t.layout.footer.resources}`}
+          aria-label={`${companyContent.footerGroupLabel} / ${t.layout.footer.resources}`}
         >
           <div class="footer-link-group">
             <p class="footer-link-title">{companyContent.footerGroupLabel}</p>
@@ -989,14 +913,6 @@ const structuredDataItems = [
             >
               {legalContent.privacy.navLabel}
             </a>
-            <a
-              href={`${currentLocalePath}changelog/`}
-              data-ga-event="internal_workflow_click"
-              data-ga-source="footer"
-              data-ga-target="changelog"
-            >
-              {t.layout.nav.changelog}
-            </a>
           </div>
         </nav>
         <div class="footer-meta">
@@ -1011,16 +927,16 @@ const structuredDataItems = [
     <SiteConfirmModal />
 
     <script>
-      import { installFrontendErrorCapture } from '../scripts/homepage/frontend-error-capture'
-      import { initializeFooterBrandIcon } from '../scripts/homepage/device'
-      import { initializeWebsiteFirstOpenedMark } from '../scripts/homepage/first-opened-mark'
+      import { installFrontendErrorCapture } from '../scripts/runtime/frontend-error-capture'
+      import { initializeFooterBrandIcon } from '../scripts/runtime/device'
+      import { initializeWebsiteFirstOpenedMark } from '../scripts/runtime/first-opened-mark'
       import '../scripts/globalClickEvents'
 
       void initializeFooterBrandIcon()
       initializeWebsiteFirstOpenedMark()
 
       installFrontendErrorCapture(capturedError => {
-        void import('../scripts/homepage/sls-mark')
+        void import('../scripts/runtime/sls-mark')
           .then(({ reportFrontendCapturedErrorToSls }) => {
             reportFrontendCapturedErrorToSls(capturedError)
           })
@@ -1035,40 +951,6 @@ const structuredDataItems = [
 
     <script>
       import { initializeLanguageSwitcher } from '../scripts/site/language-switcher'
-
-      // Solution menu dropdown
-      const solutionMenu = document.querySelector('[data-nav-menu]');
-      const solutionTrigger = document.querySelector('.nav-menu-trigger');
-      const solutionPanel = document.querySelector('.nav-menu-panel');
-      const solutionPanelLinks = document.querySelectorAll('.nav-menu-panel a');
-      const setSolutionMenuOpen = (isOpen: boolean) => {
-        solutionMenu?.classList.toggle('is-open', isOpen);
-        solutionTrigger?.setAttribute('aria-expanded', String(isOpen));
-        solutionPanel?.setAttribute('aria-hidden', String(!isOpen));
-      };
-      const closeSolutionMenu = () => setSolutionMenuOpen(false);
-
-      solutionTrigger?.addEventListener('click', (event) => {
-        event.stopPropagation();
-        setSolutionMenuOpen(!solutionMenu?.classList.contains('is-open'));
-      });
-
-      solutionPanelLinks.forEach(link => {
-        link.addEventListener('click', closeSolutionMenu);
-      });
-
-      document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') {
-          closeSolutionMenu();
-        }
-      });
-
-      document.addEventListener('click', (event) => {
-        const target = event.target;
-        if (target instanceof Element && !target.closest('[data-nav-menu]')) {
-          closeSolutionMenu();
-        }
-      });
 
       initializeLanguageSwitcher()
 

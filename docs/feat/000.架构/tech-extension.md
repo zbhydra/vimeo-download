@@ -11,7 +11,7 @@
 - 本地调试：`pnpm dev` 使用 `vite build --watch --mode development` 构建 `dist`，并通过当前 Microsoft Edge 的 CDP `DevToolsActivePort` 执行 `Extensions.loadUnpacked` 重新加载本地 unpacked extension；不创建新 profile，不接管浏览器启动。
 - **Chrome Manifest V3**（`manifest_version: 3`）：站点静态数据以 `extension/src/platforms/registry.ts` 的 `SITE_REGISTRATION` 为唯一事实源，权限与入口的最终组装以 `extension/vite.config.ts` 的 `webExtension({ manifest })` 配置为准。`permissions` 当前为 `storage` / `identity` / `downloads` / `offscreen` / `notifications`（offscreen 用于 DASH/HLS 下载的 offscreen document；notifications 用于下载终态系统通知），`host_permissions` 只含 Vimeo 页面与 Vimeo 媒体 CDN。标签页 URL 只通过已限定的 host_permissions 读取，不申请 `activeTab` 或 `tabs`。API 与 SLS 走标准 CORS，Google 登录走 `identity` 权限 + `chrome.identity.launchWebAuthFlow` 交互窗口（不注入 content script、不授予官网 host access、不申请 host_permissions），两者均不重复进入 host_permissions。
 - e2e：Playwright。
-- 入口页：`popup`（`src/popup.html`）。旧 `options_page` 已删除；购买收进 popup 内嵌购买视图（页面注入场景回退官网 Pricing），订阅管理入口在用户菜单（见 `@../006.订阅系统/tech-订阅商品与状态.md`）。
+- 入口页：`popup`（`src/popup.html`）。旧 `options_page` 已删除；购买收进 popup 内嵌购买视图（页面注入场景回退官网订阅购买页，路径常量 `WEBSITE.PRICING_PATH` = `/pricing/`，定义在 `extension/src/core/api/config.ts`，由 `core/utils/pricingUrl.ts` 拼接来源参数），订阅管理入口在用户菜单（见 `@../006.订阅系统/tech-订阅商品与状态.md`）。
 
 ### A2. 目录结构（五上下文 + 共享核心）
 
@@ -71,7 +71,7 @@ DASH/HLS 下载需要长生命周期执行环境且只用 blob API 与 OPFS（�
 
 Login、Settings、History、Premium、Upgrade 使用常驻 closed 原生 `dialog`，由 `core/composables/nativeDialog.ts` 将 owner 显隐同步到 `showModal/close`，`close` 事件回写原 owner。普通扩展页与 Shadow DOM 使用原生焦点、Tab 和最上层 Escape；action popup 的 Escape 可由浏览器宿主关闭整个 popup，焦点返回来源页，用户重开继续，不额外拦截宿主键盘。
 
-Upgrade 的购买动作由宿主提供：popup 打开 Premium，content 打开官网 Pricing；Teleport 参数仅控制渲染位置。邮箱登录界面在 popup，兑换与保存的 background owner 见 [账号与认证](../007.用户系统/tech-账号与认证.md#81-邮箱验证码登录)。
+Upgrade 的购买动作由宿主提供：popup 打开 Premium，content 打开官网 `/pricing/`（`WEBSITE.PRICING_PATH`）；Teleport 参数仅控制渲染位置。邮箱登录界面在 popup，兑换与保存的 background owner 见 [账号与认证](../007.用户系统/tech-账号与认证.md#81-邮箱验证码登录)。
 
 ### A3. RPC 系统（自研 v2，声明式 + 代码生成）
 
@@ -182,8 +182,8 @@ admin/deploy/       # deploy.sh + vimeo-admin.conf（nginx）+ .env.example
 
 ## C. 三前端关系速览
 
-- **website**（Astro 静态站，nginx）面向终端用户做 SEO/落地页，引导安装 extension。
+- **website**（Astro 静态站，nginx）面向终端用户：免费网页下载器、插件展示、插件订阅购买，引导安装 extension。
 - **extension**（Chrome MV3）运行在 `SITE_REGISTRATION` 声明的 Vimeo 页面，跨上下文 RPC 使用 chrome message + DOM event；登录、额度、远端配置等 HTTP 能力调用同一后端 business 服务。
 - **admin**（独立 Vue SPA，nginx @ admin 域，Vite proxy → :7900）管后台，走 `/api/admin/*`。
-- website 与 admin 无代码共享；website 的可复用运行时代码抽在 `website-shared/`（见 `@tech-website.md` §8）；extension 的 `core/` 是其内部共享层。
+- website、extension、admin 三端互不共享源码：website 自包含（见 `@tech-website.md`），extension 的 `core/` 是其内部共享层，admin 完全独立。
 - 三个前端 + 后端 business 共用同一套 HTTP 契约与错误信封（`{code,data,msg}`，`code=10000` 为成功）。

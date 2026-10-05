@@ -1,0 +1,150 @@
+---
+/**
+ * 区块 1：插件介绍。主按钮进商店，次按钮进 Pricing；
+ * 右侧用 HTML/CSS 还原插件页内面板（Video / Audio / Subtitle / Image 四行），不使用截图。
+ */
+import HomeSection from './HomeSection.astro'
+import type { HomepageContent } from '../../i18n/schema'
+
+const { copy, installUrl, pricingPath } = Astro.props as {
+  copy: HomepageContent['intro']
+  installUrl: string
+  pricingPath: string
+}
+const rows = [
+  { key: 'video', label: copy.panel.rows.video, icon: 'M4 6h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2zm16 3 4-2v10l-4-2' },
+  { key: 'audio', label: copy.panel.rows.audio, icon: 'M9 18V5l11-2v13M9 18a3 3 0 1 1-3-3 3 3 0 0 1 3 3zm11-2a3 3 0 1 1-3-3 3 3 0 0 1 3 3z' },
+  { key: 'subtitle', label: copy.panel.rows.subtitle, icon: 'M3 6h18v12H3zM7 11h4M13 11h4M7 15h10' },
+  { key: 'image', label: copy.panel.rows.image, icon: 'M3 5h18v14H3zM3 16l5-5 4 4 3-3 6 6M15.5 9.5h.01' }
+]
+---
+
+<HomeSection id="home-intro" heading={copy.heading}>
+  <div class="home-intro">
+    <div class="home-intro-copy">
+      <p class="home-intro-lead">{copy.lead}</p>
+      <div class="home-actions">
+        <a
+          class="btn-primary"
+          href={installUrl}
+          target="_blank"
+          rel="noopener"
+          data-ga-event="outbound_chrome_store_click"
+          data-ga-source="homepage_intro"
+        >{copy.primaryCta}</a>
+        <a
+          class="btn-secondary"
+          href={pricingPath}
+          data-ga-event="internal_workflow_click"
+          data-ga-source="homepage_intro"
+          data-ga-target="pricing"
+        >{copy.secondaryCta}</a>
+      </div>
+    </div>
+
+    <div class="home-panel" role="img" aria-label={copy.panel.ariaLabel}>
+      <ul class="home-panel-list">
+        {rows.map(row => (
+          <li class="home-panel-row">
+            <svg class="home-panel-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d={row.icon} />
+            </svg>
+            <span class="home-panel-label">{row.label}</span>
+            <span class="home-panel-bar" aria-hidden="true"></span>
+            <span class="home-panel-button" aria-hidden="true"></span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+</HomeSection>
+
+<style>
+  .home-intro {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 32px;
+    align-items: center;
+  }
+
+  .home-intro-lead {
+    max-width: 560px;
+    color: var(--gray-900);
+    font-size: 18px;
+    line-height: 28px;
+  }
+
+  .home-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 24px;
+  }
+
+  /* 本地化按钮文案可能很长，允许换行而不是撑破布局。 */
+  .home-actions :global(a) {
+    height: auto;
+    min-height: 40px;
+    padding: 10px 14px;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .home-panel {
+    padding: 16px;
+    border: 1px solid var(--gray-alpha-400);
+    border-radius: var(--radius-md);
+    background: var(--background-100);
+    box-shadow: var(--shadow-popover);
+  }
+
+  .home-panel-list {
+    display: grid;
+    gap: 8px;
+    list-style: none;
+  }
+
+  .home-panel-row {
+    display: grid;
+    grid-template-columns: 20px minmax(72px, auto) minmax(0, 1fr) 56px;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--gray-alpha-400);
+    border-radius: var(--radius-sm);
+  }
+
+  .home-panel-icon {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: var(--gray-900);
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .home-panel-label {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+  }
+
+  .home-panel-bar {
+    height: 8px;
+    border-radius: 4px;
+    background: var(--gray-100);
+  }
+
+  .home-panel-button {
+    height: 24px;
+    border-radius: var(--radius-sm);
+    background: var(--gray-1000);
+  }
+
+  @media (max-width: 960px) {
+    .home-intro {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

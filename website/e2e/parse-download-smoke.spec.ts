@@ -9,10 +9,12 @@
  * - 文件大小：下载字节数必须与 parse size 接近；parse 未给 size 时只要求 > 0。
  * - 视频资源：用 ffprobe 校验 duration、width、height 与 parse 元数据一致。
  *
- * 该用例依赖 global-setup.ts 注入 E2E_ACCESS_TOKEN / E2E_DEVICE_ID。
+ * 网页下载固定走匿名授权：每次运行使用全新 device_id，不依赖任何登录态；
+ * 断言授权调用 download-anonymous-pre-v2 与 download-v2，且不出现 download-pre-v2。
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Download, type Page, type Request } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { statSync } from 'node:fs';
 
 import { registerE2eBrowserIdentity } from '../../scripts/playwright-browser-identity.mjs';
@@ -21,8 +23,6 @@ registerE2eBrowserIdentity(test);
 
 /** 前端 localStorage 键（与 src/scripts 一致）。 */
 const STORAGE_KEYS = {
-  /** 网站登录态 access token。 */
-  accessToken: 'homepage_access_token',
   /** 设备标识。 */
   deviceId: 'homepage_device_id_v2',
 } as const;
@@ -35,7 +35,7 @@ interface SmokeCase {
 interface CapturedParseResource {
   /** 资源 ID。 */
   sourceId: string;
-  /** 服务端签发的资源 token，前端 download-pre-v2 只透传该值。 */
+  /** 服务端签发的资源 token，前端 download-anonymous-pre-v2 只透传该值。 */
   resourceToken: string;
   /** 文件名。 */
   filename: string;
@@ -401,26 +401,12 @@ async function waitForDeviceTrustBootstrap(page: Page): Promise<void> {
   await brandIconResponse;
 }
 
-async function dismissCheckinModalIfVisible(page: Page): Promise<void> {
-  const modal = page.locator('[data-download-checkin-modal]');
-  await modal.waitFor({ state: 'visible', timeout: 5_000 }).catch(() => undefined);
-  if (!(await modal.isVisible().catch(() => false))) {
-    return;
-  }
-
-  await page
-    .locator('[data-download-checkin-modal] .download-checkin-close[data-download-checkin-close]')
-    .click();
-  await expect(modal).toBeHidden({ timeout: 5_000 });
-}
-
 async function runOnce(
   page: Page,
   url: string,
   attempts: number
 ): Promise<SmokeDownloadResult> {
   await waitForDeviceTrustBootstrap(page);
-  await dismissCheckinModalIfVisible(page);
 
   await page.fill('[data-download-parse-input]', url);
   const [parseResponse] = await Promise.all([
@@ -444,10 +430,26 @@ async function runOnce(
   const firstDownloadButton = page.locator('[data-download-resource-button]').first();
   await expect(firstDownloadButton).toBeVisible({ timeout: PARSE_TIMEOUT_MS });
 
-  const [download] = await Promise.all([
-    page.waitForEvent('download', { timeout: DOWNLOAD_TIMEOUT_MS }),
-    firstDownloadButton.click(),
-  ]);
+  const authorizationPaths: string[] = [];
+  const recordPath = (request: Request): void => {
+    const pathname = new URL(request.url()).pathname;
+    if (pathname.endsWith('/download-anonymous-pre-v2') || pathname.endsWith('/download-pre-v2') || pathname.endsWith('/download-v2')) {
+      authorizationPaths.push(pathname);
+    }
+  };
+  page.on('request', recordPath);
+  let download: Download;
+  try {
+    [download] = await Promise.all([
+      page.waitForEvent('download', { timeout: DOWNLOAD_TIMEOUT_MS }),
+      firstDownloadButton.click(),
+    ]);
+  } finally {
+    page.off('request', recordPath);
+  }
+  expect(authorizationPaths.some(path => path.endsWith('/download-anonymous-pre-v2'))).toBe(true);
+  expect(authorizationPaths.some(path => path.endsWith('/download-v2'))).toBe(true);
+  expect(authorizationPaths.some(path => path.endsWith('/download-pre-v2') && !path.endsWith('/download-anonymous-pre-v2'))).toBe(false);
   const downloadPath = await download.path();
   if (!downloadPath) {
     throw new Error('[smoke] Playwright download path is empty');
@@ -537,15 +539,10 @@ function buildFinalSummary(results: SmokeCaseResult[]): string {
   return lines.join('\n');
 }
 
-const token = process.env.E2E_ACCESS_TOKEN;
-const deviceId = process.env.E2E_DEVICE_ID;
-
 test.describe('发布前真实解析+下载验收', () => {
   test('逐条解析、下载第一个资源并校验文件', async ({ page }) => {
     test.setTimeout((PARSE_TIMEOUT_MS + DOWNLOAD_TIMEOUT_MS) * MAX_ATTEMPTS * SMOKE_CASES.length);
 
-    expect(token, '请用 pnpm test:e2e:parse-smoke 创建真实登录态').toBeTruthy();
-    expect(deviceId, '真实登录态缺少 device_id').toBeTruthy();
     const apiBase = new URL(process.env.E2E_REAL_API_BASE_URL || '');
     expect(['127.0.0.1', 'localhost', '[::1]']).toContain(apiBase.hostname);
     await page.route('**/api/**', async route => {
@@ -557,11 +554,8 @@ test.describe('发布前真实解析+下载验收', () => {
       await route.continue();
     });
     await page.addInitScript(
-      ({ token, deviceId, keys }) => {
-        localStorage.setItem(keys.accessToken, token);
-        localStorage.setItem(keys.deviceId, deviceId);
-      },
-      { token: token as string, deviceId: deviceId as string, keys: STORAGE_KEYS }
+      ({ deviceId, keys }) => localStorage.setItem(keys.deviceId, deviceId),
+      { deviceId: randomUUID(), keys: STORAGE_KEYS }
     );
 
     const results: SmokeCaseResult[] = [];

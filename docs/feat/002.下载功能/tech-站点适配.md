@@ -30,7 +30,7 @@
 
 ## 2. 平台注册表(以代码为准)
 
-前端平台识别在 `website-shared/src/download/scripts/platform.ts::detectPlatform()`;后端平台识别在 `backend/src/app/contracts/media_platform.py::detect_platform()`。平台解析/下载入口固定收敛到 `backend/src/app/provider/media/{platform}_media.py`;有状态基础设施放在 `backend/src/app/provider/browser_runtime.py`。`provider/media` 不依赖 `app.services`，不保留旧 service 双轨。
+前端平台识别在 `website/src/scripts/download/platform.ts::detectPlatform()`;后端平台识别在 `backend/src/app/contracts/media_platform.py::detect_platform()`。平台解析/下载入口固定收敛到 `backend/src/app/provider/media/{platform}_media.py`;有状态基础设施放在 `backend/src/app/provider/browser_runtime.py`。`provider/media` 不依赖 `app.services`，不保留旧 service 双轨。
 
 ### 2.1 现行已落地的平台与 Provider/runtime
 
@@ -44,7 +44,7 @@
 
 ### 3.1 现行注册的 mode(代码为准)
 
-`website-shared/src/download/scripts/download-methods.ts::DOWNLOAD_METHODS` 只注册 `direct` / `client_mux` 两种 mode；`proxy` 已下线（前端 runner、注册项、预检 fallback 与历史恢复记录的兼容判定都已删除）。后端 `download_mode` 同样收窄为 `direct` / `client_mux`，`proxy` 的 resource token 与 download token 都会被节点拒绝。
+`website/src/scripts/download/download-methods.ts::DOWNLOAD_METHODS` 只注册 `direct` / `client_mux` 两种 mode；`proxy` 已下线（前端 runner、注册项、预检 fallback 与历史恢复记录的兼容判定都已删除）。后端 `download_mode` 同样收窄为 `direct` / `client_mux`，`proxy` 的 resource token 与 download token 都会被节点拒绝。
 
 | `download_mode` | runner | 现行使用场景 |
 | --- | --- | --- |
@@ -60,7 +60,7 @@
 | Vimeo progressive video | `request.files.progressive[]` 中存在与授权 `sid` 匹配的轨道 | `direct` | `download-v2` 返回 `download_url` |
 | Vimeo DASH video | progressive 缺失，且 `request.files.dash` 有可用 CDN | `client_mux` | `download-v2` 返回 video + audio 两条 track 的 JSON |
 
-> Website/backend 下载执行走 `download-pre-v2` → `download-v2` 统一链路(见 `@tech-链路与授权.md`)。`download-v2` 按 Provider 返回的 result 生成 direct JSON 或 client_mux JSON。扩展端 Vimeo 本地下载不适用本 V2 链路，见 `@tech-扩展端Vimeo本地下载.md`。
+> Website/backend 下载执行走「下载授权 → `download-v2`」统一链路(见 `@tech-链路与授权.md`)。`download-v2` 按 Provider 返回的 result 生成 direct JSON 或 client_mux JSON。扩展端 Vimeo 本地下载不适用本 V2 链路，见 `@tech-扩展端Vimeo本地下载.md`。
 
 ## 4. client_mux 轨道处理(Vimeo DASH)
 
@@ -117,11 +117,11 @@
 
 | 维度 | website | extension |
 | --- | --- | --- |
-| 入口 | 输入框粘贴 Vimeo 链接 | `vimeo.com` / `player.vimeo.com` 页面标题区面板 + Popup 视频面板（播放页单视频、聚合页多视频选择器） |
+| 入口 | 首页首屏输入框粘贴 Vimeo 链接 | `vimeo.com` / `player.vimeo.com` 页面标题区面板 + Popup 视频面板（播放页单视频、聚合页多视频选择器） |
 | 解析 | 后端匿名 Playwright 读取 config，产出 `direct` / `client_mux` | 页面内 MAIN world 捕获原生 config，纯前端解析 |
-| 登录 | 登录后下载( Credits 或匿名额度，见 `@tech-匿名下载授权.md` ) | 可选登录，仅影响每日额度与订阅状态 |
+| 登录 | 不需要登录，没有账户和 Credits（匿名授权，见 `@tech-匿名下载授权.md`） | 可选登录，仅影响每日额度与订阅状态 |
 | 资源类型 | 单视频 | 视频多画质、audio-only、thumbnail |
-| 下载落盘 | `download-pre-v2` → `download-v2` | progressive/thumbnail 交 `chrome.downloads`；DASH/HLS 页面内 mux |
+| 下载落盘 | 匿名授权 → `download-v2` | progressive/thumbnail 交 `chrome.downloads`；DASH/HLS 页面内 mux |
 | 是否调用本项目后端 | 是 | 否(媒体不经过后端；仅登录/额度/订阅/远端配置调用 API) |
 
 > 产品策略:网站为重心(移动端占多数)，扩展是桌面场景补充。
@@ -130,12 +130,12 @@
 
 以下约定以 Website/backend 下载链路为主；扩展端只适用明确写到扩展的条目。
 
-- **统一链路**:website/backend 下载执行都走 `parse-pre-v2 → parse-v2 → download-pre-v2 → download-v2`(`@tech-链路与授权.md`);扩展端 Vimeo 本地下载不走该链路。
+- **统一链路**:website/backend 下载执行都走 `parse-pre-v2 → parse-v2 → 下载授权 → download-v2`(`@tech-链路与授权.md`);扩展端 Vimeo 本地下载不走该链路。
 - **host 白名单**:同一套 Vimeo host 白名单同时存在于后端 `contracts/media_platform.py::detect_platform()`、`provider/media/vimeo_media.py` 与前端 `platform.ts::detectPlatform()`;前端识别只做本地判断(用于埋点和默认 UI)，不是鉴权。
 - **parse 不暴露直链**:website/backend parse 响应隐藏 CDN 直链、轨道 URL、Cookie、完整 signed query;直链/轨道只在 `download-v2` 按 `download_mode` 返回。扩展端本地下载只读取当前页面内已有 URL，不调用 parse。
 - **直链 host 校验**:direct/client_mux 返回的媒体 URL 必须命中 Vimeo CDN host 白名单且通过 `assert_public_host`。
 - **CDN 请求 no-referrer**:Vimeo CDN 请求和 tracks 请求用 `no-referrer` 策略(`@tech-链路与授权.md` §2.5)。
-- **直链刷新**:direct / client_mux 在新下载过程中最多通过 `download-pre-v2 -> download-v2` 刷新一次 direct/tracks JSON(`@tech-下载方法与续传.md` §8.5)。OPFS Continue 不重新授权;restartable Restart 是新的传输动作，清理当前记录后重新走 `download-pre-v2 -> download-v2`。
+- **直链刷新**:direct / client_mux 在新下载过程中最多通过「下载授权 -> `download-v2`」刷新一次 direct/tracks JSON(`@tech-下载方法与续传.md` §8.5)。OPFS Continue 不重新授权;restartable Restart 是新的传输动作，清理当前记录后重新走「下载授权 -> `download-v2`」。
 - **缓存 TTL**:Vimeo 解析结果缓存 30 分钟。
 - **解析限流**:平台共性 3 次/10 秒 per user/device;下载材料刷新 6 次/60 秒。完整口径见 `@tech-速率治理.md`。
 - **Website/backend 配额扣减**:按用户口径，同一用户同一资源 6 小时内只扣一次(`@tech-链路与授权.md` §3.3)。该规则不适用于扩展本地下载；扩展按当前 document 的 canonical 资源任务逐项扣除，同一未完成任务重复提交不再次扣除。
@@ -154,8 +154,8 @@
 | 后端 Provider | `backend/src/app/provider/media/{platform}_media.py` + `provider/media/__init__.py::MEDIA_PROVIDERS` | 新增平台 Provider，实现 `_parse()` / `_download()` 并注册 |
 | 后端平台私有逻辑 | `backend/src/app/provider/media/{platform}_media.py` | 放在对应 Provider class 内；如需有状态基础设施，放 `backend/src/app/provider/{platform}_runtime.py` 或明确命名的 provider runtime/pool 模块 |
 | 后端 token/schema | `backend/src/app/schemas/...` / token service | 如有新的 platform Literal、resource token 字段或响应 schema，同步更新 |
-| 前端平台识别 | `website-shared/src/download/scripts/platform.ts` | 加入 host 集合、`MediaPlatform` 类型、`detectPlatform()` 分支 |
-| 前端下载 mode | `website-shared/src/download/scripts/download-methods.ts::DOWNLOAD_METHODS` | 若使用新 mode，先注册 Definition 与 runner，再在 service 返回该 mode |
+| 前端平台识别 | `website/src/scripts/download/platform.ts` | 加入 host 集合、`MediaPlatform` 类型、`detectPlatform()` 分支 |
+| 前端下载 mode | `website/src/scripts/download/download-methods.ts::DOWNLOAD_METHODS` | 若使用新 mode，先注册 Definition 与 runner，再在 service 返回该 mode |
 | 错误码 | `backend/src/app/...`(错误契约) | 新增平台解析失败错误码 |
 | i18n | website i18n 资源 | 平台标签、解析失败文案、详情字段 |
 | 扩展端(如需要) | `extension/src/platforms/registry.ts` + `extension/src/sites/{platform}/` | 注册站点静态数据与 content/injected 入口 |

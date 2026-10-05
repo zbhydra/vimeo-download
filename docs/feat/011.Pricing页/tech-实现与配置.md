@@ -4,30 +4,31 @@
 
 ## 前端结构
 
-Pricing 页面在 `website` 与 `website-shared` 中拆分:
+Pricing 页全部源码在 `website/src` 下:
 
-- `website/src/pages/pricing.astro`:英文默认路由。
-- `website/src/pages/[lang]/pricing.astro`:多语言路由。
-- `website/src/pages/ext-pricing.astro` 与 `website/src/pages/[lang]/ext-pricing.astro`:插件订阅购买路由。
-- `website/src/components/pages/PricingPage.astro`:读取 locale 文案并装配页面。
-- `website-shared/src/components/pricing/PricingPageShell.astro`:页面 DOM 壳。
-- `website-shared/src/components/pricing/pricing-page-controller.ts`:登录态、商品加载、下单与订阅管理入口状态。
-- `website-shared/src/components/pricing/pricing-entry.ts`:来源识别。
-- `website-shared/src/components/pricing/pricing-checkout.ts`:订阅 checkout、管理入口和订单协议。
-- `website-shared/src/components/pricing/PricingSubscriptionConfirmModal.astro`:订阅安装确认、好评倒计时与领取结果专用弹窗。
-- `website-shared/src/components/pricing/PricingAuthModal.astro`:Pricing 登录弹窗。
+- `pages/pricing.astro`:英文默认路由。
+- `pages/[lang]/pricing.astro`:多语言路由。
+- `components/pages/PricingPage.astro`:读取 locale 文案、装配 SEO 与 FAQPage 结构化数据。
+- `components/pricing/PricingPageShell.astro`:页面 DOM 壳。
+- `components/pricing/pricing-page-controller.ts`:登录态、商品加载、下单与订阅管理入口状态。
+- `components/pricing/pricing-entry.ts`:来源识别。
+- `components/pricing/pricing-checkout.ts`:订阅 checkout、管理入口和订单协议。
+- `components/pricing/pricing-auth-controller.ts` 与 `PricingAuthModal.astro`:Pricing 登录弹窗。
+- `components/pricing/PricingSubscriptionConfirmModal.astro` 与 `pricing-subscription-confirm-controller.ts`:订阅安装确认、好评倒计时与领取结果专用弹窗。
+- `components/order-checkout/`:订阅结算弹窗与订单协议,归 Pricing 使用。
+- `i18n/pricing.ts` 与 `i18n/schema.ts`:Pricing 文案及类型。
 
-Credits 商品配置读取复用 `website-shared/src/components/credit-purchase/credit-checkout.ts`,两类购买均交给 `OrderCheckoutModal`。
+登录弹窗与结算弹窗只服务 Pricing 页;首屏下载工作区不含登录、账户与结算。
 
 ## 购买页路由合同
 
-`/pricing/` 只装配、加载和购买积分，`/ext-pricing/` 只装配、加载和购买插件订阅。英文根路由与全部语言路由显式传入商品模式，浏览器不按来源切换商品或改写首屏。可见 FAQ 与结构化数据同源，canonical、hreflang 和 sitemap 跟随各自路由。通用导航只提供积分页入口，不提供订阅页导航入口（订阅页仅经插件内购买入口与旧链接跳转抵达），不增加其他交叉销售入口；页脚积分入口保持指向积分页。
+`/pricing/` 只装配、加载和购买插件订阅(Unlimited)。英文根路由与全部语言路由都装配同一页面组件,浏览器不按来源切换商品或改写首屏。可见 FAQ 与结构化数据同源,canonical、hreflang 和 sitemap 跟随该路由。站点导航提供 Pricing 入口;首页的插件介绍与方案概览区块也链接到该页。
 
-`extension/` 直接打开 `/ext-pricing/`，保留原来源参数。旧插件的 `/pricing/` 链接继续由网站兼容。`pricing-entry.ts` 的 `readPricingEntryFlags` 保留 `utm_source=extension` 或 `source=quota_counter` 判定；命中旧入口时只替换 pathname 为订阅路由，用 `location.replace` 保留同站、语言、完整 query 和 hash。来源不决定商品类型，只控制来源文案与埋点。两页都保留账号摘要及订阅管理；积分页不装配订阅购买确认和好评入口，不读取或消费订阅购买意图。
+`/ext-pricing/` 与旧价格入口的转向逻辑已不存在,网站也不保留旧路径兼容。插件把 `WEBSITE.PRICING_PATH`(`/pricing/`)作为购买页路径,与网站同批发布。
 
-语言切换保留当前购买页类型，query 按原有规则处理。直接订阅页无需来源也可登录购买：在订阅页恢复原会话购买意图。支付、轮询和账号刷新沿用本链路。PayPal、Clink 返回页的通用返回链接仍指向 `/pricing/`，原购买页负责订阅付款后刷新权益。
+来源识别:`pricing-entry.ts` 的 `readPricingEntryFlags` 以 `utm_source=extension` 或 `source=quota_counter` 判定插件来源;来源只控制来源文案、埋点和好评赠送页面入口,不决定商品类型。
 
-转向依赖 JavaScript；禁用时旧积分路由保留积分静态内容。不新增接口、持久状态、支付状态机或依赖。
+语言切换保留 query。无来源也可直接登录购买:订阅页恢复原会话购买意图。支付、轮询和账号刷新沿用本链路。PayPal、Clink 回跳页的返回链接固定为 `/pricing/`,由该页在订阅付款后刷新权益;回跳页组件与文案见 `@../004.订单系统/tech-支付与履约.md`。
 
 ## 后端接口
 
@@ -35,15 +36,14 @@ Pricing 依赖以下客户端接口:
 
 | 接口 | 用途 |
 | --- | --- |
-| `GET /api/client/auth/me` | 返回用户、Credits 余额、订阅状态/过期时间 |
-| `GET /api/client/credit/checkout-configs` | Credits 一次性购买套餐 |
+| `GET /api/client/auth/me` | 返回用户与订阅状态/过期时间(响应里的 Credits 余额字段网站不使用) |
 | `GET /api/client/subscription/checkout-configs` | 可购买订阅商品配置,以及好评赠送活动开关与资格状态位(`0` / `1`);可选鉴权 |
 | `POST /api/client/subscription/review-reward/claim` | 登录账号领取一次 7 天好评赠送订阅,强制携带设备标识 |
 | `POST /api/client/subscription/management` | 登录态、空请求体;返回当前自动续费订阅的渠道管理 URL或空 URL 指引动作 |
-| `POST /api/client/order/create` | Credits 和订阅统一创建订单 |
+| `POST /api/client/order/create` | 创建订阅订单 |
 | `GET /api/client/order/status/{order_no}` | 支付后轮询订单状态 |
 
-`/api/client/subscription/status` 继续保留给插件兼容,不作为 website 下载额度来源。
+`/api/client/subscription/status` 保留给插件,网站不用它代替 `/api/client/auth/me`。网站不再调用 Credits 商品配置接口(见 `@../000.架构/plans/004.官网改版-插件展示与免费网页下载.md` §8)。
 
 好评赠送专用弹窗、倒计时和领取结果见 `@tech-好评赠送.md`;不扩展全站通用确认框。
 

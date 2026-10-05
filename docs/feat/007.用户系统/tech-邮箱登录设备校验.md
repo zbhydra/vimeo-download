@@ -1,6 +1,6 @@
 # 007 · Website 设备可信校验
 
-> 技术实现文档。覆盖 website Credits SVG 资源请求、`client_uuid` Cookie、后端 `device_service`、Redis TTL、重要客户端接口保护和部署反代。
+> 技术实现文档。覆盖 website 页脚品牌图标资源请求（设备校验依赖该图标，匿名网页下载同样依赖）、`client_uuid` Cookie、后端 `device_service`、Redis TTL、重要客户端接口保护和部署反代。
 > 关联:`@feat.md` `@tech-账号与认证.md`
 
 ## 1. 目标
@@ -15,9 +15,9 @@ website 在用户访问页面后,先通过一个真实图片请求建立"当前�
 
 | 场景 | 名称 |
 | --- | --- |
-| HTML 挂载点 | `data-footer-credits-icon` |
+| HTML 挂载点 | `data-footer-brand-icon` |
 | Cookie | `client_uuid` |
-| 图片路径 | `/assets/icons/credits.svg` |
+| 图片路径 | `/assets/icons/logo.svg`（带固定版本 query；后端同时兼容旧路径 `/assets/icons/credits.svg`） |
 | 公开错误码 | `AUTH_PAGE_REFRESH_REQUIRED` |
 | Redis key | `device_trust:{device_id}` |
 | 后端 service | `device_service` |
@@ -25,7 +25,7 @@ website 在用户访问页面后,先通过一个真实图片请求建立"当前�
 
 ## 3. website 流程
 
-1. `Layout.astro` 的 footer 中增加普通挂载点:`<span data-footer-credits-icon></span>`。
+1. `Layout.astro` 的 footer 中增加普通挂载点:`<span data-footer-brand-icon></span>`；重写 footer 时必须保留该挂载点。
 2. 页面运行时调用现有 `ensureDeviceId()` 获取 website `device_id`。
 3. JS 写入 Cookie:
    - name:`client_uuid`
@@ -35,35 +35,24 @@ website 在用户访问页面后,先通过一个真实图片请求建立"当前�
    - `SameSite=Lax`
    - HTTPS 下加 `Secure`
    - 生产站点域下设置 `Domain=.<站点域>`;localhost 不设置 Domain（域名单点定义见 `@../000.架构/tech-website.md` §1）。
-4. JS 在 `data-footer-credits-icon` 挂载点插入真实 `<img>`:
-   - `src="/assets/icons/credits.svg"`
-   - `width="32" height="32"`
-   - 返回内容是真实 Credits SVG,不是 1px、空白、透明或 CSS 隐藏资源。
+4. JS 在 `data-footer-brand-icon` 挂载点插入 `<img>`:
+   - `src` 为 `/assets/icons/logo.svg` 加固定版本 query(用于绕开 CDN 旧 404 缓存,nginx 按不含 query 的 URI 匹配)
+   - `width="32" height="32"`,`alt` 为空
+   - 返回内容是透明的装饰 SVG,请求本身用于后端写入设备可信关系;不使用 1px 或 `display:none` 伪装。
 5. 只有 Cookie 写入后才设置 `img.src`,避免图片请求先于 Cookie 发出。
-6. 如果 footer 视觉上无法自然容纳 32x32 Credits 图标,实现时应改挂到已有 Credits UI,不要做 1px、`display:none`、`hidden`、`aria-hidden` 之类的伪装。
+6. 页脚品牌图标是设备校验与匿名网页下载的前置依赖:改版页脚时必须保留 `data-footer-brand-icon` 挂载点并保证图标请求照常发出。
 
-本逻辑放在 `website-shared/src/homepage-runtime/device.ts`,website 侧 `website/src/scripts/homepage/device.ts` 继续只做导出镜像。
+本逻辑放在 `website/src/scripts/runtime/device.ts`,由 `website/src/layouts/Layout.astro` 在页面启动时调用。
 
 ## 4. 开发环境
 
 开发环境保持同一个图片路径,不在前端代码里切换 URL:
 
 ```text
-http://127.0.0.1:7910/assets/icons/credits.svg
+http://127.0.0.1:7910/assets/icons/logo.svg
 ```
 
-`website/astro.config.mjs` 的 Vite dev server 增加精确 proxy,把该路径转发到本地后端:
-
-```js
-server: {
-  proxy: {
-    '/assets/icons/credits.svg': {
-      target: process.env.PUBLIC_API_BASE_URL || 'http://localhost:7900',
-      changeOrigin: true
-    }
-  }
-}
-```
+`website/astro.config.mjs` 的 Vite dev server 配置了该图片路径的精确 proxy（匹配规则为正则，目标为固定本地后端地址），具体以该文件为准。
 
 规则:
 
@@ -77,7 +66,7 @@ server: {
 后端新增非 JSON 资源路由:
 
 ```text
-GET /assets/icons/credits.svg
+GET /assets/icons/logo.svg
 Cookie: client_uuid=<device_id>
 ```
 
@@ -99,7 +88,7 @@ Cache-Control: no-store
 X-Robots-Tag: noindex, nofollow
 ```
 
-SVG 由模块级数组维护,当前至少提供一个 32x32 Credits 图标。HTTP 响应永远是一个 SVG 文档。
+SVG 由模块级数组维护,当前提供一个 32x32 的透明品牌图标。HTTP 响应永远是一个 SVG 文档。
 
 ## 6. device_service
 
@@ -174,7 +163,7 @@ POST /api/client/media/download-pre-v2
 - `send-email-code`:在发送频率限制和发送邮件前校验。
 - `email-verify-login`:在验证码校验前校验,避免未可信设备消耗验证码尝试次数。
 - `parse-pre-v2`:在 IP 限流和节点选择前校验。
-- `download-pre-v2`:在用户短锁、resource token 校验和扣 Credits 前校验。
+- `download-pre-v2` 与 `download-anonymous-pre-v2`:在身份短锁、resource token 校验和扣费 / 计次前校验。
 
 显式 `X-Client-Product: extension` 的插件请求由 `require_trusted_client_device` 豁免网站图片可信关系；邮箱提交与持久化 owner 见 [账号与认证](./tech-账号与认证.md#81-邮箱验证码登录)。
 
@@ -191,22 +180,11 @@ POST /api/client/media/download-pre-v2
 
 ## 8. nginx 反代
 
-website 主域需要在静态 `.svg` 规则之前增加精确路径反代:
-
-```nginx
-location = /assets/icons/credits.svg {
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header CF-Connecting-IP $http_cf_connecting_ip;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_pass http://127.0.0.1:7900;
-}
-```
+website 主域在静态 `.svg` 规则之前对该图片路径做精确路径反代，规则为正则匹配（同时兼容 credits 图标路径），反代头与缓存策略以 `website/deploy/vimeo-web.conf` 为准。
 
 测试环境同样加到 `website/deploy/vimeo-web-test.conf`,目标后端使用测试 API 服务。
 
-本路径必须精确匹配,不要扩大到 `/assets/` 或 `/assets/icons/` 目录,避免静态资源整体绕到后端。
+匹配范围只限这两个图标路径,不要扩大到 `/assets/` 或 `/assets/icons/` 目录,避免静态资源整体绕到后端。
 
 ## 9. 边界
 
@@ -219,9 +197,9 @@ location = /assets/icons/credits.svg {
 
 ## 10. 验收标准
 
-- footer 存在 `data-footer-credits-icon` 挂载点,页面 JS 写 Cookie 后插入真实图片。
-- `pnpm dev` 下 `/assets/icons/credits.svg` 通过 Vite proxy 命中本地后端,不是 Astro 静态文件。
-- `/assets/icons/credits.svg` 通过 website 主域访问时返回 `image/svg+xml` 和 `Cache-Control: no-store`。
+- footer 存在 `data-footer-brand-icon` 挂载点,页面 JS 写 Cookie 后插入图片。
+- `pnpm dev` 下 `/assets/icons/logo.svg` 通过 Vite proxy 命中本地后端,不是 Astro 静态文件。
+- `/assets/icons/logo.svg` 通过 website 主域访问时返回 `image/svg+xml` 和 `Cache-Control: no-store`。
 - SVG 请求带合法 Cookie 和 IP 时,Redis 写入 `device_trust:{device_id}` 且 TTL 为 7 天。
 - SVG 请求缺 Cookie、非法 Cookie 或 Redis 写入失败时仍返回 SVG。
 - SVG 接口代码异常时返回 404,不返回 JSON。

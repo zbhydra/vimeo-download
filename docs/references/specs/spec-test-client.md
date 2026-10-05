@@ -9,7 +9,7 @@
 1. **E2E 优先**：Less unit tests, more e2e。业务功能优先 e2e 覆盖真实用户路径。
 2. **Unit 仅作补充**：只测纯函数、协议转换、类型映射、无 UI/IO 的小逻辑。
 3. **稳定性优先**：断言语义/文本/状态/可见性/接口结果/业务副作用，避免像素完美差分。
-4. **website-shared 无独立测试**：其代码由 `website/tests/module-scripts.test.js` 跨包编译 + 动态 import 间接覆盖；extension 不引用 website-shared。
+4. **website 单元测试入口唯一**：`website/tests/module-scripts.test.js` 按单文件 tsc 编译 + 动态 import，不认 alias，被测源码间用相对路径；extension 不引用 website 源码。
 5. **后端必须真实**：遵守根 `AGENTS.md` §3 第 10 条。不得通过 `page.route` / `route.fulfill`、替换 `fetch`、本地 fixture HTTP 服务或其他方式伪造本项目后端 API 响应；登录、商品、配额、订单与履约接口均无例外。
 6. **核对有效配置**：构建和启动前检查环境变量覆盖，启动后确认浏览器实际请求本地真实后端；不能只凭 `--mode development` 或页面 HTTP 200 判断。后端未启动时按项目规范启动，无法启动时报告阻塞，不使用模拟或生产接口替代。
 
@@ -22,7 +22,7 @@
 - 覆盖三类：
   - **构建产物**：HTML 不含 `.ts` module script、特定页文案。
   - **SEO 一致性**：sitemap 多语言索引 / hreflang / canonical 与 `i18n/ui.ts` 闭环；`llms.txt` / `robots.txt` / 退役页 CSV 引用的 URL 都对应真实 dist 文件。
-  - **TS 纯函数**：SLS 埋点 / API 错误分类 / 登录 / checkin / 媒体解析 等。
+  - **TS 纯函数**：SLS 埋点 / API 错误分类 / 登录 / 媒体解析 / 匿名下载授权 等。
 - **纯函数测试标准手法**：tsc 编译到临时目录 + 动态 import + patch `import.meta.env.*`（参考 `importCompiledTypescriptModule` / `patchCompiledBrowserModuleFiles`）。
 - DOM/浏览器全局可用手写 fake 隔离纯前端逻辑，但不得借此伪造本项目后端 API 响应。
 
@@ -38,14 +38,22 @@
 - `browser-identity.spec.ts` 是身份回归门禁，必须同时断言 JS 属性、导航请求 UA/Client
   Hints 和移动端平台一致性。该门禁只证明没有已知自曝字段，不承诺绕过 Cloudflare/WAF。
 - 稳定 Chrome 可通过 `E2E_CHROME_EXECUTABLE_PATH` 显式指定；缺失或版本无法识别时直接失败。
-- **真实后端运行**：所有浏览器 project 的 API 均须指向本地实际运行的后端。现有依赖模拟响应的用例和脚本必须先迁移，迁移前不得执行或作为验收依据。
-- **真实 smoke**：独立 `parse-download-smoke` project（`testMatch` SMOKE_SPEC），`E2E_REAL_API_BASE_URL` 必须指向本地真实后端，`globalSetup` 用后端 `e2e_seed_user.py` seed 账号并注入 token。
+- **真实后端运行**：所有浏览器 project 的 API 均须指向本地实际运行的后端；website 不保留依赖模拟响应的用例，新增用例同样不得模拟。
+- **真实 smoke**：
+  - 下载 smoke（`parse-download-smoke` project 与 `vimeo-client-mux-real` project）走匿名授权，不依赖账号、不注入登录 token；`E2E_REAL_API_BASE_URL` 必须指向本地真实后端。
+  - 需要账号的 smoke（`pricing-review-reward-smoke`）由 `globalSetup` 在设置 `E2E_SEED_SCENARIO` 时调用后端 `e2e_seed_user.py` seed 账号并注入 token；未设置场景时 `globalSetup` 不做任何事。
+  - `parse-download-smoke` project 的 `testMatch` 同时匹配 `parse-download-smoke.spec.ts`（发布验收，逐条解析并下载第一个资源）与 `anonymous-parse-download-smoke.spec.ts`（匿名授权用例）。
+- **下载 smoke 的运行要求**（均已在本地实测）：
+  - 单节点拓扑：`parse-download-smoke` 与 `vimeo-client-mux-real` 都要求业务库里只有一个健康节点。`test:e2e:parse-smoke` 入口脚本（`backend/scripts/e2e_parse_download_smoke.py`）自带拓扑搭建（`_seed_service_nodes`：临时禁用其他节点并登记唯一本地节点）与清理（`_cleanup_service_nodes`：删除登记的节点并恢复被禁用的节点），退出时自动恢复 `service_nodes`。`vimeo-client-mux-real` 暂时没有专用脚本，需手动在同样的单节点拓扑下运行（`E2E_REAL_API_BASE_URL` 指向该节点），跑完同样要恢复 `service_nodes`。
+  - 串行：Playwright 须加 `--workers=1`，默认并行会压垮单节点（基线就有这个问题）。`test:e2e:parse-smoke` 入口脚本已内置该参数；手动运行 `vimeo-client-mux-real` 时必须自己加。
+  - 状态 3 用例只覆盖单资源：后端对单个 Vimeo 链接固定只返回 1 个资源，工作区只解析首条链接，所以「批量下载停止本轮」不做自动化验证。
+  - 状态 2（等待）在当前匿名策略下不可达，没有自动化用例；重新启用等待时需先补回对应真实 smoke。
 - 断言：Playwright 原生 `expect`（`toHaveTitle` / `toBeVisible` / `toContainText` / `toHaveCount`），用 locator auto-wait，禁 fixed sleep。
 
 | 命令 | 说明 |
 |------|------|
-| `pnpm test:e2e` | 现有模拟后端用例完成真实后端迁移前禁止执行 |
-| `pnpm test:e2e:parse-smoke` | 调用 `backend/scripts/e2e_parse_download_smoke.py` 启动单个本地业务服务器，再执行真实 Playwright smoke |
+| `pnpm test:e2e` | 即 `playwright test`，不带 `--project`，会跑全部 7 个 project：`chromium` / `firefox` / `webkit` / `Mobile Chrome`（仅 `browser-identity.spec.ts` 身份回归）加 3 个 smoke project（`parse-download-smoke` / `vimeo-client-mux-real` / `pricing-review-reward-smoke`）。smoke 必须设 `E2E_REAL_API_BASE_URL` 指向本地真实后端，否则匿名 smoke 在解析该变量处直接失败；`pricing-review-reward-smoke` 另需 `E2E_SEED_SCENARIO`；`vimeo-client-mux-real` 另需单节点拓扑与 `--workers=1`。只跑身份回归用 `pnpm test:e2e:identity`；smoke 须显式指定 project，运行要求见上 |
+| `pnpm test:e2e:parse-smoke` | 调用 `backend/scripts/e2e_parse_download_smoke.py` 启动单个本地业务服务器，再执行 `parse-download-smoke` project（匿名流程），已串行；运行要求见上 |
 
 ## 3. extension 测试
 
@@ -86,8 +94,8 @@
 
 | | website smoke | extension 真实跑 |
 |---|---|---|
-| 账号 | 后端 `e2e_seed_user.py` seed，**不清理** | 不需要登录态；固定 profile 只承载扩展自身的 device_id 与构建产物 |
-| token | `globalSetup` 注入 env（`E2E_ACCESS_TOKEN` / `E2E_DEVICE_ID`），spec 写 localStorage | 无 |
+| 账号 | 下载 smoke 匿名，无账号；`pricing-review-reward-smoke` 用后端 `e2e_seed_user.py` seed，**不清理** | 不需要登录态；固定 profile 只承载扩展自身的 device_id 与构建产物 |
+| token | 下载 smoke 不注入；`pricing-review-reward-smoke` 由 `globalSetup` 注入 env（`E2E_ACCESS_TOKEN` / `E2E_DEVICE_ID`），spec 写 localStorage | 无 |
 | 隔离 | project + env 切 base URL | `testRunId`（`e2e-{ts}-{6}`）隔离下载目录 |
 
 两端都不做严格 DB 清理，依赖 fixture / seed / profile 隔离。
@@ -109,7 +117,7 @@
 | 用 component mount 代替 extension e2e | 无法证明 background、content、injected、Manifest 与真实 Chrome API 启动链 |
 | E2E route 站点页面、DOM、结构化数据或媒体 | 无法证明真实站点兼容性 |
 | 并发进程读取同一个运行 profile | Chromium profile 锁冲突与构建产物串味 |
-| 给 website-shared 加独立测试体系 | 其覆盖入口是 website 的 module-scripts.test.js |
+| 为 website 另起一套测试体系 | 覆盖入口是 module-scripts.test.js |
 | 固定账号 / ID / 文件名（extension 下载目录已用 testRunId 隔离） | 并行污染 |
 
 ## 7. checklist

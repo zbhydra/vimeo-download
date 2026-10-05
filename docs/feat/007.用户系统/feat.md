@@ -24,21 +24,21 @@
 2. **登录入口**:website 以 Google 为主路径、邮箱验证码为次级;extension 在插件 Popup 内完成登录（Google 授权窗口 + 邮箱验证码），不跳转官网登录页。
 3. **会话与认证**:登录成功签发客户端 access/refresh token，后续请求带 Bearer，服务端验签 + Redis 校验有效性。
 4. **账号信息查询**:已登录用户可查自己的基本资料、Credits 余额与当前订阅摘要。
-5. **重要入口设备保护**:website 通过 Credits 图标资源请求建立设备 UUID 的短期可信关系;邮箱验证码入口和媒体 pre-v2 控制面只接受已验证设备，IP 只用于日志排障。**显式声明 `X-Client-Product: extension` 的插件请求豁免该校验**。
+5. **重要入口设备保护**:website 通过页脚品牌图标资源请求建立设备 UUID 的短期可信关系;邮箱验证码入口和媒体 pre-v2 控制面只接受已验证设备，IP 只用于日志排障。**显式声明 `X-Client-Product: extension` 的插件请求豁免该校验**。
 
 ## 功能范围
 
 ### 包含
 
 - **邮箱验证码登录/注册**:输入邮箱 → 发送 6 位验证码 → 验证通过后服务端自动判断:未注册则创建账号,已注册则登录。同一邮箱只对应一个用户。
-- **Website 设备可信校验**:website 页面加载后写入 `client_uuid` Cookie，再加载 `/assets/icons/credits.svg`；后端通过这个真实 Credits SVG 请求记录 `device_id` 可信关系，有效期 7 天。Logo 请求 IP 仅用于日志排障，不参与拒绝。邮箱验证码入口和媒体 pre-v2 控制面入口可按配置校验该可信关系，未通过时提示用户刷新页面后重试；发布期可关闭拦截但保留真实审计日志。**显式声明 `X-Client-Product: extension` 的请求直接放行**：插件设备使用自己生成的 UUID，唯一可信记录写入通道是 Website 页面读 `client_uuid` Cookie，跨站请求既带不上该 Cookie 也不会加载品牌 Logo，开关一旦打开插件请求会 100% 被拒。豁免只认显式声明的请求头，不带该头的请求（网站与第三方）照旧走完整校验。
+- **Website 设备可信校验**:website 页面加载后写入 `client_uuid` Cookie，再加载页脚品牌图标；后端通过这个图标请求记录 `device_id` 可信关系，有效期 7 天。Logo 请求 IP 仅用于日志排障，不参与拒绝。邮箱验证码入口和媒体 pre-v2 控制面入口可按配置校验该可信关系，未通过时提示用户刷新页面后重试；发布期可关闭拦截但保留真实审计日志。**显式声明 `X-Client-Product: extension` 的请求直接放行**：插件设备使用自己生成的 UUID，唯一可信记录写入通道是 Website 页面读 `client_uuid` Cookie，跨站请求既带不上该 Cookie 也不会加载品牌 Logo，开关一旦打开插件请求会 100% 被拒。豁免只认显式声明的请求头，不带该头的请求（网站与第三方）照旧走完整校验。
 - **Google 登录(website 已实现)**:
   - 手动主路径:点击自定义 Google 按钮 → 整页跳转后端 OAuth authorize → Google 授权 → 后端 callback 用 code 换 id_token、校验、查/建用户 → 渲染一次性登录票据回前端 → 前端 exchange 换正式 token。
   - One Tap 辅助路径:登录弹窗打开时自动提示,Google 通过 GIS callback 返回 credential → 前端提交后端校验。
   - 非权威 Google 邮箱(@gmail.com 与带 `hd` 的 Workspace 邮箱为权威)不直接发项目 token,改发邮箱验证码让用户二次确认。
 - **JWT 会话**:access token(默认 24 小时)+ refresh token(默认 7 天),refresh 轮换(旧的失效)+ 30 秒宽限期(防并发刷新),token 有效性存 Redis,支持多设备同时登录。
 - **账号信息查询**:已登录用户查自己的 user_id / email / full_name / avatar_url / created_at / Credits 余额 / 当前订阅摘要。
-- **IP 注册权益风控**:同一 IP 在配置窗口内注册账号超过允许数量后,新账号仍正常创建和登录,但不发注册 Credits,也不给可领取的签到活动。
+- **IP 注册权益风控**:同一 IP 在配置窗口内注册账号超过允许数量后,新账号仍正常创建和登录,但不发注册 Credits,也不给可领取的签到活动(网站已无签到入口,后端签到能力保留,决策出处:`@../000.架构/plans/004.官网改版-插件展示与免费网页下载.md` §8)。
 - **登出**:撤销当前 access token。
 - **认证弹窗(website)**:首屏 Google 主按钮 + `Continue with email` 次级入口 + 条款;点邮箱入口展开邮箱子界面;发码后展开验证码子界面。14 语言 i18n。
 - **extension 匿名身份**:未登录用户带 `X-Device-Id`(UUID v4,首次安装生成并持久化)参与请求;登录后请求带 Bearer。device_id 与登录用户的关系在计数器系统定义(`@../005.计数器系统/feat.md`)。
@@ -72,9 +72,9 @@
 
 ### 邮箱验证码登录/注册
 
-1. 用户进入 website 页面后,页面运行时确保 `device_id` 存在,写入 `client_uuid` Cookie,并加载 footer 内的 `/assets/icons/credits.svg` 真实 Credits 图片。
+1. 用户进入 website 页面后,页面运行时确保 `device_id` 存在,写入 `client_uuid` Cookie,并加载页脚内的品牌图标。
 2. 后端收到 SVG 请求后读取 Cookie 与客户端 IP,写入 7 天有效的设备可信关系;无论写入成功与否都返回 SVG,异常返回 404。
-3. 用户在 website 认证弹窗点击 `Continue with email`,展开邮箱子界面,输入邮箱。
+3. 用户在 Pricing 页的认证弹窗点击 `Continue with email`,展开邮箱子界面,输入邮箱。
 4. 点击发送验证码,后端先校验当前 `X-Device-Id` 与 IP 是否已有可信关系;未通过时返回"请刷新页面后重试"错误,不发送邮件。
 5. 设备校验通过后,后端校验发送频率(同邮箱 60 秒内 1 次)并生成 6 位验证码,存 Redis(10 分钟有效),发邮件。
 6. 前端展开验证码子界面(含验证码输入 + `Send again`),用户输入验证码提交。
@@ -85,10 +85,10 @@
 
 ### 媒体 pre-v2 控制面保护
 
-1. 用户在 website 下载工作区发起解析或下载授权前,页面已通过 Credits SVG 请求建立设备可信关系。
+1. 用户在 website 下载工作区发起解析或下载授权前,页面已通过页脚品牌图标请求建立设备可信关系；匿名网页下载同样依赖该关系。
 2. 解析控制面先校验当前 `device_id` 可信关系,未通过时提示刷新页面,不进入 IP 限流和节点选择。
-3. 下载授权控制面在登录态有效后校验当前 `device_id` 可信关系,未通过时提示刷新页面,不进入用户短锁、资源 token 校验和扣 Credits。
-4. 设备可信关系不替代登录态、不改变下载额度归属;下载授权仍按登录用户扣 Credits。
+3. 下载授权控制面校验当前 `device_id` 可信关系,未通过时提示刷新页面,不进入身份短锁、资源 token 校验和计次扣费。
+4. 设备可信关系不替代登录态、不改变下载额度归属;网页下载按设备匿名授权,账号授权（网站不再调用）仍按登录用户扣 Credits。
 5. **显式声明 `X-Client-Product: extension` 的请求直接跳过该校验**（判定只比对字面量，缺失头与无法识别的值都照旧走完整校验），并记录一条放行日志。
 
 ### Google 登录(website,手动主路径)
@@ -100,7 +100,7 @@
 5. 权威邮箱(@gmail.com 或带 `hd` 的 Workspace):查/建用户(首次注册方式记为 google,新用户按 IP 注册权益风控决定是否赠送 10 Credits),签发一次性登录票据,303 回 `return_to?google_login_code=...`。
 6. 非权威邮箱:发邮箱验证码,303 回 `return_to?google_email_verification=邮箱`,前端展开邮箱验证码子界面,用户完成验证码登录后首次注册方式记为 email_code。
 7. 失败:303 回 `return_to?google_login_error=...`。
-8. 前端在下载工作区读取 `google_login_code` / `google_login_error` / `google_email_verification`,处理后清 URL;有 code 时调 exchange 接口换正式 token(一次性,第二次失败),无 code 时重置弹窗到 Google-first 并提示。
+8. 前端在 Pricing 页读取 `google_login_code` / `google_login_error` / `google_email_verification`,处理后清 URL;有 code 时调 exchange 接口换正式 token(一次性,第二次失败),无 code 时重置弹窗到 Google-first 并提示。
 
 ### Google 登录(website,One Tap 辅助路径)
 
@@ -150,7 +150,7 @@
 - `user_ip_registers` 是可随时清理的风控辅助表,只影响后续权益判断;写入失败、被清理或窗口统计短暂不准都不阻断注册和登录。
 - 文案需 i18n。
 - Website 设备可信校验只保护明确列出的重要入口;Google 登录、下单、支付创建、mark-log、媒体执行节点接口不纳入本阶段。
-- 公开可见命名使用真实业务资源语义:DOM 挂载点为 footer Credits 图标、Cookie 为通用客户端 UUID、资源路径为 Credits SVG;验证语义只出现在后端内部 service、Redis key 和技术文档中。
+- 公开可见命名使用真实业务资源语义:DOM 挂载点为页脚品牌图标、Cookie 为通用客户端 UUID、资源路径为品牌图标 SVG;验证语义只出现在后端内部 service、Redis key 和技术文档中。
 - Google client secret 只在后端配置,不进入任何前端 PUBLIC 配置;后端日志不记录完整 id_token;一次性票据(code/state)只存 sha256 哈希,不存明文。
 - 插件 access/refresh token 只由 extension background 调后端兑换接口获得并写入插件 storage；授权窗口回跳 URL 只携带一次性短效 code，不接触 Website 或插件的长期 token，回跳 URL 不写入日志或埋点。
 - manifest `permissions` 含 `identity`，不声明 `externally_connectable`；插件不再接收 website 的跨端登录消息。
@@ -161,7 +161,7 @@
 
 - 邮箱验证码登录:未注册邮箱首次验证通过后创建账号,未命中 IP 注册权益风控时赠送 10 Credits;已注册邮箱验证通过后登录原账号;同一邮箱只对应一个 user_id。
 - IP 注册权益风控:同一 IP 在配置窗口内第 N+1 个及之后注册的新账号不获得注册 Credits;进入签到系统时直接得到已结束活动,不会出现可领取签到奖励。N 由 `config_public.registration_ip_benefit_guard.max_registrations` 配置。
-- Website 设备可信校验:website 页面加载后会请求 `/assets/icons/credits.svg`;请求成功后 7 天内同一 device_id 可发送邮箱验证码、提交验证码登录、发起媒体 pre-v2 解析和下载授权;开启校验后,未验证或过期时受保护入口直接提示用户刷新页面后重试。Logo 请求 IP 和受保护 API 当前 IP 只进日志。
+- Website 设备可信校验:website 页面加载后会请求页脚品牌图标;请求成功后 7 天内同一 device_id 可发送邮箱验证码、提交验证码登录、发起媒体 pre-v2 解析和下载授权;开启校验后,未验证或过期时受保护入口直接提示用户刷新页面后重试。Logo 请求 IP 和受保护 API 当前 IP 只进日志。
 - 邮箱验证码规则:6 位数字、10 分钟有效、同邮箱 60 秒内最多发 1 次、最多 5 次验证尝试;发送失败可立即重发(频率限制回退)。
 - IP 限流:同一 IP 5 分钟内 10 次登录失败后封禁 10 分钟,封禁期间登录返回 IP 封禁错误。
 - Google 登录(website):手动按钮点击后立即 loading 并整页跳转后端 OAuth authorize;权威邮箱完成授权后能拿到项目 token;非权威邮箱不直接发项目 token 而是回邮箱验证码;`aud`/`iss`/`exp`/`email_verified` 任一不达标拒绝;`google_login_code` 一次性,第二次兑换失败。
@@ -179,9 +179,9 @@
 
 ## 用户操作逻辑与 UI 元素
 
-> website 常规认证 UI 集中在下载工作区的认证弹窗。extension Popup 内的登录弹窗提供 Google 与邮箱验证码两条路径，两者各自独立。文案需 i18n。
+> website 的登录入口只在 Pricing 页（下载工作区没有登录、账户入口）；常规认证 UI 集中在 Pricing 页的认证弹窗。extension Popup 内的登录弹窗提供 Google 与邮箱验证码两条路径，两者各自独立。文案需 i18n。
 
-### website 认证弹窗(下载工作区内)
+### website 认证弹窗(Pricing 页内)
 
 首屏:
 
@@ -195,12 +195,11 @@
 | 条款 | 文本 + Terms/Privacy 链接 | 链接可点 | 跳条款/隐私页 |
 | 错误提示 | 行内文本(默认隐藏) | 否 | 展示登录/发码错误 |
 
-**标题区文案与设计基调**(website 认证弹窗,产品规格):
+**标题区文案与设计基调**(Pricing 页认证弹窗,产品规格):
 
 - **首屏标题文案**:
-  - 主标题(eyebrow / 主):`Sign in to continue`
-  - 副标题 / 描述:`Sync quota and continue downloading.`
-  - 文案意图:明确"登录是为同步配额、继续下载",而非强制拦截;降低首次用户对"必须收邮件"的误解。
+  - eyebrow:`Website Access`;主标题:`Sign in to continue`;无副标题。
+  - 文案意图:登录服务于 Pricing 页的订阅购买,而非强制拦截;降低首次用户对"必须收邮件"的误解。
 - **设计基调**(整体):
   - 浅色 SaaS 工具风格,与网站整体保持一致。
   - **不抄 Resend 的暗色品牌风格**(源 feat.031 明确约束);当前网站是浅色工具型,认证弹窗不引入暗色品牌重构。
@@ -240,7 +239,7 @@
 
 - 账号数据模型 + JWT 签发/验签/轮换 + 会话存储 + 邮箱验证码 + IP 限流 + 接口规格:`@tech-账号与认证.md`
 - Google OAuth(code flow / One Tap / 权威邮箱判定 / 一次性票据 / return_to 白名单)+ extension browser identity 登录:`@tech-第三方登录.md`
-- website `client_uuid` Cookie + Credits SVG 请求 + Redis 设备可信关系 + 插件豁免:`@tech-邮箱登录设备校验.md`
+- website `client_uuid` Cookie + 页脚品牌图标请求 + Redis 设备可信关系 + 插件豁免:`@tech-邮箱登录设备校验.md`
 - 变更记录:`@changelog.md`
 - 下载按用户扣费、注册赠送 Credits:`@../003.积分系统/feat.md`
 - 订单归属用户:`@../004.订单系统/feat.md`

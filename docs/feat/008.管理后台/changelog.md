@@ -1,5 +1,14 @@
 # 008 · 管理后台 · 变更记录
 
+## 2026-10-05 数据分析下载三标签页不再有网站新数据
+
+**Why**：网站网页下载全部匿名、不扣 Credits，不再写扣费下载记录。
+
+**变更**：
+- `tech-数据分析.md`：下载资源、排名、统计三个标签页说明改为只保留历史记录；Dashboard 网站下载打点与下载详情（mark-log）不受影响。
+
+**说明**：依据见 [004 官网改版计划](../000.架构/plans/004.官网改版-插件展示与免费网页下载.md) §7 第 1 条、§8。
+
 ## 2026-09-19 Dashboard 补删 2 个零发射方列（集成审查收口）
 
 **Why**：上一条只清了插件永久收不到数据、与后端枚举无发射方的 6 列，`web_download_resume_click` / `web_download_ignore_click` 仍留在 `MarkType`、`DASHBOARD_MARK_TYPE_ORDER`、`website-shared` 的 `HOMEPAGE_MARK_TYPE` 与 `test_mark.py` 里。三端 grep 原始字符串确认它们在 `website/`、`website-shared/`、`extension/` 均无发射方（命中只剩定义处与后端枚举/列序），与 `tech-Dashboard.md` §数据源「枚举只登记真实写入 `mark_logs` 的类型」的合同直接冲突，继续保留就是 2 列恒为 0。

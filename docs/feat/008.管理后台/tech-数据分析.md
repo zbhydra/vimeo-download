@@ -7,7 +7,7 @@
 
 ### 数据源(已确认)
 
-- **下载维度三个标签页**(下载资源分析 / 下载排名 / 下载统计)统一基于 `user_download_records` 表(`UserDownloadRecordModel`)。该表**只记录 website Credits 下载**,不含 extension 下载(扩展端走每日次数规则,不写本表)。这是已知口径局限,运营查看时需知晓"数据分析反映的是 website 下载,不含 extension"。
+- **下载维度三个标签页**(下载资源分析 / 下载排名 / 下载统计)统一基于 `user_download_records` 表(`UserDownloadRecordModel`)。该表**只记录账号扣费路径（Credits）的下载**,不含 extension 下载(扩展端走每日次数规则,不写本表)。网站网页下载已改为全部匿名、不扣 Credits,**不再产生新记录**:这三个标签页不再有网站新数据,只保留历史记录;Dashboard 的网站下载打点与「下载详情」(mark-log)不受影响。依据与后续清理见 `@../000.架构/plans/004.官网改版-插件展示与免费网页下载.md` §7 第 1 条、§8。
 - **用户地理分析**基于 `users` 表(`UserModel`)的 `register_country`(注册时国家码, ISO 3166-1 alpha-2)。只有国家粒度,无省/城市/经纬度。
 - **订单维度两个标签页**(每日充值(+8) / 商品统计(+8))统一基于 `orders` 表(`OrderModel`)。时间按 `orders.created_at` 归属 UTC+8 自然日;成功订单口径为 `order_status = 2`;全部订单口径为不筛状态的所有订单。金额使用订单金额快照 `amount` 和 `currency`,按币种拆分展示,不跨币种混加。
 

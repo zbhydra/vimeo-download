@@ -18,15 +18,12 @@
     "test:e2e:pricing-review-reward-smoke": "E2E_REAL_API_BASE_URL=${E2E_REAL_API_BASE_URL:-http://localhost:7900} E2E_WEB_PORT=${E2E_WEB_PORT:-7930} E2E_SEED_SCENARIO=pricing-review-reward playwright test --project=pricing-review-reward-smoke"
   },
   "dependencies": {
-    "@astrojs/vue": "^5.0.4",
     "astro": "^5.5.2",
-    "mediabunny": "1.46.0",
-    "vue": "^3.5.18"
+    "mediabunny": "1.46.0"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.4",
     "@playwright/test": "^1.50.0",
-    "@vue/tsconfig": "^0.7.0",
     "sharp": "^0.34.5",
     "typescript": "^5.8.3"
   }

@@ -1,0 +1,418 @@
+---
+import type { PricingAuthCopy } from '../../i18n/schema'
+
+/**
+ * Pricing 登录弹窗。
+ *
+ * DOM 与样式归 Pricing 所有；交互由 pricing-auth-controller 使用 scripts/runtime/auth
+ * 接管，外层只注入 controller 所需的精简文案 payload。
+ */
+interface Props {
+  copy: {
+    auth: PricingAuthCopy
+    subscription: {
+      close: string
+    }
+  }
+}
+
+const { copy } = Astro.props as Props
+const authCopy = {
+  sendingCode: copy.auth.sendingCode,
+  sendCodeSuccess: copy.auth.sendCodeSuccess,
+  continueWithGoogle: copy.auth.continueWithGoogle,
+  googleLoading: copy.auth.googleLoading,
+  ...copy.auth.errors
+}
+---
+
+<div data-pricing-auth-root>
+  <script
+    is:inline
+    type="application/json"
+    data-pricing-auth-copy
+    set:html={JSON.stringify(authCopy)}
+  />
+  <div class="pricing-auth-modal" data-pricing-auth-modal hidden>
+    <button
+      type="button"
+      class="pricing-auth-backdrop"
+      data-pricing-auth-close
+      aria-label={copy.subscription.close}
+    ></button>
+
+    <div class="pricing-auth-dialog" role="dialog" aria-modal="true" aria-labelledby="pricing-auth-title">
+      <div class="pricing-auth-heading">
+        <p class="pricing-auth-eyebrow">{copy.auth.eyebrow}</p>
+        <h2 id="pricing-auth-title">{copy.auth.title}</h2>
+      </div>
+
+      <button
+        type="button"
+        class="pricing-auth-close"
+        data-pricing-auth-close
+        aria-label={copy.subscription.close}
+      >
+        <span aria-hidden="true">×</span>
+      </button>
+
+      <div
+        class="pricing-auth-google-button"
+        data-pricing-auth-google-login
+        aria-label={copy.auth.continueWithGoogle}
+      ></div>
+
+      <form class="pricing-auth-form" data-pricing-auth-form hidden>
+        <label class="pricing-auth-field">
+          <span class="pricing-auth-field-label">{copy.auth.emailLabel}</span>
+          <input
+            type="email"
+            autocomplete="email"
+            class="pricing-auth-input"
+            placeholder={copy.auth.emailPlaceholder}
+            data-pricing-auth-login-email
+          />
+        </label>
+
+        <button
+          type="button"
+          class="btn-primary pricing-auth-secondary-button pricing-auth-continue-email-button"
+          data-pricing-auth-continue-email
+        >
+          {copy.auth.continueWithEmail}
+        </button>
+
+        <div class="pricing-auth-email-code-area" data-pricing-auth-email-code-area hidden>
+          <label class="pricing-auth-field">
+            <span class="pricing-auth-field-label">{copy.auth.codeLabel}</span>
+            <div class="pricing-auth-code-row">
+              <input
+                type="text"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                class="pricing-auth-input pricing-auth-code-input"
+                placeholder={copy.auth.codePlaceholder}
+                data-pricing-auth-login-code
+              />
+              <button
+                type="button"
+                class="btn-secondary pricing-auth-secondary-button pricing-auth-send-code-button"
+                data-pricing-auth-send-code
+              >
+                {copy.auth.sendAgain}
+              </button>
+            </div>
+          </label>
+
+          <button type="submit" class="btn-primary pricing-auth-primary-button" data-pricing-auth-login-submit hidden>
+            {copy.auth.signIn}
+          </button>
+        </div>
+
+        <p
+          class="pricing-auth-inline-status"
+          data-pricing-auth-send-code-status
+          role="status"
+          aria-live="polite"
+        ></p>
+      </form>
+
+      <div class="pricing-auth-footer" data-pricing-auth-email-entry>
+        <span>{copy.auth.or}</span>
+        <button type="button" class="text-link pricing-auth-email-link" data-pricing-auth-email-entry-button>
+          {copy.auth.continueWithEmail}
+        </button>
+      </div>
+      <p class="pricing-auth-terms">
+        {copy.auth.termsNotice}
+        {' '}
+        <a href="/terms">{copy.auth.termsLink}</a>
+        <span aria-hidden="true"> · </span>
+        <a href="/privacy">{copy.auth.privacyLink}</a>
+      </p>
+      <p class="pricing-auth-inline-error" data-pricing-auth-error role="alert" hidden></p>
+    </div>
+  </div>
+</div>
+
+<script>
+  import './pricing-auth-controller'
+</script>
+
+<style is:global>
+  .pricing-auth-field {
+    display: grid;
+    gap: 8px;
+  }
+
+  .pricing-auth-heading {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 24px;
+    padding-right: 48px;
+  }
+
+  .pricing-auth-heading h2 {
+    margin: 0;
+    color: var(--gray-1000);
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.96px;
+    line-height: 32px;
+  }
+
+  .pricing-auth-heading p {
+    margin: 0;
+    max-width: 34ch;
+    color: var(--gray-900);
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .pricing-auth-eyebrow {
+    width: max-content;
+    max-width: 100%;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    background: var(--gray-100);
+    color: var(--gray-900) !important;
+    font-size: 12px !important;
+    font-weight: 500;
+    line-height: 16px !important;
+  }
+
+  .pricing-auth-form,
+  .pricing-auth-email-code-area {
+    display: grid;
+    gap: 16px;
+  }
+
+  .pricing-auth-code-row {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .pricing-auth-field-label {
+    color: var(--gray-1000);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 18px;
+  }
+
+  .pricing-auth-input {
+    width: 100%;
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid var(--gray-alpha-400);
+    border-radius: var(--radius-sm);
+    background: var(--background-100);
+    color: var(--gray-1000);
+    font-family: inherit;
+    font-size: 14px;
+  }
+
+  .pricing-auth-input:hover {
+    border-color: var(--gray-alpha-500);
+  }
+
+  .pricing-auth-input:focus {
+    border-color: var(--gray-alpha-600);
+  }
+
+  .pricing-auth-code-input {
+    min-width: 0;
+  }
+
+  /* 按钮外观来自共享 .btn-primary / .btn-secondary，这里只定整行宽度并允许长文案换行。 */
+  .pricing-auth-primary-button,
+  .pricing-auth-secondary-button {
+    height: auto;
+    min-height: 40px;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .pricing-auth-google-button {
+    width: 100%;
+    min-height: 40px;
+    margin-bottom: 16px;
+    display: grid;
+  }
+
+  .google-oauth-button {
+    width: 100%;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 10px;
+    border: 1px solid var(--gray-alpha-400);
+    border-radius: var(--radius-sm);
+    background: var(--background-100);
+    color: var(--gray-1000);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    transition:
+      background-color var(--transition-fast),
+      border-color var(--transition-fast);
+  }
+
+  .google-oauth-button:hover {
+    border-color: var(--gray-alpha-500);
+    background: var(--gray-100);
+  }
+
+  .google-oauth-button:disabled {
+    cursor: wait;
+    opacity: 0.72;
+  }
+
+  .google-oauth-button-icon {
+    width: 20px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    line-height: 0;
+  }
+
+  .pricing-auth-send-code-button {
+    padding: 0 10px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    width: auto;
+  }
+
+  .pricing-auth-inline-status,
+  .pricing-auth-inline-error,
+  .pricing-auth-terms {
+    min-height: 20px;
+    font-size: 13px;
+    line-height: 18px;
+  }
+
+  .pricing-auth-inline-status {
+    color: var(--gray-900);
+  }
+
+  .pricing-auth-inline-error {
+    color: var(--red-900);
+  }
+
+  .pricing-auth-terms {
+    margin: 0;
+    color: var(--gray-900);
+  }
+
+  .pricing-auth-terms a {
+    color: var(--blue-700);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .pricing-auth-terms a:hover {
+    color: var(--blue-800);
+  }
+
+  .pricing-auth-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 16px;
+    color: var(--gray-900);
+    font-size: 13px;
+    line-height: 18px;
+  }
+
+  /* 文字链接外观来自共享 .text-link，这里只重置 button 默认样式。 */
+  .pricing-auth-email-link {
+    min-height: 32px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    font: inherit;
+  }
+
+  .pricing-auth-modal[hidden],
+  .pricing-auth-form[hidden],
+  .pricing-auth-footer[hidden],
+  .pricing-auth-email-code-area[hidden],
+  .pricing-auth-primary-button[hidden],
+  .pricing-auth-continue-email-button[hidden] {
+    display: none;
+  }
+
+  .pricing-auth-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 130;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+  }
+
+  .pricing-auth-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+  }
+
+  .pricing-auth-dialog {
+    position: relative;
+    width: min(440px, 100%);
+    max-height: calc(100dvh - 40px);
+    overflow-y: auto;
+    padding: 32px 24px 24px;
+    border: 1px solid var(--gray-alpha-400);
+    border-radius: var(--radius-md);
+    background: var(--background-100);
+    box-shadow: var(--shadow-modal);
+  }
+
+  .pricing-auth-close {
+    width: 32px;
+    height: 32px;
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    border-radius: var(--radius-sm);
+    color: var(--gray-900);
+    font-size: 22px;
+    line-height: 1;
+  }
+
+  .pricing-auth-close:hover {
+    background: var(--gray-100);
+    color: var(--gray-1000);
+  }
+
+  @media (max-width: 720px) {
+    .pricing-auth-modal {
+      padding: 12px;
+    }
+
+    .pricing-auth-dialog {
+      padding: 28px 16px 20px;
+    }
+
+    .pricing-auth-primary-button,
+    .pricing-auth-secondary-button,
+    .pricing-auth-google-button {
+      width: 100%;
+    }
+
+    .pricing-auth-code-row {
+      flex-wrap: wrap;
+    }
+
+    .pricing-auth-send-code-button {
+      width: 100%;
+    }
+  }
+</style>

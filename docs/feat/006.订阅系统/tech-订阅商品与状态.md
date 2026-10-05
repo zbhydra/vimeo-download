@@ -135,18 +135,18 @@ Checkout 只返回 `period != none` 且至少有一个可用支付渠道的启�
 | `GET /api/client/subscription/status` | 插件兼容订阅状态,支持匿名设备 |
 | `POST /api/client/subscription/review-reward/claim` | 登录账号领取好评赠送订阅,强制携带设备标识 |
 | `POST /api/client/subscription/management` | 登录账号创建当前有效自动续费订阅的渠道管理入口,请求体为空;响应 URL 为空表示客户端使用渠道内指引 |
-| `GET /api/client/auth/me` | website 登录账户摘要,包含 Credits 与订阅状态 |
+| `GET /api/client/auth/me` | website 登录账户摘要,响应含订阅状态与 Credits 余额(网站只用订阅状态,不展示余额) |
 
 好评赠送的活动开关、领取事实表、并发控制与失败语义见 `@tech-好评赠送订阅.md`。Pricing 页面消费规则见 [`011 · Pricing 页与订阅配置`](../011.Pricing页/tech-pricing与自动续费.md)。
 
 ## 插件内购买视图（extension popup）
 
-extension popup 的内嵌购买视图与 website pricing 支付弹窗消费**同一套后端合同**（`@../004.订单系统/tech-支付与履约.md`），协议逻辑与 website-shared 的 pricing / checkout 控制器同源，字段不增不减：
+extension popup 的内嵌购买视图与 website pricing 支付弹窗消费**同一套后端合同**（`@../004.订单系统/tech-支付与履约.md`），协议逻辑与 `website/src/components/pricing/`、`website/src/components/order-checkout/` 的控制器同源，字段不增不减：
 
 - **商品配置**：`GET /api/client/subscription/checkout-configs`（匿名可访问）。客户端逐套餐运行时校验（订阅类 `product_class=1`、`period` 白名单、渠道价格字段齐全），过滤半升级或历史坏数据的套餐；展示价与渠道金额原样传递，前端不做任何价格计算。
 - **下单**：`POST /api/client/order/create`，请求携带所选渠道的 `payment_method / currency / amount` 与商品的 `product_class / product_id / auto_renew / period`；默认渠道优先级与官网一致（clink → paypal，均无时取配置首个）。
 - **收银台跳转**：从 `payment_data` 提取支付 URL 并做域名白名单兜底校验（paypal 限官方域名、clink 限渠道收银台域名，未知支付方式不接受任何外跳地址），新标签页打开收银台；URL 缺失或白名单外按下单失败收敛，不外跳。
-- **订单轮询**：`GET /api/client/order/status/{order_no}`，2 秒间隔、最长 10 分钟；状态归类与 website-shared 逐行同源（`PAID+SUCCESS` 成功、`PAID+FAILED/MAX_RETRY` 履约失败、`EXPIRED` 过期、`CANCELLED` / `REFUNDED` 取消或失败，其余继续轮询），轮询超时按可重试失败收敛，用户可重新发起。
+- **订单轮询**：`GET /api/client/order/status/{order_no}`，2 秒间隔、最长 10 分钟；状态归类与网站 `order-checkout` 控制器逐行同源（`PAID+SUCCESS` 成功、`PAID+FAILED/MAX_RETRY` 履约失败、`EXPIRED` 过期、`CANCELLED` / `REFUNDED` 取消或失败，其余继续轮询），轮询超时按可重试失败收敛，用户可重新发起。
 - **错误收敛**：价格已更新（`21005`）重新拉取商品配置整体刷新；订单不存在 / 已过期（`20001` / `20003`）提示重新下单；网关失败 / 支付方式未实现（`21001` / `21004`）按下单失败提示。未登录先经 popup 登录弹窗完成登录（登录门控复用既有弹窗，见 `@../007.用户系统/feat.md`）。
 - **管理订阅**：用户菜单（仅有效订阅时出现）调 `POST /api/client/subscription/management` 创建渠道管理入口并外跳；响应 URL 为空（一次性买断等非自动续费订阅）时明确提示不可管理，不静默失败。
 

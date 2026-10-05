@@ -456,7 +456,14 @@ def _run_playwright(args: argparse.Namespace, specs: list[LocalNodeSpec]) -> Non
         }
     )
     subprocess.run(
-        ["pnpm", "exec", "playwright", "test", "--project=parse-download-smoke"],
+        [
+            "pnpm",
+            "exec",
+            "playwright",
+            "test",
+            "--project=parse-download-smoke",
+            "--workers=1",
+        ],
         cwd=WEBSITE_ROOT,
         env=env,
         check=True,

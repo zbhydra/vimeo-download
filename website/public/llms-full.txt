@@ -1,42 +1,35 @@
 # Vimeo Video Downloader
 
-> Full content index for Vimeo Video Downloader. Use this file when `/llms.txt` is too compact and an AI agent needs the main product pages, language entrances, technical indexes, and update pages.
+> Full content index for Vimeo Video Downloader. Use this file when `/llms.txt` is too compact and an AI agent needs the main pages, language entrances and sitemap files.
 
-## Core Product
+## Pages
 
-- [Vimeo Video Downloader Home](https://vimeo-video-downloader.example/): Main Vimeo download entry with link parsing, resolution selection, and troubleshooting.
-- [Vimeo Downloader](https://vimeo-video-downloader.example/vimeo-downloader/): Dedicated Vimeo downloader landing page with supported link formats and download steps.
-- [Pricing](https://vimeo-video-downloader.example/pricing/): Credits packages and Unlimited plan for the browser extension.
-- [About Vimeo Video Downloader](https://vimeo-video-downloader.example/about/): Product identity, website and extension responsibilities, privacy principles, and access boundaries.
-- [Contact Vimeo Video Downloader](https://vimeo-video-downloader.example/contact/): Public support channel for account, download, extension, billing, and privacy questions.
-- [Short LLMs index](https://vimeo-video-downloader.example/llms.txt): Compact AI-readable summary of the website and its highest-value pages.
-
-## Platform Downloader
-
-- [Vimeo Downloader](https://vimeo-video-downloader.example/vimeo-downloader/): Parse public Vimeo video links on vimeo.com, www.vimeo.com, and player.vimeo.com, then download the available renditions in the resolution you pick.
+- [Home](https://vimeo-video-downloader.example/): Online download tool and an overview of the Chrome extension: features, how it works, online tool versus extension, scope and limits, plans and FAQ.
+- [Pricing](https://vimeo-video-downloader.example/pricing/): The Unlimited subscription for the Chrome extension.
+- [About](https://vimeo-video-downloader.example/about/): What the website and the extension each do, privacy principles and access boundaries.
+- [Contact](https://vimeo-video-downloader.example/contact/): Public support channel for account, download, extension, billing and privacy questions.
+- [Terms of Service](https://vimeo-video-downloader.example/terms/): Terms for using the website and the extension.
+- [Privacy Policy](https://vimeo-video-downloader.example/privacy/): What data is collected and how it is used.
+- [Short LLMs index](https://vimeo-video-downloader.example/llms.txt): Compact AI-readable summary of the website and its pages.
 
 ## Language Entrances
 
-- [English](https://vimeo-video-downloader.example/): English homepage.
-- [Simplified Chinese](https://vimeo-video-downloader.example/zh-cn/): Simplified Chinese homepage.
-- [Traditional Chinese](https://vimeo-video-downloader.example/zh-tw/): Traditional Chinese homepage.
-- [Japanese](https://vimeo-video-downloader.example/ja/): Japanese homepage.
-- [Korean](https://vimeo-video-downloader.example/ko/): Korean homepage.
-- [Spanish](https://vimeo-video-downloader.example/es/): Spanish homepage.
-- [Portuguese](https://vimeo-video-downloader.example/pt/): Portuguese homepage.
-- [German](https://vimeo-video-downloader.example/de/): German homepage.
-- [French](https://vimeo-video-downloader.example/fr/): French homepage.
-- [Russian](https://vimeo-video-downloader.example/ru/): Russian homepage.
-- [Italian](https://vimeo-video-downloader.example/it/): Italian homepage.
-- [Vietnamese](https://vimeo-video-downloader.example/vi/): Vietnamese homepage.
-- [Thai](https://vimeo-video-downloader.example/th/): Thai homepage.
-- [Indonesian](https://vimeo-video-downloader.example/id/): Indonesian homepage.
+- [English](https://vimeo-video-downloader.example/): English home page.
+- [Simplified Chinese](https://vimeo-video-downloader.example/zh-cn/): Simplified Chinese home page.
+- [Traditional Chinese](https://vimeo-video-downloader.example/zh-tw/): Traditional Chinese home page.
+- [Japanese](https://vimeo-video-downloader.example/ja/): Japanese home page.
+- [Korean](https://vimeo-video-downloader.example/ko/): Korean home page.
+- [Spanish](https://vimeo-video-downloader.example/es/): Spanish home page.
+- [Portuguese](https://vimeo-video-downloader.example/pt/): Portuguese home page.
+- [German](https://vimeo-video-downloader.example/de/): German home page.
+- [French](https://vimeo-video-downloader.example/fr/): French home page.
+- [Russian](https://vimeo-video-downloader.example/ru/): Russian home page.
+- [Italian](https://vimeo-video-downloader.example/it/): Italian home page.
+- [Vietnamese](https://vimeo-video-downloader.example/vi/): Vietnamese home page.
+- [Thai](https://vimeo-video-downloader.example/th/): Thai home page.
+- [Indonesian](https://vimeo-video-downloader.example/id/): Indonesian home page.
 
-## Updates
-
-- [Changelog](https://vimeo-video-downloader.example/changelog/): Product release notes and Vimeo download workflow updates.
-
-## Technical Indexes
+## Sitemaps
 
 - [Sitemap index](https://vimeo-video-downloader.example/sitemap.xml): Main XML sitemap index exposed through robots.txt.
 - [Sitemap index alias](https://vimeo-video-downloader.example/sitemap_index.xml): Alias with the same sitemap index content.
@@ -59,14 +52,9 @@
 ## Key Facts
 
 - Product name: Vimeo Video Downloader.
-- Site domain: `vimeo-video-downloader.example`.
-- Platform type: Browser website for public Vimeo links; the browser extension adds larger and queued downloads.
-- Supported source platform: Vimeo only.
-- Language coverage: 14 locales using per-language sitemap files.
+- Supported source platform: Vimeo only (vimeo.com, www.vimeo.com, player.vimeo.com).
+- Online tool: paste a public Vimeo link, no sign-in required; saves MP4 video.
+- Chrome extension: Chrome and other Chromium browsers; saves MP4 video, M4A or MP3 audio, VTT subtitles and JPEG cover images, with a cross-tab download queue.
+- Limits: does not bypass access controls, does not remove DRM, and is not affiliated with Vimeo, Inc.
+- Language coverage: 14 website locales, English by default.
 - Safety boundary: Vimeo Video Downloader never asks for Vimeo or Google passwords, verification codes, API credentials, or session files.
-
-## Contact
-
-- [About](https://vimeo-video-downloader.example/about/)
-- [Contact](https://vimeo-video-downloader.example/contact/)
-- [Changelog](https://vimeo-video-downloader.example/changelog/)

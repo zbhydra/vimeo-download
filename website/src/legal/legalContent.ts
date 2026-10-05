@@ -68,7 +68,7 @@ interface LegalContent {
   privacy: LegalPageContent
 }
 
-const termsLastUpdated = 'September 18, 2026'
+const termsLastUpdated = 'October 5, 2026'
 const privacyLastUpdated = 'September 18, 2026'
 const serviceName = 'Vimeo Video Downloader'
 
@@ -77,13 +77,13 @@ const englishLegalContent: LegalContent = {
     navLabel: 'Terms',
     seoTitle: `Terms of Service | ${serviceName}`,
     seoDescription:
-      'Read the Vimeo Video Downloader Terms of Service, including acceptable use, account access, downloads, Credits, subscriptions, disclaimers, and contact details.',
+      'Read the Vimeo Video Downloader Terms of Service, including acceptable use, account access, free website downloads, subscriptions, disclaimers, and contact details.',
     title: 'Terms of Service',
     intro:
       'These terms explain how you may use Vimeo Video Downloader, including the website, browser extension, download tools, account features, and subscription-related workflows.',
     updatedLabel: 'Last updated',
     updatedAt: termsLastUpdated,
-    updatedAtIso: '2026-09-18',
+    updatedAtIso: '2026-10-05',
     sections: [
       {
         title: 'Acceptance',
@@ -111,7 +111,7 @@ const englishLegalContent: LegalContent = {
           },
           {
             kind: 'paragraph',
-            text: 'Some features may run locally in your browser extension, while website parsing, account, quota, and subscription features may communicate with our backend services.'
+            text: 'Some features may run locally in your browser extension, while website parsing, account, and subscription features may communicate with our backend services.'
           }
         ]
       },
@@ -147,19 +147,15 @@ const englishLegalContent: LegalContent = {
         ]
       },
       {
-        title: 'Paid features, Credits, and subscriptions',
+        title: 'Free website downloads and subscriptions',
         blocks: [
           {
             kind: 'paragraph',
-            text: 'Paid or upgraded features, if available, may include quotas, limits, billing periods, or manual activation steps shown on the pricing page or in direct support messages.'
+            text: 'The website download tool on the home page is free to use. We may adjust or limit it as described in these Terms.'
           },
           {
             kind: 'paragraph',
-            text: 'Credits and subscriptions are separate products with separate usage scopes. Credits may be used only for website download features, while paid subscriptions apply only to supported desktop browser extension download features. A subscription does not include website download Credits, and Credits do not extend or replace subscription benefits.'
-          },
-          {
-            kind: 'paragraph',
-            text: 'Credits are one-time purchases for website download features. Purchased Credits are added to the purchasing account after payment is confirmed, do not auto-renew, do not expire, and are not refundable, transferable, or redeemable for cash.'
+            text: 'Paid or upgraded features, if available, may include quotas, limits, billing periods, or manual activation steps shown on the pricing page or in direct support messages. Paid subscriptions apply only to supported desktop browser extension download features.'
           },
           {
             kind: 'paragraph',

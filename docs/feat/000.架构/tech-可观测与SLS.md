@@ -7,11 +7,11 @@
 
 | 站点 | 文件 |
 | --- | --- |
-| website | `website/src/scripts/homepage/sls-mark.ts` |
+| website | `website/src/scripts/runtime/sls-mark.ts` |
 | extension | `extension/src/core/api/mark/sls.ts`、`extension/src/core/api/mark/api.ts`、`extension/src/core/content/services/ContentMarkReporter.ts`、`extension/src/background/services/ExtensionMarkReporter.ts` |
-| Website 共享实现 | `website-shared/src/homepage-runtime/mark.ts`(`recordHomepageMark` 双写入口)、`website-shared/src/download/scripts/media-api.ts`(下载节点连接失败 → SLS)、`website-shared/src/homepage-runtime/api.ts`(后端连接失败 → SLS) |
-| 异常捕获 | `website-shared/src/homepage-runtime/frontend-error-capture.ts` |
-| 脱敏 | `website-shared/src/homepage-runtime/mark-sanitizer.ts`、`extension/src/core/api/mark/mark-sanitizer.ts` |
+| website 运行时 | `website/src/scripts/runtime/mark.ts`(`recordHomepageMark` 双写入口)、`website/src/scripts/download/media-api.ts`(下载节点连接失败 → SLS)、`website/src/scripts/runtime/api.ts`(后端连接失败 → SLS) |
+| 异常捕获 | `website/src/scripts/runtime/frontend-error-capture.ts` |
+| 脱敏 | `website/src/scripts/runtime/mark-sanitizer.ts`、`extension/src/core/api/mark/mark-sanitizer.ts` |
 
 ## 2. 阿里云 SLS 配置
 
@@ -105,14 +105,14 @@ https://{project}.{host}/logstores/{logstore}/track?APIVersion=0.6.0&__topic__=m
 
 | 站点 | 入口 |
 | --- | --- |
-| website | `website/src/scripts/homepage/mark.ts` 兼容入口；实现为 `website-shared/src/homepage-runtime/mark.ts` 的 `recordHomepageMark()` |
-| website | `website-shared/src/homepage-runtime/first-opened-mark.ts` 首次访问 mark-log |
+| website | `website/src/scripts/runtime/mark.ts` 的 `recordHomepageMark()` |
+| website | `website/src/scripts/runtime/first-opened-mark.ts` 首次访问 mark-log |
 | website | `website/src/scripts/globalClickEvents.ts` 安装 CTA mark-log |
-| website | `website-shared/src/components/pricing/pricing-page-controller.ts` 插件升级入口 Pricing 曝光 |
-| website | `website-shared/src/components/pricing/pricing-subscription-confirm-controller.ts` 插件商店评价点击 |
+| website | `website/src/components/pricing/pricing-page-controller.ts` 插件升级入口 Pricing 曝光 |
+| website | `website/src/components/pricing/pricing-subscription-confirm-controller.ts` 插件商店评价点击 |
 | website | 全局 `error` / `unhandledrejection` |
-| website | `website/src/scripts/homepage/api.ts` 连接后端失败/超时 |
-| website | `website-shared/src/download/scripts/media-api.ts` 连接解析/下载节点失败/超时 |
+| website | `website/src/scripts/runtime/api.ts` 连接后端失败/超时 |
+| website | `website/src/scripts/download/media-api.ts` 连接解析/下载节点失败/超时 |
 | extension | `extension/src/popup/App.vue` 弹窗打开 |
 | extension | `extension/src/sites/vimeo/content/index.ts` content 初始化 |
 | extension | `extension/src/background/services/DownloadOrchestrator.ts` 下载入队(点击)、成功、失败、配额拒绝；页面按钮与 Popup 的下载统一经 background 编排器记录 |

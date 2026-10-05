@@ -57,12 +57,11 @@ monorepo，各子项目独立用 **pnpm** 管理（无根 workspace）。
 | `backend/`         | 后端 API                      | Python + FastAPI        | spec-python / spec-mysql / spec-redis |
 | `extension/`       | 浏览器插件端                  | Chrome MV3 + Vue 3      | spec-extension                    |
 | `website/`         | 主站                          | Astro                   | spec-website                      |
-| `website-shared/`  | Website 共享源码包             | —                       | —                                 |
 | `admin/`           | 管理后台                      | 独立 Vue + Naive UI SPA | —                                 |
 | `scripts/`         | 仓库级构建脚本                | Node                    | —                                 |
 | `docs/`            | 需求 / 技术 / 计划文档          | —                       | spec-docs                         |
 
-**网站关联边界**：`website/` 通过 `@website-shared` 别名引用 `website-shared/src` 的组件与控制器（映射见 `website/astro.config.mjs`），共享逻辑不在站点层重复维护。
+**网站边界**：`website/` 自包含，下载工作区、Pricing、结算弹窗与运行时脚本全部在 `website/src`；`website/` 与 `extension/` 无共享源码，各自维护。
 
 **跨端事实**：客户端接口前缀 `/api/client/*`，后台前缀 `/api/admin/*`；后端业务时区统一为 `America/New_York`（见 `backend/src/app/utils/time.py`），不是 UTC。
 
