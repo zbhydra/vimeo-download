@@ -124,3 +124,20 @@ async def test_send_verify_code_reads_current_settings_smtp(monkeypatch):
 
     assert success is True
     assert attempted_hosts == ["smtp-new.example.com"]
+
+
+@pytest.mark.asyncio
+async def test_send_verify_code_includes_code_in_subject(monkeypatch):
+    """通知主题直接包含验证码，便于用户在邮件通知中查看。"""
+    account = make_smtp_account("smtp.example.com")
+    messages: list[EmailMessage] = []
+
+    async def fake_send(message: EmailMessage, _account: SMTPSettings) -> None:
+        messages.append(message)
+
+    monkeypatch.setattr(email_sender, "_smtp_accounts_override", [account])
+    monkeypatch.setattr(email_sender, "_send_func", fake_send)
+    monkeypatch.setattr("app.utils.email_sender.random.random", lambda: 0.0)
+
+    assert await email_sender.send_verify_code("to@example.com", "123456", "en-US")
+    assert "123456" in messages[0]["Subject"]

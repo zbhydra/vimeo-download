@@ -122,7 +122,7 @@ class EmailSender:
         """
         html_body = self._load_html_template(code, language)
         logger.info(f"send_verify_code: {code}")
-        subject = translator.translate("email.subject", language)
+        subject = f"{translator.translate('email.subject', language)}: {code}"
         available_accounts = list(self._smtp_accounts_override or settings.smtp)
         attempt = 0
 
