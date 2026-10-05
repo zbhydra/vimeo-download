@@ -44,7 +44,7 @@ api:
   redoc_url: "/redoc"
 
 auth:
-  jwt_secret_key: "abcabcss$%^&*()_+"
+  jwt_secret_key: "{JWT_SECRET_KEY}"
   jwt_algorithm: "HS256"
   google_client_id: "{GOOGLE_CLIENT_ID}"
   # 可选：仅新自定义 Google 按钮 OAuth code flow 需要，留空不影响 One Tap 和旧 callback。

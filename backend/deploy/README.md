@@ -41,7 +41,7 @@ cd backend && uv run python -m playwright install --with-deps chromium
 
 - 连接服务器使用服务器登录私钥（`SSH_PRIVATE_KEY_PATH` 在 .env 内或 ~/.ssh/）
 - 拉取 Git 仓库使用 `backend/deploy/key/git_key`（与 .env 解耦；专 key 专用）
-- 每次 `init.sh` / `deploy.sh` 都会基于 `backend/config.yaml.example` + .env 内 DB / SMTP / APP_NAME / LOGGER_LEVEL / PUBLIC_API_BASE_URL / PUBLIC_WEBSITE_BASE_URL / GOOGLE_CLIENT_ID / APP_ROLE / DOWNLOAD_TOKEN_*，以及可选的 GOOGLE_CLIENT_SECRET 字段覆盖生成远端 `backend/config.yaml`
+- 每次 `init.sh` / `deploy.sh` 都会基于 `backend/config.yaml.example` + .env 内 DB / SMTP / APP_NAME / LOGGER_LEVEL / PUBLIC_API_BASE_URL / PUBLIC_WEBSITE_BASE_URL / JWT_SECRET_KEY / GOOGLE_CLIENT_ID / APP_ROLE / DOWNLOAD_TOKEN_*，以及可选的 GOOGLE_CLIENT_SECRET 字段覆盖生成远端 `backend/config.yaml`
 - 每次 `init.sh` / `deploy.sh` 都会基于 .env 内 `DEPLOY_DIR` / `BACKEND_PORT_PY` 渲染 supervisor，并基于 `NGINX_SERVER_NAME` / `BACKEND_PORT_PY` 渲染业务 API Nginx 配置；业务 Nginx 只监听 80，HTTPS 由外层 CL 代理终止，并关闭代理缓冲以避免大流写入 `proxy_temp`
 - Supervisor 停止服务时，Uvicorn 立即停止接收新请求，存量请求最多等待 10 秒；超时后取消存量请求并退出，Supervisor 同样以 10 秒作为进程组强制终止上限
 - 业务 supervisor 与 Nginx 配置文件名使用 `APP_NAME`；部署时会清理旧配置名的 vhost 文件，避免同机双进程或重复 server_name
@@ -154,6 +154,7 @@ backend/deploy/
 Google Data OAuth 授权完成后跳回管理后台的地址由 Admin SPA 发起授权时传入，不进入业务后端发布配置。
 Google 登录 Client ID 从 .env 内 `GOOGLE_CLIENT_ID` 读取，用于后端校验 Google ID Token 的 `aud`。
 Google OAuth Client Secret 从 .env 内 `GOOGLE_CLIENT_SECRET` 读取，可留空；仅新自定义按钮 OAuth code flow 需要，只写入后端 `auth.google_client_secret`，不进入前端 PUBLIC 配置。
+JWT 签名密钥从 `.env` 内 `JWT_SECRET_KEY` 读取，部署脚本每次生成 `backend/config.yaml` 时写入 `auth.jwt_secret_key`；生产环境必须使用随机值。
 下载 token 签发私钥从 .env 内 `DOWNLOAD_TOKEN_PRIVATE_KEY` 读取；验签公钥从 `DOWNLOAD_TOKEN_PUBLIC_KEYS` 多行 YAML 列表块读取，业务服务器至少配置一条当前公钥，密钥轮换期间可保留上一轮公钥。
 飞书告警群机器人 webhook 从 .env 内 `FEISHU_ALARM_WEBHOOK_URL` 读取（可选），渲染进 `backend/config.yaml` 的 `feishu_alarm.webhook_url`；**它只走这条路径**——远端 `config.yaml` 每次发布都被模板整份覆盖，在服务器上手工改的值下次发布即失效，环境变量 `FEISHU_ALARM_WEBHOOK_URL` 也压不过 YAML（`config_schema.py` 用 init kwargs 传值，pydantic-settings 中 init 优先级高于 env）。留空时 `send_feishu_alarm` 记一条 WARNING 后跳过，告警不会发出。
 SMTP 账号列表从 .env 内 `SMTP_CONFIG` 多行 YAML 块读取。Redis 连接从 .env 内 `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` 读取（可选，缺省走本机 127.0.0.1:6379 无密码；空字符串与 null 等价；部署脚本会把密码渲染成安全 YAML 字符串，密码可包含引号、反斜杠、`@`、`/`、`#`、`?` 等特殊字符）。数据库名来自 `.env.*`：
@@ -229,6 +230,7 @@ bash backend/deploy/deploy.sh backend/deploy/.env.prod --skip-health-check
 - `.env.*` 里的 `PUBLIC_WEBSITE_BASE_URL`
 - `.env.*` 里的 `GOOGLE_CLIENT_ID`
 - `.env.*` 里的可选 `GOOGLE_CLIENT_SECRET`
+- `.env.*` 里的 `JWT_SECRET_KEY`
 - `.env.*` 里的 `DOWNLOAD_TOKEN_ALGORITHM`
 - `.env.*` 里的 `DOWNLOAD_TOKEN_PRIVATE_KEY`
 - `.env.*` 里的 `DOWNLOAD_TOKEN_PUBLIC_KEYS`

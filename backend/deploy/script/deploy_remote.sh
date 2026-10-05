@@ -5,7 +5,7 @@ set -e
 # 远程执行脚本 - 在目标服务器上执行部署更新
 #
 # 用法: (由 deploy.sh 自动调用，无需手动执行)
-#   bash deploy_remote.sh <deploy_dir> <backup_dir> <keep_versions> <git_key_path> <db_host> <db_user> <db_passwd> <smtp_config_b64> <public_api_base_url> <google_client_id> <google_client_secret_or_empty> <public_website_base_url> [app_role] [download_token_algorithm] [download_token_private_key_b64] [download_token_public_keys_b64] [resource_token_secret_b64] [backend_port_py] [nginx_server_name] [app_name] [db_name] [logger_level] [service_node_internal_auth_token_b64] [redis_host] [redis_port] [redis_password_b64] [branch] [feishu_alarm_webhook_url_b64] [--no-backup] [--skip-health-check]
+#   bash deploy_remote.sh <deploy_dir> <backup_dir> <keep_versions> <git_key_path> <db_host> <db_user> <db_passwd> <smtp_config_b64> <public_api_base_url> <google_client_id> <google_client_secret_or_empty> <public_website_base_url> [app_role] [download_token_algorithm] [download_token_private_key_b64] [download_token_public_keys_b64] [resource_token_secret_b64] [backend_port_py] [nginx_server_name] [app_name] [db_name] [logger_level] [service_node_internal_auth_token_b64] [redis_host] [redis_port] [redis_password_b64] [branch] [feishu_alarm_webhook_url_b64] [jwt_secret_key] [--no-backup] [--skip-health-check]
 #
 # 此脚本将:
 # 1. 备份当前版本
@@ -48,6 +48,7 @@ REDIS_PASSWORD_B64="${26:-}"
 BRANCH="${27:-main}"
 # 飞书告警 webhook（可选；base64 透传，避免 URL 里的特殊字符破坏 sed / SSH 命令行）
 FEISHU_ALARM_WEBHOOK_URL_B64="${28:-}"
+JWT_SECRET_KEY="${29:-}"
 SKIP_BACKUP=""
 SKIP_HEALTH_CHECK=""
 
@@ -72,6 +73,10 @@ if [ -z "$PUBLIC_API_BASE_URL" ]; then
 fi
 if [ -z "$GOOGLE_CLIENT_ID" ]; then
     echo "ERROR: 缺少 Google 登录配置参数: google_client_id" >&2
+    exit 1
+fi
+if [ -z "$JWT_SECRET_KEY" ]; then
+    echo "ERROR: 缺少 JWT 密钥参数: jwt_secret_key" >&2
     exit 1
 fi
 if [ -z "$PUBLIC_WEBSITE_BASE_URL" ]; then
@@ -249,6 +254,7 @@ generate_config_from_example() {
     backend_port_escaped=$(escape_sed_replacement "$BACKEND_PORT_PY")
     google_client_id_escaped=$(escape_sed_replacement "$GOOGLE_CLIENT_ID")
     google_client_secret_escaped=$(escape_sed_replacement "$GOOGLE_CLIENT_SECRET")
+    jwt_secret_key_escaped=$(escape_sed_replacement "$JWT_SECRET_KEY")
     public_website_base_url_escaped=$(escape_sed_replacement "$PUBLIC_WEBSITE_BASE_URL")
     download_token_algorithm_escaped=$(escape_sed_replacement "$DOWNLOAD_TOKEN_ALGORITHM")
     download_token_private_key_escaped=$(escape_sed_replacement "$(decode_b64_yaml_scalar_value "$DOWNLOAD_TOKEN_PRIVATE_KEY_B64")")
@@ -280,6 +286,7 @@ generate_config_from_example() {
         -e "s|{PUBLIC_API_BASE_URL}|$public_api_base_url_escaped|g" \
         -e "s|{GOOGLE_CLIENT_ID}|$google_client_id_escaped|g" \
         -e "s|{GOOGLE_CLIENT_SECRET}|$google_client_secret_escaped|g" \
+        -e "s|{JWT_SECRET_KEY}|$jwt_secret_key_escaped|g" \
         -e "s|{PUBLIC_WEBSITE_BASE_URL}|$public_website_base_url_escaped|g" \
         -e "s|{DOWNLOAD_TOKEN_ALGORITHM}|$download_token_algorithm_escaped|g" \
         -e "s|{LOGGER_LEVEL}|$logger_level_escaped|g" \

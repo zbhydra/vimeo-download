@@ -77,6 +77,7 @@ def _business_config_replacements(
         "DB_NAME": "vimeo_download",
         "PUBLIC_API_BASE_URL": "https://vimeo-download-api.example.com",
         "PUBLIC_WEBSITE_BASE_URL": "https://vimeodownloader.app",
+        "JWT_SECRET_KEY": "test-jwt-secret",
         "GOOGLE_CLIENT_ID": "google-client-id",
         "GOOGLE_CLIENT_SECRET": "",
         "DOWNLOAD_TOKEN_ALGORITHM": "EdDSA",
@@ -153,6 +154,7 @@ def test_business_remote_scripts_replace_all_config_placeholders():
         assert 'FEISHU_ALARM_WEBHOOK_URL_B64="${28:-}"' in _read_backend_file(
             script_path
         )
+        assert 'JWT_SECRET_KEY="${29:-}"' in _read_backend_file(script_path)
     for entry_path in ["deploy/init.sh", "deploy/deploy.sh"]:
         assert "FEISHU_ALARM_WEBHOOK_URL_B64" in _read_backend_file(entry_path)
 
@@ -178,7 +180,7 @@ def test_business_deploy_uses_configured_git_branch() -> None:
     assert ': "${BRANCH:?ERROR: BRANCH 未定义}"' in deploy_entry
     # 断言的是「参数表结尾」：BRANCH 必须被转发，且尾部只剩可选开关（新增可选参数须同步这条字面量）
     assert (
-        r"\"$BRANCH\" \"$FEISHU_ALARM_WEBHOOK_URL_B64\" $SKIP_BACKUP $SKIP_HEALTH_CHECK"
+        r"\"$BRANCH\" \"$FEISHU_ALARM_WEBHOOK_URL_B64\" \"$JWT_SECRET_KEY\" $SKIP_BACKUP $SKIP_HEALTH_CHECK"
         in deploy_entry
     )
     assert 'BRANCH="${27:-main}"' in remote_script
