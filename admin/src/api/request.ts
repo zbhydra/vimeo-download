@@ -11,7 +11,7 @@ import { useAuthStore } from "@/stores/auth";
 
 /**
  * 后端业务 API 根地址。
- * - 生产：deploy.sh build 时注入 VITE_API_BASE_URL（如 https://api.vimeo-video-downloader.example），admin 直连后端公网 API。
+ * - 生产：deploy.sh build 时注入 VITE_API_BASE_URL（如 https://api.vimeodownloader.app），admin 直连后端公网 API。
  * - 开发：不注入 → 空串 → 走相对路径，由 vite proxy 转发到本地后端（vite.config.ts 的 /api → localhost:7900）。
  * 后端 CORS 为 Access-Control-Allow-Origin: *，直连无跨域问题。
  */

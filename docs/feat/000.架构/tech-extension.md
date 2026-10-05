@@ -111,13 +111,13 @@ Upgrade 的购买动作由宿主提供：popup 打开 Premium，content 打开�
 
 ### A6. 与 backend 通信
 
-- `vite.config.ts`：打包时注入 `__API_BASE_URL__` / `__WEBSITE_BASE_URL__`，运行时代码不直接读 `import.meta.env`。默认 dev 为 `http://localhost:7900` + `http://localhost:7910`，默认 prod 为 `https://api.<PLACEHOLDER_PROD_HOST>` + `https://<PLACEHOLDER_PROD_HOST>`（占位值在 `src/core/constants/deployment.ts`，上线前必须替换成真实域名）；可用 `EXTENSION_API_BASE_URL` / `EXTENSION_WEBSITE_BASE_URL` 覆盖。
+- `vite.config.ts`：打包时注入 `__API_BASE_URL__` / `__WEBSITE_BASE_URL__`，运行时代码不直接读 `import.meta.env`。默认 dev 为 `http://localhost:7900` + `http://localhost:7910`，默认 prod 为 `https://api.vimeodownloader.app` + `https://vimeodownloader.app`（值在 `src/core/constants/deployment.ts`）；可用 `EXTENSION_API_BASE_URL` / `EXTENSION_WEBSITE_BASE_URL` 覆盖。
 - `core/api/config.ts`：消费打包注入的 API / Website base URL；所有端点完整路径常量集中在此。
 - **dev / prod 两套构建都写 `dist/`**（`vite.config.ts` 只有一个 `build.outDir`，且 `emptyOutDir: true` 会全量清空），后跑的覆盖先跑的，加载前必须确认 `dist/` 就是刚跑的那套：
 
   | 命令 | 用途 | API / 官网 base | SLS | 额外产出 |
   | --- | --- | --- | --- | --- |
-  | `pnpm build` | 商店包（含 `vue-tsc` 与 zip） | `https://api.<PLACEHOLDER_PROD_HOST>` / `https://<PLACEHOLDER_PROD_HOST>` | 开（默认 project / logstore） | `dist.zip` |
+  | `pnpm build` | 商店包（含 `vue-tsc` 与 zip） | `https://api.vimeodownloader.app` / `https://vimeodownloader.app` | 开（默认 project / logstore） | `dist.zip` |
   | `pnpm build:dev` | 本地开发包，不压 zip、不压缩、带 sourcemap | `http://localhost:7900` / `http://localhost:7910` | 关 | 无 |
 
   两者 manifest 与权限完全一致（`host_permissions` / `content_scripts.matches` 由 `SITE_REGISTRATION` 派生，与 `NODE_ENV` 无关），差异只在注入的 base URL、SLS 开关与压缩 / sourcemap。

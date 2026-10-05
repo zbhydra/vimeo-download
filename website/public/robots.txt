@@ -10,4 +10,4 @@ Allow: /llms-full.txt
 
 # Sitemap reference
 # TODO(待替换): 与 src/lib/site.mjs 的 SITE_ORIGIN 一起替换为真实域名。
-Sitemap: https://vimeo-video-downloader.example/sitemap.xml
+Sitemap: https://vimeodownloader.app/sitemap.xml

@@ -12,7 +12,7 @@ from app.services.google_redirect_login_service import (
     google_redirect_login_service,
 )
 
-WEBSITE_BASE_URL = "https://vimeo-video-downloader.example"
+WEBSITE_BASE_URL = "https://vimeodownloader.app"
 # 合法扩展 ID：32 位 a-p 小写字母。
 EXTENSION_ID = "abcdefghijklmnopabcdefghijklmnop"
 EXTENSION_CALLBACK_URL = f"https://{EXTENSION_ID}.chromiumapp.org/google-login"

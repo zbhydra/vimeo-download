@@ -8,18 +8,18 @@
  *
  * 用 `.mjs` 而不是 `.ts`：Astro 配置文件只能直接 import 纯 ESM 模块。
  *
- * TODO(待替换): 下列地址全部是占位值，上线前必须替换。
- * - `SITE_ORIGIN` / `SITE_HOST`：Vimeo 站真实域名确定后替换。
+ * TODO(待替换): Chrome 商店地址、官方 X 账号仍是占位值，上线前必须替换。
+ * - `SITE_ORIGIN` / `SITE_HOST`：生产站点域名已统一为 vimeodownloader.app。
  * - `CHROME_WEB_STORE_URL`：Vimeo 插件通过商店审核后，替换成真实 listing 地址。
  * - `OFFICIAL_X_HANDLE` / `OFFICIAL_X_URL`：官方 X 账号确定为 Vimeo 产品账号后替换。
  * 替换点仅此文件（部署侧 nginx 与 .env 见各自注释），改完即可全站生效。
  */
 
 /** 生产站点源，无尾斜杠。 */
-export const SITE_ORIGIN = 'https://vimeo-video-downloader.example'
+export const SITE_ORIGIN = 'https://vimeodownloader.app'
 
 /** 生产站点主机名，用于只需要 host 的场景（cookie domain、nginx server_name 等）。 */
-export const SITE_HOST = 'vimeo-video-downloader.example'
+export const SITE_HOST = 'vimeodownloader.app'
 
 /** 产品名，用于结构化数据、meta author、sitemap XSL 等非多语言位置。 */
 export const PRODUCT_NAME = 'Vimeo Video Downloader'

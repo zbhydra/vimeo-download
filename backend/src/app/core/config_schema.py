@@ -88,13 +88,13 @@ class AppSettings(BaseSettings):
     debug: bool = Field(default=False)
     host: str = Field(default="0.0.0.0")
     port: int = Field(default=9660)
-    # TODO(待替换): 新域名与 Chrome 商店地址确定后，只在这里与 deploy/.env.* 替换占位。
+    # 生产域名集中在 deploy/.env.*，这里作为本地默认值。
     public_api_base_url: str = Field(
-        default="https://api.vimeo-video-downloader.example",
+        default="https://api.vimeodownloader.app",
         description="对外 API 根地址，用于生成返回给客户端的绝对 URL",
     )
     public_website_base_url: str = Field(
-        default="https://vimeo-video-downloader.example",
+        default="https://vimeodownloader.app",
         description=(
             "对外 Website 根地址，用于 Google redirect 登录成功后跳回网站，"
             "并派生 Google 回跳域名白名单"

@@ -13,7 +13,7 @@ Cloudflare 位置：
 表达式：
 
 ```text
-(http.host in {"vimeo-video-downloader.example" "www.vimeo-video-downloader.example" "test-vimeo-video-downloader.example"} and (
+(http.host in {"vimeodownloader.app" "www.vimeodownloader.app" "test-vimeodownloader.app"} and (
   http.request.uri.path eq "/assets/icons/logo.svg" or
   http.request.uri.path eq "/assets/icons/credits.svg"
 ))
@@ -32,10 +32,10 @@ Cache eligibility: Bypass cache
 部署后清理缓存：
 
 ```bash
-curl -I "https://vimeo-video-downloader.example/assets/icons/logo.svg"
-curl -I "https://vimeo-video-downloader.example/assets/icons/logo.svg?v=20260706"
-curl -I "https://vimeo-video-downloader.example/assets/icons/credits.svg"
-curl -I "https://test-vimeo-video-downloader.example/assets/icons/logo.svg?v=20260706"
+curl -I "https://vimeodownloader.app/assets/icons/logo.svg"
+curl -I "https://vimeodownloader.app/assets/icons/logo.svg?v=20260706"
+curl -I "https://vimeodownloader.app/assets/icons/credits.svg"
+curl -I "https://test-vimeodownloader.app/assets/icons/logo.svg?v=20260706"
 ```
 
 预期响应头：

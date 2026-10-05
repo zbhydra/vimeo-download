@@ -34,9 +34,9 @@ function stubDeviceId(deviceId: string): void {
 }
 
 function stubRuntimeGlobals(slsConfig: typeof enabledSlsConfig): void {
-  vi.stubGlobal('__API_BASE_URL__', 'https://api.vimeo-video-downloader.example')
+  vi.stubGlobal('__API_BASE_URL__', 'https://api.vimeodownloader.app')
   vi.stubGlobal('__DEV__', false)
-  vi.stubGlobal('__WEBSITE_BASE_URL__', 'https://vimeo-video-downloader.example')
+  vi.stubGlobal('__WEBSITE_BASE_URL__', 'https://vimeodownloader.app')
   vi.stubGlobal('__ALI_SLS_MARK_CONFIG__', slsConfig)
 }
 

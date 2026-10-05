@@ -4,17 +4,17 @@
 
 ## Pages
 
-- [Home](https://vimeo-video-downloader.example/): Online download tool and an overview of the Chrome extension: features, how it works, online tool versus extension, scope and limits, plans and FAQ.
-- [Pricing](https://vimeo-video-downloader.example/pricing/): The Unlimited subscription for the Chrome extension.
-- [About](https://vimeo-video-downloader.example/about/): What the website and the extension each do, privacy principles and access boundaries.
-- [Contact](https://vimeo-video-downloader.example/contact/): Public support channel for account, download, extension, billing and privacy questions.
-- [Terms of Service](https://vimeo-video-downloader.example/terms/): Terms for using the website and the extension.
-- [Privacy Policy](https://vimeo-video-downloader.example/privacy/): What data is collected and how it is used.
-- [Full content index](https://vimeo-video-downloader.example/llms-full.txt): The same pages plus language entrances and per-language sitemaps.
+- [Home](https://vimeodownloader.app/): Online download tool and an overview of the Chrome extension: features, how it works, online tool versus extension, scope and limits, plans and FAQ.
+- [Pricing](https://vimeodownloader.app/pricing/): The Unlimited subscription for the Chrome extension.
+- [About](https://vimeodownloader.app/about/): What the website and the extension each do, privacy principles and access boundaries.
+- [Contact](https://vimeodownloader.app/contact/): Public support channel for account, download, extension, billing and privacy questions.
+- [Terms of Service](https://vimeodownloader.app/terms/): Terms for using the website and the extension.
+- [Privacy Policy](https://vimeodownloader.app/privacy/): What data is collected and how it is used.
+- [Full content index](https://vimeodownloader.app/llms-full.txt): The same pages plus language entrances and per-language sitemaps.
 
 ## Sitemap
 
-- [Sitemap](https://vimeo-video-downloader.example/sitemap.xml): XML sitemap index for canonical pages and per-language sitemap files.
+- [Sitemap](https://vimeodownloader.app/sitemap.xml): XML sitemap index for canonical pages and per-language sitemap files.
 
 ## Key Facts
 

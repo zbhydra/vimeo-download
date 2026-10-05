@@ -82,12 +82,11 @@ Production builds read public runtime values from `website/.env.production`:
 Google OAuth login returns to the backend OAuth callback under
 `PUBLIC_API_BASE_URL`. Add the backend OAuth callback URI to Google Console:
 
-- `https://api.vimeo-video-downloader.example/api/client/auth/google/oauth/callback`
+- `https://api.vimeodownloader.app/api/client/auth/google/oauth/callback`
 - `http://localhost:7900/api/client/auth/google/oauth/callback`
 
 `deploy/deploy.sh` also carries the production and test domain values used by
-the nginx configs in `deploy/`; keep them in sync with `src/lib/site.mjs` when
-the real domain is assigned.
+the nginx configs in `deploy/`; the production site is `vimeodownloader.app`.
 
 ## License
 

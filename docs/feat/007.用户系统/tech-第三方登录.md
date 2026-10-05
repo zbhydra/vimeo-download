@@ -179,11 +179,11 @@ Body：`{ code(min1/max256) }`。原子消费一次性登录票据 → `user_id`
 OAuth 2.0 Web Client 的 Authorized redirect URIs 需包含：
 
 ```text
-https://api.<生产站点域>/api/client/auth/google/oauth/callback
+https://api.vimeodownloader.app/api/client/auth/google/oauth/callback
 http://localhost:7900/api/client/auth/google/oauth/callback
 ```
 
-> 生产域当前仍是占位值，见 `@../000.架构/overview.md` §1；替换域名时同步更新 Google Console。
+Authorized JavaScript origins 需包含 `https://vimeodownloader.app`；本地 One Tap 调试时另加实际本地 Website origin。
 
 插件回调走 `https://<扩展 ID>.chromiumapp.org/google-login`，由 Chrome 生成，**不登记到 Google Console**（`launchWebAuthFlow` 的回跳由扩展侧捕获）。手动按钮只跳后端 OAuth authorize，不接触 `GOOGLE_CLIENT_SECRET`。
 

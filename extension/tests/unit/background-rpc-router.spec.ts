@@ -98,8 +98,8 @@ function createContentContext(): RpcContext {
 describe('background rpc router', () => {
   beforeEach(async () => {
     vi.stubGlobal('__DEV__', false)
-    vi.stubGlobal('__API_BASE_URL__', 'https://api.vimeo-video-downloader.example')
-    vi.stubGlobal('__WEBSITE_BASE_URL__', 'https://vimeo-video-downloader.example')
+    vi.stubGlobal('__API_BASE_URL__', 'https://api.vimeodownloader.app')
+    vi.stubGlobal('__WEBSITE_BASE_URL__', 'https://vimeodownloader.app')
     vi.resetModules()
     mocks.handlers = null
     mocks.serve.mockClear()

@@ -10,8 +10,8 @@ afterEach(() => {
 describe('API domain configuration', () => {
   it('uses the production API and website hosts in extension runtime config', async () => {
     vi.stubGlobal('__DEV__', false)
-    vi.stubGlobal('__API_BASE_URL__', 'https://api.vimeo-video-downloader.example')
-    vi.stubGlobal('__WEBSITE_BASE_URL__', 'https://vimeo-video-downloader.example')
+    vi.stubGlobal('__API_BASE_URL__', 'https://api.vimeodownloader.app')
+    vi.stubGlobal('__WEBSITE_BASE_URL__', 'https://vimeodownloader.app')
     vi.stubGlobal('__ALI_SLS_MARK_CONFIG__', {
       enabled: true,
       endpoint: 'https://vimeo-download.ap-southeast-1.log.aliyuncs.com',
@@ -23,14 +23,14 @@ describe('API domain configuration', () => {
     const configModule = await import('../../src/core/api/config')
     const { API, WEBSITE, ALI_SLS_MARK } = configModule
 
-    expect(API.BASE_URL).toBe('https://api.vimeo-video-downloader.example')
+    expect(API.BASE_URL).toBe('https://api.vimeodownloader.app')
     expect(API.ENDPOINTS.REMOTE_CONFIG).toBe('/api/client/remote-config/config')
     expect(API.ENDPOINTS.AUTH_EMAIL_VERIFY_LOGIN).toBe('/api/client/auth/email-verify-login')
     expect(API.ENDPOINTS.AUTH_GOOGLE_OAUTH_AUTHORIZE).toBe(
       '/api/client/auth/google/oauth/authorize'
     )
     expect(API.ENDPOINTS.AUTH_GOOGLE_EXCHANGE).toBe('/api/client/auth/google/exchange')
-    expect(WEBSITE.BASE_URL).toBe('https://vimeo-video-downloader.example')
+    expect(WEBSITE.BASE_URL).toBe('https://vimeodownloader.app')
     // 插件不再跳官网登录，只保留条款、隐私与订阅页三个外链路径。
     expect('EXTENSION_LOGIN_PATH' in WEBSITE).toBe(false)
     expect(WEBSITE.PRICING_PATH).toBe('/pricing/')
@@ -63,8 +63,8 @@ describe('API domain configuration', () => {
       const { createExtensionBuildEnv } = await import('../../vite.config')
       const config = createExtensionBuildEnv({ NODE_ENV: 'production' })
 
-      expect(config.apiBaseUrl).toBe('https://api.vimeo-video-downloader.example')
-      expect(config.websiteBaseUrl).toBe('https://vimeo-video-downloader.example')
+      expect(config.apiBaseUrl).toBe('https://api.vimeodownloader.app')
+      expect(config.websiteBaseUrl).toBe('https://vimeodownloader.app')
       expect(config.hostPermissions).toEqual([
         'https://vimeo.com/*',
         'https://www.vimeo.com/*',
@@ -78,8 +78,8 @@ describe('API domain configuration', () => {
       expect(config.webAccessibleResources).toEqual([
         'sites/vimeo/content/styles/buttons.css'
       ])
-      expect(config.contentScriptMatches).not.toContain('https://vimeo-video-downloader.example/*')
-      expect(config.contentScriptMatches).not.toContain('https://www.vimeo-video-downloader.example/*')
+      expect(config.contentScriptMatches).not.toContain('https://vimeodownloader.app/*')
+      expect(config.contentScriptMatches).not.toContain('https://www.vimeodownloader.app/*')
       expect(config.hostPermissions).not.toContain('http://localhost:7900/*')
       expect(config.hostPermissions).not.toContain('http://localhost:7910/*')
       expect(config.hostPermissions).not.toContain(
@@ -87,10 +87,10 @@ describe('API domain configuration', () => {
       )
       // API 域依赖后端通配 CORS，不申请 host_permissions 豁免
       expect(config.hostPermissions).not.toContain(
-        'https://api.vimeo-video-downloader.example/*'
+        'https://api.vimeodownloader.app/*'
       )
-      expect(config.hostPermissions).not.toContain('https://vimeo-video-downloader.example/*')
-      expect(config.hostPermissions).not.toContain('https://www.vimeo-video-downloader.example/*')
+      expect(config.hostPermissions).not.toContain('https://vimeodownloader.app/*')
+      expect(config.hostPermissions).not.toContain('https://www.vimeodownloader.app/*')
     },
     BUILD_CONFIG_TIMEOUT_MS
   )
@@ -108,9 +108,9 @@ describe('API domain configuration', () => {
     expect(config.hostPermissions).not.toContain(
       'https://vimeo-download.ap-southeast-1.log.aliyuncs.com/*'
     )
-    expect(config.hostPermissions).not.toContain('https://api.vimeo-video-downloader.example/*')
-    expect(config.hostPermissions).not.toContain('https://vimeo-video-downloader.example/*')
-    expect(config.hostPermissions).not.toContain('https://www.vimeo-video-downloader.example/*')
+    expect(config.hostPermissions).not.toContain('https://api.vimeodownloader.app/*')
+    expect(config.hostPermissions).not.toContain('https://vimeodownloader.app/*')
+    expect(config.hostPermissions).not.toContain('https://www.vimeodownloader.app/*')
     expect(config.contentScriptMatches).not.toContain('http://localhost:7910/*')
   })
 

@@ -12,15 +12,14 @@ ARCHIVE_PATH="$SCRIPT_DIR/$ARCHIVE_NAME"
 RELEASE_NAME="v$(date +%Y%m%d_%H%M%S)"
 
 # 环境配置
-PROD_SERVER_HOST="149.71.241.52"
-PROD_SERVER_PORT="2222"
+PROD_SERVER_HOST="51.81.87.195"
+PROD_SERVER_PORT="22"
 PROD_SERVER_USER="root"
-PROD_SERVER_DEPLOY_ROOT="/data/vimeo-web"
+PROD_SERVER_DEPLOY_ROOT="/data/vimeo-download/website"
 PROD_NGINX_CONF="$SCRIPT_DIR/vimeo-web.conf"
 PROD_NGINX_REMOTE_CONF_PATH="/usr/local/nginx/vhost/vimeo-web.conf"
 
-# TODO(待替换): 测试环境主机是占位值（.example 不可解析，误连会立即失败），接入前替换为真实地址。
-# 旧 tg_download 的机器 51.81.87.195 不属于本项目，禁止复用。
+# 测试环境连接信息仍需单独配置；生产环境使用上面的固定服务器。
 TEST_SERVER_HOST="test-server.example"
 TEST_SERVER_PORT="22"
 TEST_SERVER_USER="root"
@@ -28,13 +27,13 @@ TEST_SERVER_DEPLOY_ROOT="/data/vimeo-web-test"
 TEST_NGINX_CONF="$SCRIPT_DIR/vimeo-web-test.conf"
 TEST_NGINX_REMOTE_CONF_PATH="/usr/local/nginx/vhost/test-vimeo-web.conf"
 
-# TODO(待替换): 域名与 API 地址是占位值，与 src/lib/site.mjs 的 SITE_ORIGIN 一起替换。
-PROD_DOMAIN="vimeo-video-downloader.example"
-TEST_DOMAIN="test-vimeo-video-downloader.example"
-PROD_PUBLIC_API_BASE_URL="https://api.vimeo-video-downloader.example"
-TEST_PUBLIC_API_BASE_URL="https://test-api.vimeo-video-downloader.example"
-PROD_PUBLIC_SHARED_COOKIE_DOMAIN="vimeo-video-downloader.example"
-TEST_PUBLIC_SHARED_COOKIE_DOMAIN="vimeo-video-downloader.example"
+# 生产域名与 API 地址；测试环境沿用相同根域的独立子域。
+PROD_DOMAIN="vimeodownloader.app"
+TEST_DOMAIN="test-vimeodownloader.app"
+PROD_PUBLIC_API_BASE_URL="https://api.vimeodownloader.app"
+TEST_PUBLIC_API_BASE_URL="https://test-api.vimeodownloader.app"
+PROD_PUBLIC_SHARED_COOKIE_DOMAIN="vimeodownloader.app"
+TEST_PUBLIC_SHARED_COOKIE_DOMAIN="vimeodownloader.app"
 
 DEPLOY_ENV=""
 SERVER_HOST=""

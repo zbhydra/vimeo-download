@@ -76,7 +76,7 @@ def _business_config_replacements(
         "DB_PASSWD": "password",
         "DB_NAME": "vimeo_download",
         "PUBLIC_API_BASE_URL": "https://vimeo-download-api.example.com",
-        "PUBLIC_WEBSITE_BASE_URL": "https://vimeo-video-downloader.example",
+        "PUBLIC_WEBSITE_BASE_URL": "https://vimeodownloader.app",
         "GOOGLE_CLIENT_ID": "google-client-id",
         "GOOGLE_CLIENT_SECRET": "",
         "DOWNLOAD_TOKEN_ALGORITHM": "EdDSA",

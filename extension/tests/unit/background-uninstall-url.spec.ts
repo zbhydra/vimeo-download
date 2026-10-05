@@ -61,8 +61,8 @@ describe('background uninstall url', () => {
     vi.resetModules()
 
     vi.stubGlobal('__DEV__', false)
-    vi.stubGlobal('__API_BASE_URL__', 'https://api.vimeo-video-downloader.example')
-    vi.stubGlobal('__WEBSITE_BASE_URL__', 'https://vimeo-video-downloader.example')
+    vi.stubGlobal('__API_BASE_URL__', 'https://api.vimeodownloader.app')
+    vi.stubGlobal('__WEBSITE_BASE_URL__', 'https://vimeodownloader.app')
     mocks.storageManager.get.mockReset().mockResolvedValue('existing-device-id')
     mocks.storageManager.set.mockReset().mockResolvedValue(undefined)
     mocks.initializeRuntimeLogger.mockReset().mockResolvedValue(undefined)

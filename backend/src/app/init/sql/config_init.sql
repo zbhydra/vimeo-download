@@ -20,7 +20,7 @@ INSERT IGNORE INTO config_public (c_key, g_value) VALUES
 ('subscription_review_reward', 'true'),
 ('website_checkin_campaign', '{"reward_rules": [{"credits": 6, "end_day": 7, "start_day": 1}, {"credits": 3, "end_day": 14, "start_day": 8}], "campaign_days": 14}'),
 -- 支付等待页展示的支持邮箱；占位值，上线前替换为本产品真实邮箱。
-('support_mail', 'support@vimeo-video-downloader.example');
+('support_mail', 'support@vimeodownloader.app');
 
 -- ===== config_subscription_product =====
 

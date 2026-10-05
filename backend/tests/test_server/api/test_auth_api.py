@@ -1117,8 +1117,8 @@ class TestGoogleLoginAPI:
         ("return_to", "expected_return_to"),
         [
             (
-                "https://vimeo-video-downloader.example/pricing/?plan=month&google_login_error=old",
-                "https://vimeo-video-downloader.example/pricing/?plan=month",
+                "https://vimeodownloader.app/pricing/?plan=month&google_login_error=old",
+                "https://vimeodownloader.app/pricing/?plan=month",
             ),
             # 插件 browser identity 回调：设备归因参数与路径原样进入 OAuth state。
             (
@@ -1147,17 +1147,17 @@ class TestGoogleLoginAPI:
         monkeypatch.setattr(
             settings.app,
             "public_api_base_url",
-            "https://api.vimeo-video-downloader.example",
+            "https://api.vimeodownloader.app",
         )
         monkeypatch.setattr(
             settings.app,
             "public_website_base_url",
-            "https://vimeo-video-downloader.example",
+            "https://vimeodownloader.app",
         )
         monkeypatch.setattr(
             settings.app,
             "public_website_base_url",
-            "https://vimeo-video-downloader.example",
+            "https://vimeodownloader.app",
         )
 
         async def fake_create_oauth_state(return_to: str) -> str:
@@ -1192,7 +1192,7 @@ class TestGoogleLoginAPI:
         assert parsed_location.path == "/o/oauth2/v2/auth"
         assert query["client_id"] == [google_client_id]
         assert query["redirect_uri"] == [
-            "https://api.vimeo-video-downloader.example"
+            "https://api.vimeodownloader.app"
             "/api/client/auth/google/oauth/callback"
         ]
         assert query["response_type"] == ["code"]
@@ -1213,7 +1213,7 @@ class TestGoogleLoginAPI:
         monkeypatch.setattr(
             settings.app,
             "public_website_base_url",
-            "https://vimeo-video-downloader.example",
+            "https://vimeodownloader.app",
         )
 
         async def fake_create_oauth_state(return_to: str) -> str:
@@ -1237,11 +1237,11 @@ class TestGoogleLoginAPI:
 
         response = await async_client.get(
             "/api/client/auth/google/oauth/authorize",
-            params={"return_to": "https://vimeo-video-downloader.example/pricing/"},
+            params={"return_to": "https://vimeodownloader.app/pricing/"},
         )
 
         parsed_redirect, redirect_params = parse_google_redirect_response(response)
-        assert parsed_redirect.netloc == "vimeo-video-downloader.example"
+        assert parsed_redirect.netloc == "vimeodownloader.app"
         assert redirect_params["google_login_error"] == ["internal_server_error"]
         assert create_state_calls == []
 
@@ -1259,7 +1259,7 @@ class TestGoogleLoginAPI:
         monkeypatch.setattr(
             settings.app,
             "public_website_base_url",
-            "https://vimeo-video-downloader.example",
+            "https://vimeodownloader.app",
         )
 
         async def fake_is_allowed(identifier: str, limit: int, window: int) -> bool:
@@ -1281,11 +1281,11 @@ class TestGoogleLoginAPI:
 
         response = await async_client.get(
             "/api/client/auth/google/oauth/authorize",
-            params={"return_to": "https://vimeo-video-downloader.example/pricing/"},
+            params={"return_to": "https://vimeodownloader.app/pricing/"},
         )
 
         parsed_redirect, redirect_params = parse_google_redirect_response(response)
-        assert parsed_redirect.netloc == "vimeo-video-downloader.example"
+        assert parsed_redirect.netloc == "vimeodownloader.app"
         assert redirect_params["google_login_error"] == ["rate_limit_exceeded"]
         assert limiter_calls == [("127.0.0.1", 10, 60)]
         assert create_state_calls == []
@@ -1301,7 +1301,7 @@ class TestGoogleLoginAPI:
         monkeypatch.setattr(
             settings.app,
             "public_website_base_url",
-            "https://vimeo-video-downloader.example",
+            "https://vimeodownloader.app",
         )
 
         async def fake_create_oauth_state(return_to: str) -> str:
@@ -1329,7 +1329,7 @@ class TestGoogleLoginAPI:
         )
 
         parsed_redirect, redirect_params = parse_google_redirect_response(response)
-        assert parsed_redirect.netloc == "vimeo-video-downloader.example"
+        assert parsed_redirect.netloc == "vimeodownloader.app"
         assert redirect_params["google_login_error"] == ["invalid_return_to"]
         assert create_state_calls == []
 
@@ -1348,17 +1348,17 @@ class TestGoogleLoginAPI:
         monkeypatch.setattr(
             settings.app,
             "public_api_base_url",
-            "https://api.vimeo-video-downloader.example",
+            "https://api.vimeodownloader.app",
         )
         monkeypatch.setattr(
             settings.app,
             "public_website_base_url",
-            "https://vimeo-video-downloader.example",
+            "https://vimeodownloader.app",
         )
 
         async def fake_consume_oauth_state(state: str) -> str:
             consumed_states.append(state)
-            return "https://vimeo-video-downloader.example/pricing/?plan=unlimited"
+            return "https://vimeodownloader.app/pricing/?plan=unlimited"
 
         async def fake_exchange_oauth_code_for_profile(
             *,
@@ -1392,7 +1392,7 @@ class TestGoogleLoginAPI:
         parsed_redirect, redirect_params = parse_google_redirect_response(
             callback_response
         )
-        assert parsed_redirect.netloc == "vimeo-video-downloader.example"
+        assert parsed_redirect.netloc == "vimeodownloader.app"
         assert parsed_redirect.path == "/pricing/"
         assert redirect_params["plan"] == ["unlimited"]
         assert "google_login_error" not in redirect_params
@@ -1401,7 +1401,7 @@ class TestGoogleLoginAPI:
         assert exchange_calls == [
             (
                 "oauth-code-1",
-                "https://api.vimeo-video-downloader.example"
+                "https://api.vimeodownloader.app"
                 "/api/client/auth/google/oauth/callback",
             )
         ]
@@ -1445,7 +1445,7 @@ class TestGoogleLoginAPI:
         monkeypatch.setattr(
             settings.app,
             "public_website_base_url",
-            "https://vimeo-video-downloader.example",
+            "https://vimeodownloader.app",
         )
 
         async def fake_consume_oauth_state(_state: str) -> str:
@@ -1522,11 +1522,11 @@ class TestGoogleLoginAPI:
         monkeypatch.setattr(
             settings.app,
             "public_website_base_url",
-            "https://vimeo-video-downloader.example",
+            "https://vimeodownloader.app",
         )
 
         async def fake_consume_oauth_state(_state: str) -> str:
-            return "https://vimeo-video-downloader.example/pricing/?plan=unlimited"
+            return "https://vimeodownloader.app/pricing/?plan=unlimited"
 
         async def fake_exchange_oauth_code_for_profile(
             *,
@@ -1578,7 +1578,7 @@ class TestGoogleLoginAPI:
         )
 
         parsed_redirect, redirect_params = parse_google_redirect_response(response)
-        assert parsed_redirect.netloc == "vimeo-video-downloader.example"
+        assert parsed_redirect.netloc == "vimeodownloader.app"
         assert parsed_redirect.path == "/pricing/"
         assert redirect_params["plan"] == ["unlimited"]
         assert redirect_params["google_email_verification"] == [email]
@@ -1605,7 +1605,7 @@ class TestGoogleLoginAPI:
         monkeypatch.setattr(
             settings.app,
             "public_website_base_url",
-            "https://vimeo-video-downloader.example",
+            "https://vimeodownloader.app",
         )
 
         async def fake_consume_oauth_state(_state: str) -> str:
@@ -1667,16 +1667,16 @@ class TestGoogleLoginAPI:
         monkeypatch.setattr(
             settings.app,
             "public_api_base_url",
-            "https://api.vimeo-video-downloader.example",
+            "https://api.vimeodownloader.app",
         )
         monkeypatch.setattr(
             settings.app,
             "public_website_base_url",
-            "https://vimeo-video-downloader.example",
+            "https://vimeodownloader.app",
         )
 
         async def fake_consume_oauth_state(_state: str) -> str:
-            return "https://vimeo-video-downloader.example/pricing/?plan=month"
+            return "https://vimeodownloader.app/pricing/?plan=month"
 
         async def fake_verify_id_token(_credential: str) -> GoogleTokenProfile:
             return GoogleTokenProfile(
@@ -1700,7 +1700,7 @@ class TestGoogleLoginAPI:
         parsed_redirect, redirect_params = parse_google_redirect_response(
             oauth_response
         )
-        assert parsed_redirect.netloc == "vimeo-video-downloader.example"
+        assert parsed_redirect.netloc == "vimeodownloader.app"
         assert parsed_redirect.path == "/pricing/"
         assert redirect_params["plan"] == ["month"]
         assert redirect_params["google_login_error"] == ["internal_server_error"]

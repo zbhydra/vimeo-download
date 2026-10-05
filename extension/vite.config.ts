@@ -5,7 +5,7 @@ import VueI18n from '@intlify/unplugin-vue-i18n/vite'
 import { copyFileSync, mkdirSync } from 'fs'
 import { dirname, resolve } from 'path'
 import { SITE_REGISTRATION, type SiteRegistration } from './src/platforms/registry'
-import { PLACEHOLDER_PROD_HOST } from './src/core/constants/deployment'
+import { PROD_HOST } from './src/core/constants/deployment'
 
 type ExtensionDevWebExtensionConfig = Partial<Pick<PluginOptions, 'disableAutoLaunch'>>
 
@@ -14,9 +14,9 @@ const EDGE_CURRENT_DEV_BROWSER = 'edge-current'
 
 const DEFAULT_DEV_API_BASE_URL = 'http://localhost:7900'
 const DEFAULT_DEV_WEBSITE_BASE_URL = 'http://localhost:7910'
-// 生产 API / 官网 origin 从占位域名派生；待替换项集中在 src/core/constants/deployment.ts。
-const DEFAULT_PROD_API_BASE_URL = `https://api.${PLACEHOLDER_PROD_HOST}`
-const DEFAULT_PROD_WEBSITE_BASE_URL = `https://${PLACEHOLDER_PROD_HOST}`
+// 生产 API / 官网 origin 从 src/core/constants/deployment.ts 的生产域名派生。
+const DEFAULT_PROD_API_BASE_URL = `https://api.${PROD_HOST}`
+const DEFAULT_PROD_WEBSITE_BASE_URL = `https://${PROD_HOST}`
 // 生产打点的 SLS project / logstore 需与阿里云侧资源同名；资源缺失时上报静默失败，不阻塞下载主链路。
 const DEFAULT_PROD_ALI_SLS_PROJECT = 'vimeo-download'
 const DEFAULT_PROD_ALI_SLS_HOST = 'ap-southeast-1.log.aliyuncs.com'

@@ -4,50 +4,50 @@
 
 ## Pages
 
-- [Home](https://vimeo-video-downloader.example/): Online download tool and an overview of the Chrome extension: features, how it works, online tool versus extension, scope and limits, plans and FAQ.
-- [Pricing](https://vimeo-video-downloader.example/pricing/): The Unlimited subscription for the Chrome extension.
-- [About](https://vimeo-video-downloader.example/about/): What the website and the extension each do, privacy principles and access boundaries.
-- [Contact](https://vimeo-video-downloader.example/contact/): Public support channel for account, download, extension, billing and privacy questions.
-- [Terms of Service](https://vimeo-video-downloader.example/terms/): Terms for using the website and the extension.
-- [Privacy Policy](https://vimeo-video-downloader.example/privacy/): What data is collected and how it is used.
-- [Short LLMs index](https://vimeo-video-downloader.example/llms.txt): Compact AI-readable summary of the website and its pages.
+- [Home](https://vimeodownloader.app/): Online download tool and an overview of the Chrome extension: features, how it works, online tool versus extension, scope and limits, plans and FAQ.
+- [Pricing](https://vimeodownloader.app/pricing/): The Unlimited subscription for the Chrome extension.
+- [About](https://vimeodownloader.app/about/): What the website and the extension each do, privacy principles and access boundaries.
+- [Contact](https://vimeodownloader.app/contact/): Public support channel for account, download, extension, billing and privacy questions.
+- [Terms of Service](https://vimeodownloader.app/terms/): Terms for using the website and the extension.
+- [Privacy Policy](https://vimeodownloader.app/privacy/): What data is collected and how it is used.
+- [Short LLMs index](https://vimeodownloader.app/llms.txt): Compact AI-readable summary of the website and its pages.
 
 ## Language Entrances
 
-- [English](https://vimeo-video-downloader.example/): English home page.
-- [Simplified Chinese](https://vimeo-video-downloader.example/zh-cn/): Simplified Chinese home page.
-- [Traditional Chinese](https://vimeo-video-downloader.example/zh-tw/): Traditional Chinese home page.
-- [Japanese](https://vimeo-video-downloader.example/ja/): Japanese home page.
-- [Korean](https://vimeo-video-downloader.example/ko/): Korean home page.
-- [Spanish](https://vimeo-video-downloader.example/es/): Spanish home page.
-- [Portuguese](https://vimeo-video-downloader.example/pt/): Portuguese home page.
-- [German](https://vimeo-video-downloader.example/de/): German home page.
-- [French](https://vimeo-video-downloader.example/fr/): French home page.
-- [Russian](https://vimeo-video-downloader.example/ru/): Russian home page.
-- [Italian](https://vimeo-video-downloader.example/it/): Italian home page.
-- [Vietnamese](https://vimeo-video-downloader.example/vi/): Vietnamese home page.
-- [Thai](https://vimeo-video-downloader.example/th/): Thai home page.
-- [Indonesian](https://vimeo-video-downloader.example/id/): Indonesian home page.
+- [English](https://vimeodownloader.app/): English home page.
+- [Simplified Chinese](https://vimeodownloader.app/zh-cn/): Simplified Chinese home page.
+- [Traditional Chinese](https://vimeodownloader.app/zh-tw/): Traditional Chinese home page.
+- [Japanese](https://vimeodownloader.app/ja/): Japanese home page.
+- [Korean](https://vimeodownloader.app/ko/): Korean home page.
+- [Spanish](https://vimeodownloader.app/es/): Spanish home page.
+- [Portuguese](https://vimeodownloader.app/pt/): Portuguese home page.
+- [German](https://vimeodownloader.app/de/): German home page.
+- [French](https://vimeodownloader.app/fr/): French home page.
+- [Russian](https://vimeodownloader.app/ru/): Russian home page.
+- [Italian](https://vimeodownloader.app/it/): Italian home page.
+- [Vietnamese](https://vimeodownloader.app/vi/): Vietnamese home page.
+- [Thai](https://vimeodownloader.app/th/): Thai home page.
+- [Indonesian](https://vimeodownloader.app/id/): Indonesian home page.
 
 ## Sitemaps
 
-- [Sitemap index](https://vimeo-video-downloader.example/sitemap.xml): Main XML sitemap index exposed through robots.txt.
-- [Sitemap index alias](https://vimeo-video-downloader.example/sitemap_index.xml): Alias with the same sitemap index content.
-- [Flat sitemap](https://vimeo-video-downloader.example/sitemap-0.xml): Flat XML sitemap containing all canonical website URLs.
-- [English sitemap](https://vimeo-video-downloader.example/en-sitemap.xml): English canonical pages.
-- [Simplified Chinese sitemap](https://vimeo-video-downloader.example/zh-cn-sitemap.xml): Simplified Chinese canonical pages.
-- [Traditional Chinese sitemap](https://vimeo-video-downloader.example/zh-tw-sitemap.xml): Traditional Chinese canonical pages.
-- [Japanese sitemap](https://vimeo-video-downloader.example/ja-sitemap.xml): Japanese canonical pages.
-- [Korean sitemap](https://vimeo-video-downloader.example/ko-sitemap.xml): Korean canonical pages.
-- [Spanish sitemap](https://vimeo-video-downloader.example/es-sitemap.xml): Spanish canonical pages.
-- [Portuguese sitemap](https://vimeo-video-downloader.example/pt-br-sitemap.xml): Portuguese canonical pages.
-- [German sitemap](https://vimeo-video-downloader.example/de-sitemap.xml): German canonical pages.
-- [French sitemap](https://vimeo-video-downloader.example/fr-sitemap.xml): French canonical pages.
-- [Russian sitemap](https://vimeo-video-downloader.example/ru-sitemap.xml): Russian canonical pages.
-- [Italian sitemap](https://vimeo-video-downloader.example/it-sitemap.xml): Italian canonical pages.
-- [Vietnamese sitemap](https://vimeo-video-downloader.example/vi-sitemap.xml): Vietnamese canonical pages.
-- [Thai sitemap](https://vimeo-video-downloader.example/th-sitemap.xml): Thai canonical pages.
-- [Indonesian sitemap](https://vimeo-video-downloader.example/id-sitemap.xml): Indonesian canonical pages.
+- [Sitemap index](https://vimeodownloader.app/sitemap.xml): Main XML sitemap index exposed through robots.txt.
+- [Sitemap index alias](https://vimeodownloader.app/sitemap_index.xml): Alias with the same sitemap index content.
+- [Flat sitemap](https://vimeodownloader.app/sitemap-0.xml): Flat XML sitemap containing all canonical website URLs.
+- [English sitemap](https://vimeodownloader.app/en-sitemap.xml): English canonical pages.
+- [Simplified Chinese sitemap](https://vimeodownloader.app/zh-cn-sitemap.xml): Simplified Chinese canonical pages.
+- [Traditional Chinese sitemap](https://vimeodownloader.app/zh-tw-sitemap.xml): Traditional Chinese canonical pages.
+- [Japanese sitemap](https://vimeodownloader.app/ja-sitemap.xml): Japanese canonical pages.
+- [Korean sitemap](https://vimeodownloader.app/ko-sitemap.xml): Korean canonical pages.
+- [Spanish sitemap](https://vimeodownloader.app/es-sitemap.xml): Spanish canonical pages.
+- [Portuguese sitemap](https://vimeodownloader.app/pt-br-sitemap.xml): Portuguese canonical pages.
+- [German sitemap](https://vimeodownloader.app/de-sitemap.xml): German canonical pages.
+- [French sitemap](https://vimeodownloader.app/fr-sitemap.xml): French canonical pages.
+- [Russian sitemap](https://vimeodownloader.app/ru-sitemap.xml): Russian canonical pages.
+- [Italian sitemap](https://vimeodownloader.app/it-sitemap.xml): Italian canonical pages.
+- [Vietnamese sitemap](https://vimeodownloader.app/vi-sitemap.xml): Vietnamese canonical pages.
+- [Thai sitemap](https://vimeodownloader.app/th-sitemap.xml): Thai canonical pages.
+- [Indonesian sitemap](https://vimeodownloader.app/id-sitemap.xml): Indonesian canonical pages.
 
 ## Key Facts
 
