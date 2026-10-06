@@ -19,6 +19,9 @@ set -e
 ###############################################################################
 
 DEPLOY_DIR="$1"
+ROOT_DIR="${DEPLOY_DIR%/}"
+BACKEND_DIR="$ROOT_DIR"
+REPO_DIR="$ROOT_DIR/.git"
 BACKUP_DIR="$2"
 KEEP_VERSIONS="${3:-5}"
 GIT_SSH_KEY_PATH="$4"
@@ -195,6 +198,11 @@ git_with_project_key() {
         git "$@"
 }
 
+require_bare_repository() {
+    [ "$(git --git-dir="$REPO_DIR" rev-parse --is-bare-repository 2>/dev/null)" = true ] \
+        || error_exit "部署目录不是后端裸仓库，请先运行 init.sh 重建部署目录"
+}
+
 escape_sed_replacement() {
     printf '%s' "$1" | sed 's/[&|\\]/\\&/g'
 }
@@ -270,7 +278,7 @@ generate_config_from_example() {
     smtp_config=$(printf '%s' "$SMTP_CONFIG_B64" | base64 -d)
     tmp_config=$(mktemp)
 
-    cd "${DEPLOY_DIR}backend"
+    cd "$BACKEND_DIR"
     if [ ! -f "config.yaml.example" ]; then
         error_exit "未找到 config.yaml.example"
     fi
@@ -331,19 +339,19 @@ backup_current_version() {
     mkdir -p "$BACKUP_DIR/$BACKUP_NAME"
 
     # 备份源代码
-    if [ -d "${DEPLOY_DIR}backend/src" ]; then
-        cp -r "${DEPLOY_DIR}backend/src" "$BACKUP_DIR/$BACKUP_NAME/"
+    if [ -d "$BACKEND_DIR/src" ]; then
+        cp -r "$BACKEND_DIR/src" "$BACKUP_DIR/$BACKUP_NAME/"
         log_info "已备份源代码"
     fi
 
     # 备份配置文件
-    if [ -f "${DEPLOY_DIR}backend/config.yaml" ]; then
-        cp "${DEPLOY_DIR}backend/config.yaml" "$BACKUP_DIR/$BACKUP_NAME/"
+    if [ -f "$BACKEND_DIR/config.yaml" ]; then
+        cp "$BACKEND_DIR/config.yaml" "$BACKUP_DIR/$BACKUP_NAME/"
         log_info "已备份配置文件"
     fi
 
     # 备份 .venv (如果存在)
-    if [ -d "${DEPLOY_DIR}backend/.venv" ]; then
+    if [ -d "$BACKEND_DIR/.venv" ]; then
         log_info "虚拟环境存在，跳过备份（将在更新后重建）"
     fi
 
@@ -352,9 +360,8 @@ backup_current_version() {
     echo "$TIMESTAMP" > "$BACKUP_DIR/$BACKUP_NAME/timestamp.txt"
 
     # 获取当前 commit
-    cd "$DEPLOY_DIR"
-    if [ -d ".git" ]; then
-        git rev-parse HEAD > "$BACKUP_DIR/$BACKUP_NAME/commit.txt" 2>/dev/null || true
+    if [ -d "$REPO_DIR" ]; then
+        git --git-dir="$REPO_DIR" rev-parse HEAD > "$BACKUP_DIR/$BACKUP_NAME/commit.txt" 2>/dev/null || true
     fi
 
     log_info "备份完成: $BACKUP_NAME"
@@ -381,20 +388,39 @@ cleanup_old_backups() {
 update_code() {
     log_step "拉取最新代码"
 
-    cd "$DEPLOY_DIR"
-
-    if [ ! -d ".git" ]; then
+    if [ ! -d "$REPO_DIR" ]; then
         error_exit "不是 Git 仓库，请先运行初始化脚本"
     fi
+    require_bare_repository
     if ! git check-ref-format --branch "$BRANCH" >/dev/null 2>&1; then
         error_exit "无效 Git 分支名: $BRANCH"
     fi
 
-    log_info "更新代码..."
-    git_with_project_key fetch origin
-    git reset --hard "origin/$BRANCH"
+    log_info "更新后端代码..."
+    git_with_project_key --git-dir="$REPO_DIR" fetch --prune --depth 1 origin \
+        "+refs/heads/$BRANCH:refs/heads/$BRANCH"
 
-    COMMIT_SHA=$(git rev-parse --short HEAD)
+    local staging_dir previous_dir path
+    staging_dir="$(mktemp -d "$(dirname "$ROOT_DIR")/.vimeo-backend-release.XXXXXX")"
+    trap 'rm -rf "$staging_dir"' RETURN
+    git --git-dir="$REPO_DIR" archive "$BRANCH:backend" \
+        | tar -xf - -C "$staging_dir"
+
+    for path in .git .venv config.yaml log data private public/uploads .backups .current_version; do
+        if [ -e "$ROOT_DIR/$path" ]; then
+            rm -rf "$staging_dir/$path"
+            mv "$ROOT_DIR/$path" "$staging_dir/$path"
+        fi
+    done
+
+    previous_dir="${ROOT_DIR}.previous"
+    rm -rf "$previous_dir"
+    mv "$ROOT_DIR" "$previous_dir"
+    mv "$staging_dir" "$ROOT_DIR"
+    trap - RETURN
+    rm -rf "$previous_dir"
+
+    COMMIT_SHA=$(git --git-dir="$REPO_DIR" rev-parse --short "$BRANCH")
     log_info "当前版本: $COMMIT_SHA"
 }
 
@@ -405,7 +431,7 @@ generate_config() {
     log_step "生成配置文件"
 
     generate_config_from_example
-    log_info "已基于 config.yaml.example 覆盖生成 backend/config.yaml"
+    log_info "已基于 config.yaml.example 覆盖生成 config.yaml"
 }
 
 ###############################################################################
@@ -414,7 +440,7 @@ generate_config() {
 install_dependencies() {
     log_step "安装依赖"
 
-    cd "${DEPLOY_DIR}backend"
+    cd "$BACKEND_DIR"
 
     # 确保 uv 可用
     if ! command -v uv &> /dev/null; then
@@ -506,7 +532,7 @@ PY
 sync_database_schema() {
     log_step "同步数据库结构"
 
-    cd "${DEPLOY_DIR}backend"
+    cd "$BACKEND_DIR"
 
     if [ ! -f "src/app/init/sync_database_schema.py" ]; then
         log_warn "未找到数据库结构同步脚本，跳过"
@@ -523,7 +549,7 @@ sync_database_schema() {
 import_config_init() {
     log_step "导入配置初始化数据"
 
-    cd "${DEPLOY_DIR}backend"
+    cd "$BACKEND_DIR"
 
     local sql_file="src/app/init/sql/config_init.sql"
     if [ ! -f "$sql_file" ]; then
@@ -552,8 +578,8 @@ configure_supervisor() {
 
     local supervisor_conf_dir="/etc/supervisor/conf.d"
     local target_conf="$supervisor_conf_dir/$APP_NAME.conf"
-    local template_conf="${DEPLOY_DIR}backend/deploy/supervisor/vimeo-download.conf"
-    local backend_dir="${DEPLOY_DIR%/}/backend"
+    local template_conf="$BACKEND_DIR/deploy/supervisor/vimeo-download.conf"
+    local backend_dir="$BACKEND_DIR"
     local app_name_escaped
     local backend_dir_escaped
     local backend_port_escaped
@@ -583,7 +609,7 @@ configure_nginx() {
     local nginx_conf_dir="/usr/local/nginx/vhost"
     local target_conf="$nginx_conf_dir/$APP_NAME.conf"
     local legacy_conf="$nginx_conf_dir/$NGINX_SERVER_NAME.conf"
-    local template_conf="${DEPLOY_DIR}backend/deploy/nginx/nginx.conf"
+    local template_conf="$BACKEND_DIR/deploy/nginx/nginx.conf"
     local backend_port_escaped
     local nginx_server_name_escaped
 

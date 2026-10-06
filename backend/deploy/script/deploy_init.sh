@@ -21,6 +21,9 @@ REPO_URL="$1"
 BRANCH="${2:-main}"
 DEPLOY_DIR="$3"
 GIT_SSH_KEY_PATH="$4"
+ROOT_DIR="${DEPLOY_DIR%/}"
+BACKEND_DIR="$ROOT_DIR"
+REPO_DIR="$ROOT_DIR/.git"
 DB_HOST="${5:-127.0.0.1}"
 DB_USER="${6:-vimeo_download}"
 DB_PASSWD="${7:-}"
@@ -357,40 +360,36 @@ create_deploy_dir() {
 create_log_dir() {
     log_info "=== 创建日志目录 ==="
 
-    mkdir -p "$DEPLOY_DIR/backend/log"
+    mkdir -p "$BACKEND_DIR/log"
 
-    log_info "日志目录: $DEPLOY_DIR/backend/log"
+    log_info "日志目录: $BACKEND_DIR/log"
 }
 
 ###############################################################################
-# 克隆仓库
+# 准备后端发布目录
 ###############################################################################
-clone_repository() {
-    log_info "=== 克隆仓库 ==="
+prepare_repo() {
+    log_info "=== 准备后端发布目录 ==="
 
     if [ -z "$REPO_URL" ]; then
         error_exit "请提供仓库 URL: ./init.sh <repo_url> [branch]"
     fi
 
-    # 强制模式：完全删除目录后重新克隆
-    if [ "$FORCE" = "--force" ]; then
-        log_info "强制模式：重新克隆仓库..."
-        rm -rf "$DEPLOY_DIR"
-        mkdir -p "$DEPLOY_DIR"
+    if [ -e "$ROOT_DIR" ] && [ "$FORCE" != "--force" ]; then
+        error_exit "部署目录已存在: $ROOT_DIR；如需重建请传 --force"
     fi
-
-    if [ -d "$DEPLOY_DIR/.git" ]; then
-        log_info "仓库已存在，拉取最新代码..."
-        cd "$DEPLOY_DIR"
-        git_with_project_key fetch origin
-        git reset --hard "origin/$BRANCH"
-    else
-        log_info "克隆仓库..."
-        git_with_project_key clone -b "$BRANCH" "$REPO_URL" "$DEPLOY_DIR"
-        cd "$DEPLOY_DIR"
+    if [ -e "$ROOT_DIR" ]; then
+        log_info "强制模式：重新准备部署目录..."
+        rm -rf "$ROOT_DIR"
     fi
+    mkdir -p "$ROOT_DIR" "$BACKUP_DIR"
 
-    COMMIT_SHA=$(git rev-parse --short HEAD)
+    git_with_project_key clone --bare --filter=blob:none --single-branch \
+        --branch "$BRANCH" --depth 1 "$REPO_URL" "$REPO_DIR"
+    git_with_project_key --git-dir="$REPO_DIR" archive "HEAD:backend" \
+        | tar -xf - -C "$BACKEND_DIR"
+
+    COMMIT_SHA=$(git --git-dir="$REPO_DIR" rev-parse --short HEAD)
     log_info "当前版本: $COMMIT_SHA"
 }
 
@@ -400,7 +399,7 @@ clone_repository() {
 install_python_dependencies() {
     log_info "=== 安装 Python ==="
 
-    cd "$DEPLOY_DIR/backend"
+    cd "$BACKEND_DIR"
 
     if ! command -v uv &> /dev/null; then
         export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
@@ -498,7 +497,7 @@ PY
 sync_database_schema() {
     log_info "=== 同步数据库结构 ==="
 
-    cd "$DEPLOY_DIR/backend"
+    cd "$BACKEND_DIR"
 
     if [ ! -f "src/app/init/sync_database_schema.py" ]; then
         error_exit "未找到数据库结构同步脚本: src/app/init/sync_database_schema.py"
@@ -514,7 +513,7 @@ sync_database_schema() {
 import_config_init() {
     log_info "=== 导入配置初始化数据 ==="
 
-    cd "$DEPLOY_DIR/backend"
+    cd "$BACKEND_DIR"
 
     if [ ! -f "src/app/init/sql/config_init.sql" ]; then
         log_warn "未找到配置初始化数据，跳过"
@@ -539,7 +538,7 @@ import_config_init() {
 generate_config() {
     log_info "=== 生成配置文件 ==="
 
-    cd "$DEPLOY_DIR/backend"
+    cd "$BACKEND_DIR"
 
     if [ -f "config.yaml.example" ]; then
         generate_config_from_example
@@ -558,8 +557,8 @@ configure_supervisor() {
 
     local supervisor_conf_dir="/etc/supervisor/conf.d"
     local target_conf="$supervisor_conf_dir/$APP_NAME.conf"
-    local template_conf="$DEPLOY_DIR/backend/deploy/supervisor/vimeo-download.conf"
-    local backend_dir="${DEPLOY_DIR%/}/backend"
+    local template_conf="$BACKEND_DIR/deploy/supervisor/vimeo-download.conf"
+    local backend_dir="$BACKEND_DIR"
     local app_name_escaped
     local backend_dir_escaped
     local backend_port_escaped
@@ -592,7 +591,7 @@ configure_nginx() {
     local nginx_conf_dir="/usr/local/nginx/vhost"
     local target_conf="$nginx_conf_dir/$APP_NAME.conf"
     local legacy_conf="$nginx_conf_dir/$NGINX_SERVER_NAME.conf"
-    local template_conf="$DEPLOY_DIR/backend/deploy/nginx/nginx.conf"
+    local template_conf="$BACKEND_DIR/deploy/nginx/nginx.conf"
     local backend_port_escaped
     local nginx_server_name_escaped
 
@@ -676,7 +675,7 @@ restart_service() {
 health_check() {
     log_info "=== 执行健康检查 ==="
 
-    cd "$DEPLOY_DIR/backend"
+    cd "$BACKEND_DIR"
 
     local port
     local health_url
@@ -704,7 +703,7 @@ health_check() {
 ###############################################################################
 set_permissions() {
     log_info "=== 设置权限 ==="
-    chmod -R 755 "$DEPLOY_DIR/backend/deploy"
+    chmod -R 755 "$BACKEND_DIR/deploy"
     log_info "权限设置完成"
 }
 
@@ -738,7 +737,7 @@ main() {
     validate_logger_level
     install_uv
     create_deploy_dir
-    clone_repository
+    prepare_repo
     create_log_dir
     generate_config
     install_python_dependencies

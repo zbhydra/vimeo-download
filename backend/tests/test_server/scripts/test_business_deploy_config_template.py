@@ -184,7 +184,8 @@ def test_business_deploy_uses_configured_git_branch() -> None:
         in deploy_entry
     )
     assert 'BRANCH="${27:-main}"' in remote_script
-    assert 'git reset --hard "origin/$BRANCH"' in remote_script
+    assert 'git_with_project_key --git-dir="$REPO_DIR" fetch --prune --depth 1 origin' in remote_script
+    assert 'git --git-dir="$REPO_DIR" archive "$BRANCH:backend"' in remote_script
     assert "git reset --hard origin/main" not in remote_script
     assert 'log_info "分支: $BRANCH"' in deploy_entry
     assert 'log_info "分支: $BRANCH"' in remote_script

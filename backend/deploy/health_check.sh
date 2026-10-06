@@ -5,7 +5,7 @@ set -e
 # Python backend 健康检查脚本（hydra 2026-04-30 重构：可选 .env 首参）
 #
 # 用法:
-#   ./health_check.sh                                  # 远端 cwd backend；从 config.yaml 读 port
+#   ./health_check.sh                                  # 远端 cwd 部署根目录；从 config.yaml 读 port
 #   ./health_check.sh <env_file>                       # 本地：从 .env 读 BACKEND_PORT_PY
 #   ./health_check.sh http://host:7900/api/system/health  # 直接传 URL
 ###############################################################################

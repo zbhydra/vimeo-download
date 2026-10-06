@@ -37,9 +37,17 @@ def test_business_init_generates_config_before_dependency_import_checks():
     script = _read_deploy_file("script/deploy_init.sh")
 
     assert (
-        "clone_repository\n    create_log_dir\n    generate_config\n    install_python_dependencies"
+        "prepare_repo\n    create_log_dir\n    generate_config\n    install_python_dependencies"
         in script
     )
+    assert "git_with_project_key clone --bare --filter=blob:none --single-branch" in script
+    assert 'git_with_project_key --git-dir="$REPO_DIR" archive "HEAD:backend"' in script
+    assert 'git_with_project_key clone -b "$BRANCH"' not in script
+
+    remote_script = _read_deploy_file("script/deploy_remote.sh")
+    assert "require_bare_repository" in remote_script
+    assert "git --git-dir=\"$REPO_DIR\" rev-parse --is-bare-repository" in remote_script
+    assert "for path in .git .venv config.yaml log data private public/uploads .backups .current_version; do" in remote_script
 
 
 def test_business_deploy_scripts_use_uv_local_install_path():
@@ -172,7 +180,7 @@ def test_business_supervisor_and_nginx_paths_are_env_rendered():
         assert f"{removed_key}=" not in env_example
         assert f"{{{removed_key}}}" not in combined
 
-    assert 'local backend_dir="${DEPLOY_DIR%/}/backend"' in supervisor_bodies
+    assert 'local backend_dir="$BACKEND_DIR"' in supervisor_bodies
     assert "command -v supervisorctl" in supervisor_bodies
     assert "validate_app_name" in combined
     assert (
