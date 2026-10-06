@@ -59,7 +59,7 @@ website/
 ## 4. Sitemap 生成
 
 `src/sitemap/languageSitemap.mjs`（自定义 Astro 集成，钩 `astro:build:done`）：
-1. 收集所有 canonical URL，剔除 404/500 与四个支付回跳页。
+1. 收集所有 canonical URL，剔除 404/500 与构建产物 robots meta 含 noindex 的页面（支付回跳页、只渲染英文回退稿的法务页）。
 2. `classifySitemapUrl` 按**语言前缀分组**。
 3. `lastmod` 从页面族源文件的 `git log` 取（失败回退文件 mtime）。
 4. 输出：`sitemap.xml` + `sitemap_index.xml`（索引）+ 每语言一份 `<slug>-sitemap.xml`（共 14 份）+ `sitemap-0.xml`（兼容旧扁平格式）+ `sitemap.xsl`（人类可读样式表）。
@@ -76,12 +76,16 @@ website/
 
 - **唯一布局 `src/layouts/Layout.astro`** 集中注入：
   - canonical URL
-  - hreflang alternate 链（含 `x-default` → en-US）
-  - Open Graph / Twitter card（`twitter:site` 绑定官方 X 账号）
-  - JSON-LD：`SoftwareApplication`（仅首页和 Pricing 输出；Company、Legal、PaymentReturn 传 `includeSoftwareApplicationSchema={false}`；`BrowserExtension`，`featureList` 为插件能力）+ 带公开 `ContactPoint`、Chrome Web Store 与官方 X `sameAs` 的 `Organization`；页面级 `structuredData` props 可叠加（首页、Pricing 各注入一份 FAQPage）
+  - hreflang alternate 链：页面用 `alternateLocales` 声明内容对等且可索引的语言版本。默认 14 语言并含 `x-default` → en-US；不足 2 个时不输出。规则见 `@../009.SEO与增长/tech-落地页与Sitemap.md` §4.6
+  - Open Graph / Twitter card（`og:site_name` 为品牌词；`twitter:site` 绑定官方 X 账号）
+  - JSON-LD：
+    - `SoftwareApplication`：仅首页和 Pricing 输出，Company、Legal、PaymentReturn 传 `includeSoftwareApplicationSchema={false}`；类别 `BrowserExtension`，`featureList` 为插件能力。
+    - 全站 `WebSite`：站点名称。
+    - `Organization`：带 `legalName`、公开 `ContactPoint`，以及指向 Chrome Web Store 与官方 X 的 `sameAs`。
+    - 页面级 `structuredData` props 可叠加，首页、Pricing 各注入一份 FAQPage。
   - GA4 内联加载
   - 全站深色 token（Geist 语义名、深色值，另有品牌与装饰 token，`color-scheme: dark`）、按钮与焦点环全局样式，规则见 `../../references/specs/spec-website.md` §4
-- 页面通过 props 传 `title / description / structuredData`，布局内组装 meta。
+- 页面通过 props 传 `title`（必传，布局不提供默认标题）/ `description` / `structuredData`，布局内组装 meta。
 - 品牌实体信号统一使用 `Vimeo Downloader`，与 extension 的 `extensionName` 和商店文案逐字一致。
 
 ## 7. SLS 日志双写（website）

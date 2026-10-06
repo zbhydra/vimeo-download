@@ -22,7 +22,7 @@ export const jaJP: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo Downloader – 無料のオンラインツールと Chrome 拡張機能',
+        title: 'Vimeo Downloader - HD 動画と音声をダウンロード',
         description: 'Vimeo のリンクを貼るだけで、ログイン不要・無料でブラウザに動画を保存できます。音声、字幕、カバー画像、キューが必要なら Chrome 拡張機能を追加してください。'
       },
       heroTrustPoints: [
@@ -35,7 +35,7 @@ export const jaJP: SiteContent = {
           titleBrand: 'Vimeo 動画ダウンローダー',
           titleTagline: '公開 Vimeo 動画を保存',
           helperText:
-            '公開 Vimeo 動画のリンクを貼り付け、Vimeo が公開している画質を確認して、必要な解像度をダウンロードします。',
+            '公開 Vimeo 動画のリンクを貼り付けると、利用できる最高画質の MP4 をダウンロードできます。',
           linkLabel: 'Vimeo リンク',
           linkPlaceholder: 'https://vimeo.com/123456789',
           clearInput: '入力をクリア',
@@ -202,7 +202,7 @@ export const jaJP: SiteContent = {
           },
           {
             dimension: '一括・キュー',
-            web: '複数のリンクを貼り、「すべてダウンロード」で順番に実行できます。',
+            web: 'リンクは一つずつ処理します。',
             extension: 'ポップアップから項目を追加すると、タブ共通の ひとつのキューで順番にダウンロードされます。'
           },
           {

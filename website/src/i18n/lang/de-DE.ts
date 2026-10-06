@@ -22,7 +22,7 @@ export const deDE: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo Downloader – kostenloses Online-Tool und Chrome-Erweiterung',
+        title: 'Vimeo Downloader - HD-Videos und Audio herunterladen',
         description: 'Vimeo-Link einfügen und das Video im Browser speichern, kostenlos und ohne Anmeldung. Audio, Untertitel, Titelbilder oder eine Warteschlange? Dann die Chrome-Erweiterung hinzufügen.'
       },
       heroTrustPoints: [
@@ -35,7 +35,7 @@ export const deDE: SiteContent = {
           titleBrand: 'Vimeo Downloader',
           titleTagline: 'Jedes öffentliche Vimeo-Video speichern',
           helperText:
-            'Füge einen öffentlichen Vimeo-Link ein, sieh dir die angebotenen Auflösungen an und lade die gewünschte herunter.',
+            'Füge einen öffentlichen Vimeo-Link ein und lade das Video als MP4 in der höchsten verfügbaren Qualität herunter.',
           linkLabel: 'Vimeo-Link',
           linkPlaceholder: 'https://vimeo.com/123456789',
           clearInput: 'Eingabe löschen',
@@ -203,7 +203,7 @@ export const deDE: SiteContent = {
           },
           {
             dimension: 'Stapel und Warteschlange',
-            web: 'Mehrere Links einfügen und mit „Alle herunterladen“ nacheinander abarbeiten.',
+            web: 'Ein Link nach dem anderen.',
             extension: 'Einträge aus dem Popup in eine tabübergreifende Warteschlange legen; sie werden der Reihe nach geladen.'
           },
           {

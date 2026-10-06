@@ -1,5 +1,17 @@
 # 000 · 架构 · 变更记录
 
+## 2026-10-06 Layout SEO 合同：hreflang 按对等版本输出，title 必传，新增 WebSite 与 og:site_name
+
+**Why**：13 个语言的法务页只渲染英文回退稿，不应与英文版互指 hreflang；首页 title 曾被一个英文常量覆盖全部语言。规则见 `@../009.SEO与增长/tech-落地页与Sitemap.md` §4.6，变更明细见 `@../009.SEO与增长/changelog.md` 同日条目。
+
+**变更**：
+- `tech-website.md`：
+  - sitemap 第 1 步改为剔除 robots noindex 页；
+  - Layout 的 hreflang 改由 `alternateLocales` 决定；
+  - OG 补 `og:site_name`；
+  - JSON-LD 补全站 `WebSite` 与 `Organization.legalName`；
+  - `title` 改为必传。
+
 ## 2026-10-06 官网视觉升级：全站深色，Pricing 路径改回 `/ext-pricing/`
 
 **Why**：005 把官网改为全站深色科技风并恢复 `/ext-pricing/`。决策与范围见 `plans/005.官网视觉升级与Pricing路径改回.md`。

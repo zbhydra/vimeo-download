@@ -22,7 +22,7 @@ export const idID: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo Downloader – Alat Online Gratis dan Ekstensi Chrome',
+        title: 'Vimeo Downloader - Unduh Video HD dan Audio',
         description: 'Tempel tautan Vimeo untuk menyimpan video di browser, gratis dan tanpa masuk akun. Butuh audio, subtitle, gambar sampul, atau antrean? Pasang ekstensi Chrome.'
       },
       heroTrustPoints: [
@@ -35,7 +35,7 @@ export const idID: SiteContent = {
           titleBrand: 'Pengunduh video Vimeo',
           titleTagline: 'Simpan video Vimeo publik apa pun',
           helperText:
-            'Tempel tautan video Vimeo publik, lihat resolusi yang disediakan Vimeo, lalu unduh resolusi yang kamu butuhkan.',
+            'Tempel tautan video Vimeo publik, lalu unduh sebagai MP4 dalam kualitas tertinggi yang tersedia.',
           linkLabel: 'Tautan Vimeo',
           linkPlaceholder: 'https://vimeo.com/123456789',
           clearInput: 'Hapus input',
@@ -203,7 +203,7 @@ export const idID: SiteContent = {
           },
           {
             dimension: 'Batch dan antrean',
-            web: 'Tempel beberapa tautan dan jalankan satu per satu dengan «Unduh semua».',
+            web: 'Satu tautan dalam satu waktu.',
             extension: 'Tambahkan item dari popup ke satu antrean yang dibagi antar tab; item diunduh berurutan.'
           },
           {

@@ -1,7 +1,7 @@
 /**
  * 站点身份与对外地址的唯一配置点。
  *
- * 站点域名、Chrome 插件地址、公开邮箱与官方 X 账号只在这里定义一次。
+ * 站点域名、产品名、运营主体、Chrome 插件地址、公开邮箱与官方 X 账号只在这里定义一次。
  * `astro.config.mjs`（canonical / hreflang / sitemap）、Layout 结构化数据、
  * sitemap XSL、公司页与法务页、下载工作区的插件入口都从这里取值，
  * 避免同一个地址散落在多个文件里。
@@ -24,8 +24,11 @@ export const SITE_HOST = 'vimeodownloader.app'
 /** 产品名，用于结构化数据、meta author、sitemap XSL 等非多语言位置。 */
 export const PRODUCT_NAME = 'Vimeo Downloader'
 
-/** 首页浏览器标题。 */
-export const SITE_TITLE = 'Vimeo Downloader - Download HD Video & Audio'
+/**
+ * 运营主体的法定名称，即 Terms 的合同相对方。
+ * Terms、Privacy、About / Contact、页脚与 `Organization.legalName` 都从这里取值，保证各处写的是同一个主体。
+ */
+export const OPERATOR_LEGAL_NAME = 'Ginyo Technologies Limited'
 
 /** 公开支持邮箱，出现在法务页、公司页与结构化数据里。 */
 export const DEVELOPER_EMAIL = `support@${SITE_HOST}`

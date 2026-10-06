@@ -8,7 +8,7 @@
 import { COMPANY_PAGES_PUBLISHED_DATE, getCompanyContent } from '../../company/companyContent'
 import { type Locale } from '../../i18n/content'
 import { localePaths } from '../../i18n/ui'
-import { CHROME_WEB_STORE_URL, DEVELOPER_EMAIL, OFFICIAL_X_HANDLE, OFFICIAL_X_URL } from '../../lib/site.mjs'
+import { CHROME_WEB_STORE_URL, DEVELOPER_EMAIL, OFFICIAL_X_HANDLE, OFFICIAL_X_URL, PRODUCT_NAME } from '../../lib/site.mjs'
 import Layout from '../../layouts/Layout.astro'
 import SiteBandHeader from '../site/SiteBandHeader.astro'
 import XBrandIcon from '../site/XBrandIcon.astro'
@@ -35,7 +35,8 @@ const termsPath = `${currentLocalePath}terms/`
 const pageUrl = new URL(Astro.url.pathname.endsWith('/') ? Astro.url.pathname : `${Astro.url.pathname}/`, Astro.site).href
 const organizationId = new URL('/#organization', Astro.site).href
 const contactPointId = new URL('/#support', Astro.site).href
-const primaryHref = pageKind === 'about' ? contactPath : `mailto:${DEVELOPER_EMAIL}?subject=Vimeo%20Video%20Downloader%20support%20request`
+const supportMailSubject = encodeURIComponent(`${PRODUCT_NAME} support request`)
+const primaryHref = pageKind === 'about' ? contactPath : `mailto:${DEVELOPER_EMAIL}?subject=${supportMailSubject}`
 const primaryLabel = pageKind === 'about' ? companyContent.about.contactLabel : companyContent.contact.emailLabel
 const companyPageSchema = {
   '@context': 'https://schema.org',
@@ -74,6 +75,7 @@ const companyPageSchema = {
       updatedAtIso={COMPANY_PAGES_PUBLISHED_DATE}
     >
       <p class="site-band-intro">{page.intro}</p>
+      <p class="site-band-intro">{companyContent.operatorStatement}</p>
       <Fragment slot="actions">
         <div class="company-actions" role="group" aria-label={page.eyebrow}>
           <a class="btn-primary company-primary-link" href={primaryHref}>{primaryLabel}</a>
@@ -132,8 +134,8 @@ const companyPageSchema = {
         ) : (
           <a href={aboutPath}>{companyContent.contact.aboutLabel}</a>
         )}
-        <a href={privacyPath}>{page.privacyLabel}</a>
-        <a href={termsPath}>{page.termsLabel}</a>
+        <a href={privacyPath}>{companyContent.privacyLabel}</a>
+        <a href={termsPath}>{companyContent.termsLabel}</a>
       </div>
     </nav>
   </article>

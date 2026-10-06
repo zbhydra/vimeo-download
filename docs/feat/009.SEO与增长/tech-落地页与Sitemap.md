@@ -77,7 +77,7 @@
 | `/about/`、`/contact/` | 对应 page + `[lang]/` + `components/pages/CompanyPage.astro` + `components/site/SiteBandHeader.astro`（页头带）+ `company/companyContent.ts` |
 | `/ext-pricing/` | `pages/ext-pricing.astro` + `[lang]/` + `components/pages/PricingPage.astro` + `i18n/pricing.ts` + `components/pricing/` 的页壳、登录弹窗、页控制器 + `components/order-checkout/OrderCheckoutModal.astro` |
 
-以上路径均相对 `website/src/`。支付回跳页不在映射里：它们在路由收集阶段已被提前忽略，不进入 sitemap。
+以上路径均相对 `website/src/`。支付回跳页不在映射里：它们声明 noindex，在计算 lastmod 之前已被 §2.7 排除。
 
 ### 2.6 语言分组规则
 
@@ -90,7 +90,9 @@
 不进入 sitemap：
 
 - `404`、`500`。
-- 搜索引擎封禁路由：`/clink/cancel/`、`/clink/success/`、`/paypal/cancel/`、`/paypal/success/`——这四个支付回跳页同时被 `robots.txt` Disallow、页面 noindex。
+- 构建产物里 robots meta 含 `noindex` 的页面。集成在写 sitemap 前读取 `dist` 中各页 HTML 判断，以页面自己的 robots 声明为唯一来源，不另维护路径清单。当前命中两类：
+  - 四个支付回跳页 `/clink/cancel/`、`/clink/success/`、`/paypal/cancel/`、`/paypal/success/`，它们同时被 `robots.txt` Disallow；
+  - 13 个非英语 locale 的 `/terms/`、`/privacy/`，它们只渲染英文回退稿，见 §4.6。
 - 非根路径统一补尾斜杠后再入 sitemap。
 
 `/ext-pricing/` 不被 robots 屏蔽，正常进入 sitemap。
@@ -158,13 +160,17 @@ XML 写入做实体转义。sitemap index 内每个 sitemap 的 `<lastmod>` 用�
 
 ### 4.1 JSON-LD 品牌字段与页面 SEO 解耦
 
-`Layout.astro` 用常量 `PRODUCT_NAME`（`src/lib/site.mjs`）固定 schema 主实体品牌，同时写入 `SoftwareApplication.name`、`Organization.name`；`author` 只引用 Organization 的 `@id`，不写品牌名；页面级 title / description 由各页传入，不反向影响 schema 主实体。
+`Layout.astro` 用常量 `PRODUCT_NAME`（`src/lib/site.mjs`）固定 schema 主实体品牌，写入 `WebSite.name`、`SoftwareApplication.name`、`Organization.name`；`Organization.legalName` 取 `OPERATOR_LEGAL_NAME`。
+
+- `WebSite` 全站输出：`@id` 为 `/#website`，`publisher` 引用 Organization 的 `@id`。它是 Google 站点名称的首选来源。
+- `author` / `publisher` 只引用 Organization 的 `@id`，不写品牌名；Legal 页 `WebPage.publisher` 也只引用该 `@id`，不内联第二个 Organization。
+- 页面级 title / description 由各页传入，不反向影响 schema 主实体。
 
 ### 4.2 各页面族的 SEO 字段来源
 
 | 页面族 | title / description 来源 |
 | --- | --- |
-| 首页 `/` | `pages.homepage.meta.{title,description}`（覆盖「在线工具 + 插件」），由 `schema.ts` 强制 14 语言齐全 |
+| 首页 `/` | `pages.homepage.meta.{title,description}`（覆盖「在线工具 + 插件」），由 `schema.ts` 强制 14 语言齐全。title 必须包含品牌词 `Vimeo Downloader`，当前格式为「品牌词 - 当地语言的任务描述」；各语言分别本地化，不得用一个常量覆盖全部语言 |
 | Pricing `/ext-pricing/` | `i18n/pricing.ts` 的 `getPricingPageCopy` 由订阅文案生成 seo |
 | Legal `/terms/` `/privacy/` | `legalContent.ts` 的 `seoTitle` / `seoDescription` |
 | Company `/about/` `/contact/` | `companyContent.ts` 的 `seoTitle` / `seoDescription` |
@@ -173,7 +179,19 @@ XML 写入做实体转义。sitemap index 内每个 sitemap 的 `<lastmod>` 用�
 
 ### 4.3 规范品牌合同
 
-唯一品牌为 `Vimeo Downloader`，不追加其他品牌后缀。`schemaName`、导航品牌、页脚版权、Legal `serviceName`、sitemap XSL、`application-name`、`og:site_name` 与 `Organization.name` 均使用该名称；不保留其他品牌别名作为运行时回退。Chrome 商店命名属于商店域，见 `@../../assets/store/`。
+唯一品牌为 `Vimeo Downloader`，不追加其他品牌后缀。以下位置均使用该名称：
+- 页面元素：导航品牌、页脚品牌块与版权、14 语言首页 title；
+- head 元数据：`application-name`、`og:site_name`；
+- 结构化数据：`WebSite.name`、`Organization.name`、`SoftwareApplication.name`；
+- 其他：Legal 文案（直接取 `PRODUCT_NAME`）、sitemap XSL。
+
+不保留其他品牌别名作为运行时回退。Chrome 商店命名属于商店域，见 `@../../assets/store/`。
+
+运营主体 `Ginyo Technologies Limited`（`OPERATOR_LEGAL_NAME`）是法定主体，不是品牌，不替代品牌名。它出现在：
+- Terms：合同相对方；
+- Privacy：引言；
+- About、Contact 页头带与全站页脚：运营说明（`companyContent.operatorStatement`，14 语言）；
+- 结构化数据：`Organization.legalName`。
 
 ### 4.4 结构化数据合规约束
 
@@ -188,6 +206,28 @@ XML 写入做实体转义。sitemap index 内每个 sitemap 的 `<lastmod>` 用�
 - 点击目录链接立即切换当前项，并「钉住」：记下该次点击的落点（目标章节顶边减 `scroll-margin-top`，夹在最大可滚动距离内）。平滑滚动途中与停在落点后，当前项保持为被点的链接，否则靠近页尾、滚不到阈值的短章节会被滚动判定覆盖回前一项。
 - 钉住的解除只看滚动位置：滚动位置到落点的距离一旦比上次更大（离开或越过落点），就恢复滚动判定。因此滚轮、触摸、键盘、拖滚动条、页内查找、前进后退行为一致，不依赖枚举输入事件，也不依赖 `scrollend`。
 - 无动画、无持久状态，不滚动胶囊行。
+
+### 4.6 hreflang 与法务页索引规则
+
+hreflang 只在「内容对等、且允许索引」的语言版本之间互指。页面通过 Layout 的 `alternateLocales` 声明这些版本：
+- 默认是 14 语言全部，并加 `x-default` → en-US；
+- 不足 2 个时不输出任何 hreflang，因为单一语言没有可互指的版本。
+
+| 页面族 | `alternateLocales` | robots |
+| --- | --- | --- |
+| 首页、Pricing、About、Contact | 默认（14 语言） | `index, follow` |
+| Terms、Privacy：该语言有自己的审校译本 | `LEGAL_CONTENT_LOCALES`（有译本的语言） | `index, follow` |
+| Terms、Privacy：只渲染英文回退稿 | 空 | `noindex, follow` |
+| 支付回跳页 | 空 | `noindex, nofollow, noarchive` |
+
+某语言有没有法务译本，由 `legal/legalContent.ts` 的 `legalContentByLocale` 决定，`LEGAL_CONTENT_LOCALES` 与 `getLegalContentLocale` 都从它派生。
+
+当前只有 en-US 有译本，因此：
+- 英文 `/terms/`、`/privacy/` 可索引，但不输出 hreflang；
+- 其余 13 语言的法务路由保留（站内导航不断），正文 `<article lang>` 标注 en-US；
+- 页脚与 About / Contact 里的法务链接文案仍按页面语言本地化（`companyContent.termsLabel` / `privacyLabel`），不跟随正文回退成英文。
+
+新增某语言的译本后，该语言法务页的索引、hreflang 与 sitemap（§2.7）自动恢复，不需要改路由或 sitemap 代码。
 
 ## 5. 验收/验证命令
 

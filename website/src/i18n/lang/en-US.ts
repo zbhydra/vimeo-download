@@ -22,7 +22,7 @@ export const enUS: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo Downloader – Free Online Tool and Chrome Extension',
+        title: 'Vimeo Downloader - Download HD Video & Audio',
         description: 'Paste a Vimeo link to save the video in your browser, free and without signing in. Need audio, subtitles, cover images, or a queue? Add the Chrome extension.'
       },
       heroTrustPoints: [
@@ -35,7 +35,7 @@ export const enUS: SiteContent = {
           titleBrand: 'Vimeo Downloader',
           titleTagline: 'Save Any Public Vimeo Video',
           helperText:
-            'Paste a public Vimeo video link, review the renditions Vimeo exposes, and download the resolution you need.',
+            'Paste a public Vimeo video link and download it as an MP4 in the highest quality available.',
           linkLabel: 'Vimeo link',
           linkPlaceholder: 'https://vimeo.com/123456789',
           clearInput: 'Clear input',
@@ -210,7 +210,7 @@ export const enUS: SiteContent = {
           },
           {
             dimension: 'Batch and queue',
-            web: 'Paste several links and run them one at a time with Download all.',
+            web: 'One link at a time.',
             extension: 'Add items from the popup to one queue shared across tabs; they download in order.'
           },
           {

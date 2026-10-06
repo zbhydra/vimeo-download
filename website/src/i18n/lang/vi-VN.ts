@@ -22,7 +22,7 @@ export const viVN: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo Downloader – Công cụ trực tuyến miễn phí và tiện ích Chrome',
+        title: 'Vimeo Downloader - Tải video HD và âm thanh',
         description: 'Dán liên kết Vimeo để lưu video ngay trong trình duyệt, miễn phí và không cần đăng nhập. Cần âm thanh, phụ đề, ảnh bìa hoặc hàng đợi? Hãy thêm tiện ích Chrome.'
       },
       heroTrustPoints: [
@@ -35,7 +35,7 @@ export const viVN: SiteContent = {
           titleBrand: 'Trình tải video Vimeo',
           titleTagline: 'Lưu mọi video Vimeo công khai',
           helperText:
-            'Dán liên kết video Vimeo công khai, xem các độ phân giải Vimeo cung cấp và tải độ phân giải bạn cần.',
+            'Dán liên kết video Vimeo công khai để tải xuống MP4 ở chất lượng cao nhất hiện có.',
           linkLabel: 'Liên kết Vimeo',
           linkPlaceholder: 'https://vimeo.com/123456789',
           clearInput: 'Xóa nội dung nhập',
@@ -203,7 +203,7 @@ export const viVN: SiteContent = {
           },
           {
             dimension: 'Hàng loạt và hàng đợi',
-            web: 'Dán nhiều liên kết và chạy lần lượt từng cái bằng “Tải tất cả”.',
+            web: 'Mỗi lần một liên kết.',
             extension: 'Thêm các mục từ cửa sổ bật lên vào một hàng đợi chung cho mọi thẻ; chúng tải theo thứ tự.'
           },
           {

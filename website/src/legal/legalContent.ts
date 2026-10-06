@@ -3,12 +3,15 @@
  *
  * Legal text is kept in one module so every locale route can render the same
  * reviewed fallback until each translation is explicitly approved.
+ * A route that renders the fallback is not a translation: LegalPage.astro marks
+ * it noindex and leaves it out of hreflang, so search engines only see one
+ * version of the same English text.
  *
  * Inline markup inside the strings is limited to `**bold**` and
  * `[label](href)`; LegalPage.astro renders both.
  */
-import type { Locale } from '../i18n/ui'
-import { DEVELOPER_EMAIL } from '../lib/site.mjs'
+import { locales, type Locale } from '../i18n/ui'
+import { DEVELOPER_EMAIL, OPERATOR_LEGAL_NAME, PRODUCT_NAME } from '../lib/site.mjs'
 
 /** Legal page route identifiers. */
 export type LegalPageKind = 'terms' | 'privacy'
@@ -69,13 +72,12 @@ interface LegalContent {
 }
 
 const termsLastUpdated = 'October 5, 2026'
-const privacyLastUpdated = 'September 18, 2026'
-const serviceName = 'Vimeo Downloader'
+const privacyLastUpdated = 'October 6, 2026'
 
 const englishLegalContent: LegalContent = {
   terms: {
     navLabel: 'Terms',
-    seoTitle: `Terms of Service | ${serviceName}`,
+    seoTitle: `Terms of Service | ${PRODUCT_NAME}`,
     seoDescription:
       'Read the Vimeo Downloader Terms of Service, including acceptable use, account access, free website downloads, subscriptions, disclaimers, and contact details.',
     title: 'Terms of Service',
@@ -90,11 +92,11 @@ const englishLegalContent: LegalContent = {
         blocks: [
           {
             kind: 'paragraph',
-            text: `These Terms are an agreement between you and Ginyo Technologies Limited, the company that operates ${serviceName}. In these Terms, "we", "us", and "our" refer to Ginyo Technologies Limited.`
+            text: `These Terms are an agreement between you and ${OPERATOR_LEGAL_NAME}, the company that operates ${PRODUCT_NAME}. In these Terms, "we", "us", and "our" refer to ${OPERATOR_LEGAL_NAME}.`
           },
           {
             kind: 'paragraph',
-            text: `By accessing or using ${serviceName}, you agree to these Terms. If you do not agree, do not use the service.`
+            text: `By accessing or using ${PRODUCT_NAME}, you agree to these Terms. If you do not agree, do not use the service.`
           },
           {
             kind: 'paragraph',
@@ -107,7 +109,7 @@ const englishLegalContent: LegalContent = {
         blocks: [
           {
             kind: 'paragraph',
-            text: `${serviceName} helps users save public Vimeo videos that are already accessible to them in a supported browser. The service does not unlock private, password-protected, or paywalled Vimeo videos, does not recover content you cannot access, and does not grant rights to redistribute third-party content.`
+            text: `${PRODUCT_NAME} helps users save public Vimeo videos that are already accessible to them in a supported browser. The service does not unlock private, password-protected, or paywalled Vimeo videos, does not recover content you cannot access, and does not grant rights to redistribute third-party content.`
           },
           {
             kind: 'paragraph',
@@ -168,7 +170,7 @@ const englishLegalContent: LegalContent = {
         blocks: [
           {
             kind: 'paragraph',
-            text: `${serviceName} is not affiliated with Vimeo, Google, or any other third-party platform unless explicitly stated.`
+            text: `${PRODUCT_NAME} is not affiliated with Vimeo, Google, or any other third-party platform unless explicitly stated.`
           },
           {
             kind: 'paragraph',
@@ -224,16 +226,16 @@ const englishLegalContent: LegalContent = {
   },
   privacy: {
     navLabel: 'Privacy Policy',
-    seoTitle: `Privacy Policy | ${serviceName}`,
+    seoTitle: `Privacy Policy | ${PRODUCT_NAME}`,
     seoDescription:
       'Read the Vimeo Downloader Privacy Policy, including what data is collected, how Google sign-in data is used, analytics, storage, sharing, retention, and contact details.',
     title: 'Privacy Policy',
-    intro: `This policy explains what information Vimeo Downloader collects, why we use it, how it is stored or shared, and what choices you have.
+    intro: `This policy explains what information ${PRODUCT_NAME} collects, why we use it, how it is stored or shared, and what choices you have.
 
-This policy covers the Vimeo Downloader website and browser extension.`,
+This policy covers the ${PRODUCT_NAME} website and browser extension, which are operated by ${OPERATOR_LEGAL_NAME}. In this policy, "we", "us", and "our" refer to ${OPERATOR_LEGAL_NAME}.`,
     updatedLabel: 'Last updated',
     updatedAt: privacyLastUpdated,
-    updatedAtIso: '2026-09-18',
+    updatedAtIso: '2026-10-06',
     sections: [
       {
         title: 'Information we process',
@@ -284,7 +286,7 @@ This policy covers the Vimeo Downloader website and browser extension.`,
         blocks: [
           {
             kind: 'paragraph',
-            text: 'The website may use analytics tools, including Google Analytics and Microsoft Clarity, to understand page usage, navigation, interactions, session replays, conversion, and product reliability. Analytics data is not used to sell user data or build personalized advertising profiles for Vimeo Downloader.'
+            text: 'The website may use analytics tools, including Google Analytics, to understand page usage, navigation, interactions, conversion, and product reliability. Analytics data is not used to sell user data or build personalized advertising profiles for Vimeo Downloader.'
           }
         ]
       },
@@ -362,16 +364,20 @@ This policy covers the Vimeo Downloader website and browser extension.`,
   }
 }
 
+/** Reviewed legal copy, keyed by the locale it is written in. */
 const legalContentByLocale: Partial<Record<Locale, LegalContent>> = {
   'en-US': englishLegalContent
 }
 
-/** Returns reviewed legal copy for the requested locale, falling back to English. */
-export function getLegalContent(locale: Locale): LegalContent {
-  return legalContentByLocale[locale] ?? englishLegalContent
+/** Locales that have reviewed legal copy in their own language; only their legal routes are indexable. */
+export const LEGAL_CONTENT_LOCALES: Locale[] = locales.filter(locale => legalContentByLocale[locale] !== undefined)
+
+/** Returns the locale of the copy a legal route actually renders: its own, or the English fallback. */
+export function getLegalContentLocale(locale: Locale): Locale {
+  return legalContentByLocale[locale] ? locale : 'en-US'
 }
 
 /** Returns one reviewed legal page for the requested locale, falling back to English. */
 export function getLegalPageContent(locale: Locale, pageKind: LegalPageKind): LegalPageContent {
-  return getLegalContent(locale)[pageKind]
+  return (legalContentByLocale[locale] ?? englishLegalContent)[pageKind]
 }

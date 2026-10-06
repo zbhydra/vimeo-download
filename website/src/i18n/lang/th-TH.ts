@@ -22,7 +22,7 @@ export const thTH: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo Downloader – เครื่องมือออนไลน์ฟรีและส่วนขยาย Chrome',
+        title: 'Vimeo Downloader - ดาวน์โหลดวิดีโอ HD และเสียง',
         description: 'วางลิงก์ Vimeo เพื่อบันทึกวิดีโอในเบราว์เซอร์ ฟรีและไม่ต้องเข้าสู่ระบบ ต้องการเสียง คำบรรยาย ภาพปก หรือคิวดาวน์โหลด? เพิ่มส่วนขยาย Chrome'
       },
       heroTrustPoints: [
@@ -35,7 +35,7 @@ export const thTH: SiteContent = {
           titleBrand: 'โปรแกรมดาวน์โหลดวิดีโอ Vimeo',
           titleTagline: 'บันทึกวิดีโอ Vimeo สาธารณะ',
           helperText:
-            'วางลิงก์วิดีโอ Vimeo แบบสาธารณะ ดูความละเอียดที่ Vimeo มีให้ แล้วดาวน์โหลดความละเอียดที่คุณต้องการ',
+            'วางลิงก์วิดีโอ Vimeo แบบสาธารณะ แล้วดาวน์โหลดเป็น MP4 ในคุณภาพสูงสุดที่มี',
           linkLabel: 'ลิงก์ Vimeo',
           linkPlaceholder: 'https://vimeo.com/123456789',
           clearInput: 'ล้างข้อมูลที่ป้อน',
@@ -203,7 +203,7 @@ export const thTH: SiteContent = {
           },
           {
             dimension: 'แบบกลุ่มและคิว',
-            web: 'วางหลายลิงก์แล้วรันทีละรายการด้วย “ดาวน์โหลดทั้งหมด”',
+            web: 'ครั้งละหนึ่งลิงก์',
             extension: 'เพิ่มรายการจากป๊อปอัปเข้าคิวเดียวที่ใช้ร่วมกันทุกแท็บ และดาวน์โหลดตามลำดับ'
           },
           {

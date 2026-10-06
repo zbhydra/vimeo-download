@@ -22,7 +22,7 @@ export const itIT: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo Downloader – Strumento online gratuito ed estensione Chrome',
+        title: 'Vimeo Downloader - Scarica video HD e audio',
         description: 'Incolla un link Vimeo per salvare il video nel browser, gratis e senza accedere. Ti servono audio, sottotitoli, immagine di copertina o una coda? Aggiungi l\'estensione Chrome.'
       },
       heroTrustPoints: [
@@ -35,7 +35,7 @@ export const itIT: SiteContent = {
           titleBrand: 'Downloader di video Vimeo',
           titleTagline: 'Salva qualsiasi video pubblico',
           helperText:
-            'Incolla un link video Vimeo pubblico, controlla le risoluzioni offerte e scarica quella che ti serve.',
+            'Incolla un link video Vimeo pubblico e scaricalo in MP4 alla massima qualità disponibile.',
           linkLabel: 'Link Vimeo',
           linkPlaceholder: 'https://vimeo.com/123456789',
           clearInput: 'Cancella input',
@@ -203,7 +203,7 @@ export const itIT: SiteContent = {
           },
           {
             dimension: 'Batch e coda',
-            web: 'Incolla più link ed eseguili uno alla volta con «Scarica tutto».',
+            web: 'Un link alla volta.',
             extension: 'Aggiungi voci dal popup a un\'unica coda condivisa tra le schede; vengono scaricate in ordine.'
           },
           {

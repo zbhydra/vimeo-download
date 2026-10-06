@@ -22,7 +22,7 @@ export const zhTW: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo Downloader – 免費線上工具與 Chrome 擴充功能',
+        title: 'Vimeo Downloader - 下載高畫質影片與音訊',
         description: '貼上 Vimeo 連結即可在瀏覽器中儲存影片，免費且無需登入。需要音訊、字幕、封面圖或下載佇列？加入 Chrome 擴充功能。'
       },
       heroTrustPoints: [
@@ -34,7 +34,7 @@ export const zhTW: SiteContent = {
           eyebrow: '快速連結檢查',
           titleBrand: 'Vimeo 影片下載器',
           titleTagline: '儲存任意公開的 Vimeo 影片',
-          helperText: '貼上公開的 Vimeo 影片連結，查看 Vimeo 提供的畫質，並下載你需要的解析度。',
+          helperText: '貼上公開的 Vimeo 影片連結，即可下載最高可用畫質的 MP4。',
           linkLabel: 'Vimeo 連結',
           linkPlaceholder: 'https://vimeo.com/123456789',
           clearInput: '清除輸入',
@@ -202,7 +202,7 @@ export const zhTW: SiteContent = {
           },
           {
             dimension: '批次與佇列',
-            web: '貼上多個連結，用「一鍵下載全部」逐一執行。',
+            web: '一次處理一個連結。',
             extension: '從彈窗把項目加入跨分頁共用的同一個佇列，依序下載。'
           },
           {

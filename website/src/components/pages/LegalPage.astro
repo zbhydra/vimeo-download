@@ -5,12 +5,20 @@
  * Render flow:
  * route -> legal content fallback -> SiteBandHeader + TOC/article body -> Layout SEO/schema.
  *
+ * 索引规则：只有该语言自己有审校过的法务译本时，页面才可索引、才参与 hreflang。
+ * 渲染英文回退稿的语言路由保留（站内导航不断），但设为 noindex、不输出 hreflang，
+ * 正文标注真实语言 en-US；否则 13 个语言 URL 会成为同一份英文的重复页。sitemap 读页面的 robots 声明自动排除这些页。
+ *
  * 目录在 DOM 里先于正文：桌面是左栏，手机是正文上方的横向胶囊行，Tab 顺序与视觉一致（不用 CSS order）。
  */
 import Layout from '../../layouts/Layout.astro'
 import SiteBandHeader from '../site/SiteBandHeader.astro'
-import { getLegalPageContent, type LegalPageKind } from '../../legal/legalContent'
-import { PRODUCT_NAME } from '../../lib/site.mjs'
+import {
+  getLegalContentLocale,
+  getLegalPageContent,
+  LEGAL_CONTENT_LOCALES,
+  type LegalPageKind
+} from '../../legal/legalContent'
 import { type Locale } from '../../i18n/content'
 
 interface Props {
@@ -85,6 +93,8 @@ const renderInlineHtml = (value: string) =>
 
 const { locale = 'en-US', pageKind } = Astro.props as Props
 const page = getLegalPageContent(locale, pageKind)
+const contentLocale = getLegalContentLocale(locale)
+const isFallback = contentLocale !== locale
 const introParagraphs = page.intro.split(PARAGRAPH_BREAK_PATTERN)
 const toSectionId = (title: string) => title.toLowerCase().replaceAll(' ', '-')
 const normalizePathname = (pathname: string) => {
@@ -102,9 +112,7 @@ const legalSchema = {
   name: page.title,
   description: page.seoDescription,
   publisher: {
-    '@type': 'Organization',
-    name: PRODUCT_NAME,
-    url: new URL('/', Astro.site).href
+    '@id': new URL('/#organization', Astro.site).href
   }
 }
 const structuredDataItems = page.updatedAtIso
@@ -118,8 +126,15 @@ const structuredDataItems = page.updatedAtIso
   description={page.seoDescription}
   includeSoftwareApplicationSchema={false}
   structuredData={structuredDataItems}
+  robots={isFallback ? 'noindex, follow' : undefined}
+  alternateLocales={isFallback ? [] : LEGAL_CONTENT_LOCALES}
 >
-  <article class="legal-page" data-legal-page data-legal-page-kind={pageKind}>
+  <article
+    class="legal-page"
+    data-legal-page
+    data-legal-page-kind={pageKind}
+    lang={isFallback ? contentLocale : undefined}
+  >
     <SiteBandHeader
       title={page.title}
       updatedLabel={page.updatedLabel}

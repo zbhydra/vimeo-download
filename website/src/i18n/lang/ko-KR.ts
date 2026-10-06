@@ -22,7 +22,7 @@ export const koKR: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo Downloader – 무료 온라인 도구와 Chrome 확장 프로그램',
+        title: 'Vimeo Downloader - HD 동영상과 오디오 다운로드',
         description: 'Vimeo 링크를 붙여넣으면 로그인 없이 무료로 동영상을 저장할 수 있습니다. 오디오, 자막, 커버 이미지, 다운로드 대기열이 필요하다면 Chrome 확장 프로그램을 추가하세요.'
       },
       heroTrustPoints: [
@@ -35,7 +35,7 @@ export const koKR: SiteContent = {
           titleBrand: 'Vimeo 동영상 다운로더',
           titleTagline: '공개 Vimeo 동영상 저장',
           helperText:
-            '공개 Vimeo 동영상 링크를 붙여넣고 Vimeo가 제공하는 화질을 확인한 뒤 필요한 해상도를 다운로드하세요.',
+            '공개 Vimeo 동영상 링크를 붙여넣으면 사용 가능한 최고 화질의 MP4로 다운로드할 수 있습니다.',
           linkLabel: 'Vimeo 링크',
           linkPlaceholder: 'https://vimeo.com/123456789',
           clearInput: '입력 지우기',
@@ -202,7 +202,7 @@ export const koKR: SiteContent = {
           },
           {
             dimension: '일괄 처리와 대기열',
-            web: '링크를 여러 개 붙여넣고 「모두 다운로드」로 하나씩 차례로 실행합니다.',
+            web: '한 번에 링크 하나씩 처리합니다.',
             extension: '팝업에서 항목을 추가하면 모든 탭이 공유하는 하나의 대기열에서 순서대로 다운로드됩니다.'
           },
           {

@@ -1,5 +1,35 @@
 # 009 · SEO 与增长 - 变更记录
 
+## 2026-10-06 上线后修正：品牌词落位、法务页多语言去重、运营主体公示、在线工具能力文案
+
+**Why**：上线当天的 SEO 审计（`docs/scratch/vimeodownloader.app-audit/`）发现四个问题。
+1. 13 个语言的 Terms / Privacy 只渲染英文回退稿，却可索引、互指 hreflang、进 sitemap，形成 26 个重复页。
+2. 运营主体只出现在 Terms 里。
+3. `SITE_TITLE` 让 14 个语言首页共用同一条英文 title。
+4. 首页把在线工具写成可选分辨率、可批量；后端实际只返回最高画质的一个 MP4，且一次只解析一个链接。
+
+另外，hydra 要求品牌词「Vimeo Downloader」落到页头、首页 title、页脚、结构化数据 name 与 `og:site_name`。
+
+**变更**：
+- `tech-落地页与Sitemap.md`：
+  - §2.7：sitemap 排除改为读构建产物的 robots noindex，删除支付回跳页的硬编码路径清单。
+  - §4.1：新增全站 `WebSite` 与 `Organization.legalName`；Legal 页 publisher 改为引用 `@id`。
+  - §4.2：首页 title 必须含品牌词，且 14 语言各自本地化。
+  - §4.3：品牌合同去掉已删除的 `serviceName`，补充运营主体规则。
+  - 新增 §4.6：hreflang 与法务页索引规则。
+- `tech-LLMs与增长入口.md`：页脚法务链接文案改取 `companyContent`；底部新增运营主体说明行。
+- `feat.md`：
+  - 页脚去掉官方 X，与 599b597 的代码一致；
+  - 新增运营主体公示、品牌词与法务页索引的验收项；
+  - 长尾文章页改为「已决定启动、尚未上线」。
+- 代码：
+  - `site.mjs`：删除 `SITE_TITLE`，新增 `OPERATOR_LEGAL_NAME`。
+  - `Layout`：`title` 改为必传；`includeAlternateLanguageLinks` 换成 `alternateLocales`；新增 `og:site_name`、`application-name`、`WebSite`。
+  - `legalContent`：派生 `LEGAL_CONTENT_LOCALES`，Privacy 引言写明运营主体（Last updated 改为 2026-10-06）。
+  - `companyContent`：Privacy / Terms 链接文案上提为公共字段，新增 `operatorStatement`。
+  - 14 语言字典：首页 title 改为「Vimeo Downloader - 当地语言任务描述」，按英文 `Download HD Video & Audio` 意译；在线工具说明与对比表「批量」格改为与实现一致。
+  - 删除 Microsoft Clarity：Layout 里被注释的加载代码、Privacy 中的 Clarity 与会话回放披露；`feat.md` 的访问分析只保留 GA4。
+
 ## 2026-10-06 官网视觉升级：Pricing 路径改回 `/ext-pricing/`，全站深色与首页版式重做
 
 **Why**：005 恢复 `/ext-pricing/`、删除 `/pricing/`，全站改深色科技风。决策与范围见 `../000.架构/plans/005.官网视觉升级与Pricing路径改回.md`。

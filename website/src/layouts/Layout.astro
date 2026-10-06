@@ -1,15 +1,14 @@
 ---
 import { getContent, type Locale } from '../i18n/content';
-import { localeNames, localePaths, hreflangMap } from '../i18n/ui';
+import { defaultLocale, localeNames, localePaths, hreflangMap, locales } from '../i18n/ui';
 import { getCompanyContent } from '../company/companyContent';
-import { getLegalContent } from '../legal/legalContent';
 import {
   CHROME_WEB_STORE_URL,
   DEVELOPER_EMAIL,
   OFFICIAL_X_HANDLE,
   OFFICIAL_X_URL,
-  PRODUCT_NAME,
-  SITE_TITLE
+  OPERATOR_LEGAL_NAME,
+  PRODUCT_NAME
 } from '../lib/site.mjs';
 import SiteConfirmModal from '../components/site/SiteConfirmModal.astro';
 
@@ -22,14 +21,18 @@ type JsonLd = JsonLdObject;
 
 interface Props {
   locale: Locale;
-  title?: string;
+  title: string;
   description?: string;
   ogType?: string;
   ogImage?: string;
   includeSoftwareApplicationSchema?: boolean;
   structuredData?: JsonLd[];
   robots?: string;
-  includeAlternateLanguageLinks?: boolean;
+  /**
+   * 与本页内容对等、且允许索引的语言版本，hreflang 只在这些版本之间互指。
+   * 默认全部语言；不足 2 个时不输出 hreflang，因为没有可互指的对等版本。
+   */
+  alternateLocales?: readonly Locale[];
   includeLanguageSwitcher?: boolean;
   /** 独立流程页不渲染站点导航与页脚。 */
   standalone?: boolean;
@@ -41,14 +44,14 @@ const BASE = '/';
 
 const {
   locale,
-  title = SITE_TITLE,
+  title,
   description: descriptionProp,
   ogType = 'website',
   ogImage = `${BASE}og-image.png`,
   includeSoftwareApplicationSchema = true,
   structuredData = [],
   robots = 'index, follow',
-  includeAlternateLanguageLinks = true,
+  alternateLocales = locales,
   includeLanguageSwitcher = true,
   standalone = false,
 } = Astro.props;
@@ -56,7 +59,6 @@ const {
 const t = getContent(locale);
 const description = descriptionProp ?? t.site.description;
 const companyContent = getCompanyContent(locale);
-const legalContent = getLegalContent(locale);
 const currentPath = Astro.url.pathname;
 const normalizePathname = (pathname: string) => {
   if (pathname === '' || pathname === '/') {
@@ -77,13 +79,17 @@ const pagePathWithoutLocale = currentLocalePathPrefix
 const normalizedPagePathWithoutLocale = normalizePathname(pagePathWithoutLocale);
 
 // Build alternate language links with correct page paths
-const alternateLinks = Object.entries(localePaths).map(([key, path]) => {
-  // For each language, construct the full URL with language prefix + current page path
-  const langPrefix = path === '' ? '' : `/${path}`;
-  const url = `${langPrefix}${normalizedPagePathWithoutLocale}`;
-  const fullUrl = new URL(url, Astro.site);
-  return { locale: key as Locale, url: fullUrl.href };
-});
+const alternateLinks = alternateLocales.length > 1
+  ? alternateLocales.map(alternateLocale => {
+      // For each language, construct the full URL with language prefix + current page path
+      const path = localePaths[alternateLocale];
+      const langPrefix = path === '' ? '' : `/${path}`;
+      const url = `${langPrefix}${normalizedPagePathWithoutLocale}`;
+      const fullUrl = new URL(url, Astro.site);
+      return { locale: alternateLocale, url: fullUrl.href };
+    })
+  : [];
+const xDefaultLink = alternateLinks.find(link => link.locale === defaultLocale);
 
 const localePath = localePaths[locale] || '';
 const currentLocalePath = localePath === '' ? '/' : `/${localePath}/`;
@@ -105,6 +111,7 @@ const isHomeActive = normalizedCurrentPath === currentLocalePath;
 const isPricingActive = normalizedCurrentPath === pricingPath;
 const schemaName = PRODUCT_NAME;
 const siteHomeUrl = new URL('/', Astro.site).href;
+const websiteId = new URL('/#website', Astro.site).href;
 const organizationId = new URL('/#organization', Astro.site).href;
 const supportContactId = new URL('/#support', Astro.site).href;
 const chromeWebStoreUrl = CHROME_WEB_STORE_URL;
@@ -126,11 +133,23 @@ const softwareApplicationSchema: JsonLd = {
   },
   featureList: t.pages.homepage.softwareApplication.featureList
 };
+// WebSite.name 是 Google 站点名称的首选来源，与导航、页脚、og:site_name 用同一个品牌词。
+const websiteSchema: JsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  '@id': websiteId,
+  name: schemaName,
+  url: siteHomeUrl,
+  publisher: {
+    '@id': organizationId
+  }
+};
 const organizationSchema: JsonLd = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
   '@id': organizationId,
   name: schemaName,
+  legalName: OPERATOR_LEGAL_NAME,
   url: siteHomeUrl,
   logo: new URL('/favicon.png', Astro.site).href,
   email: DEVELOPER_EMAIL,
@@ -147,6 +166,7 @@ const organizationSchema: JsonLd = {
 const structuredDataItems = [
   ...(includeSoftwareApplicationSchema ? [softwareApplicationSchema] : []),
   ...structuredData,
+  websiteSchema,
   organizationSchema
 ];
 ---
@@ -163,15 +183,6 @@ const structuredDataItems = [
       window.gtag('js', new Date());
       window.gtag('config', GA_ID);
     </script>
-    <!-- Microsoft Clarity is temporarily disabled for performance testing.
-    <script is:inline>
-      (function(c,l,a,r,i,t,y){
-        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-      })(window, document, "clarity", "script", "xyfmieibkw");
-    </script>
-    -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#070B18" />
     <link rel="icon" type="image/png" sizes="128x128" href="/favicon.png" />
@@ -183,9 +194,11 @@ const structuredDataItems = [
     <!-- keywords 留空：现代搜索引擎忽略该标签，由引擎自行从正文提取关键词（与 Cloudflare 等站点做法一致） -->
     <meta name="keywords" content="" />
     <meta name="author" content={PRODUCT_NAME} />
+    <meta name="application-name" content={PRODUCT_NAME} />
     <meta name="robots" content={robots} />
 
     <!-- Open Graph / Facebook -->
+    <meta property="og:site_name" content={PRODUCT_NAME} />
     <meta property="og:type" content={ogType} />
     <meta property="og:url" content={canonicalURL} />
     <meta property="og:title" content={title} />
@@ -202,12 +215,10 @@ const structuredDataItems = [
     <meta name="twitter:site" content={OFFICIAL_X_HANDLE} />
 
     <!-- Alternate Language Links -->
-    {includeAlternateLanguageLinks && alternateLinks.map(link => (
+    {alternateLinks.map(link => (
       <link rel="alternate" hreflang={hreflangMap[link.locale]} href={link.url} />
     ))}
-    {includeAlternateLanguageLinks && (
-      <link rel="alternate" hreflang="x-default" href={alternateLinks.find(l => l.locale === 'en-US')?.url || canonicalURL} />
-    )}
+    {xDefaultLink && <link rel="alternate" hreflang="x-default" href={xDefaultLink.url} />}
 
     <!-- Structured Data -->
     {structuredDataItems.map(item => (
@@ -797,6 +808,10 @@ const structuredDataItems = [
         font-size: 13px;
       }
 
+      .footer-meta p + p {
+        margin-top: 4px;
+      }
+
       .footer-link-group a {
         max-width: 100%;
         color: var(--gray-900);
@@ -1102,7 +1117,7 @@ const structuredDataItems = [
                 data-ga-source="footer"
                 data-ga-target="terms"
               >
-                {legalContent.terms.navLabel}
+                {companyContent.termsLabel}
               </a>
               <a
                 href={privacyPath}
@@ -1110,13 +1125,14 @@ const structuredDataItems = [
                 data-ga-source="footer"
                 data-ga-target="privacy"
               >
-                {legalContent.privacy.navLabel}
+                {companyContent.privacyLabel}
               </a>
             </div>
           </nav>
         </div>
         <div class="footer-meta">
           <p>{t.layout.footer.rights}</p>
+          <p>{companyContent.operatorStatement}</p>
         </div>
       </div>
     </footer>}

@@ -22,7 +22,7 @@ export const ptBR: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo Downloader – Ferramenta online gratuita e extensão do Chrome',
+        title: 'Vimeo Downloader - Baixe vídeos em HD e áudio',
         description: 'Cole um link do Vimeo para salvar o vídeo no navegador, de graça e sem login. Precisa de áudio, legendas, imagem de capa ou fila? Adicione a extensão do Chrome.'
       },
       heroTrustPoints: [
@@ -35,7 +35,7 @@ export const ptBR: SiteContent = {
           titleBrand: 'Baixador de vídeos do Vimeo',
           titleTagline: 'Salve qualquer vídeo público',
           helperText:
-            'Cole um link público de vídeo do Vimeo, veja as resoluções que o Vimeo oferece e baixe a que você precisar.',
+            'Cole um link público de vídeo do Vimeo e baixe-o em MP4 na maior qualidade disponível.',
           linkLabel: 'Link do Vimeo',
           linkPlaceholder: 'https://vimeo.com/123456789',
           clearInput: 'Limpar entrada',
@@ -203,7 +203,7 @@ export const ptBR: SiteContent = {
           },
           {
             dimension: 'Lote e fila',
-            web: 'Cole vários links e execute-os um por vez com “Baixar tudo”.',
+            web: 'Um link por vez.',
             extension: 'Adicione itens pelo pop-up a uma fila compartilhada entre abas; eles são baixados em ordem.'
           },
           {

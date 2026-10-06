@@ -42,15 +42,17 @@
 - **多语言 Sitemap 治理**:根 sitemap index + 14 语言 sitemap + 扁平 sitemap + 可读样式表;每个 URL 带 lastmod(以页面族源文件的 git 提交时间为准);不输出 priority/changefreq;robots 只暴露根 sitemap 入口;排除 404/500 与四个支付回跳页。
 - **llms 文件**:短入口给一句话定位 + 核心页面;完整入口另给 14 语言入口与 sitemap 索引;英文为主;只引用真实存在的站内页面;不含邮箱与站外链接;robots 显式 Allow 这两个入口。
 - **导航与安装 CTA**:导航只有 Home、Pricing 两个链接 + 安装按钮 + 语言切换;安装按钮带浏览器插件品牌图标。
-- **页脚**:Company(About / Contact / 官方 X)与 Resources(Terms / Privacy)两个分组。
-- **官方 X 身份入口**:页脚 Company 分组与 Contact 页展示官方 X 账号;链接在新标签页打开;邮件仍是主要支持渠道;全站机器可读身份声明关联同一账号。
+- **页脚**:Company(About / Contact)与 Resources(Terms / Privacy)两个分组,底部是版权行与运营主体说明行。
+- **官方 X 身份入口**:Contact 页展示官方 X 账号;链接在新标签页打开;邮件仍是主要支持渠道;全站机器可读身份声明关联同一账号。
+- **运营主体公示**:全站页脚、About 与 Contact 的页头带展示同一句本地化说明「Vimeo Downloader 由 Ginyo Technologies Limited 运营」。该主体与 Terms 的合同相对方、Privacy 引言、结构化数据中的法定名称一致,保证付费用户能识别收款与负责主体。
 - **插件 Popup 品牌回流入口**:插件 Popup 头部的 Logo + 品牌名整体可点击,在新标签页打开官网首页并带插件来源参数。
 
 ### 不包含
 
 - **不做平台落地页**:产品单平台,工具已在首页首屏;`/vimeo-downloader/` 不再存在,也不做重定向。
 - **不做更新日志页**:`/changelog/` 不再存在(条目与插件真实版本无关)。
-- **不做长尾文章页、不做多平台互链**。
+- **不做多平台互链**。
+- **长尾文章页尚未上线**:2026-10-06 决定启动。选题与英文源稿在 `docs/seo-skill/`,流程见 `docs/references/specs/spec-google-seo.md`;路由、模板与多语言形态在源稿确认后补入本文。在此之前,站内不出现文章页入口。
 - **网站不再有签到入口**:首页没有账户按钮、Credits 徽标与签到弹窗;后端签到能力保留但网站不再调用(见 `@tech-签到活动.md` 与 004 计划 §8)。
 - **首页文案不承诺**「无限次数 / 无限大小」,不写额度数字与价格:网页下载策略是可收回的后端配置,价格来自后端配置。
 - **llms 文件不是 robots/sitemap/训练授权文件**:只是一份 AI 可读目录,不能控制爬虫抓取,也不保证搜索排名;不新增易过期的 AI crawler 专用规则。
@@ -91,6 +93,7 @@
 2. 首屏直接粘贴链接即可解析下载,不需要登录。
 3. 向下浏览插件区块;需要音频、字幕、封面、队列或大文件时,点击"Add to Chrome"安装插件;关心额度时进入 Pricing。
 4. 14 语言版本通过 URL 前缀(如中文简体 `/zh-cn/`)覆盖各语种搜索,hreflang 覆盖 14 语言 + 默认入口。
+5. 法务页例外:Terms、Privacy 只有英文审校稿。其他 13 个语言的法务页面仍可从站内访问,正文显示英文,但不参与搜索收录与 hreflang,避免同一份英文在 13 个地址重复出现。某语言补上审校译本后,该语言的法务页自动恢复收录。
 
 ### AI agent 发现站点
 
@@ -113,10 +116,12 @@
 - **首页**:14 语言首页首屏为下载器,其后 8 个区块按上表顺序出现;只有一个一级标题;FAQ 结构化数据与插件应用结构化数据存在且有效;文案中没有 Credits、签到、积分购买,也没有额度数字与价格。
 - **已删除页面**:平台落地页、更新日志及其语言版本不再生成;`/pricing/` 不存在,订阅购买页是 `/ext-pricing/`;导航、页脚、sitemap、llms 都无残留。
 - **导航与 CTA**:导航只有 Home + Pricing 两个链接(桌面与移动一致);安装按钮含插件品牌图标 + i18n 文案 + 跳转 Chrome Web Store;不出现 Solution 下拉或文章页入口。
-- **页脚**:只有 Company(About / Contact / 官方 X)与 Resources(Terms / Privacy);链接同当前语言前缀。
-- **Sitemap**:根 sitemap 是索引并收录 14 语言 sitemap;索引别名内容相同;扁平 sitemap 收录全部 canonical URL;每个 URL 有 loc + lastmod;不输出 priority/changefreq;URL 总数等于构建 canonical 页面数扣除屏蔽页;robots 屏蔽四个支付回跳页并指向根 sitemap。
+- **页脚**:只有 Company(About / Contact)与 Resources(Terms / Privacy);链接同当前语言前缀,链接文案随页面语言本地化;底部有版权行与运营主体说明行。
+- **品牌词**:页头品牌、14 语言首页 title、页脚、全站结构化数据的 name(WebSite / Organization)与 `og:site_name` 都是 `Vimeo Downloader`。
+- **法务页索引**:英文 Terms、Privacy 可收录;其余 13 语言的 Terms、Privacy 为 noindex、无 hreflang、不进 sitemap,正文标注为英文。
+- **Sitemap**:根 sitemap 是索引并收录 14 语言 sitemap;索引别名内容相同;扁平 sitemap 收录全部 canonical URL;每个 URL 有 loc + lastmod;不输出 priority/changefreq;URL 总数等于构建 canonical 页面数扣除 noindex 页;robots 屏蔽四个支付回跳页并指向根 sitemap。
 - **llms**:两个文件存在且互相链接;都链接到 sitemap;robots 显式 Allow 两个入口;引用的站内路径都能在构建产物找到;不含邮箱、站外链接与已删除路由。
-- **官方 X 入口**:14 语言页脚与 Contact 页都能看到本地化账号标签;链接统一指向官方 X;Contact 同时保留邮件支持;全站主体结构化数据与 X Card 元数据声明该账号。
+- **官方 X 入口**:14 语言 Contact 页都能看到本地化账号标签;链接统一指向官方 X;Contact 同时保留邮件支持;全站主体结构化数据与 X Card 元数据声明该账号。
 
 ## 用户操作逻辑与 UI 元素
 
@@ -139,20 +144,20 @@
 
 | 分组 | 元素 | 行为 |
 | --- | --- | --- |
-| Company | About、Contact、官方 X | 站内页;官方 X 新标签页打开 |
-| Resources | Terms、Privacy | 站内页 |
-| 底部 | 版权文字 | 仅展示 |
+| Company | About、Contact | 站内页 |
+| Resources | Terms、Privacy(文案随页面语言本地化) | 站内页 |
+| 底部第 1 行 | 版权文字(含品牌词) | 仅展示 |
+| 底部第 2 行 | 运营主体说明「Vimeo Downloader 由 Ginyo Technologies Limited 运营」(14 语言) | 仅展示 |
 
-页脚版式:品牌块在左、Company 与 Resources 两列在右、版权行在底;手机上品牌单独一行,两个分组两列并排。
+页脚版式:品牌块在左、Company 与 Resources 两列在右、底部两行灰色小字(13px,行间距 4px);手机上品牌单独一行,两个分组两列并排。
 
 ### 官方 X 入口
 
 | 元素 | 形式 | 可点击 | 行为 | 样式 |
 | --- | --- | --- | --- | --- |
-| 页脚官方账号 | X 品牌图标 + 本地化文字链接 | 是 | 新标签页打开官方 X 账号 | 位于 Company 分组,Contact 之后 |
 | Contact 官方账号 | 次级按钮,X 品牌图标 + 本地化标签 + 账号名 | 是 | 新标签页打开同一官方账号 | 高 44px;6px 圆角;移动端占满一行;邮箱主按钮保持第一顺位 |
 
-两处 X 图标均为装饰图标,对读屏隐藏;外链使用 `noopener noreferrer`。账号名与地址唯一定义在站点身份配置(见 `@../000.架构/tech-website.md`),当前为占位值,上线前替换。
+X 图标为装饰图标,对读屏隐藏;外链使用 `noopener noreferrer`。账号名与地址唯一定义在站点身份配置(见 `@../000.架构/tech-website.md`),当前为占位值,上线前替换。
 
 ### 插件 Popup 品牌回流入口(头部左侧)
 
@@ -164,10 +169,10 @@ Logo 为装饰图标,对读屏隐藏;按钮的可访问名称与悬停提示使�
 
 ## 数据埋点
 
-- **网站访问分析**:全站加载 GA4。Microsoft Clarity 代码已整段注释(性能测试期间临时停用),当前不加载。
+- **网站访问分析**:全站加载 GA4,不接入其他分析或会话回放工具。
 - **内链点击**:导航 / 页脚 / 首页区块内链统一上报内部跳转事件,来源字段区分导航、移动导航、页脚与首页各区块(如插件介绍、方案概览的 Free / Unlimited 卡),目标字段为目标页。
 - **安装 CTA**:沿用既有的"点击 Chrome Web Store 外链"事件,来源字段区分导航、移动导航、首页插件介绍与首页结尾 CTA。
-- **官方 X 入口**:统一上报官方 X 点击事件,来源区分页脚与 Contact。
+- **官方 X 入口**:统一上报官方 X 点击事件,来源为 Contact。
 - **插件 Popup 品牌回流入口**:不新增插件侧埋点;打开的首页地址沿用插件打开 Pricing 的同一套来源参数约定,由 GA4 的 UTM 归因区分该入口流量。
 
 ## 关联文档

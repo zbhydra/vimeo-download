@@ -22,7 +22,7 @@ import HomePlansSection from '../homepage/HomePlansSection.astro'
 import HomeFaqSection from '../homepage/HomeFaqSection.astro'
 import HomeFinalCtaSection from '../homepage/HomeFinalCtaSection.astro'
 import DownloadWorkspace from '../download/DownloadWorkspace.astro'
-import { CHROME_WEB_STORE_URL, SITE_TITLE } from '../../lib/site.mjs'
+import { CHROME_WEB_STORE_URL } from '../../lib/site.mjs'
 import { getContent, type Locale } from '../../i18n/content'
 import { localePaths } from '../../i18n/ui'
 
@@ -35,7 +35,7 @@ const installUrl = CHROME_WEB_STORE_URL
 const { locale = 'en-US' } = Astro.props as Props
 const content = getContent(locale)
 const homepage = content.pages.homepage
-const { description } = homepage.meta
+const { title, description } = homepage.meta
 const localePath = localePaths[locale] || ''
 const pricingPath = `${localePath === '' ? '/' : `/${localePath}/`}ext-pricing/`
 
@@ -59,7 +59,7 @@ const faqSchema = {
 
 <Layout
   locale={locale}
-  title={SITE_TITLE}
+  title={title}
   description={description}
   structuredData={[faqSchema]}
 >

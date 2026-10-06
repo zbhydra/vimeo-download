@@ -120,7 +120,13 @@ LLMs 文件**不包含**：
 | Company | `companyContent.footerGroupLabel` | About、Contact |
 | Resources | `t.layout.footer.resources` | Terms、Privacy |
 
-站内链接统一带内部跳转埋点（来源 `footer`，目标为对应页），并使用当前语言前缀。底部是 `t.layout.footer.rights` 版权文字。
+站内链接统一带内部跳转埋点（来源 `footer`，目标为对应页），并使用当前语言前缀。
+
+Terms / Privacy 的链接文案取 `companyContent.termsLabel` / `privacyLabel`，14 语言本地化；不取法务正文，因为法务正文在没有译本的语言里会回退成英文。
+
+底部两行：
+1. `t.layout.footer.rights`：版权文字；
+2. `companyContent.operatorStatement`：运营主体说明，规则见 `@tech-落地页与Sitemap.md` §4.3。
 
 ## 4. 语言切换保持当前路径
 

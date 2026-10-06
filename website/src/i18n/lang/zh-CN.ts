@@ -22,7 +22,7 @@ export const zhCN: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo 视频下载器：免费在线工具与 Chrome 扩展',
+        title: 'Vimeo Downloader - 下载高清视频和音频',
         description: '粘贴 Vimeo 链接即可在浏览器中保存视频，免费且无需登录。需要音频、字幕、封面图或下载队列？安装 Chrome 扩展。'
       },
       heroTrustPoints: [
@@ -34,7 +34,7 @@ export const zhCN: SiteContent = {
           eyebrow: '快速链接检查',
           titleBrand: 'Vimeo 视频下载器',
           titleTagline: '保存任意公开的 Vimeo 视频',
-          helperText: '粘贴公开的 Vimeo 视频链接，查看 Vimeo 提供的清晰度，并下载你需要的分辨率。',
+          helperText: '粘贴公开的 Vimeo 视频链接，即可下载最高可用清晰度的 MP4。',
           linkLabel: 'Vimeo 链接',
           linkPlaceholder: 'https://vimeo.com/123456789',
           clearInput: '清除输入',
@@ -208,7 +208,7 @@ export const zhCN: SiteContent = {
           },
           {
             dimension: '批量与队列',
-            web: '可粘贴多条链接，用「一键下载全部」逐个依次下载。',
+            web: '一次处理一条链接。',
             extension: '在弹窗中逐项加入跨标签页共享的同一个队列，按顺序下载。'
           },
           {

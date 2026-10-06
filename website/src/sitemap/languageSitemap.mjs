@@ -2,11 +2,12 @@
  * Builds the production sitemap index and per-language sitemap files.
  *
  * Flow:
- * Astro build pages -> collect canonical URLs -> group by locale prefix ->
- * resolve page lastmod from Git/file metadata -> write XML files.
+ * Astro build pages -> collect canonical URLs -> drop pages whose built HTML
+ * declares noindex -> group by locale prefix -> resolve page lastmod from
+ * Git/file metadata -> write XML files.
  */
 import { execFile } from 'node:child_process'
-import { mkdir, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
@@ -19,12 +20,8 @@ const SITEMAP_INDEX_FILENAMES = ['sitemap.xml', 'sitemap_index.xml']
 const LEGACY_FLAT_SITEMAP_FILENAME = 'sitemap-0.xml'
 const SITEMAP_STYLESHEET_PATH = '/sitemap.xsl'
 const STATUS_CODE_PAGES = new Set(['404', '500'])
-const SEARCH_BOT_BLOCKED_ROUTE_PATHS = new Set([
-  '/clink/cancel/',
-  '/clink/success/',
-  '/paypal/cancel/',
-  '/paypal/success/'
-])
+/** Layout 输出的 robots meta；content 含 noindex 的页面不进 sitemap。 */
+const NOINDEX_ROBOTS_META_PATTERN = /<meta\s+name="robots"\s+content="[^"]*\bnoindex\b/i
 const WEBSITE_ROOT = path.resolve(fileURLToPath(new URL('../..', import.meta.url)))
 const SITEMAP_XSL = `<?xml version="1.0" encoding="UTF-8"?>
 <xsl:stylesheet version="1.0"
@@ -219,10 +216,6 @@ function normalizeRoutePath(routePath) {
 
 function isIgnoredRoutePath(routePath) {
   const normalized = normalizeRoutePath(routePath)
-  if (SEARCH_BOT_BLOCKED_ROUTE_PATHS.has(normalized)) {
-    return true
-  }
-
   const segments = normalized.split('/').filter(Boolean)
   if (segments.length === 1 && STATUS_CODE_PAGES.has(segments[0])) {
     return true
@@ -274,6 +267,33 @@ function collectPageUrls(pages, routes, astroConfig) {
   }
 
   return [...urls].sort((left, right) => left.localeCompare(right, 'en', { numeric: true }))
+}
+
+/**
+ * Keeps only URLs whose built HTML allows indexing.
+ *
+ * The page's own robots meta is the single source of truth: payment return pages
+ * and legal routes that render the English fallback mark themselves noindex, so
+ * the sitemap follows them without a second, hand-maintained path list.
+ */
+async function filterIndexableUrls(urls, outputDir) {
+  const indexableUrls = []
+
+  for (const url of urls) {
+    const htmlPath = path.join(outputDir, new URL(url).pathname, 'index.html')
+    let html
+    try {
+      html = await readFile(htmlPath, 'utf8')
+    } catch (error) {
+      throw new Error(`languageSitemap: cannot read built html=${htmlPath} for url=${url}`, { cause: error })
+    }
+
+    if (!NOINDEX_ROBOTS_META_PATTERN.test(html)) {
+      indexableUrls.push(url)
+    }
+  }
+
+  return indexableUrls
 }
 
 export function classifySitemapUrl(url) {
@@ -531,10 +551,11 @@ export default function languageSitemap() {
           return
         }
 
-        const urls = collectPageUrls(pages, resolvedRoutes, astroConfig)
+        const outputDir = fileURLToPath(dir)
+        const urls = await filterIndexableUrls(collectPageUrls(pages, resolvedRoutes, astroConfig), outputDir)
         const groups = await buildLanguageSitemapGroups(urls, logger)
         validateGroups(groups)
-        await writeSitemaps(groups, fileURLToPath(dir), getBuildBaseUrl(astroConfig))
+        await writeSitemaps(groups, outputDir, getBuildBaseUrl(astroConfig))
         logger.info(`languageSitemap: wrote ${urls.length} URLs into ${groups.size} language sitemaps`)
       }
     }
