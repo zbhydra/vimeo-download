@@ -75,9 +75,6 @@ from it, so a domain or listing change is a one-file edit.
 Production builds read public runtime values from `website/.env.production`:
 
 - `PUBLIC_API_BASE_URL` - backend API base URL.
-- `PUBLIC_SHARED_COOKIE_DOMAIN` - shared `client_uuid` Cookie domain. Production
-  and test deploys set this from `deploy/deploy.sh` so the root site and test
-  subdomain keep sharing the same device cookie scope.
 - `PUBLIC_GOOGLE_CLIENT_ID` - Google Identity Services OAuth client ID for website login.
 
 Google OAuth login returns to the backend OAuth callback under

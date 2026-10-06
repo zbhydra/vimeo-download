@@ -6,8 +6,6 @@ interface ImportMetaEnv {
   readonly PUBLIC_API_BASE_URL?: string
   /** Google Identity Services OAuth client ID，用于 Pricing 登录按钮。 */
   readonly PUBLIC_GOOGLE_CLIENT_ID?: string
-  /** 网站共享 Cookie Domain，不含前导点；为空时只写当前 host Cookie。 */
-  readonly PUBLIC_SHARED_COOKIE_DOMAIN?: string
   /** 阿里云 SLS project 名称；未配置 endpoint 时与 PUBLIC_ALI_SLS_HOST 拼出 endpoint。 */
   readonly PUBLIC_ALI_SLS_PROJECT?: string
   /** 阿里云 SLS 公网 host，例如 ap-northeast-1.log.aliyuncs.com。 */

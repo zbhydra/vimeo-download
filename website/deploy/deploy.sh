@@ -32,8 +32,6 @@ PROD_DOMAIN="vimeodownloader.app"
 TEST_DOMAIN="test-vimeodownloader.app"
 PROD_PUBLIC_API_BASE_URL="https://api.vimeodownloader.app"
 TEST_PUBLIC_API_BASE_URL="https://test-api.vimeodownloader.app"
-PROD_PUBLIC_SHARED_COOKIE_DOMAIN="vimeodownloader.app"
-TEST_PUBLIC_SHARED_COOKIE_DOMAIN="vimeodownloader.app"
 
 DEPLOY_ENV=""
 SERVER_HOST=""
@@ -47,7 +45,6 @@ SERVER_RELEASE_DIR=""
 DEPLOY_DOMAIN=""
 TEMP_ARCHIVE_PATH=""
 BUILD_PUBLIC_API_BASE_URL=""
-BUILD_PUBLIC_SHARED_COOKIE_DOMAIN=""
 
 # 颜色输出
 INDEXNOW_KEY="68505a1b86444029c45dd3ad751f1251"
@@ -90,7 +87,6 @@ apply_environment() {
             NGINX_REMOTE_CONF_PATH="$PROD_NGINX_REMOTE_CONF_PATH"
             DEPLOY_DOMAIN="$PROD_DOMAIN"
             BUILD_PUBLIC_API_BASE_URL="$PROD_PUBLIC_API_BASE_URL"
-            BUILD_PUBLIC_SHARED_COOKIE_DOMAIN="$PROD_PUBLIC_SHARED_COOKIE_DOMAIN"
             ;;
         test)
             DEPLOY_ENV="test"
@@ -102,7 +98,6 @@ apply_environment() {
             NGINX_REMOTE_CONF_PATH="$TEST_NGINX_REMOTE_CONF_PATH"
             DEPLOY_DOMAIN="$TEST_DOMAIN"
             BUILD_PUBLIC_API_BASE_URL="$TEST_PUBLIC_API_BASE_URL"
-            BUILD_PUBLIC_SHARED_COOKIE_DOMAIN="$TEST_PUBLIC_SHARED_COOKIE_DOMAIN"
             ;;
         *)
             echo "错误: 不支持的部署环境: $env_name"
@@ -212,7 +207,6 @@ log_info "目标服务器: ${SERVER_USER}@${SERVER_HOST}:${SERVER_PORT}:${SERVER
 log_info "本次版本目录: $SERVER_RELEASE_DIR"
 log_info "Nginx 配置: $NGINX_CONF_PATH -> $NGINX_REMOTE_CONF_PATH"
 log_info "前端 API 地址: $BUILD_PUBLIC_API_BASE_URL"
-log_info "共享 Cookie Domain: $BUILD_PUBLIC_SHARED_COOKIE_DOMAIN"
 if [ "$DEPLOY_ENV" = "test" ]; then
     log_warn "测试环境当前使用脚本内硬编码占位配置，请按需修改 deploy.sh 与 vimeo-web-test.conf"
 fi
@@ -222,7 +216,6 @@ echo ""
 log_step "步骤 1/7: 构建网站..."
 cd "$WEBSITE_DIR"
 PUBLIC_API_BASE_URL="$BUILD_PUBLIC_API_BASE_URL" \
-PUBLIC_SHARED_COOKIE_DOMAIN="$BUILD_PUBLIC_SHARED_COOKIE_DOMAIN" \
 pnpm build
 
 if [ ! -d "$DIST_DIR" ]; then

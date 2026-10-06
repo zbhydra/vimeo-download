@@ -683,10 +683,6 @@ async function patchCompiledBrowserModuleFiles(rootDir) {
       /import\.meta\.env\.PUBLIC_API_BASE_URL/g,
       `'https://api.${SITE_HOST}/'`
     )
-    source = source.replace(
-      /import\.meta\.env\.PUBLIC_SHARED_COOKIE_DOMAIN/g,
-      `'${SITE_HOST}'`
-    )
     source = source.replace(/import\.meta\.env\.PUBLIC_ALI_SLS_PROJECT/g, "'vimeo-download-logs'")
     source = source.replace(/import\.meta\.env\.PUBLIC_ALI_SLS_HOST/g, "'ap-northeast-1.log.aliyuncs.com'")
     source = source.replace(/import\.meta\.env\.PUBLIC_ALI_SLS_ENDPOINT/g, "''")
