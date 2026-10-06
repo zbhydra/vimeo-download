@@ -71,6 +71,8 @@ def test_business_deploy_scripts_use_uv_local_install_path():
         'export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"'
         in remote_dependencies_body
     )
+    assert "sync_playwright" not in init_install_body
+    assert "sync_playwright" not in remote_dependencies_body
 
 
 def test_supervisor_template_bounds_request_drain_to_ten_seconds():

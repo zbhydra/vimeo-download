@@ -29,7 +29,7 @@ bash backend/deploy/health_check.sh backend/deploy/.env.prod  # 本地传 .env
 cd backend && uv run python -m playwright install --with-deps chromium
 ```
 
-现有部署脚本的 `playwright install chromium` 及 executable 存在性检查不能替代系统动态库安装。安装后还需按目标出口验证匿名页面/config 读取；不额外安装 Google Chrome。网站 Vimeo 的实现边界与验收结果见 [技术合同](../../docs/feat/002.下载功能/tech-网站Vimeo匿名解析与客户端合并.md)。
+部署脚本执行 `playwright install chromium`，但不替代系统动态库安装。安装后还需按目标出口验证匿名页面/config 读取；不额外安装 Google Chrome。网站 Vimeo 的实现边界与验收结果见 [技术合同](../../docs/feat/002.下载功能/tech-网站Vimeo匿名解析与客户端合并.md)。
 
 ## .env 模板与命名约定
 

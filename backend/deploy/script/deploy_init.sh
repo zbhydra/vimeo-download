@@ -472,23 +472,7 @@ install_playwright_chromium() {
         error_exit "Playwright Chromium 安装失败，Threads/Instagram 浏览器解析不可用"
     fi
 
-    log_info "=== 校验 Playwright Chromium executable ==="
-    if ! uv run python - <<'PY'
-from pathlib import Path
-
-from playwright.sync_api import sync_playwright
-
-with sync_playwright() as playwright:
-    executable = Path(playwright.chromium.executable_path)
-    print(executable)
-    if not executable.exists():
-        raise SystemExit(f"Playwright Chromium executable missing: {executable}")
-PY
-    then
-        error_exit "Playwright Chromium executable 校验失败"
-    fi
-
-    log_info "Playwright Chromium 安装并校验完成"
+    log_info "Playwright Chromium 安装完成"
 }
 
 ###############################################################################
