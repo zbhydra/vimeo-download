@@ -1,7 +1,10 @@
 ---
 /**
- * 区块 4：网页版与插件对比。桌面端是三列表格；窄屏把每行折成一张卡，
- * 单元格用 data-label 回显列名，避免横向滚动。
+ * 区块 4：网页版与插件对比。同一个 `<table>` 随宽度重排：
+ * - > 960 px：三列表格，插件列用 `--blue-100` 底、`--blue-400` 描边高亮；
+ * - 600–960 px：仍是表格，外层容器可横向滚动（容器可聚焦，键盘能滚动）；
+ * - ≤ 600 px：每行排成一张卡，维度名在上，下面是「网页版」「插件」两段；
+ *   单元格用 `data-label` 取现有表头文案回显列名，不新增文案。
  */
 import HomeSection from './HomeSection.astro'
 import type { HomepageContent } from '../../i18n/schema'
@@ -9,57 +12,90 @@ import type { HomepageContent } from '../../i18n/schema'
 const { copy } = Astro.props as { copy: HomepageContent['comparison'] }
 ---
 
-<HomeSection id="home-comparison" heading={copy.heading}>
-  <table class="home-table">
-    <thead>
-      <tr>
-        <th scope="col">{copy.columns.dimension}</th>
-        <th scope="col">{copy.columns.web}</th>
-        <th scope="col">{copy.columns.extension}</th>
-      </tr>
-    </thead>
-    <tbody>
-      {copy.rows.map(row => (
+<HomeSection id="home-comparison" heading={copy.heading} divided>
+  <div class="home-table-wrap" role="region" aria-labelledby="home-comparison-heading" tabindex="0">
+    <table class="home-table">
+      <thead>
         <tr>
-          <th scope="row">{row.dimension}</th>
-          <td data-label={copy.columns.web}>{row.web}</td>
-          <td data-label={copy.columns.extension}>{row.extension}</td>
+          <th scope="col">{copy.columns.dimension}</th>
+          <th scope="col">
+            <span class="home-table-col">
+              <span class="home-table-col-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18" /></svg>
+              </span>
+              {copy.columns.web}
+            </span>
+          </th>
+          <th scope="col" class="home-table-ext">
+            <span class="home-table-col">
+              <span class="home-table-col-icon home-table-col-icon--brand" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M10 3.5a1.5 1.5 0 0 1 3 0V5h3.5A1.5 1.5 0 0 1 18 6.5V10h1.5a1.5 1.5 0 0 1 0 3H18v4.5a1.5 1.5 0 0 1-1.5 1.5H13v-1.5a1.5 1.5 0 0 0-3 0V19H6.5A1.5 1.5 0 0 1 5 17.5V14h1.5a1.5 1.5 0 0 0 0-3H5V6.5A1.5 1.5 0 0 1 6.5 5H10z" /></svg>
+              </span>
+              {copy.columns.extension}
+            </span>
+          </th>
         </tr>
-      ))}
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+        {
+          copy.rows.map(row => (
+            <tr>
+              <th scope="row">{row.dimension}</th>
+              <td data-label={copy.columns.web}>{row.web}</td>
+              <td class="home-table-ext" data-label={copy.columns.extension}>{row.extension}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
 </HomeSection>
 
 <style>
+  .home-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--gray-alpha-400);
+    border-radius: var(--radius-xl);
+    background: var(--gray-100);
+    box-shadow: var(--shadow-card);
+  }
+
   .home-table {
     width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    border: 1px solid var(--gray-alpha-400);
-    border-radius: var(--radius-md);
-    overflow: hidden;
+    min-width: 760px;
+    border-collapse: collapse;
     table-layout: fixed;
-    font-size: 14px;
-    line-height: 20px;
+    font-size: 15px;
+    line-height: 1.55;
+    text-align: left;
   }
 
   .home-table th,
   .home-table td {
-    padding: 16px;
+    padding: 18px 24px;
     text-align: left;
     vertical-align: top;
-    border-top: 1px solid var(--gray-alpha-400);
+    border-bottom: 1px solid var(--gray-alpha-100);
     overflow-wrap: anywhere;
   }
 
   .home-table thead th {
-    border-top: 0;
-    background: var(--gray-100);
+    padding: 20px 24px;
+    border-bottom-color: var(--gray-alpha-400);
+    background: var(--gray-200);
+    color: var(--gray-1000);
     font-weight: 600;
   }
 
+  .home-table thead th:first-child {
+    width: 22%;
+    color: var(--gray-700);
+    font-size: 13px;
+  }
+
   .home-table tbody th {
-    width: 20%;
+    color: var(--gray-1000);
+    font-size: 14px;
     font-weight: 600;
   }
 
@@ -67,7 +103,69 @@ const { copy } = Astro.props as { copy: HomepageContent['comparison'] }
     color: var(--gray-900);
   }
 
-  @media (max-width: 960px) {
+  .home-table tbody tr:last-child th,
+  .home-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  /* 插件列：--blue-100 底、--blue-400 描边。 */
+  .home-table .home-table-ext {
+    border-bottom-color: var(--blue-400);
+    background: var(--blue-100);
+  }
+
+  .home-table thead .home-table-ext {
+    background: var(--blue-200);
+    color: var(--blue-700);
+  }
+
+  .home-table tbody tr:last-child .home-table-ext {
+    border-bottom: 0;
+  }
+
+  .home-table-col {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .home-table-col-icon {
+    display: inline-flex;
+    flex: 0 0 28px;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: var(--glass-bg);
+    color: var(--gray-900);
+  }
+
+  .home-table-col-icon--brand {
+    background: var(--gradient-brand);
+    color: var(--gray-1000);
+  }
+
+  .home-table-col-icon svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* 手机：每行一张卡。仍是同一个 table，只用 CSS 重排；列名来自 data-label。 */
+  @media (max-width: 600px) {
+    .home-table-wrap {
+      overflow: visible;
+      border: 0;
+      border-radius: 0;
+      background: none;
+      box-shadow: none;
+    }
+
     .home-table,
     .home-table tbody,
     .home-table tr,
@@ -75,12 +173,7 @@ const { copy } = Astro.props as { copy: HomepageContent['comparison'] }
     .home-table td {
       display: block;
       width: auto;
-    }
-
-    .home-table {
-      border: 0;
-      border-radius: 0;
-      overflow: visible;
+      min-width: 0;
     }
 
     .home-table thead {
@@ -91,29 +184,50 @@ const { copy } = Astro.props as { copy: HomepageContent['comparison'] }
       clip: rect(0, 0, 0, 0);
     }
 
-    .home-table tr {
-      margin-bottom: 16px;
+    .home-table tbody tr {
+      margin-bottom: 12px;
+      padding: 16px;
       border: 1px solid var(--gray-alpha-400);
-      border-radius: var(--radius-md);
-      overflow: hidden;
+      border-radius: 16px;
+      background: var(--gray-100);
+      box-shadow: var(--shadow-card);
     }
 
-    .home-table th,
-    .home-table td {
-      border-top: 0;
-      padding: 12px 16px;
+    .home-table tbody th,
+    .home-table tbody td,
+    .home-table tbody tr:last-child th,
+    .home-table tbody tr:last-child td {
+      padding: 0;
+      border: 0;
     }
 
     .home-table tbody th {
-      width: auto;
-      background: var(--gray-100);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .home-table td {
+      margin-top: 12px;
     }
 
     .home-table td::before {
       content: attr(data-label);
       display: block;
-      color: var(--gray-1000);
+      margin-bottom: 6px;
+      color: var(--gray-700);
+      font-size: 13px;
       font-weight: 600;
+    }
+
+    .home-table tbody tr td.home-table-ext,
+    .home-table tbody tr:last-child td.home-table-ext {
+      padding: 12px;
+      border: 1px solid var(--blue-400);
+      border-radius: var(--radius-md);
+    }
+
+    .home-table .home-table-ext::before {
+      color: var(--blue-700);
     }
   }
 </style>

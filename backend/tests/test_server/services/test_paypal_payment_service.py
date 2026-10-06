@@ -98,7 +98,7 @@ async def test_subscription_management_returns_paypal_automatic_payments_page():
 
     url = await _paypal_provider().create_subscription_management_url(
         channel_uid="payer-id",
-        return_url="https://example.com/pricing/",
+        return_url="https://example.com/ext-pricing/",
     )
 
     assert url == "https://www.paypal.com/myaccount/autopay/"

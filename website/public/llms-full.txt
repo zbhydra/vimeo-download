@@ -5,7 +5,7 @@
 ## Pages
 
 - [Home](https://vimeodownloader.app/): Online download tool and an overview of the Chrome extension: features, how it works, online tool versus extension, scope and limits, plans and FAQ.
-- [Pricing](https://vimeodownloader.app/pricing/): The Unlimited subscription for the Chrome extension.
+- [Pricing](https://vimeodownloader.app/ext-pricing/): The Unlimited subscription for the Chrome extension.
 - [About](https://vimeodownloader.app/about/): What the website and the extension each do, privacy principles and access boundaries.
 - [Contact](https://vimeodownloader.app/contact/): Public support channel for account, download, extension, billing and privacy questions.
 - [Terms of Service](https://vimeodownloader.app/terms/): Terms for using the website and the extension.

@@ -34,7 +34,8 @@ export const jaJP: SiteContent = {
       workspace: {
         parse: {
           eyebrow: 'クイックリンクチェック',
-          title: 'Vimeo 動画ダウンローダー：公開 Vimeo 動画を保存',
+          titleBrand: 'Vimeo 動画ダウンローダー',
+          titleTagline: '公開 Vimeo 動画を保存',
           helperText:
             '公開 Vimeo 動画のリンクを貼り付け、Vimeo が公開している画質を確認して、必要な解像度をダウンロードします。',
           linkLabel: 'Vimeo リンク',
@@ -57,6 +58,7 @@ export const jaJP: SiteContent = {
           resumeUnavailableText: 'ローカルの復元記録は期限切れです。',
           resumeDismiss: '無視',
           resuming: '再開しています...',
+          extensionEntryLine: '拡張機能で Vimeo 上から直接ダウンロード',
           largeFileExtensionInlineChromeTitle: 'Chrome 拡張機能',
           largeFileExtensionInlineChromeDescription:
             'Chrome 専用の拡張機能で、大きな Vimeo ダウンロードをタブの外で続行できます。',

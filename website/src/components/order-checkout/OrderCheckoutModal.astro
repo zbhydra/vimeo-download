@@ -200,7 +200,9 @@ const checkoutCopy: OrderCheckoutCopy = {
   .order-checkout-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.4);
+    background: var(--overlay-bg);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
   }
 
   .order-checkout-payment-dialog {
@@ -211,8 +213,8 @@ const checkoutCopy: OrderCheckoutCopy = {
     max-height: min(680px, calc(100vh - 48px));
     overflow: hidden;
     border: 1px solid var(--gray-alpha-400);
-    border-radius: var(--radius-md);
-    background: var(--background-100);
+    border-radius: var(--radius-xl);
+    background: var(--gray-100);
     box-shadow: var(--shadow-modal);
   }
 
@@ -237,6 +239,8 @@ const checkoutCopy: OrderCheckoutCopy = {
     padding-block: 16px;
     border-top: 1px solid var(--gray-alpha-400);
     background: var(--background-200);
+    border-bottom-left-radius: var(--radius-xl);
+    border-bottom-right-radius: var(--radius-xl);
   }
 
   .order-checkout-payment-header h2 {
@@ -259,10 +263,10 @@ const checkoutCopy: OrderCheckoutCopy = {
   .order-checkout-close {
     display: inline-grid;
     place-items: center;
-    width: 32px;
-    height: 32px;
+    width: 44px;
+    height: 44px;
     border: 0;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     background: transparent;
     color: var(--gray-900);
     cursor: pointer;
@@ -274,7 +278,7 @@ const checkoutCopy: OrderCheckoutCopy = {
   }
 
   .order-checkout-close:hover {
-    background: var(--gray-100);
+    background: var(--glass-bg);
     color: var(--gray-1000);
   }
 
@@ -299,7 +303,7 @@ const checkoutCopy: OrderCheckoutCopy = {
   .order-checkout-order-error {
     padding: 8px 12px;
     border: 1px solid var(--red-400);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     background: var(--red-100);
     color: var(--red-900);
     font-weight: 500;
@@ -315,8 +319,8 @@ const checkoutCopy: OrderCheckoutCopy = {
     gap: 8px;
     padding: 16px;
     border: 1px solid var(--gray-alpha-400);
-    border-radius: var(--radius-sm);
-    background: var(--background-100);
+    border-radius: var(--radius-md);
+    background: var(--background-200);
   }
 
   .order-checkout-selected-label,
@@ -373,8 +377,8 @@ const checkoutCopy: OrderCheckoutCopy = {
     min-height: 56px;
     padding: 0 16px;
     border: 1px solid var(--gray-alpha-400);
-    border-radius: var(--radius-sm);
-    background: var(--background-100);
+    border-radius: var(--radius-md);
+    background: var(--background-200);
     color: var(--gray-1000);
     cursor: pointer;
     font-size: 14px;
@@ -386,26 +390,34 @@ const checkoutCopy: OrderCheckoutCopy = {
 
   .order-checkout-channel-button:hover {
     border-color: var(--gray-alpha-500);
-    background: var(--gray-100);
+    background: var(--gray-200);
   }
 
-  /* 选中态用 gray-1000 描边加外圈；外圈排除 :focus-visible，否则会盖住全站焦点环。 */
+  /* 选中态用品牌蓝描边加外圈；外圈排除 :focus-visible，否则会盖住全站焦点环。 */
   .order-checkout-channel-button.is-selected:not(:focus-visible) {
-    border-color: var(--gray-1000);
-    box-shadow: 0 0 0 1px var(--gray-1000);
-    background: var(--background-100);
+    border-color: var(--blue-700);
+    box-shadow: 0 0 0 1px var(--blue-700);
+    background: var(--blue-100);
   }
 
+  /* 支付图标自带深色品牌色，放在 scoped 的浅灰底板上才能在深底看清。 */
   .order-checkout-channel-icon {
     display: inline-grid;
     place-items: center;
     width: 32px;
     height: 32px;
     flex: 0 0 auto;
+    border-radius: var(--radius-sm);
+    background: var(--payment-plate);
+  }
+
+  .order-checkout-channel-icon:empty {
+    background: transparent;
   }
 
   .order-checkout-channel-icon img {
     display: block;
+    padding: 4px;
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
@@ -457,7 +469,7 @@ const checkoutCopy: OrderCheckoutCopy = {
     width: 16px;
     height: 16px;
     margin-top: 1px;
-    accent-color: var(--gray-1000);
+    accent-color: var(--blue-700);
     flex: 0 0 auto;
   }
 
@@ -484,7 +496,7 @@ const checkoutCopy: OrderCheckoutCopy = {
   .order-checkout-submit,
   .order-checkout-order-cancel {
     height: auto;
-    min-height: 40px;
+    min-height: 44px;
     white-space: normal;
     text-align: center;
   }
@@ -501,8 +513,8 @@ const checkoutCopy: OrderCheckoutCopy = {
     max-height: min(540px, calc(100vh - 48px));
     overflow: hidden;
     border: 1px solid var(--gray-alpha-400);
-    border-radius: var(--radius-md);
-    background: var(--background-100);
+    border-radius: var(--radius-xl);
+    background: var(--gray-100);
     box-shadow: var(--shadow-modal);
   }
 
@@ -540,7 +552,7 @@ const checkoutCopy: OrderCheckoutCopy = {
     width: 40px;
     height: 40px;
     border: 3px solid var(--gray-alpha-400);
-    border-top-color: var(--gray-1000);
+    border-top-color: var(--blue-700);
     border-radius: 9999px;
     transform-origin: 50% 50%;
     will-change: transform;
@@ -555,7 +567,7 @@ const checkoutCopy: OrderCheckoutCopy = {
     width: min(430px, 100%);
     padding: 16px;
     border: 1px solid var(--green-400);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     background: var(--green-100);
   }
 
@@ -628,9 +640,14 @@ const checkoutCopy: OrderCheckoutCopy = {
     .order-checkout-close {
       transition: none;
     }
+
+    /* 静止时仍是「一圈底环 + 一段高亮弧」，能表达加载中。 */
+    .order-checkout-order-spinner {
+      animation: none;
+    }
   }
 
-  @media (max-width: 760px) {
+  @media (max-width: 600px) {
     .order-checkout-modal {
       padding: 12px;
     }
@@ -700,7 +717,7 @@ const checkoutCopy: OrderCheckoutCopy = {
       max-height: min(540px, calc(100dvh - 48px));
     }
 
-    @media (max-width: 760px) {
+    @media (max-width: 600px) {
       .order-checkout-order-dialog,
       .order-checkout-payment-dialog {
         max-height: calc(100dvh - 24px);

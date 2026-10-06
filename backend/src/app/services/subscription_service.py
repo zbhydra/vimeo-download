@@ -188,7 +188,7 @@ class SubscriptionService(BaseService[UserSubscriptionModel]):
         try:
             return await provider.create_subscription_management_url(
                 channel_uid=subscription.channel_uid,
-                return_url=f"{settings.app.public_website_base_url.rstrip('/')}/pricing/",
+                return_url=f"{settings.app.public_website_base_url.rstrip('/')}/ext-pricing/",
             )
         except PaymentProviderError as exc:
             raise AppCommonException(

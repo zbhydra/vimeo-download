@@ -92,4 +92,4 @@ monorepo，各子项目独立用 **pnpm** 管理（无根 workspace）。
 | 写 / 改 extension（MV3）              | `spec-extension.md`                      |
 | SEO 内容创建 / 优化 / 本地化          | `spec-google-seo.md`                     |
 | 写测试                              | `spec-test-server.md` / `spec-test-client.md` |
-| UI / 视觉 / 配色 / 玻璃效果             | `design.md`（亮色）/ `design.dark.md`（暗色） |
+| UI / 视觉 / 配色 / 玻璃效果             | `design.md`（亮色）/ `design.dark.md`（暗色）；website 以 `spec-website.md` §4 为准 |

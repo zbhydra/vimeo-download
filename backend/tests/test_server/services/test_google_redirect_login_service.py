@@ -38,13 +38,13 @@ def _normalize(monkeypatch: pytest.MonkeyPatch, return_to: str) -> str:
         ),
         # 网站域与本地开发域沿用既有白名单。
         (
-            f"{WEBSITE_BASE_URL}/pricing/?plan=month&google_login_error=old",
-            f"{WEBSITE_BASE_URL}/pricing/?plan=month",
+            f"{WEBSITE_BASE_URL}/ext-pricing/?plan=month&google_login_error=old",
+            f"{WEBSITE_BASE_URL}/ext-pricing/?plan=month",
         ),
-        ("https://localhost:7910/pricing/", "https://localhost:7910/pricing/"),
-        ("https://127.0.0.1:7910/pricing/", "https://127.0.0.1:7910/pricing/"),
+        ("https://localhost:7910/ext-pricing/", "https://localhost:7910/ext-pricing/"),
+        ("https://127.0.0.1:7910/ext-pricing/", "https://127.0.0.1:7910/ext-pricing/"),
         # 纯相对路径拼到网站根域名。
-        ("/pricing/", f"{WEBSITE_BASE_URL}/pricing/"),
+        ("/ext-pricing/", f"{WEBSITE_BASE_URL}/ext-pricing/"),
     ],
 )
 def test_normalize_oauth_return_to_accepts_allowed_targets(
@@ -59,7 +59,7 @@ def test_normalize_oauth_return_to_accepts_allowed_targets(
 @pytest.mark.parametrize(
     "return_to",
     [
-        "https://evil.example.com/pricing/",
+        "https://evil.example.com/ext-pricing/",
         # 插件回调的各类伪装。
         f"https://{EXTENSION_ID}.chromiumapp.org.evil.com/google-login",
         f"https://{EXTENSION_ID}.chromiumapp.com/google-login",
@@ -93,7 +93,7 @@ def test_normalize_oauth_return_to_rejects_disallowed_targets(
         ("", False),
         ("   ", False),
         (f"{WEBSITE_BASE_URL}/extension-login-v3/", False),
-        ("https://localhost:7910/pricing/", False),
+        ("https://localhost:7910/ext-pricing/", False),
         # 与规范化同源的伪装用例：必须是 https + 恰好 32 位 a-p 扩展 ID。
         (f"https://{EXTENSION_ID}.chromiumapp.org.evil.com/google-login", False),
         (

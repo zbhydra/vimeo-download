@@ -22,13 +22,13 @@ Pricing 页全部源码在 `website/src` 下:
 
 ## 购买页路由合同
 
-`/pricing/` 只装配、加载和购买插件订阅(Unlimited)。英文根路由与全部语言路由都装配同一页面组件,浏览器不按来源切换商品或改写首屏。可见 FAQ 与结构化数据同源,canonical、hreflang 和 sitemap 跟随该路由。站点导航提供 Pricing 入口;首页的插件介绍与方案概览区块也链接到该页。
+`/ext-pricing/` 只装配、加载和购买插件订阅(Unlimited)。英文根路由与全部语言路由都装配同一页面组件,浏览器不按来源切换商品或改写首屏。可见 FAQ 与结构化数据同源,canonical、hreflang 和 sitemap 跟随该路由。站点导航提供 Pricing 入口;首页的插件介绍与方案概览区块也链接到该页。
 
-`/ext-pricing/` 与旧价格入口的转向逻辑已不存在,网站也不保留旧路径兼容。插件把 `WEBSITE.PRICING_PATH`(`/pricing/`)作为购买页路径,与网站同批发布。
+`/pricing/` 与旧价格入口的转向逻辑不存在,网站不保留旧路径兼容。插件的 `WEBSITE.PRICING_PATH` 是 `/ext-pricing/`,与网站路由一致,二者不必同批发布。
 
 来源识别:`pricing-entry.ts` 的 `readPricingEntryFlags` 以 `utm_source=extension` 或 `source=quota_counter` 判定插件来源;来源只控制来源文案、埋点和好评赠送页面入口,不决定商品类型。
 
-语言切换保留 query。无来源也可直接登录购买:订阅页恢复原会话购买意图。支付、轮询和账号刷新沿用本链路。PayPal、Clink 回跳页的返回链接固定为 `/pricing/`,由该页在订阅付款后刷新权益;回跳页组件与文案见 `@../004.订单系统/tech-支付与履约.md`。
+语言切换保留 query。无来源也可直接登录购买:订阅页恢复原会话购买意图。支付、轮询和账号刷新沿用本链路。PayPal、Clink 回跳页的返回链接固定为 `/ext-pricing/`,由该页在订阅付款后刷新权益;回跳页组件与文案见 `@../004.订单系统/tech-支付与履约.md`。
 
 ## 后端接口
 

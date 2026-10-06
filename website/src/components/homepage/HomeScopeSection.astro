@@ -1,22 +1,45 @@
 ---
-/** 区块 5：适用范围与边界（works for / does not do / 合规声明）。 */
+/**
+ * 区块 5：适用范围与边界（works for / does not do / 合规声明），`--background-200` 区块里 3 张卡。
+ * 三张卡的图标块与列表标记各用一组色（绿 / 灰 / 紫）；前两张是勾与叉，合规声明是小圆点。
+ */
 import HomeSection from './HomeSection.astro'
 import type { HomepageContent } from '../../i18n/schema'
 
 const { copy } = Astro.props as { copy: HomepageContent['scope'] }
-const groups = [copy.worksFor, copy.doesNot, copy.compliance]
+const groups = [
+  { key: 'works', tone: 'green', group: copy.worksFor },
+  { key: 'does-not', tone: 'gray', group: copy.doesNot },
+  { key: 'compliance', tone: 'violet', group: copy.compliance }
+] as const
 ---
 
-<HomeSection id="home-scope" heading={copy.heading}>
+<HomeSection id="home-scope" heading={copy.heading} tone="alt">
   <div class="home-scope-grid">
-    {groups.map(group => (
-      <div class="home-scope-card">
-        <h3>{group.heading}</h3>
-        <ul>
-          {group.items.map(item => <li>{item}</li>)}
-        </ul>
-      </div>
-    ))}
+    {
+      groups.map(({ key, tone, group }) => (
+        <div class={`home-scope-card home-scope-card--${tone}`}>
+          <div class="home-scope-head">
+            <span class="home-scope-icon" aria-hidden="true">
+              {key === 'works' && <svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>}
+              {key === 'does-not' && <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></svg>}
+              {key === 'compliance' && <svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6z" /></svg>}
+            </span>
+            <h3>{group.heading}</h3>
+          </div>
+          <ul>
+            {group.items.map(item => (
+              <li>
+                {key === 'works' && <svg class="home-scope-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>}
+                {key === 'does-not' && <svg class="home-scope-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" /></svg>}
+                {key === 'compliance' && <span class="home-scope-dot" aria-hidden="true" />}
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))
+    }
   </div>
 </HomeSection>
 
@@ -27,35 +50,122 @@ const groups = [copy.worksFor, copy.doesNot, copy.compliance]
     gap: 16px;
   }
 
+  /* 色组只在本组件里用：图标块同色相 alpha 0.14 的底配浅色线条。 */
   .home-scope-card {
-    padding: 24px;
+    --scope-bg: rgba(34, 197, 94, 0.14);
+    --scope-fg: var(--green-900);
+    min-width: 0;
+    padding: 28px;
     border: 1px solid var(--gray-alpha-400);
-    border-radius: var(--radius-md);
-    background: var(--background-100);
+    border-radius: var(--radius-xl);
+    background: var(--gray-100);
+    box-shadow: var(--shadow-card);
   }
 
-  .home-scope-card h3 {
-    font-size: 16px;
+  .home-scope-card--gray {
+    --scope-bg: var(--glass-bg);
+    --scope-fg: var(--gray-900);
+  }
+
+  .home-scope-card--violet {
+    --scope-bg: var(--violet-200);
+    --scope-fg: var(--violet-900);
+  }
+
+  .home-scope-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .home-scope-icon {
+    display: inline-flex;
+    flex: 0 0 36px;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--scope-bg);
+    color: var(--scope-fg);
+  }
+
+  .home-scope-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .home-scope-icon svg,
+  .home-scope-mark {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .home-scope-head h3 {
+    color: var(--gray-1000);
+    font-size: 18px;
     font-weight: 600;
-    line-height: 24px;
-    letter-spacing: -0.32px;
+    line-height: 1.3;
   }
 
   .home-scope-card ul {
-    margin-top: 12px;
-    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 20px;
+    list-style: none;
     color: var(--gray-900);
-    font-size: 14px;
-    line-height: 20px;
+    font-size: 15px;
+    line-height: 1.55;
   }
 
-  .home-scope-card li + li {
-    margin-top: 8px;
+  .home-scope-card li {
+    display: flex;
+    gap: 10px;
+  }
+
+  .home-scope-mark {
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    color: var(--scope-fg);
+  }
+
+  .home-scope-dot {
+    flex: 0 0 6px;
+    width: 6px;
+    height: 6px;
+    margin: 9px 6px 0;
+    border-radius: 50%;
+    background: var(--scope-fg);
   }
 
   @media (max-width: 960px) {
     .home-scope-grid {
       grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  @media (max-width: 600px) {
+    .home-scope-grid {
+      gap: 12px;
+    }
+
+    .home-scope-card {
+      padding: 20px;
+      border-radius: 18px;
+    }
+
+    .home-scope-head h3 {
+      font-size: 17px;
+    }
+
+    .home-scope-card ul {
+      margin-top: 16px;
     }
   }
 </style>

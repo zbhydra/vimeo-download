@@ -140,6 +140,7 @@ const authCopy = {
 </script>
 
 <style is:global>
+  /* 深色写法同 SiteConfirmModal：gray-100 底、alpha-400 描边、遮罩加模糊；按钮、输入框、关闭钮统一。 */
   .pricing-auth-field {
     display: grid;
     gap: 8px;
@@ -169,16 +170,17 @@ const authCopy = {
     line-height: 20px;
   }
 
-  .pricing-auth-eyebrow {
+  .pricing-auth-heading .pricing-auth-eyebrow {
     width: max-content;
     max-width: 100%;
-    padding: 2px 8px;
+    padding: 2px 10px;
+    border: 1px solid var(--blue-400);
     border-radius: 9999px;
-    background: var(--gray-100);
-    color: var(--gray-900) !important;
-    font-size: 12px !important;
+    background: var(--blue-100);
+    color: var(--blue-700);
+    font-size: 12px;
     font-weight: 500;
-    line-height: 16px !important;
+    line-height: 16px;
   }
 
   .pricing-auth-form,
@@ -202,22 +204,26 @@ const authCopy = {
 
   .pricing-auth-input {
     width: 100%;
-    height: 40px;
+    height: 44px;
     padding: 0 12px;
-    border: 1px solid var(--gray-alpha-400);
-    border-radius: var(--radius-sm);
+    border: 1px solid var(--gray-alpha-500);
+    border-radius: var(--radius-md);
     background: var(--background-100);
     color: var(--gray-1000);
     font-family: inherit;
-    font-size: 14px;
+    font-size: 16px;
+  }
+
+  .pricing-auth-input::placeholder {
+    color: var(--gray-700);
   }
 
   .pricing-auth-input:hover {
-    border-color: var(--gray-alpha-500);
+    border-color: var(--gray-alpha-600);
   }
 
   .pricing-auth-input:focus {
-    border-color: var(--gray-alpha-600);
+    border-color: var(--blue-700);
   }
 
   .pricing-auth-code-input {
@@ -228,46 +234,27 @@ const authCopy = {
   .pricing-auth-primary-button,
   .pricing-auth-secondary-button {
     height: auto;
-    min-height: 40px;
+    min-height: 44px;
     white-space: normal;
     text-align: center;
   }
 
   .pricing-auth-google-button {
     width: 100%;
-    min-height: 40px;
+    min-height: 44px;
     margin-bottom: 16px;
     display: grid;
   }
 
+  /* 外观来自共享 .btn-secondary（auth.ts 渲染时同时带该类），这里只定尺寸。 */
   .google-oauth-button {
     width: 100%;
-    min-height: 40px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
+    min-height: 44px;
     padding: 0 10px;
-    border: 1px solid var(--gray-alpha-400);
-    border-radius: var(--radius-sm);
-    background: var(--background-100);
-    color: var(--gray-1000);
-    font-size: 14px;
-    font-weight: 500;
-    line-height: 20px;
-    transition:
-      background-color var(--transition-fast),
-      border-color var(--transition-fast);
-  }
-
-  .google-oauth-button:hover {
-    border-color: var(--gray-alpha-500);
-    background: var(--gray-100);
   }
 
   .google-oauth-button:disabled {
     cursor: wait;
-    opacity: 0.72;
   }
 
   .google-oauth-button-icon {
@@ -331,7 +318,7 @@ const authCopy = {
 
   /* 文字链接外观来自共享 .text-link，这里只重置 button 默认样式。 */
   .pricing-auth-email-link {
-    min-height: 32px;
+    min-height: 44px;
     padding: 0;
     border: 0;
     background: transparent;
@@ -360,7 +347,9 @@ const authCopy = {
   .pricing-auth-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.4);
+    background: var(--overlay-bg);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
   }
 
   .pricing-auth-dialog {
@@ -370,29 +359,29 @@ const authCopy = {
     overflow-y: auto;
     padding: 32px 24px 24px;
     border: 1px solid var(--gray-alpha-400);
-    border-radius: var(--radius-md);
-    background: var(--background-100);
+    border-radius: var(--radius-xl);
+    background: var(--gray-100);
     box-shadow: var(--shadow-modal);
   }
 
   .pricing-auth-close {
-    width: 32px;
-    height: 32px;
+    width: 44px;
+    height: 44px;
     position: absolute;
-    top: 16px;
-    right: 16px;
-    border-radius: var(--radius-sm);
+    top: 8px;
+    right: 8px;
+    border-radius: var(--radius-md);
     color: var(--gray-900);
     font-size: 22px;
     line-height: 1;
   }
 
   .pricing-auth-close:hover {
-    background: var(--gray-100);
+    background: var(--glass-bg);
     color: var(--gray-1000);
   }
 
-  @media (max-width: 720px) {
+  @media (max-width: 600px) {
     .pricing-auth-modal {
       padding: 12px;
     }

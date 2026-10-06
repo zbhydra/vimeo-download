@@ -33,7 +33,7 @@ describe('API domain configuration', () => {
     expect(WEBSITE.BASE_URL).toBe('https://vimeodownloader.app')
     // 插件不再跳官网登录，只保留条款、隐私与订阅页三个外链路径。
     expect('EXTENSION_LOGIN_PATH' in WEBSITE).toBe(false)
-    expect(WEBSITE.PRICING_PATH).toBe('/pricing/')
+    expect(WEBSITE.PRICING_PATH).toBe('/ext-pricing/')
     // Google 不再走 GIS：插件侧不持有 client_id，也不加载远程脚本。
     expect('GOOGLE_AUTH' in configModule).toBe(false)
     expect(ALI_SLS_MARK).toEqual({

@@ -1117,8 +1117,8 @@ class TestGoogleLoginAPI:
         ("return_to", "expected_return_to"),
         [
             (
-                "https://vimeodownloader.app/pricing/?plan=month&google_login_error=old",
-                "https://vimeodownloader.app/pricing/?plan=month",
+                "https://vimeodownloader.app/ext-pricing/?plan=month&google_login_error=old",
+                "https://vimeodownloader.app/ext-pricing/?plan=month",
             ),
             # 插件 browser identity 回调：设备归因参数与路径原样进入 OAuth state。
             (
@@ -1192,8 +1192,7 @@ class TestGoogleLoginAPI:
         assert parsed_location.path == "/o/oauth2/v2/auth"
         assert query["client_id"] == [google_client_id]
         assert query["redirect_uri"] == [
-            "https://api.vimeodownloader.app"
-            "/api/client/auth/google/oauth/callback"
+            "https://api.vimeodownloader.app/api/client/auth/google/oauth/callback"
         ]
         assert query["response_type"] == ["code"]
         assert query["scope"] == ["openid email profile"]
@@ -1237,7 +1236,7 @@ class TestGoogleLoginAPI:
 
         response = await async_client.get(
             "/api/client/auth/google/oauth/authorize",
-            params={"return_to": "https://vimeodownloader.app/pricing/"},
+            params={"return_to": "https://vimeodownloader.app/ext-pricing/"},
         )
 
         parsed_redirect, redirect_params = parse_google_redirect_response(response)
@@ -1281,7 +1280,7 @@ class TestGoogleLoginAPI:
 
         response = await async_client.get(
             "/api/client/auth/google/oauth/authorize",
-            params={"return_to": "https://vimeodownloader.app/pricing/"},
+            params={"return_to": "https://vimeodownloader.app/ext-pricing/"},
         )
 
         parsed_redirect, redirect_params = parse_google_redirect_response(response)
@@ -1325,7 +1324,7 @@ class TestGoogleLoginAPI:
 
         response = await async_client.get(
             "/api/client/auth/google/oauth/authorize",
-            params={"return_to": "https://evil.example.com/pricing/"},
+            params={"return_to": "https://evil.example.com/ext-pricing/"},
         )
 
         parsed_redirect, redirect_params = parse_google_redirect_response(response)
@@ -1358,7 +1357,7 @@ class TestGoogleLoginAPI:
 
         async def fake_consume_oauth_state(state: str) -> str:
             consumed_states.append(state)
-            return "https://vimeodownloader.app/pricing/?plan=unlimited"
+            return "https://vimeodownloader.app/ext-pricing/?plan=unlimited"
 
         async def fake_exchange_oauth_code_for_profile(
             *,
@@ -1393,7 +1392,7 @@ class TestGoogleLoginAPI:
             callback_response
         )
         assert parsed_redirect.netloc == "vimeodownloader.app"
-        assert parsed_redirect.path == "/pricing/"
+        assert parsed_redirect.path == "/ext-pricing/"
         assert redirect_params["plan"] == ["unlimited"]
         assert "google_login_error" not in redirect_params
         assert "access_token" not in redirect_params
@@ -1526,7 +1525,7 @@ class TestGoogleLoginAPI:
         )
 
         async def fake_consume_oauth_state(_state: str) -> str:
-            return "https://vimeodownloader.app/pricing/?plan=unlimited"
+            return "https://vimeodownloader.app/ext-pricing/?plan=unlimited"
 
         async def fake_exchange_oauth_code_for_profile(
             *,
@@ -1579,7 +1578,7 @@ class TestGoogleLoginAPI:
 
         parsed_redirect, redirect_params = parse_google_redirect_response(response)
         assert parsed_redirect.netloc == "vimeodownloader.app"
-        assert parsed_redirect.path == "/pricing/"
+        assert parsed_redirect.path == "/ext-pricing/"
         assert redirect_params["plan"] == ["unlimited"]
         assert redirect_params["google_email_verification"] == [email]
         assert "google_login_code" not in redirect_params
@@ -1676,7 +1675,7 @@ class TestGoogleLoginAPI:
         )
 
         async def fake_consume_oauth_state(_state: str) -> str:
-            return "https://vimeodownloader.app/pricing/?plan=month"
+            return "https://vimeodownloader.app/ext-pricing/?plan=month"
 
         async def fake_verify_id_token(_credential: str) -> GoogleTokenProfile:
             return GoogleTokenProfile(
@@ -1701,7 +1700,7 @@ class TestGoogleLoginAPI:
             oauth_response
         )
         assert parsed_redirect.netloc == "vimeodownloader.app"
-        assert parsed_redirect.path == "/pricing/"
+        assert parsed_redirect.path == "/ext-pricing/"
         assert redirect_params["plan"] == ["month"]
         assert redirect_params["google_login_error"] == ["internal_server_error"]
         assert "google_login_code" not in redirect_params

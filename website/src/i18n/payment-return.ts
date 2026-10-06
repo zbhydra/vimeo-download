@@ -1,6 +1,6 @@
 /** PayPal / Clink 英文支付回跳页共用文案；回跳页仅英文、noindex，不进语言字典。 */
 export const paymentReturnContent = {
-  /** 「返回价格页」按钮文案，链接固定为 /pricing/。 */
+  /** 「返回价格页」按钮文案，链接固定为 /ext-pricing/。 */
   backToPricing: 'Back to pricing',
   success: {
     /** 订单已查到且未终态：轮询中。 */

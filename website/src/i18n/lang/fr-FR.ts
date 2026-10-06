@@ -34,7 +34,8 @@ export const frFR: SiteContent = {
       workspace: {
         parse: {
           eyebrow: 'Vérification rapide du lien',
-          title: 'Téléchargeur de vidéos Vimeo : enregistrez toute vidéo publique',
+          titleBrand: 'Téléchargeur de vidéos Vimeo',
+          titleTagline: 'Enregistrez toute vidéo publique',
           helperText:
             'Collez un lien de vidéo Vimeo public, consultez les résolutions proposées par Vimeo et téléchargez celle qu’il vous faut.',
           linkLabel: 'Lien Vimeo',
@@ -58,6 +59,7 @@ export const frFR: SiteContent = {
           resumeUnavailableText: 'L’enregistrement de récupération local a expiré.',
           resumeDismiss: 'Ignorer',
           resuming: 'Reprise...',
+          extensionEntryLine: 'Téléchargez directement sur Vimeo avec l’extension',
           largeFileExtensionInlineChromeTitle: 'Extension Chrome',
           largeFileExtensionInlineChromeDescription:
             'Extension dédiée à Chrome qui maintient les gros téléchargements Vimeo hors de l’onglet.',

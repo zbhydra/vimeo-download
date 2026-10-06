@@ -12,7 +12,7 @@
 
 ## 1. 平台落地页:不存在
 
-产品单平台，网页下载器直接放在首页首屏，不再有独立的平台落地页路由。`/vimeo-downloader/` 及其语言版本已删除（避免同一关键词两个页面），不做重定向；`/changelog/`、`/ext-pricing/` 同样已删除。sitemap、llms、导航、页脚均不得再出现这些路径。
+产品单平台，网页下载器直接放在首页首屏，不再有独立的平台落地页路由。`/vimeo-downloader/` 及其语言版本已删除（避免同一关键词两个页面），不做重定向；`/changelog/` 同样已删除；旧积分页路径 `/pricing/` 不再生成，订阅购买页是 `/ext-pricing/`。sitemap、llms、导航、页脚均不得再出现这些路径。
 
 链接识别：`website/src/scripts/download/platform.ts` 的平台识别只认 `vimeo.com` / `www.vimeo.com` / `player.vimeo.com` 三个 host，结果仅用于埋点预填；识别不到不阻断提交，真正的准入由后端 Provider 判定。
 
@@ -73,9 +73,9 @@
 | route pattern | source group |
 | --- | --- |
 | `/` | `pages/index.astro` + `pages/[lang]/index.astro` + `components/pages/HomePage.astro` |
-| `/terms/`、`/privacy/` | 对应 page + `[lang]/` + `components/pages/LegalPage.astro` + `legal/legalContent.ts` |
-| `/about/`、`/contact/` | 对应 page + `[lang]/` + `components/pages/CompanyPage.astro` + `company/companyContent.ts` |
-| `/pricing/` | `pages/pricing.astro` + `[lang]/` + `components/pages/PricingPage.astro` + `i18n/pricing.ts` + `components/pricing/` 的页壳、登录弹窗、页控制器 + `components/order-checkout/OrderCheckoutModal.astro` |
+| `/terms/`、`/privacy/` | 对应 page + `[lang]/` + `components/pages/LegalPage.astro` + `components/site/SiteBandHeader.astro`（页头带）+ `legal/legalContent.ts` |
+| `/about/`、`/contact/` | 对应 page + `[lang]/` + `components/pages/CompanyPage.astro` + `components/site/SiteBandHeader.astro`（页头带）+ `company/companyContent.ts` |
+| `/ext-pricing/` | `pages/ext-pricing.astro` + `[lang]/` + `components/pages/PricingPage.astro` + `i18n/pricing.ts` + `components/pricing/` 的页壳、登录弹窗、页控制器 + `components/order-checkout/OrderCheckoutModal.astro` |
 
 以上路径均相对 `website/src/`。支付回跳页不在映射里：它们在路由收集阶段已被提前忽略，不进入 sitemap。
 
@@ -93,7 +93,7 @@
 - 搜索引擎封禁路由：`/clink/cancel/`、`/clink/success/`、`/paypal/cancel/`、`/paypal/success/`——这四个支付回跳页同时被 `robots.txt` Disallow、页面 noindex。
 - 非根路径统一补尾斜杠后再入 sitemap。
 
-`/pricing/` 不被 robots 屏蔽，正常进入 sitemap。
+`/ext-pricing/` 不被 robots 屏蔽，正常进入 sitemap。
 
 ### 2.8 XML 写入
 
@@ -117,7 +117,7 @@ XML 写入做实体转义。sitemap index 内每个 sitemap 的 `<lastmod>` 用�
 | 顺序 | 组件 | 文案键(`pages.homepage.*`) |
 | --- | --- | --- |
 | 首屏 | `components/download/DownloadWorkspace.astro` + 信任徽标 | `workspace`、`heroTrustPoints`(恰好 4 个) |
-| 1 | `HomeIntroSection` | `intro`（含 `panel` 四行面板示意） |
+| 1 | `HomeIntroSection` | `intro`（含 `panel` 四行面板示意；示意由 `ExtensionMockup.astro` 渲染，与 `HomeFinalCtaSection` 共用） |
 | 2 | `HomeFeaturesSection` | `features` |
 | 3 | `HomeStepsSection` | `steps` |
 | 4 | `HomeComparisonSection` | `comparison`（维度 / 网页版 / 插件三列） |
@@ -128,7 +128,8 @@ XML 写入做实体转义。sitemap index 内每个 sitemap 的 `<lastmod>` 用�
 
 约束：
 
-- 页面唯一 H1 是下载工作区的解析工具标题（`workspace.parse.title`），不新增独立标题行。
+- 页面唯一 H1 是下载工作区的解析工具标题，由 `workspace.parse.titleBrand`（品牌词，渐变文字）与 `workspace.parse.titleTagline`（标语）两个键拼成，两个 span 之间保留空白，使 H1 文本内容为「品牌词 + 空格 + 标语」；不新增独立标题行。
+- 首屏另有一行插件入口，文案键 `workspace.parse.extensionEntryLine`，后接 Chrome / Edge 两个按钮，链接均为安装地址；引导卡可见时由 CSS 兄弟选择器隐藏（显示条件见 `@../002.下载功能/feat.md`），不增加脚本状态。
 - 展示区块纯静态、无客户端脚本；只有下载工作区运行前端状态机。
 - 展示区块文案不写「无限」承诺、额度数字与价格，不出现 Credits、签到、积分购买；方案概览的数值来自后端配置，由 Pricing 页呈现。
 - 文案事实与术语来源是 `docs/assets/store/<商店语言>.txt`，商店语言到站点 locale 的映射（如 `en_US`→`en-US`、`pt`→`pt-BR`）见 004 计划 §2.2。
@@ -164,7 +165,7 @@ XML 写入做实体转义。sitemap index 内每个 sitemap 的 `<lastmod>` 用�
 | 页面族 | title / description 来源 |
 | --- | --- |
 | 首页 `/` | `pages.homepage.meta.{title,description}`（覆盖「在线工具 + 插件」），由 `schema.ts` 强制 14 语言齐全 |
-| Pricing `/pricing/` | `i18n/pricing.ts` 的 `getPricingPageCopy` 由订阅文案生成 seo |
+| Pricing `/ext-pricing/` | `i18n/pricing.ts` 的 `getPricingPageCopy` 由订阅文案生成 seo |
 | Legal `/terms/` `/privacy/` | `legalContent.ts` 的 `seoTitle` / `seoDescription` |
 | Company `/about/` `/contact/` | `companyContent.ts` 的 `seoTitle` / `seoDescription` |
 
@@ -178,6 +179,15 @@ XML 写入做实体转义。sitemap index 内每个 sitemap 的 `<lastmod>` 用�
 
 - `SoftwareApplication.featureList` 只描述用户已加载或已有权访问的内容，不得出现 `100%`、`bypass` 等绝对化或绕过权限的承诺。
 - OG 图为 1200×630 的静态 PNG（`public/og-image.png`），`public/manifest.json` 的描述与 `theme_color` 与新视觉一致。
+
+### 4.5 Legal 页目录「当前项」规则
+
+`LegalPage.astro` 的目录（左侧竖栏，手机为胶囊行）用 `aria-current="location"` 标出「正在阅读的章节」，样式只认该属性；没有 JS 时目录退化为普通锚点链接。判定规则：
+
+- 滚动时取最后一个顶边已越过 `scroll-margin-top` 的章节，都没越过时取第一个；滚到页面底部时取最后一个，否则短的末尾章节永远不会成为当前项。
+- 点击目录链接立即切换当前项，并「钉住」：记下该次点击的落点（目标章节顶边减 `scroll-margin-top`，夹在最大可滚动距离内）。平滑滚动途中与停在落点后，当前项保持为被点的链接，否则靠近页尾、滚不到阈值的短章节会被滚动判定覆盖回前一项。
+- 钉住的解除只看滚动位置：滚动位置到落点的距离一旦比上次更大（离开或越过落点），就恢复滚动判定。因此滚轮、触摸、键盘、拖滚动条、页内查找、前进后退行为一致，不依赖枚举输入事件，也不依赖 `scrollend`。
+- 无动画、无持久状态，不滚动胶囊行。
 
 ## 5. 验收/验证命令
 

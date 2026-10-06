@@ -132,10 +132,13 @@ asyncio.run(main())
   await expect(parseError).toBeHidden()
 
   // 单个下载：状态 3 → 完整提示 + 插件引导卡，不弹窗、不记失败。
-  // 引导卡首页默认可见：先滚离视口并断言，才能证明状态 3 的显示与滚动确实生效。
+  // 引导卡默认隐藏、一行入口默认可见：先断言这个前置状态并滚离视口，才能证明引导卡的显示、滚动与入口隐藏都是状态 3 带出来的。
   const guide = page.locator('[data-download-large-file-extension-inline]')
+  const entryLine = page.locator('[data-download-extension-entry]')
+  await expect(guide).toBeHidden()
+  await expect(entryLine).toBeVisible()
   await page.evaluate(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' }))
-  await expect(guide).not.toBeInViewport()
+  await expect(entryLine).not.toBeInViewport()
   const authorization = page.waitForResponse(response => response.url().endsWith('/download-anonymous-pre-v2'))
   // dispatchEvent 不触发 Playwright 的自动滚动，避免点击动作本身把引导卡带回视口。
   await button.dispatchEvent('click')
@@ -143,7 +146,9 @@ asyncio.run(main())
   expect(body.code).toBe(10000)
   expect(body.data.status).toBe(3)
   await expect(parseError).toHaveText(useExtensionMessage)
+  await expect(guide).toBeVisible()
   await expect(guide).toBeInViewport()
+  await expect(entryLine).toBeHidden()
   await expect(page.locator('[data-download-anonymous-modal]')).toBeHidden()
   await expect(page.locator('[data-download-auth-modal]')).toHaveCount(0)
   await expect(button).toBeEnabled()

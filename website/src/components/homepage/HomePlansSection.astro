@@ -1,5 +1,5 @@
 ---
-/** 区块 6：方案概览。只写定位，不写额度数字与价格（两者来自后端配置），按钮都进 Pricing。 */
+/** 区块 6：方案概览。只写定位，不写额度数字与价格（两者来自后端配置），按钮都进 Pricing。Free 卡用次按钮，Unlimited 卡用渐变描边加主按钮。 */
 import HomeSection from './HomeSection.astro'
 import type { HomepageContent } from '../../i18n/schema'
 
@@ -9,9 +9,12 @@ const { copy, pricingPath } = Astro.props as {
 }
 ---
 
-<HomeSection id="home-plans" heading={copy.heading}>
+<HomeSection id="home-plans" heading={copy.heading} center>
   <div class="home-plan-grid">
     <div class="home-plan-card">
+      <span class="home-plan-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14" /></svg>
+      </span>
       <h3>{copy.free.name}</h3>
       <p>{copy.free.description}</p>
       <a
@@ -22,7 +25,10 @@ const { copy, pricingPath } = Astro.props as {
         data-ga-target="pricing"
       >{copy.free.cta}</a>
     </div>
-    <div class="home-plan-card">
+    <div class="home-plan-card home-plan-card--featured">
+      <span class="home-plan-icon home-plan-icon--brand" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="m13 3-8 11h6l-1 7 8-11h-6z" /></svg>
+      </span>
       <h3>{copy.unlimited.name}</h3>
       <p>{copy.unlimited.description}</p>
       <a
@@ -40,40 +46,85 @@ const { copy, pricingPath } = Astro.props as {
   .home-plan-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
+    gap: 20px;
+    max-width: 920px;
+    margin: 0 auto;
   }
 
   .home-plan-card {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
+    min-width: 0;
     padding: 32px;
     border: 1px solid var(--gray-alpha-400);
-    border-radius: var(--radius-md);
-    background: var(--background-100);
+    border-radius: var(--radius-2xl);
+    background: var(--gray-100);
     box-shadow: var(--shadow-card);
   }
 
+  /* Unlimited：1 px 渐变描边，底色仍是组件底。 */
+  .home-plan-card--featured {
+    border-color: transparent;
+    background:
+      linear-gradient(var(--gray-100), var(--gray-100)) padding-box,
+      var(--gradient-border) border-box;
+    box-shadow:
+      0 0 0 1px rgba(138, 180, 255, 0.12),
+      0 28px 64px -28px rgba(45, 106, 232, 0.6);
+  }
+
+  .home-plan-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    background: var(--glass-bg);
+    color: var(--gray-900);
+  }
+
+  .home-plan-icon--brand {
+    background: var(--gradient-brand);
+    color: var(--gray-1000);
+  }
+
+  .home-plan-icon svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
   .home-plan-card h3 {
+    margin-top: 20px;
+    color: var(--gray-1000);
     font-size: 24px;
-    font-weight: 600;
-    line-height: 32px;
-    letter-spacing: -0.96px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
   }
 
   .home-plan-card p {
     flex: 1;
-    margin-bottom: 16px;
+    margin-top: 10px;
     color: var(--gray-900);
-    font-size: 14px;
-    line-height: 20px;
+    font-size: 15px;
+    line-height: 1.6;
   }
 
+  /* 本地化按钮文案可能很长，允许换行而不是撑破布局。 */
   .home-plan-card a {
+    align-self: flex-start;
     height: auto;
-    min-height: 40px;
-    padding: 10px 14px;
+    min-height: 48px;
+    margin-top: 28px;
+    padding: 10px 22px;
+    border-radius: var(--radius-md);
+    font-size: 15px;
     white-space: normal;
     text-align: center;
   }
@@ -82,9 +133,26 @@ const { copy, pricingPath } = Astro.props as {
     .home-plan-grid {
       grid-template-columns: minmax(0, 1fr);
     }
+  }
+
+  @media (max-width: 600px) {
+    .home-plan-grid {
+      gap: 12px;
+    }
 
     .home-plan-card {
       padding: 24px;
+      border-radius: 22px;
+    }
+
+    .home-plan-card h3 {
+      margin-top: 16px;
+      font-size: 22px;
+    }
+
+    .home-plan-card a {
+      align-self: stretch;
+      margin-top: 20px;
     }
   }
 </style>

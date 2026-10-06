@@ -2,7 +2,8 @@
 
 Official website for the Vimeo Video Downloader browser extension: a free in-browser
 download tool on the home page, an overview of the extension, and the extension's
-Unlimited subscription at `/pricing/`.
+Unlimited subscription at `/ext-pricing/`. The whole site uses a single dark visual
+theme; its rules live in `docs/references/specs/spec-website.md` §4.
 
 ## Tech Stack
 
@@ -40,16 +41,16 @@ website/
 ├── src/
 │   ├── components/
 │   │   ├── download/        # Download workspace UI
-│   │   ├── homepage/        # Home page showcase sections
+│   │   ├── homepage/        # Home page showcase sections, ExtensionMockup (shared plugin UI mockup)
 │   │   ├── pricing/         # Pricing page shell, login / confirm modals, controllers
 │   │   ├── order-checkout/  # Subscription checkout modal and order protocol
 │   │   ├── payment-return/  # PayPal / Clink return pages
 │   │   ├── pages/           # Page assembly: Home / Pricing / Company / Legal
-│   │   └── site/            # Site-level: confirm modal, brand icon
+│   │   └── site/            # Site-level: SiteStage (dark stage), SiteBandHeader (legal / company header band), confirm modal, brand icon
 │   ├── i18n/                # schema.ts, ui.ts, content.ts, pricing.ts, lang/* (14 locales)
 │   ├── layouts/Layout.astro # Only layout: SEO, design tokens, nav, footer
 │   ├── lib/site.mjs         # 品牌与外部地址的唯一配置点
-│   ├── pages/               # index / pricing / about / contact / terms / privacy,
+│   ├── pages/               # index / ext-pricing / about / contact / terms / privacy,
 │   │                        # [lang]/ mirrors, clink/ and paypal/ return pages
 │   ├── scripts/
 │   │   ├── download/        # Download state machine and download methods

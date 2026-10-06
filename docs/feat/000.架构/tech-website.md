@@ -25,17 +25,17 @@ website/
 └── src/
     ├── components/
     │   ├── download/         # 下载工作区、解析结果、匿名等待弹窗
-    │   ├── homepage/         # 首页展示区块（8 个）
+    │   ├── homepage/         # 首页展示区块（8 个）与插件界面示意 ExtensionMockup（唯一实现，首页插件展示与收尾 CTA 共用）
     │   ├── pricing/          # Pricing 页壳、登录 / 订阅确认弹窗与控制器
     │   ├── order-checkout/   # 订阅结算弹窗与订单协议
     │   ├── payment-return/   # PayPal / Clink 回跳页共用组件与脚本
     │   ├── pages/            # 页面装配：Home / Pricing / Company / Legal
-    │   └── site/             # 站级：确认框、X 图标
+    │   └── site/             # 站级：深色舞台 SiteStage（hero / band / card 三变体，唯一实现）、SiteBandHeader（法务页与公司页的页头带：SiteStage band + H1 + 引言 + 日期胶囊，这两页页头的唯一实现）、确认框、X 图标
     ├── i18n/                 # ui / content / schema / pricing / payment-return + lang/*
     ├── layouts/Layout.astro  # 唯一布局
     ├── legal/ company/       # terms/privacy、about/contact 文案
     ├── lib/site.mjs          # 站点身份唯一配置点
-    ├── pages/                # index / pricing / about / contact / terms / privacy、[lang]/、clink/、paypal/
+    ├── pages/                # index / ext-pricing / about / contact / terms / privacy、[lang]/、clink/、paypal/
     ├── scripts/
     │   ├── globalClickEvents.ts  # 全站点击埋点
     │   ├── download/         # 下载状态机、下载方法、媒体接口
@@ -68,7 +68,7 @@ website/
 
 ## 5. Cloudflare / 部署
 
-- `cloudflare/README.md`：使用说明；新域名没有历史 URL，不配置 Bulk Redirects，也不保留任何旧路径兼容 301。已下线的 `/vimeo-downloader/`、`/changelog/`、`/ext-pricing/` 不做重定向。
+- `cloudflare/README.md`：使用说明；新域名没有历史 URL，不配置 Bulk Redirects，也不保留任何旧路径兼容 301。已下线的 `/vimeo-downloader/`、`/changelog/`、`/pricing/`（旧积分页路径）不做重定向。
 - `deploy/vimeo-web.conf` / `deploy/vimeo-web-test.conf`：nginx 配置——仅对构建产物中真实存在的目录执行「无尾斜杠 → HTTPS 尾斜杠」单跳 301，不维护第二份路由白名单，不做旧路径兼容。
 - `deploy/deploy.sh`：发布静态版本后将对应环境的 vhost 安装到 `/usr/local/nginx/vhost/`，执行 `nginx -t`，失败恢复原配置，通过后 reload；静态资源使用 30 天 immutable 缓存。
 
@@ -80,7 +80,7 @@ website/
   - Open Graph / Twitter card（`twitter:site` 绑定官方 X 账号）
   - JSON-LD：`SoftwareApplication`（仅首页和 Pricing 输出；Company、Legal、PaymentReturn 传 `includeSoftwareApplicationSchema={false}`；`BrowserExtension`，`featureList` 为插件能力）+ 带公开 `ContactPoint`、Chrome Web Store 与官方 X `sameAs` 的 `Organization`；页面级 `structuredData` props 可叠加（首页、Pricing 各注入一份 FAQPage）
   - GA4 内联加载
-  - 全站 Geist 亮色 token（CSS 变量）、按钮与焦点环全局样式，规则见 `../../references/specs/spec-website.md` §4
+  - 全站深色 token（Geist 语义名、深色值，另有品牌与装饰 token，`color-scheme: dark`）、按钮与焦点环全局样式，规则见 `../../references/specs/spec-website.md` §4
 - 页面通过 props 传 `title / description / structuredData`，布局内组装 meta。
 - 品牌实体信号统一使用 `Vimeo Video Downloader`，与 extension 的 `extensionName` 和商店文案逐字一致。
 

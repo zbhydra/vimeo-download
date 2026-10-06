@@ -34,7 +34,8 @@ export const idID: SiteContent = {
       workspace: {
         parse: {
           eyebrow: 'Pemeriksaan tautan cepat',
-          title: 'Pengunduh video Vimeo: simpan video Vimeo publik apa pun',
+          titleBrand: 'Pengunduh video Vimeo',
+          titleTagline: 'Simpan video Vimeo publik apa pun',
           helperText:
             'Tempel tautan video Vimeo publik, lihat resolusi yang disediakan Vimeo, lalu unduh resolusi yang kamu butuhkan.',
           linkLabel: 'Tautan Vimeo',
@@ -58,6 +59,7 @@ export const idID: SiteContent = {
           resumeUnavailableText: 'Catatan pemulihan lokal sudah kedaluwarsa.',
           resumeDismiss: 'Abaikan',
           resuming: 'Melanjutkan...',
+          extensionEntryLine: 'Unduh langsung di Vimeo dengan ekstensi',
           largeFileExtensionInlineChromeTitle: 'Ekstensi Chrome',
           largeFileExtensionInlineChromeDescription:
             'Ekstensi khusus Chrome yang menjaga unduhan Vimeo besar tetap berjalan di luar tab.',

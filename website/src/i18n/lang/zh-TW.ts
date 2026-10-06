@@ -34,7 +34,8 @@ export const zhTW: SiteContent = {
       workspace: {
         parse: {
           eyebrow: '快速連結檢查',
-          title: 'Vimeo 影片下載器：儲存任意公開的 Vimeo 影片',
+          titleBrand: 'Vimeo 影片下載器',
+          titleTagline: '儲存任意公開的 Vimeo 影片',
           helperText: '貼上公開的 Vimeo 影片連結，查看 Vimeo 提供的畫質，並下載你需要的解析度。',
           linkLabel: 'Vimeo 連結',
           linkPlaceholder: 'https://vimeo.com/123456789',
@@ -56,6 +57,7 @@ export const zhTW: SiteContent = {
           resumeUnavailableText: '本機恢復記錄已失效。',
           resumeDismiss: '忽略',
           resuming: '繼續下載中...',
+          extensionEntryLine: '用擴充功能直接在 Vimeo 頁面下載',
           largeFileExtensionInlineChromeTitle: 'Chrome 擴充功能',
           largeFileExtensionInlineChromeDescription:
             'Chrome 專用擴充功能，讓大檔案 Vimeo 下載在分頁之外繼續運作。',

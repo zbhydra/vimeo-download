@@ -34,7 +34,8 @@ export const koKR: SiteContent = {
       workspace: {
         parse: {
           eyebrow: '빠른 링크 확인',
-          title: 'Vimeo 동영상 다운로더: 공개 Vimeo 동영상 저장',
+          titleBrand: 'Vimeo 동영상 다운로더',
+          titleTagline: '공개 Vimeo 동영상 저장',
           helperText:
             '공개 Vimeo 동영상 링크를 붙여넣고 Vimeo가 제공하는 화질을 확인한 뒤 필요한 해상도를 다운로드하세요.',
           linkLabel: 'Vimeo 링크',
@@ -57,6 +58,7 @@ export const koKR: SiteContent = {
           resumeUnavailableText: '로컬 복구 기록이 만료되었습니다.',
           resumeDismiss: '무시',
           resuming: '다시 시작하는 중...',
+          extensionEntryLine: '확장 프로그램으로 Vimeo에서 바로 다운로드',
           largeFileExtensionInlineChromeTitle: 'Chrome 확장 프로그램',
           largeFileExtensionInlineChromeDescription:
             'Chrome 전용 확장 프로그램으로, 큰 Vimeo 다운로드를 탭 밖에서 계속 진행합니다.',

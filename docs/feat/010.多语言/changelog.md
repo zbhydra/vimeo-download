@@ -1,5 +1,13 @@
 # 010 · 多语言 - 变更记录
 
+## 2026-10-06 官网视觉升级：首屏标题拆分与一行入口文案键
+
+**Why**：005 首页 H1 品牌词渐变显示，首屏新增一行插件入口，Pricing 路径改回 `/ext-pricing/`。决策见 `../000.架构/plans/005.官网视觉升级与Pricing路径改回.md` §2.3。
+
+**变更**：
+- `feat.md`：路由示例改为 `/ext-pricing/`、`/ja/ext-pricing/`。
+- `tech-website多语言.md`：`workspace.parse.title` 拆为 `parse.titleBrand` / `parse.titleTagline`，新增 `parse.extensionEntryLine`（14 语言齐全）。
+
 ## 2026-10-05 官网改版：website 文案结构与路由集合同步
 
 **Why**：官网改版后首页文案改为「工具首屏 + 8 个插件展示区块」，旧首页专属键、平台落地页、更新日志与插件定价页文案随页面删除，下载工作区文案去掉登录 / 账户 / 积分购买；`middleware.ts` 已删除。

@@ -34,7 +34,8 @@ export const thTH: SiteContent = {
       workspace: {
         parse: {
           eyebrow: 'ตรวจลิงก์แบบรวดเร็ว',
-          title: 'โปรแกรมดาวน์โหลดวิดีโอ Vimeo: บันทึกวิดีโอ Vimeo สาธารณะ',
+          titleBrand: 'โปรแกรมดาวน์โหลดวิดีโอ Vimeo',
+          titleTagline: 'บันทึกวิดีโอ Vimeo สาธารณะ',
           helperText:
             'วางลิงก์วิดีโอ Vimeo แบบสาธารณะ ดูความละเอียดที่ Vimeo มีให้ แล้วดาวน์โหลดความละเอียดที่คุณต้องการ',
           linkLabel: 'ลิงก์ Vimeo',
@@ -58,6 +59,7 @@ export const thTH: SiteContent = {
           resumeUnavailableText: 'บันทึกกู้คืนในเครื่องหมดอายุแล้ว',
           resumeDismiss: 'ไม่สนใจ',
           resuming: 'กำลังทำต่อ...',
+          extensionEntryLine: 'ดาวน์โหลดได้โดยตรงบน Vimeo ด้วยส่วนขยาย',
           largeFileExtensionInlineChromeTitle: 'ส่วนขยาย Chrome',
           largeFileExtensionInlineChromeDescription:
             'ส่วนขยายสำหรับ Chrome โดยเฉพาะ ช่วยให้ดาวน์โหลด Vimeo ขนาดใหญ่ทำงานต่อนอกแท็บได้',

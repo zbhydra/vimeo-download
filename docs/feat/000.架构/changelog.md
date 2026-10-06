@@ -1,5 +1,13 @@
 # 000 · 架构 · 变更记录
 
+## 2026-10-06 官网视觉升级：全站深色，Pricing 路径改回 `/ext-pricing/`
+
+**Why**：005 把官网改为全站深色科技风并恢复 `/ext-pricing/`。决策与范围见 `plans/005.官网视觉升级与Pricing路径改回.md`。
+
+**变更**：
+- `tech-website.md`：token 描述改为深色；目录树补 `components/site/SiteStage.astro`（三变体）与 `components/homepage/ExtensionMockup.astro`；目录树补 `components/site/SiteBandHeader.astro`（法务页与公司页页头带的唯一实现）；路由 `pricing` 改 `ext-pricing`；已下线路径列表去掉 `/ext-pricing/`、改为 `/pricing/`。
+- `tech-extension.md`：`WEBSITE.PRICING_PATH` 改回 `/ext-pricing/`（与 004 之前一致），购买页回退路径同步。
+
 ## 2026-10-05 官网改版：网站收敛为插件展示站 + 免费网页下载，website-shared 并入 website
 
 **Why**：网站定位改为「首屏免费网页下载 + 插件展示 + 插件订阅购买」，Credits 购买与展示、签到入口、下载工作区登录 / 账户下线；`website-shared` 与未使用的 Vue 集成属结构遗留。决策与范围见 `plans/004.官网改版-插件展示与免费网页下载.md`。

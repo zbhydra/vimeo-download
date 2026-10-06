@@ -3,7 +3,7 @@
  * Website 通用确认弹窗。
  *
  * 页面脚本通过 site/confirm.ts 写入标题、正文和按钮文案，组件只负责提供稳定 DOM
- * 与全站一致的视觉样式。
+ * 与全站一致的深色视觉样式（Pricing 各弹窗沿用同一写法）。
  */
 ---
 
@@ -87,7 +87,9 @@
   .site-confirm-backdrop {
     position: absolute;
     inset: 0;
-    background: var(--gray-alpha-600);
+    background: var(--overlay-bg);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
   }
 
   .site-confirm-dialog {
@@ -98,26 +100,26 @@
     width: min(520px, 100%);
     padding: 24px;
     border: 1px solid var(--gray-alpha-400);
-    border-radius: var(--radius-md);
-    background: var(--background-100);
+    border-radius: var(--radius-xl);
+    background: var(--gray-100);
     color: var(--gray-1000);
     box-shadow: var(--shadow-modal);
   }
 
   .site-confirm-close {
     position: absolute;
-    top: 12px;
-    right: 12px;
-    width: 32px;
-    height: 32px;
-    border-radius: var(--radius-sm);
+    top: 8px;
+    right: 8px;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-md);
     color: var(--gray-900);
     font-size: 22px;
     line-height: 1;
   }
 
   .site-confirm-close:hover {
-    background: var(--gray-alpha-100);
+    background: var(--glass-bg);
     color: var(--gray-1000);
   }
 
@@ -126,7 +128,7 @@
     place-items: center;
     width: 40px;
     height: 40px;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     background: var(--amber-100);
     color: var(--amber-900);
   }
@@ -138,7 +140,7 @@
 
   .site-confirm-copy {
     min-width: 0;
-    padding-right: 32px;
+    padding-right: 40px;
   }
 
   .site-confirm-copy h2 {
@@ -178,7 +180,7 @@
     min-width: 96px;
   }
 
-  @media (max-width: 560px) {
+  @media (max-width: 600px) {
     .site-confirm-modal {
       align-items: end;
       padding: 16px;
@@ -201,6 +203,7 @@
 
     .site-confirm-action {
       width: 100%;
+      min-height: 44px;
     }
   }
 </style>

@@ -4,8 +4,8 @@
   "description": "Free online Vimeo video downloader in your browser, plus a Chrome extension for audio, subtitles, cover images, and queued downloads.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#ffffff",
+  "background_color": "#070B18",
+  "theme_color": "#070B18",
   "orientation": "portrait-primary",
   "icons": [
     {

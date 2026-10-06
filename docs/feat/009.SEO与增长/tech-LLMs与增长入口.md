@@ -72,7 +72,7 @@ LLMs 文件**不包含**：
 
 - `mailto:` 或明文邮箱（面向 crawler，直接写会放大垃圾邮件风险；只提供站内页面入口）。
 - 站外绝对 URL（只引用 `SITE_ORIGIN` 下的站内 URL）。
-- 不存在的站内路径，包括已删除的 `vimeo-downloader`、`changelog`、`ext-pricing` 与已删除平台的落地页路由。
+- 不存在的站内路径，包括已删除的 `vimeo-downloader`、`changelog`、`pricing`（旧积分页路径）与已删除平台的落地页路由；订阅购买页 `ext-pricing` 存在。
 - 支付回跳页等非 canonical 页面。
 
 ### 1.8 测试约束(`website/tests/module-scripts.test.js`)
@@ -95,9 +95,9 @@ LLMs 文件**不包含**：
 
 1. **品牌**：Logo + 品牌名，指向当前语言首页。
 2. **Home 链接**：指向当前语言首页，当前页高亮。
-3. **Pricing 链接**：指向当前语言 `/pricing/`，当前页高亮；带内部跳转埋点（来源为 `nav`，目标为 `pricing`）。
+3. **Pricing 链接**：指向当前语言 `/ext-pricing/`，当前页高亮；带内部跳转埋点（来源为 `nav`，目标为 `pricing`）。
 4. **Install CTA**：
-   - 次按钮（`btn-secondary nav-install-link`），链接为 `CHROME_WEB_STORE_URL`，新标签页打开且带 `noopener`。
+   - 主按钮（`btn-primary nav-install-link`），链接为 `CHROME_WEB_STORE_URL`，新标签页打开且带 `noopener`。
    - 左侧图标是 `public/googe-ext-logo-192px.svg` 图片，`alt` 为空，装饰用。
    - 可访问名称与按钮文字均取 `t.common.installCta`。
    - 沿用外链点击埋点（来源为 `nav`）。
@@ -105,7 +105,7 @@ LLMs 文件**不包含**：
 
 ### 2.2 移动导航
 
-移动菜单含 Home、Pricing、Install（埋点来源均为 `mobile_nav`）；Install 是不带图标的纯文字链接，不是按钮。
+移动菜单含 Home、Pricing、Install（埋点来源均为 `mobile_nav`）；Install 是带图标的满宽主按钮（`btn-primary mobile-nav-install`）。
 
 ### 2.3 i18n
 
@@ -128,8 +128,8 @@ LLMs 文件**不包含**：
 
 验收：
 
-- 在 `/pricing/` 切日语 → `/ja/pricing/`。
-- 在 `/ja/pricing/` 切英文 → `/pricing/`。
+- 在 `/ext-pricing/` 切日语 → `/ja/ext-pricing/`。
+- 在 `/ja/ext-pricing/` 切英文 → `/ext-pricing/`。
 - 首页切语言仍落在目标语言的首页。
 
 切换器还会继承当前 URL 的完整 query（见 `@../010.多语言/tech-website多语言.md`）。

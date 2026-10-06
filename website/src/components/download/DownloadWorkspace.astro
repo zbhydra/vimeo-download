@@ -6,12 +6,10 @@ import type { DownloadWorkspaceContent } from '../../i18n/schema'
 const {
   copy,
   installUrl,
-  showLargeFileExtensionGuideByDefault = false,
   deferRuntime = false
 } = Astro.props as {
   copy: DownloadWorkspaceContent
   installUrl: string
-  showLargeFileExtensionGuideByDefault?: boolean
   /** 匿名首屏是否延迟完整下载状态机，直到交互或发现可恢复本地状态。 */
   deferRuntime?: boolean
 }
@@ -25,11 +23,9 @@ const {
   <script is:inline type="application/json" data-download-copy set:html={JSON.stringify(copy)} />
 
   <div class="download-workspace-shell" data-download-workspace-shell>
-    <DownloadParseResults
-      copy={copy}
-      installUrl={installUrl}
-      showLargeFileExtensionGuideByDefault={showLargeFileExtensionGuideByDefault}
-    />
+    <DownloadParseResults copy={copy} installUrl={installUrl}>
+      <slot />
+    </DownloadParseResults>
   </div>
 
   <DownloadAnonymousModal copy={copy} />
@@ -51,46 +47,54 @@ const {
 </script>
 
 <style is:global>
-  /* 下载工作区：Geist 亮色。按钮、焦点环用 Layout 全局的 .btn-* 与 :focus-visible，这里只管布局与工作区专属控件。 */
+  /*
+    下载工作区：深色首屏。按钮、焦点环用 Layout 全局的 .btn-* 与 :focus-visible，这里只管布局与工作区专属控件。
+    可交互元素上不写 box-shadow（会盖住全局焦点环，规则见 spec-website §4）。
+  */
   .download-workspace {
     position: relative;
   }
 
   .download-workspace-shell {
-    display: grid;
-    gap: 16px;
     min-width: 0;
-    padding: 32px;
-    border: 1px solid var(--gray-alpha-400);
-    border-radius: var(--radius-md);
-    background: var(--background-100);
-    box-shadow: var(--shadow-card);
   }
 
   .download-results-panel {
     min-width: 0;
+    text-align: center;
   }
 
   .download-panel-title {
-    font-size: 40px;
-    font-weight: 600;
-    line-height: 48px;
-    letter-spacing: -2.4px;
+    max-width: 1000px;
+    margin: 0 auto;
+    color: var(--gray-1000);
+    font-size: clamp(40px, 6vw, 72px);
+    font-weight: 700;
+    line-height: 1.04;
+    letter-spacing: -0.045em;
   }
 
-  .download-results-title {
-    margin: 0;
+  /* 品牌词渐变文字，标语纯色；两个 span 之间的空格保证 H1 的 textContent 可读。 */
+  .download-panel-title .title-brand {
+    display: block;
+    padding-bottom: 6px;
+    background: var(--gradient-brand-text);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 
-  .download-results-heading {
-    margin-bottom: 24px;
+  .download-panel-title .title-tagline {
+    display: block;
+    color: var(--gray-1000);
   }
 
   .download-results-helper {
-    margin-top: 16px;
+    max-width: 640px;
+    margin: 24px auto 0;
     color: var(--gray-900);
-    font-size: 14px;
-    line-height: 20px;
+    font-size: 19px;
+    line-height: 1.6;
   }
 
   .sr-only {
@@ -105,53 +109,74 @@ const {
     border: 0;
   }
 
+  .download-parse-form {
+    max-width: 780px;
+    margin: 40px auto 0;
+  }
+
   .download-field {
     display: grid;
     gap: 12px;
     min-width: 0;
   }
 
+  /* 玻璃输入框：渐变描边靠 padding-box / border-box 双层背景实现，圆角随之保持。 */
+  .download-parse-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-xl);
+    background:
+      linear-gradient(var(--gray-100), var(--gray-100)) padding-box,
+      var(--gradient-border) border-box;
+    box-shadow: 0 0 0 6px rgba(76, 130, 255, 0.1), 0 24px 64px -24px rgba(45, 106, 232, 0.85);
+  }
+
   .download-input {
     width: 100%;
-    height: 48px;
-    padding: 0 12px;
-    border: 1px solid var(--gray-alpha-400);
-    border-radius: var(--radius-sm);
-    background: var(--background-100);
+    height: 52px;
+    padding: 0 44px 0 44px;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: transparent;
     color: var(--gray-1000);
-    font-size: 16px;
-    line-height: 20px;
+    font-size: 17px;
+    line-height: 24px;
   }
 
   .download-input::placeholder {
     color: var(--gray-700);
   }
 
-  .download-input:hover {
-    border-color: var(--gray-alpha-500);
-  }
-
-  .download-parse-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 8px;
-    align-items: center;
-  }
-
   .download-parse-input-shell {
     position: relative;
+    flex: 1 1 auto;
     min-width: 0;
   }
 
-  .download-parse-input-shell .download-parse-input {
-    padding-right: 44px;
+  .download-parse-input-icon {
+    position: absolute;
+    top: 50%;
+    left: 14px;
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: var(--gray-700);
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: none;
+    transform: translateY(-50%);
   }
 
-  /* 工作区按钮复用 .btn-*（40px），解析提交与批量下载是视图主操作，升到 large（48px）。 */
-  .download-workspace .download-parse-submit,
-  .download-workspace .download-all-button {
-    height: 48px;
-    padding: 0 14px;
+  /* 解析提交与批量下载是视图主操作，升到 large。 */
+  .download-workspace .download-parse-submit {
+    flex: 0 0 auto;
+    height: 52px;
+    padding: 0 24px;
+    border-radius: var(--radius-md);
     font-size: 16px;
   }
 
@@ -162,20 +187,21 @@ const {
   .download-parse-clear-button {
     position: absolute;
     top: 50%;
-    right: 8px;
+    right: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 44px;
+    height: 44px;
     padding: 0;
-    border-radius: var(--radius-sm);
-    color: var(--gray-900);
+    border-radius: 10px;
+    color: var(--gray-700);
     transform: translateY(-50%);
   }
 
   .download-parse-clear-button:hover {
     background: var(--gray-alpha-100);
+    color: var(--gray-900);
   }
 
   .download-parse-clear-button:disabled {
@@ -184,8 +210,8 @@ const {
   }
 
   .download-parse-clear-button svg {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     fill: none;
     stroke: currentColor;
     stroke-width: 2;
@@ -202,8 +228,10 @@ const {
     min-width: 0;
     max-width: 100%;
     padding: 16px;
-    border-radius: var(--radius-sm);
+    border: 1px solid var(--gray-alpha-400);
+    border-radius: var(--radius-md);
     background: var(--gray-100);
+    text-align: left;
   }
 
   .download-pending-resume-hint {
@@ -222,26 +250,37 @@ const {
     flex-wrap: wrap;
   }
 
-  .download-inline-status,
-  .download-inline-error {
-    min-height: 20px;
-    font-size: 13px;
-    line-height: 20px;
-  }
-
-  .download-inline-status {
-    color: var(--gray-900);
-  }
-
-  .download-inline-error {
-    color: var(--red-900);
-    white-space: pre-line;
-  }
-
   .download-results-list {
     display: grid;
     gap: 12px;
-    margin-top: 16px;
+    max-width: 780px;
+    margin: 16px auto 0;
+    text-align: left;
+  }
+
+  .download-results-list:empty {
+    margin-top: 0;
+  }
+
+  /* 提示条：默认红色状态色；引导卡可见（状态 3 等「只能用插件」场景）时改琥珀，纯 CSS 判断，不加脚本状态。 */
+  .download-inline-error {
+    max-width: 780px;
+    margin: 16px auto 0;
+    padding: 12px 16px;
+    border: 1px solid var(--red-400);
+    border-radius: var(--radius-md);
+    background: var(--red-100);
+    color: var(--red-900);
+    font-size: 15px;
+    line-height: 22px;
+    text-align: left;
+    white-space: pre-line;
+  }
+
+  .download-results-panel:has(> .download-large-file-extension-inline:not([hidden])) > .download-inline-error {
+    border-color: var(--amber-400);
+    background: var(--amber-100);
+    color: var(--amber-900);
   }
 
   .download-results-actions[hidden] {
@@ -249,36 +288,41 @@ const {
   }
 
   .download-results-actions {
-    margin-top: 16px;
+    max-width: 780px;
+    margin: 16px auto 0;
   }
 
   .download-all-button {
     width: 100%;
+    height: 48px;
+    font-size: 16px;
   }
 
   .download-result-card {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
-    gap: 16px;
+    gap: 16px 20px;
     padding: 16px;
     border: 1px solid var(--gray-alpha-400);
-    border-radius: var(--radius-sm);
-    background: var(--background-100);
+    border-radius: var(--radius-lg);
+    background: var(--gray-100);
+    box-shadow: var(--shadow-card);
   }
 
   .download-result-meta {
     min-width: 0;
-    flex: 1;
+    flex: 1 1 240px;
   }
 
   .download-result-thumbnail {
-    width: 96px;
-    height: 54px;
-    border-radius: var(--radius-sm);
+    flex: 0 0 176px;
+    width: 176px;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    border-radius: var(--radius-md);
     object-fit: cover;
-    flex-shrink: 0;
-    background: var(--gray-100);
+    background: var(--gray-200);
   }
 
   .download-result-actions {
@@ -291,25 +335,34 @@ const {
     justify-content: flex-end;
   }
 
+  .download-result-actions .download-resource-button {
+    height: 48px;
+    padding: 0 20px;
+    border-radius: var(--radius-md);
+    font-size: 15px;
+  }
+
   .download-resource-button-label {
     min-width: 0;
   }
 
   .download-result-name {
     min-width: 0;
-    font-size: 14px;
+    color: var(--gray-1000);
+    font-size: 16px;
     font-weight: 600;
-    line-height: 20px;
+    line-height: 24px;
     word-break: break-word;
     overflow-wrap: anywhere;
   }
 
   .download-result-detail {
-    margin-top: 4px;
+    margin-top: 6px;
     min-width: 0;
     color: var(--gray-900);
-    font-size: 13px;
-    line-height: 18px;
+    font-size: 14px;
+    line-height: 20px;
+    font-variant-numeric: tabular-nums;
     overflow-wrap: anywhere;
   }
 
@@ -321,58 +374,76 @@ const {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
-    margin-top: 16px;
+    max-width: 780px;
+    margin: 16px auto 0;
+    text-align: left;
   }
 
   .download-large-file-extension-card {
-    display: grid;
-    justify-items: center;
-    align-content: start;
-    gap: 8px;
+    display: flex;
+    flex-direction: column;
     padding: 24px;
-    border: 1px solid var(--gray-alpha-400);
-    border-radius: var(--radius-md);
-    background: var(--background-100);
+    border: 1px solid var(--blue-400);
+    border-radius: var(--radius-lg);
+    background: var(--gray-100);
     box-shadow: var(--shadow-card);
-    text-align: center;
+  }
+
+  .download-large-file-extension-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .download-large-file-extension-logo-plate {
+    display: inline-flex;
+    flex: 0 0 48px;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border: 1px solid var(--gray-alpha-400);
+    border-radius: 14px;
+    background: var(--glass-bg);
   }
 
   .download-large-file-extension-logo {
-    width: 40px;
-    height: 40px;
+    display: block;
     object-fit: contain;
   }
 
   .download-large-file-extension-title {
     margin: 0;
     color: var(--gray-1000);
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 600;
     line-height: 24px;
-    letter-spacing: -0.32px;
   }
 
   .download-large-file-extension-card p.download-large-file-extension-description {
-    max-width: 320px;
-    margin: 0 0 8px;
+    flex: 1 1 auto;
+    margin: 14px 0 0;
     color: var(--gray-900);
-    font-size: 14px;
-    line-height: 20px;
+    font-size: 15px;
+    line-height: 1.6;
   }
 
   /* 本地化文案可能很长，允许按钮换行而不是撑破卡片。 */
   .download-large-file-extension-card a {
-    width: min(100%, 258px);
+    width: 100%;
     height: auto;
-    min-height: 40px;
+    min-height: 48px;
+    margin-top: 20px;
     padding: 10px 14px;
+    border-radius: var(--radius-md);
+    font-size: 15px;
     white-space: normal;
     text-align: center;
   }
 
   .download-large-file-extension-card a svg {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     flex-shrink: 0;
     fill: none;
     stroke: currentColor;
@@ -381,19 +452,65 @@ const {
     stroke-linejoin: round;
   }
 
-  @media (max-width: 960px) {
-    .download-workspace-shell {
-      padding: 16px;
+  /* 一行插件入口：引导卡出现（状态 3）时隐藏，靠兄弟选择器，不需要脚本状态。 */
+  .download-extension-entry {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px 12px;
+    width: fit-content;
+    max-width: 100%;
+    margin: 28px auto 0;
+    padding: 6px 6px 6px 16px;
+    border: 1px solid var(--glass-border);
+    border-radius: 999px;
+    background: var(--glass-bg);
+    color: var(--gray-1000);
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .download-large-file-extension-inline:not([hidden]) ~ .download-extension-entry {
+    display: none;
+  }
+
+  .download-extension-entry-actions {
+    display: inline-flex;
+    gap: 6px;
+  }
+
+  /* 外观复用全站 .btn-secondary，这里只改成药丸入口需要的尺寸。 */
+  .download-extension-entry-link {
+    gap: 6px;
+    height: 32px;
+    padding: 0 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    text-decoration: none;
+  }
+
+  .download-extension-entry-link img {
+    display: block;
+  }
+
+  @media (max-width: 600px) {
+    .download-results-helper {
+      margin-top: 18px;
+      font-size: 16px;
     }
 
-    .download-panel-title {
-      font-size: 32px;
-      line-height: 40px;
-      letter-spacing: -1.28px;
+    .download-parse-form {
+      margin-top: 28px;
     }
 
     .download-parse-row {
-      grid-template-columns: 1fr;
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .download-workspace .download-parse-submit {
+      width: 100%;
     }
 
     .download-pending-resume-buttons {
@@ -406,9 +523,8 @@ const {
     }
 
     .download-result-thumbnail {
+      flex: 0 0 auto;
       width: 100%;
-      height: auto;
-      aspect-ratio: 16 / 9;
     }
 
     .download-result-actions {
@@ -424,6 +540,27 @@ const {
 
     .download-large-file-extension-inline {
       grid-template-columns: 1fr;
+    }
+
+    /* 一行入口变成：文案在上，两个等宽按钮在下，去掉药丸外框。 */
+    .download-extension-entry {
+      flex-direction: column;
+      align-items: stretch;
+      width: 100%;
+      padding: 0;
+      border: 0;
+      background: none;
+      gap: 10px;
+    }
+
+    .download-extension-entry-actions {
+      gap: 8px;
+    }
+
+    .download-extension-entry-link {
+      flex: 1 1 0;
+      height: 44px;
+      font-size: 14px;
     }
   }
 </style>

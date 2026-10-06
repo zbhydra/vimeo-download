@@ -353,7 +353,7 @@ export function renderGoogleRedirectButton(
   container.textContent = ''
   const button = document.createElement('button')
   button.type = 'button'
-  button.className = 'google-oauth-button'
+  button.className = 'btn-secondary google-oauth-button'
   button.dataset.googleOauthButton = 'true'
   button.setAttribute('aria-label', label)
   button.append(createGoogleButtonIcon(), createGoogleButtonText(label))

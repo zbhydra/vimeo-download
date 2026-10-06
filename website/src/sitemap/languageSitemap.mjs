@@ -321,10 +321,10 @@ function getRouteSourceFiles(routePath) {
     ]
   }
 
-  if (normalized === '/pricing/') {
+  if (normalized === '/ext-pricing/') {
     return [
-      'src/pages/pricing.astro',
-      'src/pages/[lang]/pricing.astro',
+      'src/pages/ext-pricing.astro',
+      'src/pages/[lang]/ext-pricing.astro',
       'src/components/pages/PricingPage.astro',
       'src/i18n/pricing.ts',
       'src/components/pricing/PricingPageShell.astro',

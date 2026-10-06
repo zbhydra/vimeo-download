@@ -1,5 +1,14 @@
 # 009 · SEO 与增长 - 变更记录
 
+## 2026-10-06 官网视觉升级：Pricing 路径改回 `/ext-pricing/`，全站深色与首页版式重做
+
+**Why**：005 恢复 `/ext-pricing/`、删除 `/pricing/`，全站改深色科技风。决策与范围见 `../000.架构/plans/005.官网视觉升级与Pricing路径改回.md`。
+
+**变更**：
+- `feat.md`：Pricing 页族路径与已删除路由口径改为 `/ext-pricing/` 存在、`/pricing/` 不存在；按钮规格、导航栏与页脚改为深色版式；首页区块表补首屏一行插件入口、浏览器窗口示意、bento 功能卡、竖向时间线、手机对比卡片、CTA 卡。
+- `tech-落地页与Sitemap.md`：页面族映射与 SEO 来源改为 `/ext-pricing/`（`pages/ext-pricing.astro`）；H1 由 `titleBrand` + `titleTagline` 拼成；首屏一行入口键；`ExtensionMockup.astro` 共用；新增 §4.5 Legal 目录当前项规则；Legal / Company 页族的源文件映射补 `SiteBandHeader.astro`。
+- `tech-LLMs与增长入口.md`：导航 Pricing 链接与语言切换示例改为 `/ext-pricing/`；不存在路径列表改为含 `pricing`、不含 `ext-pricing`；Install 改为主按钮（移动菜单里是带图标的满宽主按钮）。
+
 ## 2026-10-05 官网改版：首页即工具页 + 8 个插件展示区块，下线平台落地页、更新日志与签到入口
 
 **Why**：网站定位改为「首屏免费网页下载 + 插件展示 + 插件订阅购买」。工具已在首页首屏，独立平台落地页与同一关键词重复；更新日志条目与插件真实版本无关；Credits 与签到不再在网站提供。决策基线见 `../000.架构/plans/004.官网改版-插件展示与免费网页下载.md`。

@@ -1,61 +1,688 @@
 ---
-/** 区块 2：插件功能卡片网格。 */
+/**
+ * 区块 2：功能 bento。8 张深色卡，3 行，宽度比 2+1+1 / 1+1+2 / 2+2；每张卡一个彩色图标块和一个小型 CSS 示意。
+ * 文案沿用 `features.items`（14 语言条目顺序一致，下标决定卡片的图标、色组与示意）；
+ * 示意只含格式和分辨率标识（如 1080p、M4A）与色块，不含本地化文字，也不含数量、价格、额度类数字，整体装饰（aria-hidden）。
+ * 手机（≤ 960 px）单列，宽卡的示意放到文字下方。
+ */
 import HomeSection from './HomeSection.astro'
 import type { HomepageContent } from '../../i18n/schema'
 
 const { copy } = Astro.props as { copy: HomepageContent['features'] }
+
+/** 与 `copy.items` 同下标：色组、是否占两列、示意类型。 */
+const cardLayouts = [
+  { tone: 'blue', wide: true, art: 'panel' },
+  { tone: 'violet', wide: false, art: 'quality' },
+  { tone: 'teal', wide: false, art: 'audio' },
+  { tone: 'orange', wide: false, art: 'clip' },
+  { tone: 'pink', wide: false, art: 'cover' },
+  { tone: 'blue', wide: true, art: 'queue' },
+  { tone: 'violet', wide: true, art: 'large' },
+  { tone: 'teal', wide: true, art: 'settings' }
+] as const
+
+/** 页内面板示意的四行：左侧是行标签占位，右侧是选项。 */
+const panelRows = [
+  [{ text: '1080p', selected: true }, { text: '720p' }],
+  [{ text: 'M4A', selected: true }],
+  [{ text: 'VTT' }],
+  [{ text: 'JPEG', selected: true }]
+]
+
+/** 队列示意的四行：完成 / 进行中 / 排队 / 排队。 */
+const queueRows = ['done', 'running', 'queued', 'queued']
 ---
 
 <HomeSection id="home-features" heading={copy.heading}>
-  <ul class="home-feature-grid">
-    {copy.items.map(item => (
-      <li class="home-feature-card">
-        <h3>{item.title}</h3>
-        <p>{item.description}</p>
-      </li>
-    ))}
+  <ul class="bento">
+    {
+      copy.items.map((item, index) => {
+        const layout = cardLayouts[index]
+        return (
+          <li class:list={['bento-card', `bento-card--${layout.tone}`, { 'bento-card--wide': layout.wide }]}>
+            <div class="bento-text">
+              <span class="bento-icon" aria-hidden="true">
+                {layout.art === 'panel' && (
+                  <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5" /><path d="M3 14h18M7 17h3M13 17h4" /></svg>
+                )}
+                {layout.art === 'quality' && (
+                  <svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10" /><circle cx="16" cy="7" r="2" /><circle cx="8" cy="17" r="2" /></svg>
+                )}
+                {layout.art === 'audio' && (
+                  <svg viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2" /></svg>
+                )}
+                {layout.art === 'clip' && (
+                  <svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5" /><circle cx="6" cy="18" r="2.5" /><path d="M8 7.5 20 18M8 16.5 20 6" /></svg>
+                )}
+                {layout.art === 'cover' && (
+                  <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5" /><circle cx="9" cy="10" r="1.5" /><path d="m21 16-5-5-8 8" /></svg>
+                )}
+                {layout.art === 'queue' && (
+                  <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01" /></svg>
+                )}
+                {layout.art === 'large' && (
+                  <svg viewBox="0 0 24 24"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14" /></svg>
+                )}
+                {layout.art === 'settings' && (
+                  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                )}
+              </span>
+              <h3>{item.title}</h3>
+              <p>{item.description}</p>
+            </div>
+
+            <div class={`bento-art bento-art--${layout.art}`} aria-hidden="true">
+              {layout.art === 'panel' &&
+                panelRows.map(row => (
+                  <div class="art-row">
+                    <span class="art-label" />
+                    {row.map(chip => (
+                      <span class:list={['art-chip', { 'art-chip--solid': chip.selected }]}>{chip.text}</span>
+                    ))}
+                  </div>
+                ))}
+
+              {layout.art === 'quality' && (
+                <div class="art-pills">
+                  <span class="art-pill art-pill--solid">1080p</span>
+                  <span class="art-pill art-pill--tone">720p</span>
+                  <span class="art-pill">MP4</span>
+                </div>
+              )}
+
+              {layout.art === 'audio' && (
+                <div class="art-audio">
+                  <div class="art-wave">
+                    {[30, 60, 90, 55, 75, 40, 100, 65, 35].map(height => (
+                      <span style={`height: ${height}%`} />
+                    ))}
+                  </div>
+                  <span class="art-pill art-pill--solid">M4A</span>
+                  <span class="art-pill art-pill--tone">MP3</span>
+                </div>
+              )}
+
+              {layout.art === 'clip' && (
+                <div class="art-clip">
+                  <div class="art-clip-track">
+                    <span class="art-clip-range" />
+                    <span class="art-clip-handle art-clip-handle--start" />
+                    <span class="art-clip-handle art-clip-handle--end" />
+                  </div>
+                  <span class="art-badge">VTT</span>
+                </div>
+              )}
+
+              {layout.art === 'cover' && (
+                <div class="art-cover">
+                  <span class="art-cover-hill" />
+                  <span class="art-cover-sun" />
+                  <span class="art-cover-badge">JPEG</span>
+                </div>
+              )}
+
+              {layout.art === 'queue' &&
+                queueRows.map(state => (
+                  <div class="art-queue-row">
+                    <span class={`art-dot art-dot--${state}`} />
+                    <div class="art-bar">
+                      <div class={`art-bar-fill art-bar-fill--${state}`} />
+                    </div>
+                  </div>
+                ))}
+
+              {layout.art === 'large' && (
+                <div class="art-large">
+                  <div class="art-chunks">
+                    {[22, 38, 55, 38, 75, 22].map(alpha => (
+                      <span style={`--chunk-alpha: ${alpha / 100}`} />
+                    ))}
+                  </div>
+                  <svg class="art-large-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5" /></svg>
+                  <span class="art-file">MP4</span>
+                </div>
+              )}
+
+              {layout.art === 'settings' && (
+                <div class="art-settings">
+                  <div class="art-setting">
+                    <svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>
+                    <span class="art-setting-bar" style="flex: 1" />
+                  </div>
+                  <div class="art-setting">
+                    <svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM14 3v5h5" /></svg>
+                    <span class="art-setting-bar" style="flex: 0 0 70%" />
+                  </div>
+                  <div class="art-setting">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18" /></svg>
+                    <span class="art-setting-bar" style="flex: 0 0 55%" />
+                  </div>
+                  <span class="art-badge art-badge--end">CSV</span>
+                </div>
+              )}
+            </div>
+          </li>
+        )
+      })
+    }
   </ul>
 </HomeSection>
 
 <style>
-  .home-feature-grid {
+  .bento {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 16px;
     list-style: none;
   }
 
-  .home-feature-card {
-    padding: 24px;
+  /* 色组：同色相 alpha 0.14 的图标底配浅色线条；只在本组件里用，不进全局。 */
+  .bento-card {
+    --tone-bg: rgba(76, 130, 255, 0.14);
+    --tone-fg: var(--blue-700);
+    --tone-line: rgba(138, 180, 255, 0.35);
+    --tone-solid: var(--brand-600);
+    --tone-solid-ink: var(--gray-1000);
+    --art-bg: var(--gray-200);
+    --art-line: var(--gray-alpha-100);
+    --art-fill: var(--gray-alpha-500);
+    --art-ok: #22b573;
+    --art-violet: #7c5cf6;
+    --art-chunk: 167, 139, 250;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 28px;
     border: 1px solid var(--gray-alpha-400);
-    border-radius: var(--radius-md);
-    background: var(--background-100);
+    border-radius: var(--radius-xl);
+    background: var(--gray-100);
     box-shadow: var(--shadow-card);
   }
 
-  .home-feature-card h3 {
-    font-size: 16px;
-    font-weight: 600;
-    line-height: 24px;
-    letter-spacing: -0.32px;
+  .bento-card--violet {
+    --tone-bg: var(--violet-200);
+    --tone-fg: var(--violet-900);
+    --tone-line: rgba(196, 181, 253, 0.35);
+    --tone-solid: #6a46e0;
   }
 
-  .home-feature-card p {
+  .bento-card--teal {
+    --tone-bg: rgba(20, 184, 166, 0.14);
+    --tone-fg: #5eead4;
+    --tone-line: rgba(94, 234, 212, 0.35);
+    --tone-solid: #0b6e62;
+  }
+
+  .bento-card--orange {
+    --tone-bg: rgba(249, 115, 22, 0.14);
+    --tone-fg: #fdba74;
+    --tone-line: rgba(253, 186, 116, 0.35);
+    --tone-solid: #a93f08;
+  }
+
+  .bento-card--pink {
+    --tone-bg: rgba(236, 72, 153, 0.14);
+    --tone-fg: #f9a8d4;
+    --tone-line: rgba(249, 168, 212, 0.35);
+    --tone-solid: #be185d;
+  }
+
+  .bento-card--wide {
+    grid-column: span 2;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 24px;
+  }
+
+  .bento-text {
+    flex: 1 1 220px;
+    min-width: 0;
+  }
+
+  .bento-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    background: var(--tone-bg);
+    color: var(--tone-fg);
+  }
+
+  .bento-icon svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .bento-text h3 {
+    margin-top: 18px;
+    color: var(--gray-1000);
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+  }
+
+  .bento-text p {
     margin-top: 8px;
     color: var(--gray-900);
-    font-size: 14px;
-    line-height: 20px;
+    font-size: 15px;
+    line-height: 1.6;
   }
 
-  @media (max-width: 1200px) {
-    .home-feature-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
+  /* 示意：窄卡贴在卡底，宽卡与文字并排并垂直居中。 */
+  .bento-art {
+    margin-top: auto;
+    padding-top: 20px;
+  }
+
+  .bento-card--wide .bento-art {
+    flex: 1 1 240px;
+    min-width: 0;
+    align-self: center;
+    margin-top: 0;
+    padding-top: 0;
+  }
+
+  .bento-art--large,
+  .bento-art--settings {
+    flex: 0 1 200px;
+  }
+
+  /* 页内面板示意。 */
+  .bento-art--panel,
+  .bento-art--queue,
+  .bento-art--settings {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .bento-art--panel,
+  .bento-art--queue {
+    padding: 14px;
+    border: 1px solid var(--art-line);
+    border-radius: 14px;
+    background: var(--art-bg);
+  }
+
+  .bento-card--wide .bento-art--panel,
+  .bento-card--wide .bento-art--queue {
+    padding: 14px;
+  }
+
+  .art-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .art-label {
+    flex: 0 0 56px;
+    height: 8px;
+    border-radius: 4px;
+    background: var(--art-fill);
+  }
+
+  .art-chip,
+  .art-pill,
+  .art-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .art-chip {
+    min-width: 52px;
+    height: 26px;
+    padding: 0 8px;
+    border: 1px solid var(--gray-alpha-500);
+    border-radius: 6px;
+    background: var(--gray-100);
+    color: var(--gray-900);
+  }
+
+  .art-chip--solid {
+    border-color: transparent;
+    background: var(--tone-solid);
+    color: var(--tone-solid-ink);
+  }
+
+  /* 画质 / 格式胶囊。 */
+  .art-pills,
+  .art-audio {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .art-pill {
+    height: 28px;
+    padding: 0 10px;
+    border: 1px solid var(--gray-alpha-400);
+    border-radius: 999px;
+    color: var(--gray-900);
+    font-weight: 600;
+  }
+
+  .art-pill--solid {
+    border-color: transparent;
+    background: var(--tone-solid);
+    color: var(--tone-solid-ink);
+    font-weight: 700;
+  }
+
+  .art-pill--tone {
+    border-color: var(--tone-line);
+    background: var(--tone-bg);
+    color: var(--tone-fg);
+    font-weight: 700;
+  }
+
+  .art-audio {
+    flex-wrap: nowrap;
+    gap: 10px;
+  }
+
+  .art-wave {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 3px;
+    height: 28px;
+    min-width: 0;
+  }
+
+  .art-wave span {
+    flex: 1;
+    border-radius: 2px;
+    background: var(--tone-fg);
+    opacity: 0.55;
+  }
+
+  .art-wave span:nth-child(3n) {
+    opacity: 1;
+  }
+
+  /* 裁剪示意：时间轴上的区间与两个把手。 */
+  .art-clip {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .art-clip-track {
+    position: relative;
+    height: 8px;
+    border-radius: 8px;
+    background: var(--art-fill);
+  }
+
+  .art-clip-range {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 22%;
+    width: 46%;
+    border-radius: 8px;
+    background: linear-gradient(90deg, var(--tone-fg), var(--tone-solid));
+  }
+
+  .art-clip-handle {
+    position: absolute;
+    top: 50%;
+    width: 16px;
+    height: 16px;
+    margin: -8px 0 0 -8px;
+    border: 2px solid var(--tone-fg);
+    border-radius: 50%;
+    background: var(--gray-100);
+  }
+
+  .art-clip-handle--start {
+    left: 22%;
+  }
+
+  .art-clip-handle--end {
+    left: 68%;
+  }
+
+  .art-badge {
+    align-self: flex-start;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 6px;
+    background: var(--tone-solid);
+    color: var(--tone-solid-ink);
+  }
+
+  .art-badge--end {
+    align-self: flex-end;
+    margin-top: 2px;
+  }
+
+  /* 封面示意：渐变缩略图。 */
+  .art-cover {
+    position: relative;
+    aspect-ratio: 16 / 7;
+    overflow: hidden;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, var(--tone-fg) 0%, #c084fc 55%, #818cf8 100%);
+  }
+
+  .art-cover-hill {
+    position: absolute;
+    left: 12%;
+    bottom: -30%;
+    width: 46%;
+    height: 80%;
+    border-radius: 50%;
+    background: rgba(238, 242, 255, 0.28);
+  }
+
+  .art-cover-sun {
+    position: absolute;
+    right: 14%;
+    top: 18%;
+    width: 18%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: rgba(238, 242, 255, 0.55);
+  }
+
+  .art-cover-badge {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 6px;
+    background: rgba(7, 11, 24, 0.72);
+    color: var(--gray-1000);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  /* 队列示意：进度条逐行完成 / 进行 / 排队。 */
+  .bento-art--queue {
+    gap: 10px;
+  }
+
+  .art-queue-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .art-dot {
+    flex: 0 0 10px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--art-fill);
+  }
+
+  .art-dot--done {
+    background: var(--art-ok);
+  }
+
+  .art-dot--running {
+    background: var(--blue-700);
+  }
+
+  .art-bar {
+    flex: 1 1 auto;
+    height: 6px;
+    overflow: hidden;
+    border-radius: 6px;
+    background: var(--gray-alpha-400);
+  }
+
+  .art-bar-fill {
+    height: 100%;
+  }
+
+  .art-bar-fill--done {
+    width: 100%;
+    background: var(--art-ok);
+  }
+
+  .art-bar-fill--running {
+    width: 58%;
+    background: linear-gradient(90deg, var(--brand-500), var(--art-violet));
+  }
+
+  /* 大文件示意：分块 → 合成一个文件。 */
+  .art-large {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .art-chunks {
+    display: grid;
+    flex: 1 1 auto;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .art-chunks span {
+    height: 18px;
+    border-radius: 4px;
+    background: rgba(var(--art-chunk), var(--chunk-alpha));
+  }
+
+  .art-large-arrow {
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: var(--gray-700);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .art-file {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 60px;
+    border-radius: 8px;
+    background: var(--tone-solid);
+    color: var(--gray-1000);
+    font-size: 12px;
+    font-weight: 700;
+    box-shadow: 0 10px 20px -10px rgba(109, 74, 230, 0.7);
+  }
+
+  /* 设置示意：三行设置项加一个 CSV 角标。 */
+  .bento-art--settings {
+    padding: 12px;
+    border: 1px solid var(--art-line);
+    border-radius: 14px;
+    background: var(--art-bg);
+  }
+
+  .art-setting {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .art-setting svg {
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: var(--tone-fg);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .art-setting-bar {
+    height: 8px;
+    border-radius: 4px;
+    background: var(--art-fill);
   }
 
   @media (max-width: 960px) {
-    .home-feature-grid {
+    .bento {
       grid-template-columns: minmax(0, 1fr);
+      gap: 12px;
+    }
+
+    .bento-card,
+    .bento-card--wide {
+      grid-column: auto;
+      flex-direction: column;
+      flex-wrap: nowrap;
+      gap: 0;
+      padding: 20px;
+      border-radius: 18px;
+    }
+
+    .bento-text {
+      flex: 0 0 auto;
+    }
+
+    .bento-card .bento-art,
+    .bento-card--wide .bento-art {
+      flex: 0 0 auto;
+      align-self: stretch;
+      margin-top: 16px;
+      padding-top: 0;
+    }
+
+    .bento-text h3 {
+      margin-top: 16px;
+      font-size: 17px;
+    }
+
+    .bento-text p {
+      margin-top: 6px;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .bento-art--panel {
+      padding: 12px;
     }
   }
 </style>

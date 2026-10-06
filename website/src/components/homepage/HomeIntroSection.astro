@@ -1,27 +1,27 @@
 ---
 /**
- * 区块 1：插件介绍。主按钮进商店，次按钮进 Pricing；
- * 右侧用 HTML/CSS 还原插件页内面板（Video / Audio / Subtitle / Image 四行），不使用截图。
+ * 插件展示：标题、导语、两个 CTA（主按钮进商店，次按钮进 Pricing），下方是插件界面示意。
+ * 本区块放在首页 hero 舞台里，与首屏共用同一个 SiteStage，自己不再包底色与分隔线。
+ * 示意图由 ExtensionMockup 渲染（纯 HTML/CSS，不使用截图）。
  */
-import HomeSection from './HomeSection.astro'
+import ExtensionMockup from './ExtensionMockup.astro'
 import type { HomepageContent } from '../../i18n/schema'
 
-const { copy, installUrl, pricingPath } = Astro.props as {
+const { copy, installUrl, pricingPath, brand, callouts } = Astro.props as {
   copy: HomepageContent['intro']
   installUrl: string
   pricingPath: string
+  /** popup 标题（品牌名）。 */
+  brand: string
+  /** 标注胶囊文案：复用功能卡标题（页内面板 / popup）。 */
+  callouts: { panel: string; popup: string }
 }
-const rows = [
-  { key: 'video', label: copy.panel.rows.video, icon: 'M4 6h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2zm16 3 4-2v10l-4-2' },
-  { key: 'audio', label: copy.panel.rows.audio, icon: 'M9 18V5l11-2v13M9 18a3 3 0 1 1-3-3 3 3 0 0 1 3 3zm11-2a3 3 0 1 1-3-3 3 3 0 0 1 3 3z' },
-  { key: 'subtitle', label: copy.panel.rows.subtitle, icon: 'M3 6h18v12H3zM7 11h4M13 11h4M7 15h10' },
-  { key: 'image', label: copy.panel.rows.image, icon: 'M3 5h18v14H3zM3 16l5-5 4 4 3-3 6 6M15.5 9.5h.01' }
-]
 ---
 
-<HomeSection id="home-intro" heading={copy.heading}>
-  <div class="home-intro">
+<section class="home-intro" id="home-intro" aria-labelledby="home-intro-heading">
+  <div class="container">
     <div class="home-intro-copy">
+      <h2 id="home-intro-heading" class="home-intro-heading">{copy.heading}</h2>
       <p class="home-intro-lead">{copy.lead}</p>
       <div class="home-actions">
         <a
@@ -31,7 +31,13 @@ const rows = [
           rel="noopener"
           data-ga-event="outbound_chrome_store_click"
           data-ga-source="homepage_intro"
-        >{copy.primaryCta}</a>
+        >
+          <!-- Chrome 图标放在共享的小白底板上（.btn-chrome-plate，Layout 全局）。 -->
+          <span class="btn-chrome-plate">
+            <img src="/googe-ext-logo-192px.svg" alt="" width="16" height="16" loading="lazy" aria-hidden="true" />
+          </span>
+          <span>{copy.primaryCta}</span>
+        </a>
         <a
           class="btn-secondary"
           href={pricingPath}
@@ -42,109 +48,82 @@ const rows = [
       </div>
     </div>
 
-    <div class="home-panel" role="img" aria-label={copy.panel.ariaLabel}>
-      <ul class="home-panel-list">
-        {rows.map(row => (
-          <li class="home-panel-row">
-            <svg class="home-panel-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d={row.icon} />
-            </svg>
-            <span class="home-panel-label">{row.label}</span>
-            <span class="home-panel-bar" aria-hidden="true"></span>
-            <span class="home-panel-button" aria-hidden="true"></span>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <ExtensionMockup
+      ariaLabel={copy.panel.ariaLabel}
+      rows={copy.panel.rows}
+      callouts={callouts}
+      brand={brand}
+    />
   </div>
-</HomeSection>
+</section>
 
 <style>
+  /* 透视地面比窗口宽，横向裁掉超出视口的部分，避免页面横向滚动（clip 不产生滚动容器，纵向不受影响）。 */
   .home-intro {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 32px;
-    align-items: center;
+    padding: 40px 0 176px;
+    overflow-x: clip;
+  }
+
+  .home-intro-copy {
+    max-width: 760px;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  .home-intro-heading {
+    color: var(--gray-1000);
+    font-size: clamp(32px, 4vw, 44px);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.035em;
   }
 
   .home-intro-lead {
-    max-width: 560px;
+    margin-top: 18px;
     color: var(--gray-900);
     font-size: 18px;
-    line-height: 28px;
+    line-height: 1.6;
   }
 
   .home-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 24px;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 28px;
   }
 
   /* 本地化按钮文案可能很长，允许换行而不是撑破布局。 */
   .home-actions :global(a) {
     height: auto;
-    min-height: 40px;
-    padding: 10px 14px;
+    min-height: 48px;
+    padding: 10px 22px;
+    border-radius: var(--radius-md);
+    font-size: 15px;
     white-space: normal;
     text-align: center;
   }
 
-  .home-panel {
-    padding: 16px;
-    border: 1px solid var(--gray-alpha-400);
-    border-radius: var(--radius-md);
-    background: var(--background-100);
-    box-shadow: var(--shadow-popover);
-  }
-
-  .home-panel-list {
-    display: grid;
-    gap: 8px;
-    list-style: none;
-  }
-
-  .home-panel-row {
-    display: grid;
-    grid-template-columns: 20px minmax(72px, auto) minmax(0, 1fr) 56px;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
-    border: 1px solid var(--gray-alpha-400);
-    border-radius: var(--radius-sm);
-  }
-
-  .home-panel-icon {
-    width: 20px;
-    height: 20px;
-    fill: none;
-    stroke: var(--gray-900);
-    stroke-width: 1.6;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-  }
-
-  .home-panel-label {
-    font-size: 14px;
-    font-weight: 600;
-    line-height: 20px;
-  }
-
-  .home-panel-bar {
-    height: 8px;
-    border-radius: 4px;
-    background: var(--gray-100);
-  }
-
-  .home-panel-button {
-    height: 24px;
-    border-radius: var(--radius-sm);
-    background: var(--gray-1000);
-  }
-
-  @media (max-width: 960px) {
+  @media (max-width: 600px) {
     .home-intro {
-      grid-template-columns: minmax(0, 1fr);
+      padding: 40px 0 120px;
+    }
+
+    .home-intro-heading {
+      font-size: 30px;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+    }
+
+    .home-intro-lead {
+      margin-top: 14px;
+      font-size: 16px;
+    }
+
+    .home-actions {
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 24px;
     }
   }
 </style>

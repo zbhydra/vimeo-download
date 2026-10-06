@@ -66,7 +66,7 @@ test('真实账号完成桌面与移动端 30 秒好评赠送领取', async ({ p
   })
 
   await page.setViewportSize({ width: 1440, height: 900 })
-  const response = await page.goto('/zh-cn/pricing/')
+  const response = await page.goto('/zh-cn/ext-pricing/')
   expect(response?.ok()).toBe(true)
   await expect(page.locator('[data-pricing-account-signed-in]')).toBeVisible()
 

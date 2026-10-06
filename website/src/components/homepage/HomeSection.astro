@@ -1,42 +1,112 @@
 ---
 /**
- * 首页展示区块外壳：统一的纵向节奏、顶部分隔线和唯一的 H2。
+ * 首页展示区块外壳：统一的纵向节奏与唯一的 H2。
  * 各区块只管自己的内容布局，标题与间距由这里统一，避免每个区块各写一份。
+ *
+ * - `tone="alt"`：`--background-200` 交替区块，上下各一条分隔线。
+ * - `divided`：区块顶部一条发丝线（对比表、FAQ）；其余区块靠间距区分。
+ * - `center`：标题居中（步骤、方案）。
+ * - `split`：标题在左、内容在右的两栏（FAQ），≤ 960 px 单列。
  */
-const { heading, id } = Astro.props as { heading: string; id: string }
+const {
+  heading,
+  id,
+  tone = 'base',
+  divided = false,
+  center = false,
+  split = false
+} = Astro.props as {
+  heading: string
+  id: string
+  tone?: 'base' | 'alt'
+  divided?: boolean
+  center?: boolean
+  split?: boolean
+}
 ---
 
-<section class="home-section" aria-labelledby={`${id}-heading`}>
+<section
+  class:list={['home-section', `home-section--${tone}`, { 'home-section--divided': divided, 'home-section--center': center, 'home-section--split': split }]}
+  aria-labelledby={`${id}-heading`}
+>
   <div class="container">
     <h2 id={`${id}-heading`} class="home-section-heading">{heading}</h2>
-    <slot />
+    {
+      split ? (
+        <div class="home-section-body">
+          <slot />
+        </div>
+      ) : (
+        <slot />
+      )
+    }
   </div>
 </section>
 
 <style>
   .home-section {
-    padding: 64px 0;
-    border-top: 1px solid var(--gray-alpha-400);
+    padding: 120px 0;
+  }
+
+  .home-section--divided {
+    border-top: 1px solid var(--gray-alpha-100);
+  }
+
+  .home-section--alt {
+    background: var(--background-200);
+    border-top: 1px solid var(--gray-alpha-100);
+    border-bottom: 1px solid var(--gray-alpha-100);
   }
 
   .home-section-heading {
-    margin-bottom: 32px;
-    font-size: 32px;
-    font-weight: 600;
-    line-height: 40px;
-    letter-spacing: -1.28px;
+    margin-bottom: 48px;
+    color: var(--gray-1000);
+    font-size: clamp(32px, 4vw, 44px);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.035em;
+  }
+
+  .home-section--center .home-section-heading {
+    text-align: center;
+  }
+
+  .home-section--split > .container {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    gap: 40px 64px;
+    align-items: start;
+  }
+
+  .home-section--split .home-section-heading {
+    margin-bottom: 0;
+  }
+
+  .home-section-body {
+    min-width: 0;
   }
 
   @media (max-width: 960px) {
     .home-section {
-      padding: 40px 0;
+      padding: 80px 0;
+    }
+
+    .home-section--split > .container {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 32px;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .home-section {
+      padding: 64px 0;
     }
 
     .home-section-heading {
-      margin-bottom: 24px;
-      font-size: 24px;
-      line-height: 32px;
-      letter-spacing: -0.96px;
+      margin-bottom: 32px;
+      font-size: 30px;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
     }
   }
 </style>

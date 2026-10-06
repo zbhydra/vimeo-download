@@ -2,15 +2,17 @@
 /**
  * 首页：工具首屏 + 8 个静态展示区块。
  *
- * 区块顺序：Hero（下载工作区 + Trust Points）→ 插件介绍 → 功能 → 使用步骤
+ * 区块顺序：Hero（下载工作区 + Trust Points + 一行插件入口）→ 插件介绍 → 功能 → 使用步骤
  * → 网页版与插件对比 → 适用范围与边界 → 方案概览 → FAQ → 结尾 CTA。
  *
  * 关键约定：
- * - 页面唯一 H1 = 下载工作区的解析工具标题（workspace.parse.title），区块标题各为一个 H2。
+ * - 首屏与插件介绍放在同一个 SiteStage hero 里，舞台装饰只由 SiteStage 实现。
+ * - 页面唯一 H1 = 下载工作区的解析工具标题（titleBrand + titleTagline），区块标题各为一个 H2。
  * - 展示区块纯静态、不带客户端脚本；只有下载工作区运行前端状态机。
  * - FAQPage JSON-LD 经 Layout 的 structuredData prop 注入，内容与可见 FAQ 同源。
  */
 import Layout from '../../layouts/Layout.astro'
+import SiteStage from '../site/SiteStage.astro'
 import HomeIntroSection from '../homepage/HomeIntroSection.astro'
 import HomeFeaturesSection from '../homepage/HomeFeaturesSection.astro'
 import HomeStepsSection from '../homepage/HomeStepsSection.astro'
@@ -31,10 +33,15 @@ interface Props {
 const installUrl = CHROME_WEB_STORE_URL
 
 const { locale = 'en-US' } = Astro.props as Props
-const homepage = getContent(locale).pages.homepage
+const content = getContent(locale)
+const homepage = content.pages.homepage
 const { title, description } = homepage.meta
 const localePath = localePaths[locale] || ''
-const pricingPath = `${localePath === '' ? '/' : `/${localePath}/`}pricing/`
+const pricingPath = `${localePath === '' ? '/' : `/${localePath}/`}ext-pricing/`
+
+// 插件展示的标注胶囊复用功能卡标题：第 1 条是页内面板，第 6 条是 popup 列表与队列（14 语言条目顺序一致）。
+const [panelFeature, , , , , popupFeature] = homepage.features.items
+const callouts = { panel: panelFeature.title, popup: popupFeature.title }
 
 const faqSchema = {
   '@context': 'https://schema.org',
@@ -56,55 +63,68 @@ const faqSchema = {
   description={description}
   structuredData={[faqSchema]}
 >
-  <section class="hero-tool">
-    <div class="container">
-      <DownloadWorkspace
-        copy={homepage.workspace}
-        installUrl={installUrl}
-        showLargeFileExtensionGuideByDefault
-        deferRuntime
-      />
-      <ul class="hero-trust-points">
-        {homepage.heroTrustPoints.map(point => (
-          <li class="hero-trust-point">
-            <svg class="hero-trust-check" viewBox="0 0 20 20" aria-hidden="true">
-              <path d="M5 10.5l3.2 3.2L15 7" />
-            </svg>
-            <span>{point}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  </section>
+  <SiteStage variant="hero">
+    <section class="hero-tool">
+      <div class="container">
+        <DownloadWorkspace
+          copy={homepage.workspace}
+          installUrl={installUrl}
+          deferRuntime
+        >
+          <ul class="hero-trust-points">
+            {homepage.heroTrustPoints.map(point => (
+              <li class="hero-trust-point">
+                <svg class="hero-trust-check" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M8.5 12.5l2.5 2.5 4.5-5" />
+                </svg>
+                <span>{point}</span>
+              </li>
+            ))}
+          </ul>
+        </DownloadWorkspace>
+      </div>
+    </section>
 
-  <HomeIntroSection copy={homepage.intro} installUrl={installUrl} pricingPath={pricingPath} />
+    <HomeIntroSection
+      copy={homepage.intro}
+      installUrl={installUrl}
+      pricingPath={pricingPath}
+      brand={content.layout.nav.brand}
+      callouts={callouts}
+    />
+  </SiteStage>
+
   <HomeFeaturesSection copy={homepage.features} />
   <HomeStepsSection copy={homepage.steps} />
   <HomeComparisonSection copy={homepage.comparison} />
   <HomeScopeSection copy={homepage.scope} />
   <HomePlansSection copy={homepage.plans} pricingPath={pricingPath} />
   <HomeFaqSection copy={homepage.faq} />
-  <HomeFinalCtaSection copy={homepage.finalCta} installUrl={installUrl} />
+  <HomeFinalCtaSection copy={homepage.finalCta} installUrl={installUrl} rows={homepage.intro.panel.rows} />
 </Layout>
 
 <style>
   .hero-tool {
-    padding: 40px 0 32px;
+    padding: 104px 0 64px;
   }
 
   .hero-trust-points {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px 24px;
-    margin-top: 16px;
+    justify-content: center;
+    gap: 10px 24px;
+    max-width: 780px;
+    margin: 24px auto 0;
     list-style: none;
+    text-align: left;
   }
 
   .hero-trust-point {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     color: var(--gray-900);
     font-size: 14px;
     line-height: 20px;
@@ -112,18 +132,43 @@ const faqSchema = {
 
   .hero-trust-check {
     flex-shrink: 0;
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     fill: none;
-    stroke: var(--gray-1000);
+    stroke: var(--neon-cyan);
     stroke-width: 2;
     stroke-linecap: round;
     stroke-linejoin: round;
   }
 
-  @media (max-width: 960px) {
+  /* 手机：信任点 2×2，第 4 条较长，跨两列。 */
+  @media (max-width: 600px) {
     .hero-tool {
-      padding: 24px 0;
+      padding: 48px 0 40px;
+    }
+
+    .hero-trust-points {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px 12px;
+      margin-top: 20px;
+      font-size: 13px;
+    }
+
+    .hero-trust-point {
+      align-items: flex-start;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .hero-trust-point:nth-child(4) {
+      grid-column: 1 / -1;
+    }
+
+    .hero-trust-check {
+      width: 16px;
+      height: 16px;
+      margin-top: 1px;
     }
   }
 </style>

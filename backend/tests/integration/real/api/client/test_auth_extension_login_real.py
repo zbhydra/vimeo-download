@@ -243,7 +243,7 @@ async def test_real_v3_registration_source_is_preserved(
             return_to = (
                 f"{EXTENSION_CALLBACK_URL}/google-login"
                 if registration_entry
-                else f"{website_base_url}/pricing/"
+                else f"{website_base_url}/ext-pricing/"
             )
             state = await google_redirect_login_service.create_oauth_state(
                 f"{return_to}?{urlencode(registration)}"

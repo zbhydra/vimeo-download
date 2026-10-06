@@ -68,8 +68,8 @@ const normalizePathname = (pathname: string) => {
 const canonicalURL = new URL(normalizePathname(currentPath), Astro.site);
 
 // Extract the page path without language prefix
-// e.g., "/zh-tw/pricing/" → "/pricing/"
-// e.g., "/pricing/" → "/pricing/"
+// e.g., "/zh-tw/ext-pricing/" → "/ext-pricing/"
+// e.g., "/ext-pricing/" → "/ext-pricing/"
 const currentLocalePathPrefix = localePaths[locale] ? `/${localePaths[locale]}` : '';
 const pagePathWithoutLocale = currentLocalePathPrefix
   ? currentPath.replace(currentLocalePathPrefix, '') || '/'
@@ -91,7 +91,7 @@ const termsPath = `${currentLocalePath}terms/`;
 const privacyPath = `${currentLocalePath}privacy/`;
 const aboutPath = `${currentLocalePath}about/`;
 const contactPath = `${currentLocalePath}contact/`;
-const pricingPath = `${currentLocalePath}pricing/`;
+const pricingPath = `${currentLocalePath}ext-pricing/`;
 const languageOptionLinks = Object.entries(localePaths).map(([key, path]) => {
   const langPrefix = path === '' ? '' : `/${path}`;
   const targetPath = `${langPrefix}${normalizedPagePathWithoutLocale}`;
@@ -173,7 +173,7 @@ const structuredDataItems = [
     </script>
     -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="theme-color" content="#070B18" />
     <link rel="icon" type="image/png" sizes="128x128" href="/favicon.png" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="canonical" href={canonicalURL} />
@@ -215,46 +215,81 @@ const structuredDataItems = [
     ))}
     <style is:inline is:global>
       /*
-        Geist 亮色 token（取自 docs/references/specs/design.md，命名对齐，只收录用到的子集）。
+        全站深色 token。中性色沿用 Geist 的 token 名（对齐 docs/references/specs/design.md），
+        值翻转为偏蓝的深色，与 Geist 暗色主题（design.dark.md）同一种做法：语义名不变，值翻转。
+        只收录用到的子集；取值与对比度依据见 docs/feat/000.架构/plans/005 §2.2。
+        跨组件使用的颜色只能从这里取，纯白只用于主按钮文字与 Chrome 图标的小白底板。
       */
       :root {
-        --background-100: #ffffff;
-        --gray-100: #f2f2f2;
-        --gray-700: #8f8f8f;
-        --gray-900: #4d4d4d;
-        --gray-1000: #171717;
-        --gray-alpha-100: #0000000d;
-        --gray-alpha-400: #00000014;
-        --gray-alpha-500: #00000036;
-        --gray-alpha-600: #0000003d;
-        --blue-700: #006bff;
-        --blue-800: #0059ec;
-        --amber-100: #fff6de;
-        --amber-900: #aa4d00;
-        --background-200: #fafafa;
-        --blue-100: #f0f7ff;
-        --blue-200: #e9f4ff;
-        --blue-400: #cae7ff;
-        --blue-500: #94ccff;
-        --red-100: #ffeeef;
-        --red-400: #ffd7d6;
-        --red-900: #d8001b;
-        --green-100: #ecfdec;
-        --green-400: #b9f5bc;
-        --green-900: #107d32;
+        color-scheme: dark;
+
+        --background-100: #070b18;
+        --background-200: #0a1020;
+        --gray-100: #0e1529;
+        --gray-200: #131c36;
+        --gray-700: #7e88a4;
+        --gray-900: #a3acc4;
+        --gray-1000: #e3e8f5;
+        --gray-alpha-100: rgba(148, 163, 255, 0.06);
+        --gray-alpha-400: rgba(148, 163, 255, 0.12);
+        --gray-alpha-500: rgba(148, 163, 255, 0.22);
+        --gray-alpha-600: rgba(148, 163, 255, 0.28);
+        --blue-700: #8ab4ff;
+        --blue-800: #a9c6ff;
+        --blue-100: rgba(96, 150, 255, 0.1);
+        --blue-200: rgba(96, 150, 255, 0.16);
+        --blue-400: rgba(96, 150, 255, 0.28);
+        --blue-500: rgba(96, 150, 255, 0.45);
+        --amber-100: rgba(251, 146, 60, 0.1);
+        --amber-400: rgba(251, 146, 60, 0.28);
+        --amber-900: #fed7aa;
+        --red-100: rgba(248, 113, 113, 0.1);
+        --red-400: rgba(248, 113, 113, 0.28);
+        --red-900: #fca5a5;
+        --green-100: rgba(74, 222, 128, 0.1);
+        --green-400: rgba(74, 222, 128, 0.28);
+        --green-900: #86efac;
+        --violet-200: rgba(139, 92, 246, 0.16);
+        --violet-900: #c4b5fd;
+
+        --brand-500: #2d6ae8;
+        --brand-600: #1f4fcc;
+        --gradient-button: linear-gradient(180deg, #2f6bea 0%, var(--brand-600) 100%);
+        --gradient-brand: linear-gradient(100deg, #2f6bea 0%, #5b5bf0 50%, #6d4ae6 100%);
+        --gradient-brand-text: linear-gradient(100deg, #8ab4ff 0%, #a78bfa 55%, #c4b5fd 100%);
+        --gradient-border: linear-gradient(
+          140deg,
+          rgba(138, 180, 255, 0.75) 0%,
+          rgba(167, 139, 250, 0.35) 50%,
+          rgba(103, 232, 249, 0.55) 100%
+        );
+        --neon-cyan: #67e8f9;
+        --glass-bg: rgba(255, 255, 255, 0.06);
+        --glass-border: rgba(255, 255, 255, 0.12);
+        --on-brand: #fff;
+        --overlay-bg: rgba(3, 6, 14, 0.72);
+        --payment-plate: #e6ebf3;
+        --shadow-glow: 0 8px 20px -8px rgba(45, 106, 232, 0.65);
+        --shadow-badge-color: rgba(45, 106, 232, 0.8);
 
         --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
 
         --radius-sm: 6px;
         --radius-md: 12px;
+        --radius-lg: 16px;
+        --radius-xl: 20px;
+        --radius-2xl: 24px;
 
-        --shadow-card: 0 2px 2px rgba(0, 0, 0, 0.04);
-        --shadow-popover: 0 1px 1px rgba(0, 0, 0, 0.02), 0 4px 8px -4px rgba(0, 0, 0, 0.04), 0 16px 24px -8px rgba(0, 0, 0, 0.06);
-        --shadow-modal: 0 1px 1px rgba(0, 0, 0, 0.02), 0 8px 16px -4px rgba(0, 0, 0, 0.04), 0 24px 32px -8px rgba(0, 0, 0, 0.06);
+        --shadow-card: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 20px 40px -24px rgba(0, 0, 0, 0.6);
+        --shadow-popover: 0 24px 48px -12px rgba(0, 0, 0, 0.6);
+        --shadow-modal: 0 24px 48px -12px rgba(0, 0, 0, 0.6);
 
-        --focus-ring: 0 0 0 2px #fff, 0 0 0 4px #006bff;
+        --focus-ring: 0 0 0 2px #070b18, 0 0 0 4px #8ab4ff;
         --transition-fast: 160ms;
         --transition-normal: 220ms;
+
+        /* 吸顶 header 的高度；SiteStage 据此向上延伸到 header 下面。 */
+        --header-height: 68px;
       }
 
       * {
@@ -270,7 +305,7 @@ const structuredDataItems = [
       body {
         min-height: 100vh;
         font-family: var(--font-sans);
-        font-size: 14px;
+        font-size: 16px;
         line-height: 1.6;
         color: var(--gray-1000);
         background: var(--background-100);
@@ -288,6 +323,7 @@ const structuredDataItems = [
         font-family: inherit;
         border: none;
         background: none;
+        color: inherit;
         cursor: pointer;
       }
 
@@ -314,7 +350,7 @@ const structuredDataItems = [
         box-shadow: var(--focus-ring);
       }
 
-      /* 全站按钮：主按钮 gray-1000 实底，次按钮白底加 gray-alpha-400 描边。 */
+      /* 全站按钮：主按钮是品牌蓝渐变加光晕，次按钮是玻璃面，全站只有这两种。 */
       .btn-primary,
       .btn-secondary {
         display: inline-flex;
@@ -322,41 +358,44 @@ const structuredDataItems = [
         justify-content: center;
         gap: 8px;
         height: 40px;
-        padding: 0 10px;
+        padding: 0 14px;
         border: 1px solid transparent;
-        border-radius: var(--radius-sm);
+        border-radius: 10px;
         font-size: 14px;
-        font-weight: 500;
+        font-weight: 600;
         line-height: 20px;
         white-space: nowrap;
-        transition: color var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast);
+        transition: color var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast), filter var(--transition-fast);
       }
 
       .btn-primary {
-        color: var(--background-100);
-        background: var(--gray-1000);
+        color: var(--on-brand);
+        background: var(--gradient-button);
+        box-shadow: var(--shadow-glow);
       }
 
       .btn-primary:hover {
-        background: var(--gray-900);
+        filter: brightness(1.1);
       }
 
       .btn-secondary {
         color: var(--gray-1000);
-        background: var(--background-100);
-        border-color: var(--gray-alpha-400);
+        background: var(--glass-bg);
+        border-color: rgba(255, 255, 255, 0.16);
       }
 
       .btn-secondary:hover {
-        background: var(--gray-100);
-        border-color: var(--gray-alpha-500);
+        background: var(--gray-alpha-400);
+        border-color: var(--gray-alpha-600);
       }
 
       .btn-primary:disabled,
       .btn-secondary:disabled {
         color: var(--gray-700);
         background: var(--gray-100);
-        border-color: transparent;
+        border-color: var(--gray-alpha-400);
+        box-shadow: none;
+        filter: none;
         cursor: not-allowed;
       }
 
@@ -366,7 +405,23 @@ const structuredDataItems = [
         flex: 0 0 18px;
       }
 
-      /* 全站链接：accent blue-700 只用于链接与焦点。 */
+      /* Chrome 图标的小白底板（纯白白名单之一）：彩色图标在渐变蓝按钮上看不清，包一层白底方圆角。 */
+      .btn-chrome-plate {
+        display: inline-flex;
+        flex: 0 0 22px;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 6px;
+        background: #fff;
+      }
+
+      .btn-chrome-plate img {
+        display: block;
+      }
+
+      /* 全站链接：用 --blue-700；选中态、目录当前项也用同一个蓝，不是链接专属。 */
       .text-link {
         color: var(--blue-700);
         text-decoration: underline;
@@ -384,16 +439,24 @@ const structuredDataItems = [
         margin: 0 auto;
       }
 
+      /* header / 菜单 / 页脚共用的分隔线色，只在 Layout 内使用，不进全局 token 表。 */
+      .header,
+      .footer {
+        --divider: rgba(255, 255, 255, 0.08);
+      }
+
       .header {
         position: sticky;
         top: 0;
         z-index: 100;
-        background: var(--background-100);
-        border-bottom: 1px solid var(--gray-alpha-400);
+        background: rgba(7, 11, 24, 0.78);
+        -webkit-backdrop-filter: saturate(160%) blur(14px);
+        backdrop-filter: saturate(160%) blur(14px);
+        border-bottom: 1px solid var(--divider);
       }
 
       .nav {
-        height: 64px;
+        height: calc(var(--header-height) - 1px);
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -403,7 +466,7 @@ const structuredDataItems = [
       .logo {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
         min-width: 0;
         color: var(--gray-1000);
       }
@@ -411,8 +474,8 @@ const structuredDataItems = [
       .logo span {
         overflow: hidden;
         font-size: 16px;
-        font-weight: 600;
-        letter-spacing: -0.32px;
+        font-weight: 650;
+        letter-spacing: -0.16px;
         text-overflow: ellipsis;
         white-space: nowrap;
       }
@@ -421,7 +484,7 @@ const structuredDataItems = [
         width: 32px;
         height: 32px;
         flex: 0 0 32px;
-        border-radius: var(--radius-sm);
+        border-radius: 8px;
       }
 
       .nav-links {
@@ -433,8 +496,8 @@ const structuredDataItems = [
       }
 
       .nav-links a {
-        padding: 6px 12px;
-        border-radius: var(--radius-sm);
+        padding: 8px 12px;
+        border-radius: 8px;
         color: var(--gray-900);
         font-size: 14px;
         font-weight: 500;
@@ -444,7 +507,7 @@ const structuredDataItems = [
       .nav-links a:hover,
       .nav-links a.active {
         color: var(--gray-1000);
-        background: var(--gray-100);
+        background: var(--glass-bg);
       }
 
       .nav-actions {
@@ -455,15 +518,17 @@ const structuredDataItems = [
       }
 
       .nav-install-link {
-        gap: 8px;
-        height: 32px;
-        padding: 0 10px 0 8px;
+        padding: 0 14px 0 10px;
       }
 
+      /* Chrome 图标的小白底板：彩色图标在品牌蓝按钮上需要白底才看得清。 */
       .nav-install-icon {
         width: 20px;
         height: 20px;
         flex: 0 0 20px;
+        padding: 1px;
+        border-radius: 50%;
+        background: #fff;
       }
 
       .lang-switcher {
@@ -473,22 +538,24 @@ const structuredDataItems = [
       .lang-btn {
         display: flex;
         align-items: center;
-        gap: 8px;
-        height: 32px;
+        gap: 6px;
+        height: 44px;
         max-width: 160px;
         padding: 0 10px;
-        border: 1px solid var(--gray-alpha-400);
-        border-radius: var(--radius-sm);
-        color: var(--gray-1000);
-        background: var(--background-100);
+        border-radius: 10px;
+        color: var(--gray-900);
         font-size: 14px;
         font-weight: 500;
         white-space: nowrap;
       }
 
       .lang-btn:hover {
-        background: var(--gray-100);
-        border-color: var(--gray-alpha-500);
+        background: var(--glass-bg);
+        color: var(--gray-1000);
+      }
+
+      .lang-btn-globe {
+        flex: 0 0 auto;
       }
 
       .lang-dropdown {
@@ -497,7 +564,7 @@ const structuredDataItems = [
         right: 0;
         min-width: 160px;
         padding: 4px;
-        background: var(--background-100);
+        background: var(--gray-100);
         border: 1px solid var(--gray-alpha-400);
         border-radius: var(--radius-md);
         box-shadow: var(--shadow-popover);
@@ -516,8 +583,8 @@ const structuredDataItems = [
       .lang-dropdown .lang-option {
         display: block;
         width: 100%;
-        padding: 8px 12px;
-        border-radius: var(--radius-sm);
+        padding: 10px 12px;
+        border-radius: 8px;
         text-align: left;
         font-size: 14px;
         color: var(--gray-900);
@@ -525,32 +592,31 @@ const structuredDataItems = [
 
       .lang-dropdown .lang-option:hover,
       .lang-dropdown .lang-option.current {
-        background: var(--gray-100);
+        background: var(--glass-bg);
         color: var(--gray-1000);
       }
 
       .mobile-menu-btn {
         display: none;
         flex-direction: column;
+        align-items: center;
         justify-content: center;
-        gap: 4px;
-        width: 32px;
-        height: 32px;
-        border: 1px solid var(--gray-alpha-400);
-        border-radius: var(--radius-sm);
-        background: var(--background-100);
+        gap: 5px;
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        color: var(--gray-1000);
       }
 
       .mobile-menu-btn:hover {
-        background: var(--gray-100);
+        background: var(--glass-bg);
       }
 
       .hamburger {
         display: block;
-        width: 14px;
-        height: 1.5px;
-        margin: 0 auto;
-        background: var(--gray-1000);
+        width: 18px;
+        height: 2px;
+        background: currentColor;
         border-radius: 1px;
         transition: transform var(--transition-fast), opacity var(--transition-fast);
       }
@@ -561,8 +627,8 @@ const structuredDataItems = [
         left: 0;
         right: 0;
         background: var(--background-100);
-        border-bottom: 1px solid var(--gray-alpha-400);
-        box-shadow: var(--shadow-popover);
+        border-bottom: 1px solid var(--divider);
+        box-shadow: 0 24px 48px -24px rgba(0, 0, 0, 0.8);
         max-height: 0;
         overflow: hidden;
         visibility: hidden;
@@ -570,7 +636,7 @@ const structuredDataItems = [
       }
 
       .mobile-nav.open {
-        max-height: 320px;
+        max-height: 360px;
         visibility: visible;
       }
 
@@ -580,25 +646,55 @@ const structuredDataItems = [
         width: min(1200px, calc(100vw - 32px));
         margin: 0 auto;
         padding: 8px 0 16px;
-        gap: 4px;
       }
 
-      .mobile-nav a {
-        padding: 10px 12px;
-        border-radius: var(--radius-sm);
-        font-size: 14px;
+      .mobile-nav a:not(.btn-primary) {
+        position: relative;
+        display: flex;
+        align-items: center;
+        min-height: 52px;
+        padding: 0 14px;
+        font-size: 16px;
         font-weight: 500;
         color: var(--gray-900);
       }
 
-      .mobile-nav a:hover,
+      .mobile-nav a:not(.btn-primary) + a:not(.btn-primary) {
+        border-top: 1px solid var(--divider);
+      }
+
+      .mobile-nav a:not(.btn-primary):hover,
       .mobile-nav a.active {
-        background: var(--gray-100);
         color: var(--gray-1000);
       }
 
+      .mobile-nav a.active {
+        font-weight: 600;
+      }
+
+      /* 当前项左侧的发光竖条。 */
+      .mobile-nav a.active::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 14px;
+        bottom: 14px;
+        width: 2px;
+        border-radius: 2px;
+        background: var(--blue-700);
+        box-shadow: 0 0 10px rgba(138, 180, 255, 0.8);
+      }
+
+      .mobile-nav-install {
+        width: 100%;
+        height: 48px;
+        margin-top: 16px;
+        border-radius: var(--radius-md);
+        font-size: 15px;
+      }
+
       .header.menu-open .mobile-menu-btn .hamburger:nth-child(1) {
-        transform: translateY(5.5px) rotate(45deg);
+        transform: translateY(7px) rotate(45deg);
       }
 
       .header.menu-open .mobile-menu-btn .hamburger:nth-child(2) {
@@ -606,7 +702,7 @@ const structuredDataItems = [
       }
 
       .header.menu-open .mobile-menu-btn .hamburger:nth-child(3) {
-        transform: translateY(-5.5px) rotate(-45deg);
+        transform: translateY(-7px) rotate(-45deg);
       }
 
       .page-hero h1 {
@@ -617,51 +713,33 @@ const structuredDataItems = [
 
       .footer {
         margin-top: 80px;
-        border-top: 1px solid var(--gray-alpha-400);
-        background: var(--background-100);
+        border-top: 1px solid var(--divider);
+        background: #05080f;
       }
 
       .footer-content {
-        padding-top: 40px;
-        padding-bottom: 24px;
-      }
-
-      .footer-link-groups {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(160px, 240px));
-        gap: 48px;
+        padding-top: 56px;
         padding-bottom: 32px;
-        text-align: left;
       }
 
-      .footer-link-group {
+      .footer-main {
         display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
+        flex-wrap: wrap;
+        gap: 40px 64px;
+      }
+
+      .footer-brand {
+        flex: 1 1 280px;
         min-width: 0;
       }
 
-      .footer-link-title {
-        margin-bottom: 4px;
+      .footer-brand-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
         color: var(--gray-1000);
-        font-size: 14px;
-        font-weight: 600;
-        line-height: 20px;
-      }
-
-      .footer-meta {
-        display: flex;
-        align-items: center;
-        min-height: 56px;
-        padding-top: 16px;
-        border-top: 1px solid var(--gray-alpha-400);
-      }
-
-      .footer-brand-row {
-        display: flex;
-        align-items: center;
-        gap: 8px;
+        font-size: 16px;
+        font-weight: 650;
       }
 
       .footer-brand-icon {
@@ -669,29 +747,60 @@ const structuredDataItems = [
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 24px;
-        height: 24px;
-        flex: 0 0 24px;
+        width: 28px;
+        height: 28px;
+        flex: 0 0 28px;
         background: url('/favicon.png') center / contain no-repeat;
+        border-radius: 7px;
       }
 
+      /* 挂载点里的透明 SVG 由 device.ts 注入，叠在 favicon 底图上，不能隐藏或懒加载。 */
       .footer-brand-icon img {
         position: absolute;
         inset: 0;
-        width: 24px;
-        height: 24px;
-        flex: 0 0 24px;
-        border-radius: var(--radius-sm);
+        width: 28px;
+        height: 28px;
+        flex: 0 0 28px;
       }
 
-      .footer-link-group a,
+      .footer-link-groups {
+        display: grid;
+        grid-template-columns: repeat(2, 160px);
+        gap: 40px 64px;
+        text-align: left;
+      }
+
+      .footer-link-group {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .footer-link-title {
+        margin-bottom: 6px;
+        color: var(--gray-1000);
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 20px;
+      }
+
+      .footer-meta {
+        margin-top: 48px;
+        padding-top: 24px;
+        border-top: 1px solid var(--divider);
+      }
+
       .footer-meta p {
-        color: var(--gray-900);
-        font-size: 14px;
+        color: var(--gray-700);
+        font-size: 13px;
       }
 
       .footer-link-group a {
         max-width: 100%;
+        color: var(--gray-900);
+        font-size: 14px;
         line-height: 20px;
         overflow-wrap: anywhere;
       }
@@ -718,7 +827,7 @@ const structuredDataItems = [
           max-width: 128px;
         }
 
-        .lang-btn span {
+        .lang-btn-label {
           overflow: hidden;
           text-overflow: ellipsis;
         }
@@ -728,19 +837,104 @@ const structuredDataItems = [
         }
 
         .footer-link-groups {
+          flex: 1 1 100%;
           grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 32px 24px;
+          gap: 32px 12px;
         }
       }
 
       @media (max-width: 600px) {
+        :root {
+          --header-height: 60px;
+        }
+
+        .nav {
+          width: 100%;
+          padding: 0 8px 0 16px;
+          gap: 12px;
+        }
+
+        .nav-actions {
+          gap: 4px;
+        }
+
+        .logo {
+          gap: 8px;
+          min-height: 44px;
+        }
+
+        .logo img {
+          width: 28px;
+          height: 28px;
+          flex-basis: 28px;
+          border-radius: 7px;
+        }
+
+        .logo span {
+          font-size: 15px;
+        }
+
+        /* 只留地球图标；语言名用视觉隐藏保留为可访问名称。 */
+        .lang-btn {
+          justify-content: center;
+          width: 44px;
+          padding: 0;
+        }
+
+        .lang-btn-label,
+        .lang-btn-chevron {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          overflow: hidden;
+          clip-path: inset(50%);
+          white-space: nowrap;
+        }
+
+        .lang-btn-globe {
+          width: 20px;
+          height: 20px;
+        }
+
         .footer {
           margin-top: 64px;
         }
 
         .footer-content {
-          padding-top: 32px;
-          padding-bottom: 20px;
+          padding-top: 40px;
+          padding-bottom: 24px;
+        }
+
+        .footer-main {
+          gap: 28px 12px;
+        }
+
+        .footer-brand {
+          flex-basis: 100%;
+        }
+
+        .footer-brand-link {
+          min-height: 44px;
+        }
+
+        .footer-link-group {
+          gap: 0;
+        }
+
+        .footer-link-group a {
+          display: flex;
+          align-items: center;
+          min-height: 44px;
+          font-size: 15px;
+        }
+
+        .footer-meta {
+          margin-top: 28px;
+          padding-top: 20px;
+        }
+
+        .footer-meta p {
+          line-height: 1.5;
         }
       }
     </style>
@@ -756,12 +950,17 @@ const structuredDataItems = [
 
         <!-- Desktop Navigation -->
         <div class="nav-links">
-          <a href={currentLocalePath} class={isHomeActive ? 'active' : ''}>
+          <a
+            href={currentLocalePath}
+            class={isHomeActive ? 'active' : ''}
+            aria-current={isHomeActive ? 'page' : undefined}
+          >
             {t.layout.nav.home}
           </a>
           <a
             href={pricingPath}
             class={isPricingActive ? 'active' : ''}
+            aria-current={isPricingActive ? 'page' : undefined}
             data-ga-event="internal_workflow_click"
             data-ga-source="nav"
             data-ga-target="pricing"
@@ -775,7 +974,7 @@ const structuredDataItems = [
             href={chromeWebStoreUrl}
             target="_blank"
             rel="noopener"
-            class="btn-secondary nav-install-link"
+            class="btn-primary nav-install-link"
             aria-label={t.common.installCta}
             data-ga-event="outbound_chrome_store_click"
             data-ga-source="nav"
@@ -793,10 +992,15 @@ const structuredDataItems = [
 
           {includeLanguageSwitcher && (
             <div class="lang-switcher">
-              <button class="lang-btn" aria-label="Language switcher">
-                <span>{localeNames[locale]}</span>
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M2 4L6 8L10 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <button class="lang-btn">
+                <svg class="lang-btn-globe" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M3 12h18" />
+                  <path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z" />
+                </svg>
+                <span class="lang-btn-label">{localeNames[locale]}</span>
+                <svg class="lang-btn-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M6 9l6 6 6-6" />
                 </svg>
               </button>
               <div class="lang-dropdown">
@@ -828,12 +1032,17 @@ const structuredDataItems = [
       <!-- Mobile Navigation Menu -->
       <div class="mobile-nav">
         <div class="mobile-nav-inner">
-          <a href={currentLocalePath} class={isHomeActive ? 'active' : ''}>
+          <a
+            href={currentLocalePath}
+            class={isHomeActive ? 'active' : ''}
+            aria-current={isHomeActive ? 'page' : undefined}
+          >
             {t.layout.nav.home}
           </a>
           <a
             href={pricingPath}
             class={isPricingActive ? 'active' : ''}
+            aria-current={isPricingActive ? 'page' : undefined}
             data-ga-event="internal_workflow_click"
             data-ga-source="mobile_nav"
             data-ga-target="pricing"
@@ -844,10 +1053,12 @@ const structuredDataItems = [
             href={chromeWebStoreUrl}
             target="_blank"
             rel="noopener"
+            class="btn-primary mobile-nav-install"
             data-ga-event="outbound_chrome_store_click"
             data-ga-source="mobile_nav"
           >
-            {t.common.installCta}
+            <img src="/googe-ext-logo-192px.svg" width="192" height="192" alt="" class="nav-install-icon" loading="lazy" />
+            <span>{t.common.installCta}</span>
           </a>
         </div>
       </div>
@@ -859,67 +1070,72 @@ const structuredDataItems = [
 
     {!standalone && <footer class="footer">
       <div class="footer-content">
-        <nav
-          class="footer-link-groups"
-          aria-label={`${companyContent.footerGroupLabel} / ${t.layout.footer.resources}`}
-        >
-          <div class="footer-link-group">
-            <p class="footer-link-title">{companyContent.footerGroupLabel}</p>
-            <a
-              href={aboutPath}
-              data-ga-event="internal_workflow_click"
-              data-ga-source="footer"
-              data-ga-target="about"
-            >
-              {companyContent.about.navLabel}
-            </a>
-            <a
-              href={contactPath}
-              data-ga-event="internal_workflow_click"
-              data-ga-source="footer"
-              data-ga-target="contact"
-            >
-              {companyContent.contact.navLabel}
-            </a>
-            <a
-              class="footer-social-link"
-              href={OFFICIAL_X_URL}
-              target="_blank"
-              rel="me noopener noreferrer"
-              aria-label={`${companyContent.officialXLabel} (${OFFICIAL_X_HANDLE})`}
-              data-ga-event="official_x_click"
-              data-ga-source="footer"
-              data-ga-target="official_x"
-            >
-              <XBrandIcon />
-              <span>{companyContent.officialXLabel}</span>
+        <div class="footer-main">
+          <div class="footer-brand">
+            <a href={currentLocalePath} class="footer-brand-link">
+              <span class="footer-brand-icon" data-footer-brand-icon></span>
+              <span>{t.layout.nav.brand}</span>
             </a>
           </div>
-          <div class="footer-link-group" data-footer-resources>
-            <p class="footer-link-title">{t.layout.footer.resources}</p>
-            <a
-              href={termsPath}
-              data-ga-event="internal_workflow_click"
-              data-ga-source="footer"
-              data-ga-target="terms"
-            >
-              {legalContent.terms.navLabel}
-            </a>
-            <a
-              href={privacyPath}
-              data-ga-event="internal_workflow_click"
-              data-ga-source="footer"
-              data-ga-target="privacy"
-            >
-              {legalContent.privacy.navLabel}
-            </a>
-          </div>
-        </nav>
+          <nav
+            class="footer-link-groups"
+            aria-label={`${companyContent.footerGroupLabel} / ${t.layout.footer.resources}`}
+          >
+            <div class="footer-link-group">
+              <p class="footer-link-title">{companyContent.footerGroupLabel}</p>
+              <a
+                href={aboutPath}
+                data-ga-event="internal_workflow_click"
+                data-ga-source="footer"
+                data-ga-target="about"
+              >
+                {companyContent.about.navLabel}
+              </a>
+              <a
+                href={contactPath}
+                data-ga-event="internal_workflow_click"
+                data-ga-source="footer"
+                data-ga-target="contact"
+              >
+                {companyContent.contact.navLabel}
+              </a>
+              <a
+                class="footer-social-link"
+                href={OFFICIAL_X_URL}
+                target="_blank"
+                rel="me noopener noreferrer"
+                aria-label={`${companyContent.officialXLabel} (${OFFICIAL_X_HANDLE})`}
+                data-ga-event="official_x_click"
+                data-ga-source="footer"
+                data-ga-target="official_x"
+              >
+                <XBrandIcon />
+                <span>{companyContent.officialXLabel}</span>
+              </a>
+            </div>
+            <div class="footer-link-group" data-footer-resources>
+              <p class="footer-link-title">{t.layout.footer.resources}</p>
+              <a
+                href={termsPath}
+                data-ga-event="internal_workflow_click"
+                data-ga-source="footer"
+                data-ga-target="terms"
+              >
+                {legalContent.terms.navLabel}
+              </a>
+              <a
+                href={privacyPath}
+                data-ga-event="internal_workflow_click"
+                data-ga-source="footer"
+                data-ga-target="privacy"
+              >
+                {legalContent.privacy.navLabel}
+              </a>
+            </div>
+          </nav>
+        </div>
         <div class="footer-meta">
-          <div class="footer-brand-row">
-            <span class="footer-brand-icon" data-footer-brand-icon></span>
-            <p>{t.layout.footer.rights}</p>
-          </div>
+          <p>{t.layout.footer.rights}</p>
         </div>
       </div>
     </footer>}

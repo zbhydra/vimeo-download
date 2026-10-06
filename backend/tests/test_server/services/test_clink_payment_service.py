@@ -168,7 +168,7 @@ async def test_subscription_management_creates_customer_portal_session(monkeypat
         assert request.url.path == "/api/billing/session"
         assert json.loads(request.content) == {
             "customerId": "customer_test",
-            "returnUrl": "https://example.com/pricing/",
+            "returnUrl": "https://example.com/ext-pricing/",
         }
         return httpx.Response(
             200,
@@ -178,7 +178,7 @@ async def test_subscription_management_creates_customer_portal_session(monkeypat
     _install_transport(monkeypatch, handler)
     url = await _provider().create_subscription_management_url(
         channel_uid="customer_test",
-        return_url="https://example.com/pricing/",
+        return_url="https://example.com/ext-pricing/",
     )
 
     assert url == "https://uat-portal.clinkbill.com/s/1"
@@ -199,7 +199,7 @@ async def test_subscription_management_rejects_other_environment_portal(monkeypa
     with pytest.raises(PaymentProviderError, match="host mismatch"):
         await _provider().create_subscription_management_url(
             channel_uid="customer_test",
-            return_url="https://example.com/pricing/",
+            return_url="https://example.com/ext-pricing/",
         )
 
 

@@ -1,0 +1,998 @@
+---
+/**
+ * 插件界面示意：全站唯一实现（页内面板 + popup），纯 HTML/CSS，不用截图。
+ *
+ * props.part：
+ * - `window`（默认）：浏览器窗口 + 页内面板 + popup + 透视地面，用于首页插件展示。
+ *   窗口内的页内面板通过 `Astro.self` 渲染 `part="panel"`，面板结构因此只写一份。
+ * - `panel`：只有页内面板（Video / Audio / Subtitle / Image 四行），渲染成独立卡片
+ *   （实底、圆角、发光），用于收尾 CTA 卡。根节点自带 `aria-hidden`，调用方只需包一层定位和旋转。
+ *   面板嵌在窗口网页里时的差异（虚线、半透明底、间距）由 `.ext-page .ext-panel` 覆盖。
+ *
+ * 示意是装饰：整体 `role="img"`，内部没有可聚焦元素。
+ * 调暗的浅色（网页底、popup 底）与取自插件 buttons.css 的 Vimeo 青只写在本组件里，不进全局 token。
+ * 面板里的选项只放分辨率 / 格式标识（与语言无关），不新增文案；行标签沿用既有本地化键。
+ *
+ * 循环动效只有扫描线与透视地面，只动画 transform 与 opacity，`prefers-reduced-motion: reduce` 时静止。
+ */
+interface Props {
+  part?: 'window' | 'panel'
+  /** 无障碍名称：`window` 整体作为一张图时使用；`panel` 是装饰，不需要。 */
+  ariaLabel?: string
+  /** 面板行标签（本地化）。 */
+  rows: { video: string; audio: string; subtitle: string; image: string }
+  /** 标注胶囊文案：复用功能卡标题。`panel` 只用 `panel`，`window` 两个都用。 */
+  callouts?: { panel: string; popup: string }
+  /** popup 标题（品牌名），仅 `window` 使用。 */
+  brand?: string
+}
+
+const { part = 'window', ariaLabel, rows, callouts, brand = '' } = Astro.props
+
+/** 选项只放分辨率 / 格式标识；selected 对应插件里的 Vimeo 青实底按钮。 */
+const panelRows = [
+  { key: 'video', label: rows.video, options: [{ text: '1080p', selected: true }, { text: '720p' }, { text: '540p' }] },
+  { key: 'audio', label: rows.audio, options: [{ text: 'M4A', selected: true }] },
+  { key: 'subtitle', label: rows.subtitle, options: [{ text: 'VTT' }] },
+  { key: 'image', label: rows.image, options: [{ text: 'JPG', selected: true }] }
+]
+
+/** popup 队列的三条任务：进行中 / 完成 / 排队。 */
+const popupItems = [
+  { key: 'video', label: rows.video, format: '1080p', state: 'running' },
+  { key: 'audio', label: rows.audio, format: 'M4A', state: 'done' },
+  { key: 'subtitle', label: rows.subtitle, format: 'VTT', state: 'queued' }
+]
+---
+
+{
+  part === 'panel' ? (
+    <div class="ext-panel" aria-hidden="true">
+      {callouts && (
+        <span class="ext-callout ext-callout--top">
+          <i />
+          {callouts.panel}
+        </span>
+      )}
+      {panelRows.map(row => (
+        <div class="ext-panel-row">
+          <span class="ext-panel-label">{row.label}</span>
+          <div class="ext-panel-options">
+            {row.options.map(option => (
+              <span class={`ext-chip${option.selected ? ' ext-chip--selected' : ''}`}>{option.text}</span>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <div class="ext-stage">
+      <div class="ext-floor" aria-hidden="true">
+        <div class="ext-floor-plane">
+          <div class="ext-floor-grid" />
+        </div>
+      </div>
+      <div class="ext-glow" aria-hidden="true" />
+
+      <figure class="ext-figure" role="img" aria-label={ariaLabel}>
+        <div class="ext-window">
+        <div class="ext-toolbar">
+          <div class="ext-dots">
+            <span />
+            <span />
+            <span />
+          </div>
+          <div class="ext-address">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 11h14v9H5zM8 11V8a4 4 0 0 1 8 0v3" />
+            </svg>
+            <span>vimeo.com/123456789</span>
+          </div>
+          <div class="ext-toolbar-icons">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M10 3.5a1.5 1.5 0 0 1 3 0V5h3.5A1.5 1.5 0 0 1 18 6.5V10h1.5a1.5 1.5 0 0 1 0 3H18v4.5a1.5 1.5 0 0 1-1.5 1.5H13v-1.5a1.5 1.5 0 0 0-3 0V19H6.5A1.5 1.5 0 0 1 5 17.5V14h1.5a1.5 1.5 0 0 0 0-3H5V6.5A1.5 1.5 0 0 1 6.5 5H10z" />
+            </svg>
+            <img class="ext-toolbar-logo" src="/favicon.png" width="20" height="20" alt="" loading="lazy" />
+          </div>
+        </div>
+
+        <div class="ext-body">
+          <div class="ext-page">
+            <div class="ext-player">
+              <span class="ext-corner ext-corner--tl" />
+              <span class="ext-corner ext-corner--tr" />
+              <span class="ext-corner ext-corner--bl" />
+              <span class="ext-corner ext-corner--br" />
+              <div class="ext-scan">
+                <span class="ext-scan-line" />
+              </div>
+              <span class="ext-play">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M8 5.5v13l11-6.5z" />
+                </svg>
+              </span>
+              <div class="ext-progress">
+                <span>1:24</span>
+                <div class="ext-progress-bar">
+                  <div />
+                </div>
+                <span>4:05</span>
+              </div>
+            </div>
+            <div class="ext-skeleton-lines">
+              <span />
+              <span />
+            </div>
+            <Astro.self part="panel" rows={rows} callouts={callouts} />
+          </div>
+
+          <div class="ext-side" aria-hidden="true">
+            {[0, 1, 2, 3, 4].map(() => (
+              <div class="ext-side-row">
+                <span class="ext-side-thumb" />
+                <div class="ext-side-text">
+                  <span />
+                  <span />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        </div>
+
+        <div class="ext-popup">
+          <span class="ext-popup-notch" />
+          <div class="ext-popup-head">
+            <img src="/favicon.png" width="24" height="24" alt="" loading="lazy" />
+            <span>{brand}</span>
+          </div>
+          {popupItems.map(item => (
+            <div class="ext-popup-item">
+              <span class={`ext-popup-icon ext-popup-icon--${item.key}`}>
+                {item.key === 'video' && (
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 6h13v12H3zM16 10l5-3v10l-5-3" />
+                  </svg>
+                )}
+                {item.key === 'audio' && (
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M9 18V6l11-2v12M9 18a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0zM20 16a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z" />
+                  </svg>
+                )}
+                {item.key === 'subtitle' && (
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 5h18v14H3zM7 13h4M13 13h4M7 16h7" />
+                  </svg>
+                )}
+              </span>
+              <div class="ext-popup-main">
+                <div class="ext-popup-line">
+                  <span class="ext-popup-name">{item.label} · {item.format}</span>
+                  {item.state === 'running' && <span class="ext-popup-percent">72%</span>}
+                  {item.state === 'done' && (
+                    <svg class="ext-popup-done" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M5 12.5l4.5 4.5L19 7.5" />
+                    </svg>
+                  )}
+                  {item.state === 'queued' && (
+                    <svg class="ext-popup-queued" viewBox="0 0 24 24" aria-hidden="true">
+                      <circle cx="12" cy="12" r="9" />
+                      <path d="M12 7v5l3 2" />
+                    </svg>
+                  )}
+                </div>
+                <div class="ext-popup-track">
+                  <div class={`ext-popup-fill ext-popup-fill--${item.state}`} />
+                </div>
+                {item.state === 'running' && <span class="ext-popup-speed">4.2 MB/s</span>}
+              </div>
+            </div>
+          ))}
+          {callouts && (
+            <span class="ext-callout ext-callout--bottom">
+              <i />
+              {callouts.popup}
+            </span>
+          )}
+        </div>
+      </figure>
+    </div>
+  )
+}
+
+<style>
+  .ext-stage,
+  .ext-panel {
+    /* 示意里调暗的浅色：只在本组件使用，不进全局 token。 */
+    --ext-page: #e6ebf3;
+    --ext-popup: #edf1f7;
+    --ext-line: #d3dae6;
+    --ext-line-soft: #dce2ec;
+    --ext-ink: #0b1220;
+    --ext-ink-soft: #1f2937;
+    --ext-chip-bg: #f2f5f9;
+    --ext-chip-ink: #111827;
+    /* 取自插件 buttons.css 的 Vimeo 青（选中按钮实底）。 */
+    --ext-vimeo: #00adef;
+    --ext-vimeo-ink: #f7fbff;
+    --ext-chip-border: rgba(15, 23, 42, 0.18);
+    --ext-panel-line: #b9ccf7;
+    --ext-panel-inset: rgba(238, 243, 254, 0.55);
+    --ext-window-bg: #0d1428;
+    --ext-dot-close: #ff5f57;
+    --ext-dot-min: #febc2e;
+    --ext-dot-max: #28c840;
+    --ext-player-hi: #3b4f7a;
+    --ext-player-mid: #1b2540;
+    --ext-player-lo: #0b1020;
+    --ext-violet: #7c5cf6;
+    --ext-ink-muted: #475467;
+    --ext-ink-faint: #667085;
+    --ext-idle: #98a2b3;
+    --ext-ok: #12a150;
+    --ext-ok-fill: #22b573;
+    --ext-icon-video-bg: #eaf1ff;
+    --ext-icon-audio-bg: #e3f7f3;
+    --ext-icon-audio: #0e8a7a;
+    --ext-icon-subtitle-bg: #fff0e5;
+    --ext-icon-subtitle: #d9480f;
+    --ext-floor-height: 320px;
+  }
+
+  .ext-stage {
+    position: relative;
+    max-width: 1080px;
+    margin: 72px auto 0;
+  }
+
+  /* 透视地面：外层裁切并渐隐，plane 负责透视，grid 只做 transform 位移（周期等于网格间距，循环无缝）。 */
+  .ext-floor {
+    position: absolute;
+    left: -24%;
+    right: -24%;
+    bottom: -170px;
+    height: var(--ext-floor-height);
+    overflow: hidden;
+    pointer-events: none;
+    -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 30%, #000 70%, transparent 100%);
+    mask-image: linear-gradient(180deg, transparent 0%, #000 30%, #000 70%, transparent 100%);
+  }
+
+  .ext-floor-plane {
+    position: absolute;
+    left: -50%;
+    bottom: 0;
+    width: 200%;
+    height: 2400px;
+    transform-origin: 50% 100%;
+    transform: perspective(520px) rotateX(62deg);
+  }
+
+  .ext-floor-grid {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -56px;
+    bottom: 0;
+    background-image:
+      linear-gradient(rgba(122, 162, 255, 0.32) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(122, 162, 255, 0.32) 1px, transparent 1px);
+    background-size: 56px 56px;
+    background-position: 50% 0;
+    animation: ext-floor-move 2.8s linear infinite;
+  }
+
+  .ext-glow {
+    position: absolute;
+    left: 8%;
+    right: 8%;
+    top: 10%;
+    bottom: -6%;
+    pointer-events: none;
+    background: radial-gradient(closest-side, rgba(45, 106, 232, 0.55), rgba(124, 92, 246, 0.22) 55%, rgba(124, 92, 246, 0));
+    filter: blur(48px);
+  }
+
+  .ext-figure {
+    position: relative;
+    z-index: 1;
+    margin: 0;
+  }
+
+  /* 窗口：渐变描边（border-box 层）+ 外发光。 */
+  .ext-window {
+    border: 1px solid transparent;
+    border-radius: 18px;
+    background:
+      linear-gradient(var(--ext-window-bg), var(--ext-window-bg)) padding-box,
+      var(--gradient-border) border-box;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.03), 0 50px 120px -40px rgba(45, 106, 232, 0.75);
+  }
+
+  .ext-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    height: 48px;
+    padding: 0 16px;
+  }
+
+  .ext-dots {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 8px;
+  }
+
+  .ext-dots span {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--ext-dot-close);
+  }
+
+  .ext-dots span:nth-child(2) {
+    background: var(--ext-dot-min);
+  }
+
+  .ext-dots span:nth-child(3) {
+    background: var(--ext-dot-max);
+  }
+
+  .ext-address {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 520px;
+    min-width: 0;
+    height: 30px;
+    margin: 0 auto;
+    padding: 0 12px;
+    border: 1px solid var(--gray-alpha-400);
+    border-radius: 8px;
+    background: var(--glass-bg);
+    color: var(--gray-900);
+    font-size: 13px;
+  }
+
+  .ext-address svg,
+  .ext-toolbar-icons svg {
+    flex: 0 0 auto;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .ext-address svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .ext-address span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ext-toolbar-icons {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 12px;
+    color: var(--gray-700);
+  }
+
+  .ext-toolbar-icons svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* 工具栏插件 logo 带光环：popup 的小三角指向它。 */
+  .ext-toolbar-logo {
+    display: block;
+    border-radius: 5px;
+    box-shadow: 0 0 0 3px rgba(138, 180, 255, 0.35), 0 0 16px rgba(138, 180, 255, 0.65);
+  }
+
+  .ext-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+    gap: 28px;
+    margin: 0 8px 8px;
+    padding: 24px;
+    border-radius: 0 0 12px 12px;
+    background: var(--ext-page);
+  }
+
+  .ext-page {
+    min-width: 0;
+  }
+
+  .ext-player {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: var(--radius-md);
+    background:
+      radial-gradient(55% 50% at 78% 72%, rgba(124, 92, 246, 0.38), rgba(124, 92, 246, 0) 70%),
+      radial-gradient(120% 90% at 25% 20%, var(--ext-player-hi) 0%, var(--ext-player-mid) 45%, var(--ext-player-lo) 100%);
+  }
+
+  .ext-corner {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border: 0 solid var(--neon-cyan);
+  }
+
+  .ext-corner--tl {
+    top: 12px;
+    left: 12px;
+    border-width: 2px 0 0 2px;
+    border-top-left-radius: 4px;
+  }
+
+  .ext-corner--tr {
+    top: 12px;
+    right: 12px;
+    border-width: 2px 2px 0 0;
+    border-top-right-radius: 4px;
+  }
+
+  .ext-corner--bl {
+    bottom: 40px;
+    left: 12px;
+    border-width: 0 0 2px 2px;
+    border-bottom-left-radius: 4px;
+  }
+
+  .ext-corner--br {
+    right: 12px;
+    bottom: 40px;
+    border-width: 0 2px 2px 0;
+    border-bottom-right-radius: 4px;
+  }
+
+  /*
+    扫描线：wrapper 铺满播放器，线贴在 wrapper 底边；动画把 wrapper 从 -100% 平移到 0，
+    线就从顶部扫到底部（只用 transform / opacity）。静止时停在 38% 处。
+  */
+  .ext-scan {
+    position: absolute;
+    inset: 0;
+    transform: translateY(-62%);
+    animation: ext-scan-move 3.6s ease-in-out infinite both;
+  }
+
+  .ext-scan-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    background: linear-gradient(90deg, rgba(103, 232, 249, 0), var(--neon-cyan) 50%, rgba(103, 232, 249, 0));
+    box-shadow: 0 0 14px 2px rgba(103, 232, 249, 0.55);
+  }
+
+  .ext-play {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 76px;
+    height: 76px;
+    margin: -38px 0 0 -38px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.16);
+    color: var(--gray-1000);
+  }
+
+  .ext-play svg {
+    width: 30px;
+    height: 30px;
+    fill: currentColor;
+  }
+
+  .ext-progress {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: rgba(255, 255, 255, 0.86);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ext-progress-bar {
+    flex: 1 1 auto;
+    height: 4px;
+    overflow: hidden;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.25);
+  }
+
+  .ext-progress-bar div {
+    width: 34%;
+    height: 100%;
+    background: var(--ext-vimeo);
+  }
+
+  .ext-skeleton-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 18px;
+  }
+
+  .ext-skeleton-lines span {
+    width: 58%;
+    height: 14px;
+    border-radius: 6px;
+    background: var(--ext-line);
+  }
+
+  .ext-skeleton-lines span + span {
+    width: 32%;
+    height: 10px;
+    background: var(--ext-line-soft);
+  }
+
+  /*
+    页内面板：与插件真实面板一致，行标签 56–64 px、选项 32 px 高 6 px 圆角、选中项 Vimeo 青实底。
+    基础样式是独立卡片（收尾 CTA 用）：实底、18 px 圆角、发光；嵌在窗口网页里的差异见 .ext-page .ext-panel。
+  */
+  .ext-panel {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 18px;
+    border-radius: 18px;
+    background: var(--ext-page);
+    box-shadow: 0 0 0 1px rgba(138, 180, 255, 0.5), 0 0 40px -8px rgba(76, 130, 255, 0.65), 0 30px 60px -30px rgba(0, 0, 0, 0.6);
+  }
+
+  .ext-page .ext-panel {
+    margin-top: 24px;
+    padding: 20px 16px 16px;
+    border: 1px dashed var(--ext-panel-line);
+    border-radius: var(--radius-md);
+    background: var(--ext-panel-inset);
+    box-shadow: none;
+  }
+
+  .ext-panel-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .ext-panel-label {
+    display: flex;
+    flex: 0 0 64px;
+    align-items: center;
+    min-height: 32px;
+    color: var(--ext-ink-soft);
+    font-size: 13px;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+  }
+
+  .ext-panel-options {
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .ext-chip {
+    display: inline-grid;
+    place-items: center;
+    min-width: 72px;
+    height: 32px;
+    padding: 0 12px;
+    border: 1px solid var(--ext-chip-border);
+    border-radius: 6px;
+    background: var(--ext-chip-bg);
+    color: var(--ext-chip-ink);
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .ext-chip--selected {
+    border-color: var(--ext-vimeo);
+    background: var(--ext-vimeo);
+    color: var(--ext-vimeo-ink);
+  }
+
+  /* 标注胶囊：深底浅字，压在面板 / popup 的边线上。 */
+  .ext-callout {
+    position: absolute;
+    left: 16px;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 26px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: var(--ext-ink);
+    color: var(--gray-1000);
+    font: 600 12px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    white-space: nowrap;
+    box-shadow: 0 0 0 1px rgba(138, 180, 255, 0.45), 0 8px 20px -6px rgba(45, 106, 232, 0.65);
+  }
+
+  .ext-callout i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--neon-cyan);
+    box-shadow: 0 0 8px var(--neon-cyan);
+  }
+
+  .ext-callout--top {
+    top: -13px;
+  }
+
+  .ext-callout--bottom {
+    bottom: -13px;
+  }
+
+  .ext-side {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+  }
+
+  .ext-side-row {
+    display: flex;
+    gap: 12px;
+  }
+
+  .ext-side-thumb {
+    flex: 0 0 112px;
+    height: 63px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--ext-line), var(--ext-line-soft));
+  }
+
+  .ext-side-text {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 4px;
+  }
+
+  .ext-side-text span {
+    height: 10px;
+    border-radius: 5px;
+    background: var(--ext-line);
+  }
+
+  .ext-side-text span + span {
+    width: 60%;
+    height: 8px;
+    background: var(--ext-line-soft);
+  }
+
+  /* popup：从工具栏图标下方弹出，小三角对着图标。 */
+  .ext-popup {
+    position: absolute;
+    z-index: 3;
+    top: 58px;
+    right: 10px;
+    width: 300px;
+    border: 1px solid var(--ext-line);
+    border-radius: var(--radius-lg);
+    background: var(--ext-popup);
+    box-shadow: 0 0 0 1px rgba(138, 180, 255, 0.35), 0 30px 70px -30px rgba(0, 0, 0, 0.65);
+  }
+
+  .ext-popup-notch {
+    position: absolute;
+    top: -7px;
+    right: 10px;
+    width: 12px;
+    height: 12px;
+    border-top: 1px solid var(--ext-line);
+    border-left: 1px solid var(--ext-line);
+    background: var(--ext-popup);
+    transform: rotate(45deg);
+  }
+
+  .ext-popup-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--ext-line-soft);
+    color: var(--ext-ink);
+    font-size: 14px;
+    font-weight: 650;
+  }
+
+  .ext-popup-head img {
+    display: block;
+    border-radius: 6px;
+  }
+
+  .ext-popup-item {
+    display: flex;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--ext-line-soft);
+  }
+
+  .ext-popup-item:last-of-type {
+    border-bottom: 0;
+  }
+
+  .ext-popup-icon {
+    display: inline-flex;
+    flex: 0 0 32px;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    border-radius: 9px;
+  }
+
+  .ext-popup-icon svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.9;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .ext-popup-icon--video {
+    background: var(--ext-icon-video-bg);
+    color: var(--brand-500);
+  }
+
+  .ext-popup-icon--audio {
+    background: var(--ext-icon-audio-bg);
+    color: var(--ext-icon-audio);
+  }
+
+  .ext-popup-icon--subtitle {
+    background: var(--ext-icon-subtitle-bg);
+    color: var(--ext-icon-subtitle);
+  }
+
+  .ext-popup-main {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .ext-popup-line {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 13px;
+  }
+
+  .ext-popup-name {
+    color: var(--ext-ink);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  .ext-popup-percent {
+    color: var(--ext-ink-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ext-popup-done,
+  .ext-popup-queued {
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .ext-popup-done {
+    stroke: var(--ext-ok);
+    stroke-width: 2.2;
+  }
+
+  .ext-popup-queued {
+    stroke: var(--ext-idle);
+    stroke-width: 2;
+  }
+
+  .ext-popup-track {
+    height: 6px;
+    margin-top: 8px;
+    overflow: hidden;
+    border-radius: 6px;
+    background: var(--ext-line-soft);
+  }
+
+  .ext-popup-fill {
+    height: 100%;
+    border-radius: 6px;
+  }
+
+  .ext-popup-fill--running {
+    width: 72%;
+    background: linear-gradient(90deg, var(--brand-500), var(--ext-violet));
+  }
+
+  .ext-popup-fill--done {
+    width: 100%;
+    background: var(--ext-ok-fill);
+  }
+
+  .ext-popup-fill--queued {
+    width: 0;
+  }
+
+  .ext-popup-speed {
+    display: block;
+    margin-top: 6px;
+    color: var(--ext-ink-faint);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  @keyframes ext-scan-move {
+    0% {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    10% {
+      opacity: 1;
+    }
+    90% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(0);
+      opacity: 0;
+    }
+  }
+
+  @keyframes ext-floor-move {
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(56px);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ext-scan,
+    .ext-floor-grid {
+      animation: none;
+    }
+  }
+
+  /* ≤ 960 px：窗口只留播放器和面板，侧栏占位隐藏；popup 移到窗口下方并满宽。 */
+  @media (max-width: 960px) {
+    .ext-body {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .ext-side {
+      display: none;
+    }
+
+    .ext-popup {
+      position: relative;
+      top: auto;
+      right: auto;
+      width: auto;
+      margin-top: 16px;
+    }
+
+    .ext-popup-notch {
+      display: none;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .ext-stage {
+      --ext-floor-height: 160px;
+      margin-top: 40px;
+    }
+
+    .ext-floor {
+      left: -16px;
+      right: -16px;
+      bottom: -110px;
+    }
+
+    .ext-floor-plane {
+      transform: perspective(300px) rotateX(62deg);
+    }
+
+    .ext-toolbar {
+      gap: 10px;
+      height: 40px;
+      padding: 0 12px;
+    }
+
+    .ext-dots {
+      gap: 6px;
+    }
+
+    .ext-dots span {
+      width: 10px;
+      height: 10px;
+    }
+
+    .ext-address {
+      height: 28px;
+      margin: 0;
+      padding: 0 10px;
+      font-size: 12px;
+    }
+
+    .ext-toolbar-icons {
+      gap: 10px;
+    }
+
+    .ext-body {
+      margin: 0 6px 6px;
+      padding: 12px;
+    }
+
+    .ext-play {
+      width: 52px;
+      height: 52px;
+      margin: -26px 0 0 -26px;
+    }
+
+    .ext-play svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .ext-progress {
+      left: 12px;
+      right: 12px;
+      bottom: 10px;
+    }
+
+    .ext-corner--bl,
+    .ext-corner--br {
+      bottom: 34px;
+    }
+
+    .ext-page .ext-panel {
+      gap: 10px;
+      margin-top: 28px;
+      padding: 22px 12px 14px;
+    }
+
+    .ext-panel-label {
+      flex-basis: 60px;
+    }
+
+    .ext-chip {
+      min-width: 64px;
+    }
+
+    .ext-callout--top {
+      left: 12px;
+    }
+  }
+</style>

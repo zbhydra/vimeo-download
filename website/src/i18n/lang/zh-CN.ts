@@ -34,7 +34,8 @@ export const zhCN: SiteContent = {
       workspace: {
         parse: {
           eyebrow: '快速链接检查',
-          title: 'Vimeo 视频下载器：保存任意公开的 Vimeo 视频',
+          titleBrand: 'Vimeo 视频下载器',
+          titleTagline: '保存任意公开的 Vimeo 视频',
           helperText: '粘贴公开的 Vimeo 视频链接，查看 Vimeo 提供的清晰度，并下载你需要的分辨率。',
           linkLabel: 'Vimeo 链接',
           linkPlaceholder: 'https://vimeo.com/123456789',
@@ -56,6 +57,7 @@ export const zhCN: SiteContent = {
           resumeUnavailableText: '本地恢复记录已失效。',
           resumeDismiss: '忽略',
           resuming: '继续下载中...',
+          extensionEntryLine: '用插件直接在 Vimeo 页面下载',
           largeFileExtensionInlineChromeTitle: 'Chrome 插件',
           largeFileExtensionInlineChromeDescription:
             'Chrome 专用插件，让大文件 Vimeo 下载在标签页之外继续运行。',

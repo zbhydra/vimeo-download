@@ -34,7 +34,8 @@ export const ruRU: SiteContent = {
       workspace: {
         parse: {
           eyebrow: 'Быстрая проверка ссылки',
-          title: 'Загрузчик видео Vimeo: сохраните любое публичное видео',
+          titleBrand: 'Загрузчик видео Vimeo',
+          titleTagline: 'Сохраните любое публичное видео',
           helperText:
             'Вставьте публичную ссылку на видео Vimeo, посмотрите доступные разрешения и скачайте нужное.',
           linkLabel: 'Ссылка Vimeo',
@@ -58,6 +59,7 @@ export const ruRU: SiteContent = {
           resumeUnavailableText: 'Локальная запись восстановления устарела.',
           resumeDismiss: 'Игнорировать',
           resuming: 'Продолжение...',
+          extensionEntryLine: 'Скачивайте прямо на Vimeo с помощью расширения',
           largeFileExtensionInlineChromeTitle: 'Расширение для Chrome',
           largeFileExtensionInlineChromeDescription:
             'Расширение для Chrome, которое продолжает большие скачивания Vimeo вне вкладки.',

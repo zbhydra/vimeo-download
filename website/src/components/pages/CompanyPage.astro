@@ -3,13 +3,14 @@
  * Shared renderer for the localized About and Contact pages.
  *
  * Route locale -> typed company copy -> visible semantic content and dates ->
- * page-level JSON-LD -> the global Layout shell.
+ * page-level JSON-LD -> SiteBandHeader + dark section cards inside the global Layout shell.
  */
 import { COMPANY_PAGES_PUBLISHED_DATE, getCompanyContent } from '../../company/companyContent'
 import { type Locale } from '../../i18n/content'
 import { localePaths } from '../../i18n/ui'
 import { CHROME_WEB_STORE_URL, DEVELOPER_EMAIL, OFFICIAL_X_HANDLE, OFFICIAL_X_URL } from '../../lib/site.mjs'
 import Layout from '../../layouts/Layout.astro'
+import SiteBandHeader from '../site/SiteBandHeader.astro'
 import XBrandIcon from '../site/XBrandIcon.astro'
 
 /** Company information page variants supported by this renderer. */
@@ -66,16 +67,15 @@ const companyPageSchema = {
   structuredData={[companyPageSchema]}
 >
   <article class="company-page" data-company-page={pageKind}>
-    <header class="company-hero">
-      <div class="container company-hero-content">
-        <p class="company-eyebrow">{page.eyebrow}</p>
-        <h1>{page.title}</h1>
-        <p class="company-intro">{page.intro}</p>
-        <p class="company-date">
-          {page.updatedLabel}
-          <time datetime={COMPANY_PAGES_PUBLISHED_DATE}>{page.updatedAt}</time>
-        </p>
-        <div class="company-actions" aria-label={page.eyebrow}>
+    <SiteBandHeader
+      title={page.title}
+      updatedLabel={page.updatedLabel}
+      updatedAt={page.updatedAt}
+      updatedAtIso={COMPANY_PAGES_PUBLISHED_DATE}
+    >
+      <p class="site-band-intro">{page.intro}</p>
+      <Fragment slot="actions">
+        <div class="company-actions" role="group" aria-label={page.eyebrow}>
           <a class="btn-primary company-primary-link" href={primaryHref}>{primaryLabel}</a>
           {pageKind === 'about' && (
             <a
@@ -106,22 +106,20 @@ const companyPageSchema = {
             </>
           )}
         </div>
-      </div>
-    </header>
+      </Fragment>
+    </SiteBandHeader>
 
-    <div class="company-sections">
+    <div class="container company-sections">
       {page.sections.map((section, index) => (
         <section class="company-section" aria-labelledby={`${pageKind}-section-${index}`}>
-          <div class="container company-section-layout">
-            <h2 id={`${pageKind}-section-${index}`}>{section.title}</h2>
-            <div class="company-section-copy">
-              {section.paragraphs.map(paragraph => <p>{paragraph}</p>)}
-              {section.items && (
-                <ul>
-                  {section.items.map(item => <li>{item}</li>)}
-                </ul>
-              )}
-            </div>
+          <h2 id={`${pageKind}-section-${index}`}>{section.title}</h2>
+          <div class="company-section-copy">
+            {section.paragraphs.map(paragraph => <p>{paragraph}</p>)}
+            {section.items && (
+              <ul>
+                {section.items.map(item => <li>{item}</li>)}
+              </ul>
+            )}
           </div>
         </section>
       ))}
@@ -146,52 +144,6 @@ const companyPageSchema = {
     color: var(--gray-1000);
   }
 
-  .company-hero {
-    border-bottom: 1px solid var(--gray-alpha-400);
-    background: var(--background-100);
-  }
-
-  .company-hero-content {
-    padding-top: 64px;
-    padding-bottom: 64px;
-  }
-
-  .company-eyebrow {
-    margin: 0 0 16px;
-    color: var(--gray-900);
-    font-size: 14px;
-    font-weight: 500;
-    line-height: 20px;
-  }
-
-  h1 {
-    max-width: 820px;
-    margin: 0;
-    color: var(--gray-1000);
-    font-size: 48px;
-    font-weight: 600;
-    line-height: 56px;
-    letter-spacing: -2.88px;
-  }
-
-  .company-intro {
-    max-width: 760px;
-    margin: 24px 0 0;
-    color: var(--gray-900);
-    font-size: 18px;
-    line-height: 28px;
-  }
-
-  .company-date {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin: 16px 0 0;
-    color: var(--gray-900);
-    font-size: 13px;
-    line-height: 18px;
-  }
-
   .company-actions {
     display: flex;
     flex-wrap: wrap;
@@ -204,7 +156,7 @@ const companyPageSchema = {
   .company-primary-link,
   .company-secondary-link {
     height: auto;
-    min-height: 40px;
+    min-height: 44px;
     padding-block: 0;
     white-space: normal;
     text-align: center;
@@ -226,30 +178,30 @@ const companyPageSchema = {
     font-size: 14px;
   }
 
+  .company-sections {
+    display: grid;
+    gap: 16px;
+    padding-top: 56px;
+  }
+
   .company-section {
-    border-bottom: 1px solid var(--gray-alpha-400);
-    background: var(--background-100);
-  }
-
-  .company-section:nth-child(even) {
-    background: var(--background-200);
-  }
-
-  .company-section-layout {
     display: grid;
     grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1.3fr);
     gap: 64px;
-    padding-top: 48px;
-    padding-bottom: 48px;
+    padding: 40px;
+    border: 1px solid var(--gray-alpha-400);
+    border-radius: var(--radius-xl);
+    background: var(--gray-100);
+    box-shadow: var(--shadow-card);
   }
 
   .company-section h2 {
     margin: 0;
     color: var(--gray-1000);
     font-size: 24px;
-    font-weight: 600;
-    line-height: 32px;
-    letter-spacing: -0.96px;
+    font-weight: 650;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
   }
 
   .company-section-copy {
@@ -260,7 +212,7 @@ const companyPageSchema = {
     margin: 0;
     color: var(--gray-900);
     font-size: 16px;
-    line-height: 24px;
+    line-height: 1.75;
   }
 
   .company-section-copy p + p {
@@ -279,35 +231,33 @@ const companyPageSchema = {
     position: relative;
     padding-left: 20px;
     color: var(--gray-900);
-    font-size: 14px;
-    line-height: 22px;
+    font-size: 15px;
+    line-height: 1.7;
   }
 
   .company-section-copy li::before {
     position: absolute;
-    top: 9px;
+    top: 0.7em;
     left: 0;
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: var(--gray-1000);
+    background: var(--blue-700);
     content: '';
-  }
-
-  .company-related {
-    border-bottom: 1px solid var(--gray-alpha-400);
-    background: var(--background-100);
   }
 
   .company-related-links {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px 24px;
+    gap: 0 24px;
     padding-top: 24px;
-    padding-bottom: 24px;
+    padding-bottom: 96px;
   }
 
   .company-related a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
     border-radius: var(--radius-sm);
     color: var(--blue-700);
     font-size: 14px;
@@ -322,38 +272,34 @@ const companyPageSchema = {
   }
 
   @media (max-width: 960px) {
-    .company-hero-content {
-      padding-top: 40px;
-      padding-bottom: 40px;
-    }
-
-    h1 {
-      font-size: 32px;
-      line-height: 40px;
-      letter-spacing: -1.28px;
-    }
-
-    .company-intro {
-      font-size: 16px;
-      line-height: 24px;
-    }
-
-    .company-section-layout {
+    .company-section {
       grid-template-columns: minmax(0, 1fr);
       gap: 16px;
-      padding-top: 32px;
-      padding-bottom: 32px;
+      padding: 28px 24px;
     }
   }
 
-  @media (max-width: 480px) {
+  @media (max-width: 600px) {
+    .company-sections {
+      padding-top: 32px;
+    }
+
+    .company-section {
+      padding: 24px 20px;
+    }
+
+    .company-section h2 {
+      font-size: 22px;
+    }
+
     .company-primary-link,
-    .company-secondary-link {
+    .company-secondary-link,
+    .company-email {
       width: 100%;
     }
 
-    .company-email {
-      width: 100%;
+    .company-related-links {
+      padding-bottom: 64px;
     }
   }
 </style>

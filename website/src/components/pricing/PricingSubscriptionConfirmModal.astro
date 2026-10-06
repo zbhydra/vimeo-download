@@ -181,14 +181,17 @@ const [installMessageBeforeLink, installMessageAfterLink = ''] = copy.installCon
     padding: 0;
     overflow: visible;
     border: 1px solid var(--gray-alpha-400);
-    border-radius: var(--radius-md);
-    background: var(--background-100);
+    border-radius: var(--radius-xl);
+    background: var(--gray-100);
     color: var(--gray-1000);
     box-shadow: var(--shadow-modal);
   }
 
+  /* 遮罩与 SiteConfirmModal 一致：深色加模糊。 */
   .pricing-subscription-confirm::backdrop {
-    background: rgba(0, 0, 0, 0.4);
+    background: var(--overlay-bg);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
   }
 
   .pricing-subscription-confirm-panel {
@@ -239,7 +242,7 @@ const [installMessageBeforeLink, installMessageAfterLink = ''] = copy.installCon
     gap: 12px;
     padding: 16px;
     border: 1px solid var(--blue-400);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     background: var(--blue-100);
   }
 
@@ -250,8 +253,8 @@ const [installMessageBeforeLink, installMessageAfterLink = ''] = copy.installCon
   .pricing-review-countdown {
     min-height: 40px;
     padding: 10px 12px;
-    border-radius: var(--radius-sm);
-    background: var(--gray-100);
+    border-radius: var(--radius-md);
+    background: var(--gray-200);
     color: var(--gray-1000);
     font-variant-numeric: tabular-nums;
     font-weight: 500;
@@ -259,15 +262,15 @@ const [installMessageBeforeLink, installMessageAfterLink = ''] = copy.installCon
 
   .pricing-subscription-confirm-close {
     position: absolute;
-    top: 16px;
-    right: 16px;
+    top: 8px;
+    right: 8px;
     display: grid;
     place-items: center;
-    width: 32px;
-    height: 32px;
+    width: 44px;
+    height: 44px;
     padding: 0;
     border: 0;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     background: transparent;
     color: var(--gray-900);
     font-size: 22px;
@@ -276,7 +279,7 @@ const [installMessageBeforeLink, installMessageAfterLink = ''] = copy.installCon
   }
 
   .pricing-subscription-confirm-close:hover {
-    background: var(--gray-100);
+    background: var(--glass-bg);
     color: var(--gray-1000);
   }
 
@@ -292,7 +295,7 @@ const [installMessageBeforeLink, installMessageAfterLink = ''] = copy.installCon
   .pricing-dialog-secondary,
   .pricing-review-button {
     height: auto;
-    min-height: 40px;
+    min-height: 44px;
     white-space: normal;
     text-align: center;
   }
@@ -310,7 +313,7 @@ const [installMessageBeforeLink, installMessageAfterLink = ''] = copy.installCon
     white-space: nowrap;
   }
 
-  @media (max-width: 560px) {
+  @media (max-width: 600px) {
     .pricing-subscription-confirm {
       width: calc(100% - 24px);
     }

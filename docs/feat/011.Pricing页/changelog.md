@@ -1,5 +1,15 @@
 # 011 · Pricing 页 - 变更记录
 
+## 2026-10-06 官网视觉升级：订阅购买页改回 `/ext-pricing/`，页面深色重做
+
+**Why**：004 把订阅购买页并到 `/pricing/` 并删除 `/ext-pricing/`，005 恢复 `/ext-pricing/`（`/pricing/` 删除、不做跳转），同时全站改为深色视觉。决策与范围见 `../000.架构/plans/005.官网视觉升级与Pricing路径改回.md`。
+
+**变更**：
+- `feat.md`：购买页地址改为 `/ext-pricing/`，「不保留」的旧入口改为 `/pricing/`；新增「页面界面元素」一节（页头带、登录条、3 张价格卡、信任行、FAQ、弹窗）。
+- `tech-实现与配置.md`：路由合同改为 `/ext-pricing/`；插件 `WEBSITE.PRICING_PATH` 与网站路由一致，不必同批发布；回跳页返回链接改为 `/ext-pricing/`。
+- `tech-pricing与自动续费.md`：路径改为 `/ext-pricing/`。
+- `tech-好评赠送.md`：路径改为 `/ext-pricing/`；确认弹窗改为深色视觉（宽度上限 480px、圆角 20px），视觉规则指向 spec-website §4。
+
 ## 2026-10-05 官网改版：`/pricing/` 只保留 Unlimited 订阅购买
 
 **Why**：网站定位改为插件展示站 + 插件订阅购买，Credits 积分包页、余额展示、`/ext-pricing/` 与旧入口转向一并下线；Pricing 组件随 `website-shared` 并入 `website/src`。决策基线见 `../000.架构/plans/004.官网改版-插件展示与免费网页下载.md` §2.4。

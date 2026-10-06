@@ -92,8 +92,8 @@
 
 ### website 多语言页面访问
 
-1. 访问默认语言页面:无前缀路径(如 `/`、`/pricing/`),渲染 en-US 内容。
-2. 访问其他语言页面:带路径前缀(如 `/zh-cn/`、`/ja/pricing/`),`[lang]` 动态路由 `getStaticPaths` 枚举 14 语言的 `localePaths` 生成静态页(en-US 跳过前缀)。
+1. 访问默认语言页面:无前缀路径(如 `/`、`/ext-pricing/`),渲染 en-US 内容。
+2. 访问其他语言页面:带路径前缀(如 `/zh-cn/`、`/ja/ext-pricing/`),`[lang]` 动态路由 `getStaticPaths` 枚举 14 语言的 `localePaths` 生成静态页(en-US 跳过前缀)。
 3. 页面按 locale 取 `content[locale]` 文案对象渲染;locale 不在清单时回退默认语言。
 
 ### website 用户切换语言

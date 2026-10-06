@@ -1,14 +1,16 @@
 ---
+/**
+ * 首屏解析面板：H1 + 副标题 → 玻璃输入框 → 结果卡 → 插件引导卡（状态 3）→ slot → 一行插件入口。
+ *
+ * 引导卡默认隐藏，只有脚本在状态 3 / 不安全文件类型 / 存储不足时取消 hidden；
+ * 一行入口排在引导卡之后，用 CSS 兄弟选择器在引导卡出现时隐藏，不需要脚本状态。
+ * slot 位于引导卡与一行入口之间，由页面放信任点。
+ */
 import type { DownloadWorkspaceContent } from '../../i18n/schema'
 
-const {
-  copy,
-  installUrl,
-  showLargeFileExtensionGuideByDefault = false
-} = Astro.props as {
+const { copy, installUrl } = Astro.props as {
   copy: DownloadWorkspaceContent
   installUrl: string
-  showLargeFileExtensionGuideByDefault?: boolean
 }
 const helperText = copy.parse.helperText
 const clearInputLabel = copy.parse.clearInput ?? 'Clear input'
@@ -36,14 +38,20 @@ const largeFileExtensionInline = {
 
 <div class="download-results-panel" data-download-results-panel data-panel="parse">
   <div class="download-results-heading" data-download-results-heading>
-    <h1 class="download-panel-title download-results-title">{copy.parse.title}</h1>
+    <h1 class="download-panel-title download-results-title"><span class="title-brand">{copy.parse.titleBrand}</span> <span class="title-tagline">{copy.parse.titleTagline}</span></h1>
+    {helperText && <p class="download-results-helper">{helperText}</p>}
   </div>
 
   <div class="download-parse-form" data-download-parse-form>
     <div class="download-field">
       <div class="download-parse-row">
+        <label class="sr-only" for="download-parse-input">{copy.parse.linkLabel}</label>
         <div class="download-parse-input-shell">
+          <svg class="download-parse-input-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 4.5M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L12.5 19.5" />
+          </svg>
           <input
+            id="download-parse-input"
             type="text"
             class="download-input download-parse-input"
             placeholder={copy.parse.linkPlaceholder}
@@ -88,10 +96,12 @@ const largeFileExtensionInline = {
         </div>
       </div>
     </div>
-    <p class="download-inline-error" data-download-parse-error role="alert" hidden></p>
   </div>
 
   <div class="download-results-list" data-download-results></div>
+
+  <!-- 提示条跟在结果卡后面：状态 3 时它就是「只能用插件下载」的琥珀提示。 -->
+  <p class="download-inline-error" data-download-parse-error role="alert" hidden></p>
 
   <div class="download-results-actions" data-download-results-actions hidden>
     <button type="button" class="btn-primary download-all-button" data-download-all-button>
@@ -102,21 +112,23 @@ const largeFileExtensionInline = {
   <section
     class="download-large-file-extension-inline"
     data-download-large-file-extension-inline
-    data-download-large-file-extension-default={showLargeFileExtensionGuideByDefault ? 'true' : 'false'}
-    hidden={!showLargeFileExtensionGuideByDefault}
+    hidden
   >
     <article class="download-large-file-extension-card">
-      <img
-        class="download-large-file-extension-logo download-large-file-extension-logo-chrome"
-        src="/googe-ext-logo-192px.svg"
-        alt=""
-        width="50"
-        height="50"
-        loading={showLargeFileExtensionGuideByDefault ? 'eager' : 'lazy'}
-        fetchpriority={showLargeFileExtensionGuideByDefault ? 'high' : undefined}
-        aria-hidden="true"
-      />
-      <p class="download-large-file-extension-title">{largeFileExtensionInline.chromeTitle}</p>
+      <div class="download-large-file-extension-head">
+        <span class="download-large-file-extension-logo-plate">
+          <img
+            class="download-large-file-extension-logo download-large-file-extension-logo-chrome"
+            src="/googe-ext-logo-192px.svg"
+            alt=""
+            width="28"
+            height="28"
+            loading="lazy"
+            aria-hidden="true"
+          />
+        </span>
+        <p class="download-large-file-extension-title">{largeFileExtensionInline.chromeTitle}</p>
+      </div>
       <p class="download-large-file-extension-description">{largeFileExtensionInline.chromeDescription}</p>
       <a
         class="btn-primary"
@@ -136,16 +148,20 @@ const largeFileExtensionInline = {
     </article>
 
     <article class="download-large-file-extension-card">
-      <img
-        class="download-large-file-extension-logo download-large-file-extension-logo-edge"
-        src="/microsoftLogoHeader.svg"
-        alt=""
-        width="50"
-        height="50"
-        loading={showLargeFileExtensionGuideByDefault ? 'eager' : 'lazy'}
-        aria-hidden="true"
-      />
-      <p class="download-large-file-extension-title">{largeFileExtensionInline.edgeTitle}</p>
+      <div class="download-large-file-extension-head">
+        <span class="download-large-file-extension-logo-plate">
+          <img
+            class="download-large-file-extension-logo download-large-file-extension-logo-edge"
+            src="/microsoftLogoHeader.svg"
+            alt=""
+            width="24"
+            height="24"
+            loading="lazy"
+            aria-hidden="true"
+          />
+        </span>
+        <p class="download-large-file-extension-title">{largeFileExtensionInline.edgeTitle}</p>
+      </div>
       <p class="download-large-file-extension-description">{largeFileExtensionInline.edgeDescription}</p>
       <a
         class="btn-primary"
@@ -165,6 +181,35 @@ const largeFileExtensionInline = {
     </article>
   </section>
 
-  {helperText && <p class="download-results-helper">{helperText}</p>}
+  <slot />
 
+  <div class="download-extension-entry" data-download-extension-entry>
+    <span class="download-extension-entry-text">{copy.parse.extensionEntryLine}</span>
+    <span class="download-extension-entry-actions">
+      <a
+        class="btn-secondary download-extension-entry-link"
+        href={installUrl}
+        target="_blank"
+        rel="noopener"
+        aria-label={largeFileExtensionInline.chromeTitle}
+        data-ga-event="extension_recommended_click"
+        data-ga-source="extension_entry_chrome"
+      >
+        <img src="/googe-ext-logo-192px.svg" alt="" width="16" height="16" loading="lazy" aria-hidden="true" />
+        <span>Chrome</span>
+      </a>
+      <a
+        class="btn-secondary download-extension-entry-link"
+        href={installUrl}
+        target="_blank"
+        rel="noopener"
+        aria-label={largeFileExtensionInline.edgeTitle}
+        data-ga-event="extension_recommended_click"
+        data-ga-source="extension_entry_edge"
+      >
+        <img src="/microsoftLogoHeader.svg" alt="" width="14" height="14" loading="lazy" aria-hidden="true" />
+        <span>Edge</span>
+      </a>
+    </span>
+  </div>
 </div>

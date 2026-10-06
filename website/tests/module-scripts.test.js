@@ -191,17 +191,17 @@ test('language switch URL keeps the current query parameters', async () => {
   try {
     assert.equal(
       module.buildLanguageSwitchUrl(
-        '/zh-cn/pricing/',
-        `${SITE_ORIGIN}/pricing/?utm_source=extension&source=upgrade_modal`
+        '/zh-cn/ext-pricing/',
+        `${SITE_ORIGIN}/ext-pricing/?utm_source=extension&source=upgrade_modal`
       ),
-      '/zh-cn/pricing/?utm_source=extension&source=upgrade_modal'
+      '/zh-cn/ext-pricing/?utm_source=extension&source=upgrade_modal'
     )
     assert.equal(
       module.buildLanguageSwitchUrl(
-        '/pricing/',
-        `${SITE_ORIGIN}/zh-cn/pricing/`
+        '/ext-pricing/',
+        `${SITE_ORIGIN}/zh-cn/ext-pricing/`
       ),
-      '/pricing/'
+      '/ext-pricing/'
     )
   } finally {
     await cleanup()
@@ -252,9 +252,9 @@ test('every locale homepage has one H1, eight ordered sections and valid structu
       positions,
       `${label}: sections are out of order`
     )
-    // 8 个展示区块各一个 H2；弹窗标题（等待窗、确认窗）不属于展示区块，不计入。
+    // 8 个展示区块各一个 H2（插件展示在 hero 舞台里，标题类名是 home-intro-heading；收尾 CTA 是舞台卡，标题类名是 home-cta-heading）；弹窗标题（等待窗、确认窗）不属于展示区块，不计入。
     assert.equal(
-      (html.match(/<h2\b[^>]*class="home-section-heading"/g) ?? []).length,
+      (html.match(/<h2\b[^>]*class="home-(?:section|intro|cta)-heading"/g) ?? []).length,
       sectionIds.length,
       `${label}: expected one section H2 per section`
     )
@@ -296,7 +296,8 @@ test('every locale homepage has one H1, eight ordered sections and valid structu
     assert.equal(forbiddenCopy.test(JSON.stringify(faq)), false)
 
     // 展示区块除格式词外不出现数字（次数、大小、价格都来自后端配置，不写进静态文案）。
-    const sectionsText = toText(sectionsHtml)
+    // 插件界面示意（figure）是装饰：地址栏、时间、进度等示意数字不是文案，不计入。
+    const sectionsText = toText(sectionsHtml.replace(/<figure\b[\s\S]*?<\/figure>/gi, ' '))
       .replace(/\b(MP3|MP4|M4A|VTT|JPEG|HLS|DRM|CSV)\b/gi, ' ')
       .replace(/\b(720|1080)p\b/gi, ' ')
       .replace(/&#\d+;|&#x[0-9a-f]+;/gi, ' ')
@@ -466,7 +467,7 @@ test('language sitemap output matches locale mapping and built canonical pages',
   assert.equal(sitemapUrls.has(`${siteUrl}/paypal/cancel/`), false)
   assert.equal(sitemapUrls.has(`${siteUrl}/paypal/success/`), false)
   assert.equal(
-    Array.from(sitemapUrls).some((url) => new URL(url).pathname.endsWith('/pricing/')),
+    Array.from(sitemapUrls).some((url) => new URL(url).pathname.endsWith('/ext-pricing/')),
     true
   )
 })
@@ -536,7 +537,7 @@ test('LLMs text indexes reference existing built website paths', async () => {
 
   const requiredShortIndexUrls = [
     `${siteUrl}/`,
-    `${siteUrl}/pricing/`,
+    `${siteUrl}/ext-pricing/`,
     `${siteUrl}/about/`,
     `${siteUrl}/contact/`,
     `${siteUrl}/llms-full.txt`,
@@ -556,7 +557,7 @@ test('LLMs text indexes reference existing built website paths', async () => {
 
   const requiredFullIndexUrls = [
     `${siteUrl}/`,
-    `${siteUrl}/pricing/`,
+    `${siteUrl}/ext-pricing/`,
     `${siteUrl}/about/`,
     `${siteUrl}/contact/`,
     `${siteUrl}/llms.txt`,
@@ -1381,7 +1382,7 @@ function installPromptingGoogleIdentity() {
 }
 
 function installGoogleRedirectDom(
-  href = `${SITE_ORIGIN}/pricing/?plan=month&google_login_code=old`
+  href = `${SITE_ORIGIN}/ext-pricing/?plan=month&google_login_code=old`
 ) {
   const dom = installGoogleScriptDom()
   const locationUrl = new URL(href)
@@ -1520,7 +1521,7 @@ async function assertGoogleRedirectButtonUsesOAuthAuthorize(sourceFile, tempPref
     assert.equal(authorizeUrl.pathname, '/api/client/auth/google/oauth/authorize')
     const returnTo = new URL(authorizeUrl.searchParams.get('return_to'))
     assert.equal(returnTo.origin, SITE_ORIGIN)
-    assert.equal(returnTo.pathname, '/pricing/')
+    assert.equal(returnTo.pathname, '/ext-pricing/')
     assert.equal(returnTo.searchParams.get('plan'), 'month')
     assert.equal(returnTo.searchParams.get('register_device_id'), window.localStorage.getItem('homepage_device_id_v2'))
     assert.equal(returnTo.searchParams.get('first_opened_at'), window.localStorage.getItem('homepage_first_opened_at'))
@@ -1618,7 +1619,7 @@ async function assertGoogleOneTapCallbackPostsCredential(sourceFile, tempPrefix)
 async function assertGoogleRedirectResultCanBeCleared(sourceFile, tempPrefix) {
   const { module, cleanup } = await importHomepageAuthModule(sourceFile, tempPrefix)
   const dom = installGoogleRedirectDom(
-    `${SITE_ORIGIN}/pricing/?plan=month&google_login_code=code-1&google_login_error=bad&google_email_verification=user%40example.com`
+    `${SITE_ORIGIN}/ext-pricing/?plan=month&google_login_code=code-1&google_login_error=bad&google_email_verification=user%40example.com`
   )
 
   try {
@@ -1629,7 +1630,7 @@ async function assertGoogleRedirectResultCanBeCleared(sourceFile, tempPrefix) {
     })
 
     module.clearGoogleRedirectResult()
-    assert.equal(dom.replacedUrl, `${SITE_ORIGIN}/pricing/?plan=month`)
+    assert.equal(dom.replacedUrl, `${SITE_ORIGIN}/ext-pricing/?plan=month`)
   } finally {
     dom.cleanup()
     await cleanup()
@@ -2267,13 +2268,13 @@ test('homepage SLS mark builds WebTracking URL for website', async () => {
     'src/scripts/runtime/sls-mark.ts',
     'homepage-sls-mark-',
     'website',
-    `${SITE_ORIGIN}/pricing/`
+    `${SITE_ORIGIN}/ext-pricing/`
   )
   await assertSlsMarkBuildsWebTrackingUrl(
     path.resolve(repoDir, 'src/scripts/runtime/sls-mark.ts'),
     'shared-homepage-sls-mark-',
     'website',
-    `${SITE_ORIGIN}/pricing/`
+    `${SITE_ORIGIN}/ext-pricing/`
   )
 })
 
@@ -2443,7 +2444,7 @@ test('shared frontend error capture dispatches unhandled rejection to callback',
     'shared-frontend-error-capture-'
   )
   const browser = installFrontendErrorBrowserGlobals({
-    href: `${SITE_ORIGIN}/pricing/`
+    href: `${SITE_ORIGIN}/ext-pricing/`
   })
   const capturedErrors = []
 
@@ -2463,7 +2464,7 @@ test('shared frontend error capture dispatches unhandled rejection to callback',
     assert.equal(capturedErrors[0].errorKind, 'unhandled_rejection')
     assert.equal(capturedErrors[0].errorName, 'Error')
     assert.equal(capturedErrors[0].errorMessage, 'Async failed with access_token=secret-token')
-    assert.equal(capturedErrors[0].pagePath, '/pricing/')
+    assert.equal(capturedErrors[0].pagePath, '/ext-pricing/')
   } finally {
     browser.restore()
     await cleanup()
@@ -2476,7 +2477,7 @@ test('shared frontend captured error SLS callback reports website site', async (
     'shared-frontend-captured-error-sls-'
   )
   const browser = installFrontendErrorBrowserGlobals({
-    href: `${SITE_ORIGIN}/pricing/`
+    href: `${SITE_ORIGIN}/ext-pricing/`
   })
   const previousFetch = globalThis.fetch
   const calls = []
@@ -2495,7 +2496,7 @@ test('shared frontend captured error SLS callback reports website site', async (
       errorKind: 'unhandled_rejection',
       errorName: 'Error',
       errorMessage: 'Async failed with access_token=secret-token',
-      pagePath: '/pricing/',
+      pagePath: '/ext-pricing/',
       sourceFile: '',
       line: 0,
       column: 0
@@ -2512,7 +2513,7 @@ test('shared frontend captured error SLS callback reports website site', async (
     assert.equal(markMsg.error_kind, 'unhandled_rejection')
     assert.equal(markMsg.error_name, 'Error')
     assert.equal(markMsg.error_message.includes('secret-token'), false)
-    assert.equal(markMsg.page_path, '/pricing/')
+    assert.equal(markMsg.page_path, '/ext-pricing/')
   } finally {
     if (previousFetch === undefined) {
       delete globalThis.fetch

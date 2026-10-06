@@ -512,20 +512,31 @@ function renderSubscription(elements: PricingElements, copy: PricingCopy, state:
     return
   }
 
-  for (const plan of state.subscriptionPlans) {
-    list.append(renderSubscriptionCard(elements, copy, state, plan))
-  }
+  state.subscriptionPlans.forEach((plan, index) => {
+    list.append(renderSubscriptionCard(elements, copy, state, plan, index === 0))
+  })
 }
 
-/** 按商品配置克隆并填充一张订阅卡。 */
+/**
+ * 按商品配置克隆并填充一张订阅卡。
+ *
+ * @param featured 是否列表首张主推卡：卡片标记 data-pricing-featured（样式据此出渐变描边与徽标），
+ *   购买按钮由模板默认的次按钮换成主按钮，全站次按钮只有一种样式，不在页面里另写。
+ */
 function renderSubscriptionCard(
   elements: PricingElements,
   copy: PricingCopy,
   state: PricingState,
-  plan: SubscriptionCheckoutPlan
+  plan: SubscriptionCheckoutPlan,
+  featured: boolean
 ): HTMLElement {
   const card = cloneTemplate(elements.subscriptionTemplate)
   const subscription = querySubscriptionElements(card)
+  if (featured) {
+    card.dataset.pricingFeatured = ''
+    subscription.buy.classList.remove('btn-secondary')
+    subscription.buy.classList.add('btn-primary')
+  }
   card.dataset.pricingSubscriptionProductId = plan.product_id
 
   const channel = getDefaultOrderPaymentChannel(plan.payment_channels)

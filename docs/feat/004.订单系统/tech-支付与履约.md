@@ -164,9 +164,10 @@ GET /clink/cancel/?order_no=<local_order_no>
   - 本地订单达到 `PAID + CALLBACK SUCCESS` 才更新为到账确认并停止轮询；后端明确的取消 / 过期 / 失败显示失败态。
   - 本页无法确认订单时显示中性「已提交」：URL 缺少 `order_no`、没有网站登录态（插件内购买的常态）、网站 token 失效（401）、订单不属于当前网站账号（后端返回订单不存在）。提示用户回到发起购买的地方查看，在插件内购买的重新打开插件即可看到套餐。
 - cancel 页：展示取消提示；有 `order_no` 且有登录态时调用 `/api/client/order/cancel` 把本地 `PENDING` 订单置为 `CANCELLED`，最后通知原结算弹窗查订单状态；无登录态只通知。
-- 「返回价格页」按钮固定指向 `/pricing/`，不再按订单商品类别改写，也不查询订单类别。
+- 「返回价格页」按钮固定指向 `/ext-pricing/`，不再按订单商品类别改写，也不查询订单类别。
+- 回跳页版式：深色舞台页头带作背景，深色状态卡跨在页头带底边上（状态图标块、标题、说明、主按钮）；视觉规则见 `../../references/specs/spec-website.md` §4。
 - success/cancel 页都不触发发货、不调用 PayPal capture；到账展示只认 `/api/client/order/status/{order_no}` 的本地订单状态。
-- 原结算弹窗（`/pricing/` 页的订单结算弹窗）轮询到 `PAID + CALLBACK SUCCESS` 才显示到账成功；轮询到 `CANCELLED / EXPIRED / REFUNDED / PAID + CALLBACK FAILED` 显示对应失败或取消态。
+- 原结算弹窗（`/ext-pricing/` 页的订单结算弹窗）轮询到 `PAID + CALLBACK SUCCESS` 才显示到账成功；轮询到 `CANCELLED / EXPIRED / REFUNDED / PAID + CALLBACK FAILED` 显示对应失败或取消态。
 
 ### 1.7 PayPal webhook 回调
 

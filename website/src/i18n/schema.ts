@@ -12,7 +12,10 @@ export interface DownloadWorkspaceContent {
   /** 解析与结果区文案。 */
   parse: {
     eyebrow: string
-    title: string
+    /** H1 第一行：品牌词。 */
+    titleBrand: string
+    /** H1 第二行：标语，与品牌词之间由组件补一个空格。 */
+    titleTagline: string
     helperText?: string
     linkLabel: string
     linkPlaceholder: string
@@ -35,6 +38,8 @@ export interface DownloadWorkspaceContent {
     resumeUnavailableText?: string
     resumeDismiss?: string
     resuming?: string
+    /** 首屏默认显示的通用插件入口一行文案。 */
+    extensionEntryLine: string
     /** 大文件插件引导的 Chrome 卡片标题。 */
     largeFileExtensionInlineChromeTitle?: string
     /** 大文件插件引导的 Chrome 卡片说明。 */

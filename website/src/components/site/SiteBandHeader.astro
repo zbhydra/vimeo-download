@@ -1,0 +1,129 @@
+---
+/**
+ * 法务页与公司页共用的页头带：SiteStage band + 唯一的 H1 + 引言 + 更新日期胶囊。
+ *
+ * - 默认 slot：引言段落，调用方写 `<p class="site-band-intro">`（slot 内容属于调用方作用域，类名由本组件的 :global 规则命中）。
+ * - `actions` slot：日期胶囊之后的操作区（公司页的按钮组）；空的具名 slot 不输出任何内容，外面也没有包裹元素。
+ * - 日期胶囊只在 `updatedAt` 与 `updatedAtIso` 同时存在时出现；`updatedColon` 为真时在标签后补冒号并去掉日期前的额外间距。
+ */
+import SiteStage from './SiteStage.astro'
+
+interface Props {
+  /** 页面 H1。 */
+  title: string
+  /** 日期胶囊的标签文案，已经过 i18n。 */
+  updatedLabel?: string
+  /** 展示用日期。 */
+  updatedAt?: string
+  /** `<time datetime>` 用的 ISO 日期。 */
+  updatedAtIso?: string
+  /** 标签后是否补冒号（法务页）。 */
+  updatedColon?: boolean
+}
+
+const { title, updatedLabel, updatedAt, updatedAtIso, updatedColon = false } = Astro.props as Props
+---
+
+<SiteStage variant="band">
+  <header class="container site-band-header">
+    <h1>{title}</h1>
+    <slot />
+    {updatedAt && updatedAtIso && (
+      <p class:list={['site-band-date', { 'site-band-date--colon': updatedColon }]}>
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <rect x="3.5" y="5" width="17" height="15" rx="2.5" />
+          <path d="M3.5 10h17M8 3v4M16 3v4" />
+        </svg>
+        <span>{updatedLabel}{updatedColon ? ':' : ''} <time datetime={updatedAtIso}>{updatedAt}</time></span>
+      </p>
+    )}
+    <slot name="actions" />
+  </header>
+</SiteStage>
+
+<style>
+  .site-band-header {
+    padding-top: 80px;
+    padding-bottom: 72px;
+  }
+
+  h1 {
+    max-width: 820px;
+    margin: 0;
+    color: var(--gray-1000);
+    font-size: clamp(36px, 4.6vw, 56px);
+    font-weight: 700;
+    line-height: 1.06;
+    letter-spacing: -0.04em;
+  }
+
+  .site-band-header :global(.site-band-intro) {
+    max-width: 720px;
+    margin: 18px 0 0;
+    color: var(--gray-900);
+    font-size: 18px;
+    line-height: 1.65;
+  }
+
+  .site-band-header :global(.site-band-intro + .site-band-intro) {
+    margin-top: 12px;
+  }
+
+  .site-band-date {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
+    margin: 24px 0 0;
+    padding: 0 12px;
+    border: 1px solid var(--glass-border);
+    border-radius: 9999px;
+    background: var(--glass-bg);
+    color: var(--gray-900);
+    font-size: 13px;
+    line-height: 18px;
+  }
+
+  .site-band-date svg {
+    flex: none;
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .site-band-date time {
+    margin-left: 4px;
+    color: var(--gray-1000);
+    font-weight: 600;
+  }
+
+  .site-band-date--colon time {
+    margin-left: 0;
+  }
+
+  @media (max-width: 600px) {
+    .site-band-header {
+      padding-top: 40px;
+      padding-bottom: 40px;
+    }
+
+    h1 {
+      font-size: 32px;
+      line-height: 1.1;
+      letter-spacing: -0.035em;
+    }
+
+    .site-band-header :global(.site-band-intro) {
+      margin-top: 14px;
+      font-size: 16px;
+    }
+
+    .site-band-date {
+      margin-top: 20px;
+    }
+  }
+</style>

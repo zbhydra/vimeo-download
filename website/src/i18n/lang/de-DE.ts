@@ -34,7 +34,8 @@ export const deDE: SiteContent = {
       workspace: {
         parse: {
           eyebrow: 'Schnelle Link-Prüfung',
-          title: 'Vimeo Video Downloader: jedes öffentliche Vimeo-Video speichern',
+          titleBrand: 'Vimeo Video Downloader',
+          titleTagline: 'Jedes öffentliche Vimeo-Video speichern',
           helperText:
             'Füge einen öffentlichen Vimeo-Link ein, sieh dir die angebotenen Auflösungen an und lade die gewünschte herunter.',
           linkLabel: 'Vimeo-Link',
@@ -58,6 +59,7 @@ export const deDE: SiteContent = {
           resumeUnavailableText: 'Der lokale Wiederherstellungseintrag ist abgelaufen.',
           resumeDismiss: 'Ignorieren',
           resuming: 'Wird fortgesetzt...',
+          extensionEntryLine: 'Direkt auf Vimeo mit der Erweiterung herunterladen',
           largeFileExtensionInlineChromeTitle: 'Chrome-Erweiterung',
           largeFileExtensionInlineChromeDescription:
             'Erweiterung speziell für Chrome, die große Vimeo-Downloads außerhalb des Tabs weiterlaufen lässt.',

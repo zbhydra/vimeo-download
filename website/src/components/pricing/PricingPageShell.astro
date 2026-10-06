@@ -3,9 +3,11 @@
  * Pricing 页面 DOM 壳。
  *
  * 静态装配 Unlimited 订阅商品，并提供账号摘要与订阅管理入口。
+ * 页头带走 SiteStage band，价格卡用负 margin 跨在舞台底边上（定位见样式注释）。
  * 交互逻辑由 pricing-page-controller.ts 使用命令式 DOM 接管。
  */
 import OrderCheckoutModal from '../order-checkout/OrderCheckoutModal.astro'
+import SiteStage from '../site/SiteStage.astro'
 import type { OrderCheckoutModalContent } from '../order-checkout/order-checkout-types'
 import PricingAuthModal from './PricingAuthModal.astro'
 import type { PricingAuthCopy } from '../../i18n/schema'
@@ -157,98 +159,115 @@ const { copy, extensionInstallUrl, supportEmail, showHero = false } = Astro.prop
 <section class="pricing-page" data-pricing-page>
   <script is:inline type="application/json" data-pricing-copy set:html={JSON.stringify(copy)} />
 
-  <div class="container pricing-container">
-    {
-      showHero && (
-        <header class="pricing-hero">
-          <p class="pricing-hero-eyebrow">{copy.hero.eyebrow}</p>
-          <h1 class="pricing-hero-title" data-pricing-hero-title>{copy.hero.title}</h1>
-          <p class="pricing-hero-description" data-pricing-hero-description>{copy.hero.description}</p>
-        </header>
-      )
-    }
-
-    <div class="pricing-account-stack">
-      <aside class="pricing-account" data-pricing-account>
-        <p class="pricing-account-loading" data-pricing-account-loading>
-          {copy.account.loading}
-        </p>
-        <div class="pricing-account-signed-out" data-pricing-account-signed-out hidden>
-          <p class="pricing-account-title">{copy.account.signedOutTitle}</p>
-          <p>{copy.account.signedOutDescription}</p>
-          <button type="button" class="btn-secondary pricing-secondary-button" data-pricing-login>
-            {copy.account.signInCta}
-          </button>
-        </div>
-        <div class="pricing-account-signed-in" data-pricing-account-signed-in hidden>
-          <div class="pricing-account-balance-row">
-            <div class="pricing-account-menu-wrap">
-              <button
-                type="button"
-                class="pricing-avatar"
-                data-pricing-account-button
-                aria-label={copy.accountMenu.accountButtonLabel}
-                aria-expanded="false"
-              >
-                <img class="pricing-avatar-image" data-pricing-user-avatar alt="" hidden />
-                <span class="pricing-avatar-initial" data-pricing-user-initial aria-hidden="true"></span>
-              </button>
-              <div
-                class="pricing-account-menu"
-                data-pricing-account-menu
-                role="menu"
-                aria-label={copy.accountMenu.accountMenuLabel}
-                hidden
-              >
-                <div class="pricing-account-email" data-pricing-account-email role="presentation"></div>
-                <button type="button" class="pricing-account-logout" data-pricing-account-logout role="menuitem">
-                  {copy.auth.logout}
-                </button>
-              </div>
-            </div>
-          </div>
-          <div class="pricing-account-plan-row">
-            <p class="pricing-account-plan-line">
-              <span data-pricing-user-subscription></span>
-              <span aria-hidden="true">·</span>
-              <span data-pricing-user-expires></span>
-            </p>
-            <button
-              type="button"
-              class="btn-secondary pricing-subscription-manage-button"
-              data-pricing-subscription-manage-button
-              hidden
-            >
-              {copy.subscriptionManagement.buttonLabel}
-            </button>
-          </div>
-        </div>
-        <p class="pricing-inline-error" data-pricing-account-error hidden></p>
-      </aside>
-
+  <SiteStage variant="band">
+    <div class="container pricing-band">
       {
-        copy.subscription.reviewReward &&
-          copy.extensionSource.reviewRewardTitle &&
-          copy.extensionSource.reviewRewardDescription && (
-          <button
-            type="button"
-            class="pricing-review-reward-banner"
-            data-pricing-review-reward-banner
-            hidden
-          >
-            <span class="pricing-review-reward-days" aria-hidden="true">7</span>
-            <span class="pricing-review-reward-content">
-              <span class="pricing-review-reward-title">{copy.extensionSource.reviewRewardTitle}</span>
-              <span class="pricing-review-reward-description">
-                {copy.extensionSource.reviewRewardDescription}
-              </span>
-            </span>
-            <span class="pricing-review-reward-chevron" aria-hidden="true"></span>
-          </button>
+        showHero && (
+          <header class="pricing-hero">
+            <p class="pricing-hero-eyebrow">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M10 3.5a1.5 1.5 0 0 1 3 0V5h3.5A1.5 1.5 0 0 1 18 6.5V10h1.5a1.5 1.5 0 0 1 0 3H18v4.5a1.5 1.5 0 0 1-1.5 1.5H13v-1.5a1.5 1.5 0 0 0-3 0V19H6.5A1.5 1.5 0 0 1 5 17.5V14h1.5a1.5 1.5 0 0 0 0-3H5V6.5A1.5 1.5 0 0 1 6.5 5H10z" />
+              </svg>
+              {copy.hero.eyebrow}
+            </p>
+            <h1 class="pricing-hero-title" data-pricing-hero-title>{copy.hero.title}</h1>
+            <p class="pricing-hero-description" data-pricing-hero-description>{copy.hero.description}</p>
+          </header>
         )
       }
-    </div>
 
+      <div class="pricing-account-stack">
+        <aside class="pricing-account" data-pricing-account>
+          <p class="pricing-account-loading" data-pricing-account-loading>
+            {copy.account.loading}
+          </p>
+          <div class="pricing-account-signed-out" data-pricing-account-signed-out hidden>
+            <span class="pricing-account-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false">
+                <circle cx="12" cy="8" r="3.5" />
+                <path d="M5 20a7 7 0 0 1 14 0" />
+              </svg>
+            </span>
+            <div class="pricing-account-signed-out-text">
+              <p class="pricing-account-title">{copy.account.signedOutTitle}</p>
+              <p>{copy.account.signedOutDescription}</p>
+            </div>
+            <button type="button" class="btn-secondary pricing-secondary-button" data-pricing-login>
+              {copy.account.signInCta}
+            </button>
+          </div>
+          <div class="pricing-account-signed-in" data-pricing-account-signed-in hidden>
+            <div class="pricing-account-balance-row">
+              <div class="pricing-account-menu-wrap">
+                <button
+                  type="button"
+                  class="pricing-avatar"
+                  data-pricing-account-button
+                  aria-label={copy.accountMenu.accountButtonLabel}
+                  aria-expanded="false"
+                >
+                  <img class="pricing-avatar-image" data-pricing-user-avatar alt="" hidden />
+                  <span class="pricing-avatar-initial" data-pricing-user-initial aria-hidden="true"></span>
+                </button>
+                <div
+                  class="pricing-account-menu"
+                  data-pricing-account-menu
+                  role="menu"
+                  aria-label={copy.accountMenu.accountMenuLabel}
+                  hidden
+                >
+                  <div class="pricing-account-email" data-pricing-account-email role="presentation"></div>
+                  <button type="button" class="pricing-account-logout" data-pricing-account-logout role="menuitem">
+                    {copy.auth.logout}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="pricing-account-plan-row">
+              <p class="pricing-account-plan-line">
+                <span data-pricing-user-subscription></span>
+                <span aria-hidden="true">·</span>
+                <span data-pricing-user-expires></span>
+              </p>
+              <button
+                type="button"
+                class="btn-secondary pricing-subscription-manage-button"
+                data-pricing-subscription-manage-button
+                hidden
+              >
+                {copy.subscriptionManagement.buttonLabel}
+              </button>
+            </div>
+          </div>
+          <p class="pricing-inline-error" data-pricing-account-error hidden></p>
+        </aside>
+
+        {
+          copy.subscription.reviewReward &&
+            copy.extensionSource.reviewRewardTitle &&
+            copy.extensionSource.reviewRewardDescription && (
+            <button
+              type="button"
+              class="pricing-review-reward-banner"
+              data-pricing-review-reward-banner
+              hidden
+            >
+              <span class="pricing-review-reward-days" aria-hidden="true">7</span>
+              <span class="pricing-review-reward-content">
+                <span class="pricing-review-reward-title">{copy.extensionSource.reviewRewardTitle}</span>
+                <span class="pricing-review-reward-description">
+                  {copy.extensionSource.reviewRewardDescription}
+                </span>
+              </span>
+              <span class="pricing-review-reward-chevron" aria-hidden="true"></span>
+            </button>
+          )
+        }
+      </div>
+    </div>
+  </SiteStage>
+
+  <div class="container pricing-plans">
     <section class="pricing-product-section" aria-label={copy.hero.title}>
       <div class="pricing-product-list" data-pricing-product-list>
         <div class="pricing-subscription-list" data-pricing-subscription-list>
@@ -267,6 +286,27 @@ const { copy, extensionInstallUrl, supportEmail, showHero = false } = Astro.prop
           ))}
         </div>
       </div>
+      {
+        copy.subscription.trustNote && (
+          <div class="pricing-trust-row">
+            <span class="pricing-trust-text">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z" />
+                <path d="M9 12l2 2 4-4" />
+              </svg>
+              {copy.subscription.trustNote}
+            </span>
+            <span class="pricing-trust-icons" aria-hidden="true">
+              <span class="pricing-trust-icon">
+                <img src="/payment-icons/paypal-monogram.png" alt="" width="13" height="16" />
+              </span>
+              <span class="pricing-trust-icon">
+                <img class="pricing-trust-card-icon" src="/payment-icons/bank-card.svg" alt="" width="18" height="18" />
+              </span>
+            </span>
+          </div>
+        )
+      }
       {supportEmail && (
         <p class="pricing-support-email">
           {copy.subscription.supportMailPrefix}<a href={`mailto:${supportEmail}`}>{supportEmail}</a>
@@ -277,10 +317,9 @@ const { copy, extensionInstallUrl, supportEmail, showHero = false } = Astro.prop
 
   {
     copy.faq && (
-      <div class="container pricing-faq-container">
-        <section class="pricing-faq" data-pricing-faq aria-labelledby="pricing-faq-title">
+      <section class="pricing-faq-section" data-pricing-faq aria-labelledby="pricing-faq-title">
+        <div class="container pricing-faq">
           <header class="pricing-faq-header">
-            <p class="pricing-faq-eyebrow">FAQ</p>
             <h2 class="pricing-faq-title" id="pricing-faq-title">
               {copy.faq.title}
             </h2>
@@ -291,22 +330,34 @@ const { copy, extensionInstallUrl, supportEmail, showHero = false } = Astro.prop
               <details class="pricing-faq-item" data-pricing-faq-item>
                 <summary class="pricing-faq-question">
                   <span>{item.question}</span>
-                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <path d="M6 9.5 12 15.5 18 9.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />
-                  </svg>
+                  <span class="pricing-faq-toggle" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false">
+                      <path d="M5 12h14" />
+                      <path class="pricing-faq-toggle-bar" d="M12 5v14" />
+                    </svg>
+                  </span>
                 </summary>
                 <p class="pricing-faq-answer">{item.answer}</p>
               </details>
             ))}
           </div>
-        </section>
-      </div>
+        </div>
+      </section>
     )
   }
 
   <template data-pricing-subscription-card-template>
     <article class="pricing-product-card pricing-subscription-card" data-pricing-subscription-card>
-      {copy.popularLabel && <p class="pricing-card-badge">{copy.popularLabel}</p>}
+      {
+        copy.popularLabel && (
+          <p class="pricing-card-badge">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M12 3l2.2 5.3L20 9l-4.4 3.9L17 19l-5-3-5 3 1.4-6.1L4 9l5.8-.7z" />
+            </svg>
+            {copy.popularLabel}
+          </p>
+        )
+      }
       <p class="pricing-card-name">{copy.subscription.title}</p>
       <p class="pricing-card-quota">{copy.subscription.eyebrow}</p>
 
@@ -319,7 +370,7 @@ const { copy, extensionInstallUrl, supportEmail, showHero = false } = Astro.prop
       <p class="pricing-inline-error" data-pricing-subscription-error hidden></p>
       <button
         type="button"
-        class="btn-primary pricing-primary-button"
+        class="btn-secondary pricing-buy-button"
         data-pricing-subscription-buy
         data-ga-event="upgrade_cta_click"
         data-ga-source="pricing"
@@ -328,7 +379,17 @@ const { copy, extensionInstallUrl, supportEmail, showHero = false } = Astro.prop
       >
         {copy.subscription.buyNow}
       </button>
-      {copy.subscription.trustNote && <p class="pricing-trust-note">{copy.subscription.trustNote}</p>}
+      {
+        copy.subscription.trustNote && (
+          <p class="pricing-trust-note">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <rect x="5" y="11" width="14" height="9" rx="2" />
+              <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+            </svg>
+            {copy.subscription.trustNote}
+          </p>
+        )
+      }
       {
         copy.subscription.benefits && (
           <ul class="pricing-benefits">
@@ -377,11 +438,27 @@ const { copy, extensionInstallUrl, supportEmail, showHero = false } = Astro.prop
 </script>
 
 <style is:global>
-  .pricing-page {
-    padding: clamp(32px, 4vw, 64px) 0 32px;
+  /*
+    页头带（SiteStage band）与价格卡的叠放：
+    band 内容底部留 240px，价格区用 -200px 上移，让 3 张卡跨在舞台底边上，两者之间留 40px 缓冲，
+    账号菜单展开时不会被卡片盖住。价格区 z-index 高于舞台，卡片之外的区域透明，舞台仍可见。
+  */
+  .pricing-band {
+    display: grid;
+    justify-items: center;
+    gap: 32px;
+    padding: 88px 0 240px;
+    text-align: center;
   }
 
-  .pricing-container,
+  .pricing-plans {
+    position: relative;
+    z-index: 2;
+    margin-top: -200px;
+    padding-bottom: 72px;
+  }
+
+  .pricing-plans,
   .pricing-product-section,
   .pricing-product-list,
   .pricing-product-card,
@@ -390,40 +467,81 @@ const { copy, extensionInstallUrl, supportEmail, showHero = false } = Astro.prop
     min-width: 0;
   }
 
-  .pricing-container {
+  .pricing-product-section {
     display: grid;
-    gap: 32px;
+    gap: 40px;
   }
 
-  .pricing-account,
-  .pricing-product-card {
-    position: relative;
-    border: 1px solid var(--gray-alpha-400);
-    border-radius: var(--radius-md);
-    background: var(--background-100);
-    box-shadow: var(--shadow-card);
+  /* ---------- 页头 ---------- */
+  .pricing-hero {
+    display: grid;
+    justify-items: center;
+    gap: 18px;
   }
 
+  .pricing-hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 30px;
+    padding: 0 12px;
+    border: 1px solid var(--blue-500);
+    border-radius: 9999px;
+    background: var(--blue-200);
+    color: var(--blue-800);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 18px;
+  }
+
+  .pricing-hero-eyebrow svg {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .pricing-hero-title {
+    max-width: 880px;
+    color: var(--gray-1000);
+    font-size: clamp(40px, 5.4vw, 64px);
+    font-weight: 700;
+    letter-spacing: -0.045em;
+    line-height: 1.04;
+    text-wrap: balance;
+  }
+
+  .pricing-hero-description {
+    max-width: 560px;
+    color: var(--gray-900);
+    font-size: 19px;
+    line-height: 1.6;
+    text-wrap: balance;
+  }
+
+  /* ---------- 登录条 / 账号摘要（玻璃面） ---------- */
   .pricing-account-stack {
     display: grid;
-    gap: 8px;
-    justify-self: center;
-    width: auto;
+    justify-items: center;
+    gap: 12px;
     max-width: 100%;
   }
 
   .pricing-account {
+    position: relative;
     display: grid;
-    gap: 16px;
-    justify-self: center;
-    width: auto;
     max-width: 100%;
-    padding: 12px 24px;
-    align-content: start;
+    padding: 8px 8px 8px 12px;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-2xl);
+    background: var(--glass-bg);
   }
 
   .pricing-account-loading {
-    text-align: center;
+    padding: 6px 4px;
     color: var(--gray-900);
     font-size: 14px;
     line-height: 20px;
@@ -435,14 +553,199 @@ const { copy, extensionInstallUrl, supportEmail, showHero = false } = Astro.prop
     flex-wrap: wrap;
     align-items: center;
     justify-content: center;
-    gap: 8px 16px;
-    text-align: center;
+    gap: 8px 14px;
   }
 
-  .pricing-account-balance-row {
+  .pricing-account-signed-in {
+    padding: 4px 8px 4px 4px;
+  }
+
+  .pricing-account-icon {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 30px;
+    width: 30px;
+    height: 30px;
+    border-radius: 9999px;
+    background: var(--blue-200);
+    color: var(--blue-700);
+  }
+
+  .pricing-account-icon svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.9;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .pricing-account-signed-out-text {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
     justify-content: center;
+    gap: 2px 14px;
+    min-width: 0;
+    text-align: left;
   }
 
+  .pricing-account-signed-out-text p {
+    color: var(--gray-900);
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .pricing-account-signed-out-text .pricing-account-title {
+    color: var(--gray-1000);
+    font-weight: 600;
+  }
+
+  .pricing-account-balance-row,
+  .pricing-account-plan-row,
+  .pricing-account-plan-line {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .pricing-account-plan-row,
+  .pricing-account-plan-line {
+    flex-wrap: wrap;
+  }
+
+  .pricing-account-plan-line {
+    color: var(--gray-900);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+  }
+
+  /* 账户区按钮沿用共享 .btn-secondary，只定尺寸；登录按钮在桌面是药丸，手机改满宽（见 ≤ 600 px）。 */
+  .btn-secondary.pricing-secondary-button,
+  .btn-secondary.pricing-subscription-manage-button {
+    height: 36px;
+    padding: 0 16px;
+    border-radius: 9999px;
+  }
+
+  .pricing-subscription-manage-button[hidden] {
+    display: none;
+  }
+
+  .pricing-avatar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    overflow: hidden;
+    border: 1px solid var(--blue-500);
+    border-radius: 9999px;
+    background: var(--blue-200);
+    color: var(--blue-800);
+    font-weight: 600;
+    font-size: 16px;
+    cursor: pointer;
+  }
+
+  .pricing-account-menu-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+  }
+
+  .pricing-account-menu[hidden],
+  .pricing-avatar-image[hidden],
+  .pricing-avatar-initial[hidden] {
+    display: none;
+  }
+
+  .pricing-account-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 30;
+    width: min(280px, calc(100vw - 36px));
+    padding: 4px;
+    border: 1px solid var(--gray-alpha-400);
+    border-radius: var(--radius-md);
+    background: var(--gray-100);
+    box-shadow: var(--shadow-popover);
+    text-align: left;
+  }
+
+  .pricing-account-email {
+    width: 100%;
+    min-width: 0;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--gray-alpha-400);
+    color: var(--gray-900);
+    font-size: 13px;
+    line-height: 18px;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    user-select: text;
+  }
+
+  .pricing-account-logout {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 44px;
+    margin-top: 4px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    color: var(--gray-1000);
+    background: transparent;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .pricing-account-logout:hover {
+    background: var(--gray-200);
+  }
+
+  .pricing-avatar-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .pricing-avatar-initial {
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  .pricing-inline-error {
+    padding: 8px 12px;
+    border: 1px solid var(--red-400);
+    border-radius: var(--radius-sm);
+    color: var(--red-900);
+    background: var(--red-100);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 18px;
+    text-align: left;
+  }
+
+  .pricing-account-signed-out p,
+  .pricing-inline-status {
+    color: var(--gray-900);
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  /* ---------- 好评赠送横幅 ---------- */
   .pricing-review-reward-banner {
     display: grid;
     grid-template-columns: 36px minmax(0, 1fr) 10px;
@@ -452,7 +755,7 @@ const { copy, extensionInstallUrl, supportEmail, showHero = false } = Astro.prop
     min-height: 72px;
     padding: 12px 16px 12px 12px;
     border: 1px solid var(--blue-400);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     background: var(--blue-100);
     color: var(--gray-1000);
     box-shadow: var(--shadow-card);
@@ -473,8 +776,8 @@ const { copy, extensionInstallUrl, supportEmail, showHero = false } = Astro.prop
     width: 36px;
     height: 36px;
     border-radius: var(--radius-sm);
-    background: var(--gray-1000);
-    color: var(--background-100);
+    background: var(--blue-200);
+    color: var(--blue-800);
     font-size: 14px;
     font-weight: 600;
     line-height: 1;
@@ -513,90 +816,197 @@ const { copy, extensionInstallUrl, supportEmail, showHero = false } = Astro.prop
     background: var(--blue-200);
   }
 
-  /* ---------- Hero ---------- */
-  .pricing-hero {
+  /* ---------- 价格卡 ---------- */
+  .pricing-product-list {
     display: grid;
-    justify-items: center;
-    gap: 12px;
-    text-align: center;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+    max-width: 1120px;
+    margin-inline: auto;
+    width: 100%;
   }
 
-  .pricing-hero-eyebrow {
-    color: var(--gray-900);
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 18px;
+  .pricing-subscription-list {
+    display: contents;
   }
 
-  .pricing-hero-title {
-    max-width: 720px;
-    color: var(--gray-1000);
-    font-size: clamp(32px, 5vw, 48px);
-    font-weight: 600;
-    letter-spacing: -0.06em;
-    line-height: 1.1;
-    text-wrap: balance;
+  .pricing-product-card,
+  .pricing-skeleton-card {
+    position: relative;
+    padding: 32px;
+    border: 1px solid var(--gray-alpha-400);
+    border-radius: var(--radius-2xl);
+    background: var(--gray-100);
+    box-shadow: var(--shadow-card);
   }
 
-  .pricing-hero-description {
-    max-width: 600px;
-    color: var(--gray-900);
-    font-size: 16px;
-    line-height: 24px;
-    text-wrap: balance;
+  .pricing-product-card {
+    display: flex;
+    flex-direction: column;
   }
 
-  /* ---------- 商品卡内容（套餐名 / 额度行 / 主推徽章 / 卖点清单 / 保障说明） ---------- */
+  /* 主推卡（列表首张）：渐变描边 + 发光，描边靠 padding-box / border-box 双层背景实现。 */
+  .pricing-subscription-card[data-pricing-featured] {
+    border-color: transparent;
+    background:
+      linear-gradient(var(--gray-100), var(--gray-100)) padding-box,
+      var(--gradient-border) border-box;
+    box-shadow:
+      0 0 0 1px rgba(138, 180, 255, 0.4),
+      0 40px 90px -40px rgba(45, 106, 232, 0.9);
+  }
+
   .pricing-card-name {
     color: var(--gray-1000);
-    font-size: 20px;
-    font-weight: 600;
-    letter-spacing: -0.4px;
+    font-size: 18px;
+    font-weight: 650;
     line-height: 26px;
   }
 
   .pricing-card-quota {
-    color: var(--gray-900);
-    font-size: 13px;
-    line-height: 18px;
+    margin-top: 4px;
+    color: var(--gray-700);
+    font-size: 14px;
+    line-height: 20px;
   }
 
+  /* 徽标文字用纯白（spec-website §4 白名单：--gradient-brand 底上的徽标文字）：只有纯白在渐变起点 #2F6BEA 上 ≥ 4.76:1。 */
   .pricing-card-badge {
     position: absolute;
-    top: -13px;
+    top: -15px;
     left: 50%;
     transform: translateX(-50%);
-    padding: 4px 12px;
+    display: none;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+    padding: 0 14px;
     border-radius: 9999px;
-    background: var(--gray-1000);
-    color: var(--background-100);
+    background: var(--gradient-brand);
+    color: var(--on-brand);
+    box-shadow: 0 8px 18px -8px var(--shadow-badge-color);
     font-size: 12px;
-    font-weight: 500;
+    font-weight: 700;
     line-height: 16px;
     white-space: nowrap;
   }
 
-  /* 订阅卡徽章只标记列表首张主推卡。 */
-  .pricing-subscription-card > .pricing-card-badge {
+  .pricing-card-badge svg {
+    width: 13px;
+    height: 13px;
+    fill: currentColor;
+  }
+
+  .pricing-subscription-card[data-pricing-featured] > .pricing-card-badge {
+    display: inline-flex;
+  }
+
+  .pricing-subscription-price-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 8px;
+    margin-top: 24px;
+  }
+
+  .pricing-price {
+    color: var(--gray-1000);
+    font-size: 52px;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .pricing-period {
+    color: var(--gray-900);
+    font-size: 15px;
+    line-height: 20px;
+  }
+
+  /* 季卡价格下方的省钱标注；非季卡由 controller 保持 hidden。 */
+  .pricing-savings {
+    align-self: flex-start;
+    margin-top: 8px;
+    padding: 2px 10px;
+    border-radius: 9999px;
+    background: var(--green-100);
+    color: var(--green-900);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 20px;
+  }
+
+  .pricing-savings[hidden] {
     display: none;
+  }
+
+  .pricing-subscription-card .pricing-inline-error {
+    margin-top: 16px;
+  }
+
+  /* 购买按钮沿用共享 .btn-primary / .btn-secondary（主推卡由 controller 换成主按钮），这里只定 large 尺寸并允许长文案换行。 */
+  .pricing-buy-button {
+    width: 100%;
+    height: auto;
+    min-height: 52px;
+    margin-top: 28px;
+    padding: 0 14px;
+    border-radius: var(--radius-md);
+    font-size: 16px;
+    white-space: normal;
+    text-align: center;
+  }
+
+  /* 有效订阅时的置灰：与 :disabled 同观感，但保留可点击（弹出提示）。 */
+  .pricing-buy-button.is-soft-disabled,
+  .pricing-buy-button.is-soft-disabled:hover {
+    border-color: var(--gray-alpha-400);
+    color: var(--gray-700);
+    background: var(--gray-200);
+    box-shadow: none;
+    filter: none;
+    cursor: not-allowed;
+  }
+
+  .pricing-trust-note {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 12px;
+    color: var(--gray-700);
+    font-size: 13px;
+    line-height: 18px;
+    text-align: center;
+  }
+
+  .pricing-trust-note svg {
+    width: 13px;
+    height: 13px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 
   .pricing-benefits {
     display: grid;
     gap: 12px;
-    margin: 0;
-    padding: 20px 0 0;
-    border-top: 1px solid var(--gray-alpha-400);
+    margin: 24px 0 0;
+    padding: 24px 0 0;
+    border-top: 1px solid var(--gray-alpha-100);
     list-style: none;
   }
 
   .pricing-benefits li {
     display: flex;
     align-items: flex-start;
-    gap: 8px;
+    gap: 10px;
     color: var(--gray-900);
-    font-size: 14px;
-    line-height: 20px;
+    font-size: 15px;
+    line-height: 1.5;
   }
 
   /* 仅一条可见权益时居中（隐藏的计费行不计入），多条保持左对齐列表。 */
@@ -606,11 +1016,19 @@ const { copy, extensionInstallUrl, supportEmail, showHero = false } = Astro.prop
   }
 
   .pricing-benefits [data-pricing-subscription-billing-row] {
-    padding: 8px 12px;
-    border-radius: var(--radius-sm);
-    background: var(--gray-100);
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    background: var(--gray-200);
     color: var(--gray-1000);
-    font-weight: 500;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 18px;
+  }
+
+  .pricing-subscription-card[data-pricing-featured] [data-pricing-subscription-billing-row] {
+    background: var(--blue-100);
+    color: var(--blue-700);
   }
 
   .pricing-benefits li[hidden] {
@@ -618,16 +1036,77 @@ const { copy, extensionInstallUrl, supportEmail, showHero = false } = Astro.prop
   }
 
   .pricing-benefits svg {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     margin-top: 2px;
-    stroke: var(--gray-1000);
-    stroke-width: 2.4;
+    stroke: var(--neon-cyan);
+    stroke-width: 2.2;
     flex: 0 0 auto;
   }
 
+  .pricing-benefits [data-pricing-subscription-billing-row] svg {
+    width: 15px;
+    height: 15px;
+    margin-top: 1px;
+    stroke: currentColor;
+    stroke-width: 2.2;
+  }
+
+  /* ---------- 信任行：trustNote + 支付方式图标（装饰） ---------- */
+  .pricing-trust-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 10px 24px;
+    color: var(--gray-900);
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .pricing-trust-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .pricing-trust-text svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: var(--green-900);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* 图标自带浅色/深色混杂的品牌色，放在 scoped 的浅灰底板上才能在深底看清。 */
+  .pricing-trust-icons {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .pricing-trust-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 24px;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    background: var(--payment-plate);
+  }
+
+  .pricing-trust-icon img {
+    display: block;
+  }
+
+  .pricing-trust-card-icon {
+    filter: brightness(0.55);
+  }
+
   .pricing-support-email {
-    margin: 24px auto 0;
     color: var(--gray-900);
     font-size: 14px;
     line-height: 20px;
@@ -645,7 +1124,7 @@ const { copy, extensionInstallUrl, supportEmail, showHero = false } = Astro.prop
     color: var(--blue-800);
   }
 
-  /* ---------- 加载骨架卡：与商品卡同框同栅格，光带扫过表示加载中 ---------- */
+  /* ---------- 加载骨架卡：与价格卡同框同栅格，透明度脉动表示加载中（只动画 opacity） ---------- */
   .sr-only {
     position: absolute;
     width: 1px;
@@ -662,11 +1141,6 @@ const { copy, extensionInstallUrl, supportEmail, showHero = false } = Astro.prop
     display: grid;
     align-content: start;
     gap: 12px;
-    padding: 24px;
-    border: 1px solid var(--gray-alpha-400);
-    border-radius: var(--radius-md);
-    background: var(--background-100);
-    box-shadow: var(--shadow-card);
   }
 
   .pricing-skeleton-name,
@@ -677,9 +1151,8 @@ const { copy, extensionInstallUrl, supportEmail, showHero = false } = Astro.prop
   .pricing-skeleton-benefits span {
     display: block;
     border-radius: var(--radius-sm);
-    background: linear-gradient(90deg, var(--gray-100) 32%, var(--background-200) 50%, var(--gray-100) 68%);
-    background-size: 200% 100%;
-    animation: pricing-skeleton-sweep 1.4s ease-in-out infinite;
+    background: var(--gray-200);
+    animation: pricing-skeleton-pulse 1.4s ease-in-out infinite;
   }
 
   .pricing-skeleton-name {
@@ -694,7 +1167,8 @@ const { copy, extensionInstallUrl, supportEmail, showHero = false } = Astro.prop
 
   .pricing-skeleton-price {
     width: 46%;
-    height: 34px;
+    height: 44px;
+    margin-top: 12px;
   }
 
   .pricing-skeleton-note {
@@ -704,14 +1178,15 @@ const { copy, extensionInstallUrl, supportEmail, showHero = false } = Astro.prop
   }
 
   .pricing-skeleton-button {
-    min-height: 48px;
+    min-height: 52px;
+    margin-top: 12px;
   }
 
   .pricing-skeleton-benefits {
     display: grid;
     gap: 12px;
-    padding-top: 20px;
-    border-top: 1px solid var(--gray-alpha-400);
+    padding-top: 24px;
+    border-top: 1px solid var(--gray-alpha-100);
   }
 
   .pricing-skeleton-benefits span {
@@ -730,12 +1205,13 @@ const { copy, extensionInstallUrl, supportEmail, showHero = false } = Astro.prop
     width: 76%;
   }
 
-  @keyframes pricing-skeleton-sweep {
-    from {
-      background-position: 180% 0;
+  @keyframes pricing-skeleton-pulse {
+    0%,
+    100% {
+      opacity: 1;
     }
-    to {
-      background-position: -80% 0;
+    50% {
+      opacity: 0.45;
     }
   }
 
@@ -750,361 +1226,50 @@ const { copy, extensionInstallUrl, supportEmail, showHero = false } = Astro.prop
     }
   }
 
-  .pricing-trust-note {
-    margin-top: -4px;
-    color: var(--gray-900);
-    font-size: 13px;
-    line-height: 18px;
-    text-align: center;
-  }
-
-  .pricing-account-signed-out p,
-  .pricing-inline-status {
-    color: var(--gray-900);
-    font-size: 14px;
-    line-height: 20px;
-  }
-
-  .pricing-subscription-card {
-    display: grid;
-    gap: 12px;
-  }
-
-  .pricing-account-title {
-    color: var(--gray-1000);
-    font-size: 14px;
-    font-weight: 600;
-    line-height: 20px;
-  }
-
-  .pricing-product-section {
-    display: grid;
-    gap: 16px;
-  }
-
-  .pricing-account-balance-row,
-  .pricing-account-plan-row,
-  .pricing-account-plan-line {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .pricing-account-plan-row,
-  .pricing-account-plan-line {
-    flex-wrap: wrap;
-  }
-
-  .pricing-account-plan-line {
-    color: var(--gray-900);
-    font-size: 14px;
-    font-weight: 500;
-    line-height: 20px;
-  }
-
-  /* 账户区按钮沿用共享 .btn-secondary，这里只定尺寸（small 32px）。 */
-  .btn-secondary.pricing-secondary-button,
-  .btn-secondary.pricing-subscription-manage-button {
-    height: 32px;
-    padding: 0 10px;
-  }
-
-  .pricing-subscription-manage-button[hidden] {
-    display: none;
-  }
-
-  .pricing-avatar {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    flex: 0 0 40px;
-    overflow: hidden;
-    border: 0;
-    border-radius: 9999px;
-    background: var(--gray-1000);
-    color: var(--background-100);
-    font-weight: 600;
-    font-size: 16px;
-    cursor: pointer;
-  }
-
-  .pricing-account-menu-wrap {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    flex: 0 0 auto;
-  }
-
-  .pricing-account-menu[hidden],
-  .pricing-avatar-image[hidden],
-  .pricing-avatar-initial[hidden] {
-    display: none;
-  }
-
-  .pricing-account-menu {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    z-index: 30;
-    width: min(280px, calc(100vw - 36px));
-    padding: 4px;
-    border: 1px solid var(--gray-alpha-400);
-    border-radius: var(--radius-md);
-    background: var(--background-100);
-    box-shadow: var(--shadow-popover);
-  }
-
-  .pricing-account-email {
-    width: 100%;
-    min-width: 0;
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--gray-alpha-400);
-    color: var(--gray-900);
-    font-size: 13px;
-    line-height: 18px;
-    text-align: left;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    user-select: text;
-  }
-
-  .pricing-account-logout {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    min-height: 40px;
-    margin-top: 4px;
-    padding: 0 12px;
-    border: 0;
-    border-radius: var(--radius-sm);
-    color: var(--gray-1000);
-    background: transparent;
-    font-size: 14px;
-    font-weight: 500;
-    text-align: left;
-    cursor: pointer;
-  }
-
-  .pricing-account-logout:hover {
-    background: var(--gray-100);
-  }
-
-  .pricing-avatar-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .pricing-avatar-initial {
-    font-size: 16px;
-    line-height: 1;
-  }
-
-  .pricing-product-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 16px;
-  }
-
-  .pricing-subscription-list {
-    display: contents;
-  }
-
-  .pricing-product-card {
-    display: grid;
-    align-content: start;
-    gap: 12px;
-    padding: 24px;
-  }
-
-  .pricing-subscription-price-row {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-  }
-
-  .pricing-price {
-    color: var(--gray-1000);
-    font-size: 40px;
-    font-weight: 600;
-    letter-spacing: -2.4px;
-    line-height: 48px;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .pricing-period {
-    color: var(--gray-900);
-    font-size: 14px;
-    line-height: 20px;
-  }
-
-  /* 季卡价格下方的省钱标注；非季卡由 controller 保持 hidden。 */
-  .pricing-savings {
-    justify-self: start;
-    color: var(--gray-1000);
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 18px;
-  }
-
-  .pricing-savings[hidden] {
-    display: none;
-  }
-
-  /* 购买按钮沿用共享 .btn-primary，这里只定 large 尺寸（48px）并允许长文案换行。 */
-  .btn-primary.pricing-primary-button {
-    width: 100%;
-    height: auto;
-    min-height: 48px;
-    padding: 0 14px;
-    font-size: 16px;
-    white-space: normal;
-    text-align: center;
-  }
-
-  /* 有效订阅时的置灰：与 :disabled 同观感，但保留可点击（弹出提示）。 */
-  .btn-primary.pricing-primary-button.is-soft-disabled {
-    color: var(--gray-700);
-    background: var(--gray-100);
-    cursor: not-allowed;
-  }
-
-  /* 订阅页用居中三卡布局（月 / 季 / 终生）；移动端由全局断点收回单列。 */
-  .pricing-page .pricing-container {
-    max-width: 1140px;
-    margin-inline: auto;
-  }
-
-  .pricing-page .pricing-product-list {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  /* 首张订阅卡（默认月卡）保持主推：gray-1000 描边与徽章。 */
-  .pricing-page .pricing-subscription-card:first-child {
-    border-color: var(--gray-1000);
-    box-shadow: 0 0 0 1px var(--gray-1000);
-  }
-
-  .pricing-page .pricing-subscription-card:first-child > .pricing-card-badge {
-    display: block;
-  }
-
-  /* 订阅页在较矮的桌面视口需要减少区块间的空白，
-     确保完整订阅卡在无需滚动时即可被比较和确认。 */
-  @media (min-width: 961px) and (max-height: 900px) {
-    .pricing-page {
-      padding-top: 24px;
-    }
-
-    .pricing-page .pricing-container {
-      gap: 24px;
-    }
-
-    .pricing-page .pricing-hero {
-      gap: 8px;
-    }
-
-    .pricing-page .pricing-hero-title {
-      font-size: 40px;
-    }
-
-    .pricing-page .pricing-subscription-card {
-      gap: 8px;
-      padding: 20px 24px;
-    }
-  }
-
-  @media (min-width: 961px) and (max-height: 800px) {
-    .pricing-page {
-      padding-top: 16px;
-    }
-
-    .pricing-page .pricing-container {
-      gap: 16px;
-    }
-
-    .pricing-page .pricing-hero-title {
-      font-size: 36px;
-    }
-
-    .pricing-page .pricing-subscription-card {
-      padding-block: 16px;
-    }
-  }
-
-  .pricing-inline-error {
-    padding: 8px 12px;
-    border: 1px solid var(--red-400);
-    border-radius: var(--radius-sm);
-    color: var(--red-900);
-    background: var(--red-100);
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 18px;
-  }
-
-  /* ---------- 页底购买答疑（仅 copy.faq 配置时渲染） ---------- */
-  .pricing-faq-container {
-    margin-top: 64px;
+  /* ---------- 页底购买答疑（仅 copy.faq 配置时渲染）：桌面左标题右列表 ---------- */
+  .pricing-faq-section {
+    padding: 96px 0 120px;
+    border-top: 1px solid var(--gray-alpha-100);
+    background: var(--background-200);
   }
 
   .pricing-faq {
     display: grid;
-    justify-items: center;
-    gap: 32px;
-    max-width: 720px;
-    margin-inline: auto;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    align-items: start;
+    gap: 40px 64px;
   }
 
   .pricing-faq-header {
     display: grid;
-    justify-items: center;
-    gap: 8px;
-    text-align: center;
-  }
-
-  .pricing-faq-eyebrow {
-    color: var(--gray-900);
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 18px;
+    gap: 12px;
   }
 
   .pricing-faq-title {
     color: var(--gray-1000);
-    font-size: clamp(24px, 3.4vw, 32px);
-    font-weight: 600;
-    letter-spacing: -0.96px;
-    line-height: 1.25;
+    font-size: clamp(30px, 3.6vw, 40px);
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    line-height: 1.12;
   }
 
   .pricing-faq-description {
-    max-width: 560px;
     color: var(--gray-900);
     font-size: 16px;
     line-height: 24px;
   }
 
+  /* 列表卡不设 overflow:hidden，否则会把 summary 的焦点环裁掉；首尾圆角由 summary 自己承担。 */
   .pricing-faq-list {
-    display: grid;
-    gap: 8px;
-    width: 100%;
-  }
-
-  .pricing-faq-item {
+    min-width: 0;
     border: 1px solid var(--gray-alpha-400);
-    border-radius: var(--radius-md);
-    background: var(--background-100);
-    transition: border-color var(--transition-fast);
+    border-radius: var(--radius-xl);
+    background: var(--gray-100);
+    box-shadow: var(--shadow-card);
   }
 
-  .pricing-faq-item:hover,
-  .pricing-faq-item[open] {
-    border-color: var(--gray-alpha-500);
+  .pricing-faq-item + .pricing-faq-item {
+    border-top: 1px solid var(--gray-alpha-100);
   }
 
   .pricing-faq-question {
@@ -1112,55 +1277,221 @@ const { copy, extensionInstallUrl, supportEmail, showHero = false } = Astro.prop
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    padding: 16px 20px;
-    border-radius: var(--radius-md);
+    min-height: 56px;
+    padding: 18px 24px;
     cursor: pointer;
     color: var(--gray-1000);
-    font-size: 15px;
-    font-weight: 500;
-    line-height: 22px;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.4;
     list-style: none;
+  }
+
+  .pricing-faq-item:first-child .pricing-faq-question {
+    border-top-left-radius: var(--radius-xl);
+    border-top-right-radius: var(--radius-xl);
+  }
+
+  .pricing-faq-item:last-child .pricing-faq-question {
+    border-bottom-left-radius: var(--radius-xl);
+    border-bottom-right-radius: var(--radius-xl);
+  }
+
+  .pricing-faq-item[open]:last-child .pricing-faq-question {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
   }
 
   .pricing-faq-question::-webkit-details-marker {
     display: none;
   }
 
-  .pricing-faq-question svg {
-    flex-shrink: 0;
-    width: 18px;
-    height: 18px;
-    stroke: var(--gray-900);
-    stroke-width: 2;
-    transition: transform var(--transition-fast);
+  .pricing-faq-toggle {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+    border-radius: 9999px;
+    background: var(--glass-bg);
+    color: var(--gray-900);
   }
 
-  .pricing-faq-item[open] .pricing-faq-question svg {
-    transform: rotate(180deg);
+  .pricing-faq-toggle svg {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.4;
+    stroke-linecap: round;
+  }
+
+  .pricing-faq-item[open] .pricing-faq-toggle {
+    background: var(--blue-200);
+    color: var(--blue-700);
+  }
+
+  .pricing-faq-item[open] .pricing-faq-toggle-bar {
+    display: none;
   }
 
   .pricing-faq-answer {
-    padding: 0 20px 16px;
+    padding: 0 24px 22px;
     color: var(--gray-900);
-    font-size: 14px;
-    line-height: 22px;
+    font-size: 15px;
+    line-height: 1.65;
   }
 
   @media (max-width: 960px) {
-    .pricing-product-list,
-    .pricing-page .pricing-product-list {
+    .pricing-product-list {
       grid-template-columns: 1fr;
+      max-width: 560px;
     }
 
-    .pricing-account-stack {
-      justify-self: stretch;
+    .pricing-faq {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* ---------- 手机布局（≤ 600 px） ---------- */
+  @media (max-width: 600px) {
+    .pricing-band {
+      gap: 24px;
+      padding: 48px 0 160px;
+    }
+
+    .pricing-plans {
+      margin-top: -120px;
+      padding-bottom: 64px;
+    }
+
+    .pricing-hero {
+      gap: 14px;
+    }
+
+    .pricing-hero-title {
+      font-size: 36px;
+      line-height: 1.08;
+      letter-spacing: -0.04em;
+    }
+
+    .pricing-hero-description {
+      font-size: 16px;
+    }
+
+    .pricing-account-stack,
+    .pricing-account {
       width: 100%;
     }
 
     .pricing-account {
-      justify-self: stretch;
+      padding: 16px;
+      border-radius: var(--radius-lg);
+    }
+
+    /* 登录条改成卡片：图标 + 文字在上，满宽 Sign in 在下。 */
+    .pricing-account-signed-out {
+      display: grid;
+      grid-template-columns: 32px minmax(0, 1fr);
+      align-items: start;
+      gap: 12px;
+    }
+
+    .pricing-account-icon {
+      width: 32px;
+      height: 32px;
+    }
+
+    .pricing-account-signed-out-text {
+      display: grid;
+      gap: 4px;
+      justify-content: start;
+    }
+
+    .pricing-account-signed-out-text p {
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .pricing-account-signed-out-text .pricing-account-title {
+      font-size: 15px;
+      line-height: 1.4;
+    }
+
+    .btn-secondary.pricing-secondary-button {
+      grid-column: 1 / -1;
       width: 100%;
-      padding: 12px 16px;
+      height: 48px;
+      border-radius: var(--radius-md);
+      font-size: 15px;
+    }
+
+    .btn-secondary.pricing-subscription-manage-button {
+      height: 44px;
+    }
+
+    .pricing-avatar {
+      width: 44px;
+      height: 44px;
+      flex-basis: 44px;
+    }
+
+    .pricing-product-card,
+    .pricing-skeleton-card {
+      padding: 24px;
+    }
+
+    .pricing-card-name {
+      font-size: 17px;
+    }
+
+    .pricing-price {
+      font-size: 44px;
+    }
+
+    .pricing-subscription-price-row {
+      margin-top: 20px;
+    }
+
+    .pricing-buy-button {
+      min-height: 48px;
+      margin-top: 24px;
+    }
+
+    .pricing-benefits {
+      margin-top: 20px;
+      padding-top: 20px;
+    }
+
+    .pricing-trust-row {
+      gap: 10px 16px;
+    }
+
+    .pricing-product-section {
+      gap: 32px;
+    }
+
+    .pricing-faq-section {
+      padding: 64px 0;
+    }
+
+    .pricing-faq {
+      gap: 24px;
+    }
+
+    .pricing-faq-title {
+      font-size: 30px;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+    }
+
+    .pricing-faq-question {
+      gap: 12px;
+      padding: 14px 16px;
+    }
+
+    .pricing-faq-answer {
+      padding: 0 16px 18px;
     }
   }
 </style>

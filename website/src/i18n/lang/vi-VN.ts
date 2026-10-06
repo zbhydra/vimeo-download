@@ -34,7 +34,8 @@ export const viVN: SiteContent = {
       workspace: {
         parse: {
           eyebrow: 'Kiểm tra liên kết nhanh',
-          title: 'Trình tải video Vimeo: lưu mọi video Vimeo công khai',
+          titleBrand: 'Trình tải video Vimeo',
+          titleTagline: 'Lưu mọi video Vimeo công khai',
           helperText:
             'Dán liên kết video Vimeo công khai, xem các độ phân giải Vimeo cung cấp và tải độ phân giải bạn cần.',
           linkLabel: 'Liên kết Vimeo',
@@ -58,6 +59,7 @@ export const viVN: SiteContent = {
           resumeUnavailableText: 'Bản ghi phục hồi cục bộ đã hết hạn.',
           resumeDismiss: 'Bỏ qua',
           resuming: 'Đang tiếp tục...',
+          extensionEntryLine: 'Tải trực tiếp trên Vimeo bằng tiện ích',
           largeFileExtensionInlineChromeTitle: 'Tiện ích Chrome',
           largeFileExtensionInlineChromeDescription:
             'Tiện ích dành riêng cho Chrome, giữ các lượt tải Vimeo lớn chạy ngoài tab.',

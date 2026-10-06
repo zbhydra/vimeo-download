@@ -34,7 +34,8 @@ export const enUS: SiteContent = {
       workspace: {
         parse: {
           eyebrow: 'Quick link check',
-          title: 'Vimeo Video Downloader: Save Any Public Vimeo Video',
+          titleBrand: 'Vimeo Video Downloader',
+          titleTagline: 'Save Any Public Vimeo Video',
           helperText:
             'Paste a public Vimeo video link, review the renditions Vimeo exposes, and download the resolution you need.',
           linkLabel: 'Vimeo link',
@@ -58,6 +59,7 @@ export const enUS: SiteContent = {
           resumeUnavailableText: 'The local recovery record has expired.',
           resumeDismiss: 'Ignore',
           resuming: 'Resuming...',
+          extensionEntryLine: 'Download right on Vimeo with the extension',
           largeFileExtensionInlineChromeTitle: 'Chrome Extension',
           largeFileExtensionInlineChromeDescription:
             'Dedicated extension for Chrome to keep large Vimeo downloads running outside the tab.',

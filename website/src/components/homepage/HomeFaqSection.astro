@@ -1,37 +1,43 @@
 ---
-/** 区块 7：FAQ，原生 details/summary，无脚本；FAQPage JSON-LD 由页面根据同一份文案输出。 */
+/**
+ * 区块 7：FAQ，左右两栏（标题在左、问答在右），原生 details/summary，无脚本；
+ * FAQPage JSON-LD 由页面根据同一份文案输出。
+ * 列表容器不裁切（不设 overflow: hidden），否则贴边的 summary 焦点环会被裁掉；首尾圆角由首尾 summary 自己承担。
+ */
 import HomeSection from './HomeSection.astro'
 import type { HomepageContent } from '../../i18n/schema'
 
 const { copy } = Astro.props as { copy: HomepageContent['faq'] }
 ---
 
-<HomeSection id="home-faq" heading={copy.heading}>
+<HomeSection id="home-faq" heading={copy.heading} split divided>
   <div class="home-faq-list">
-    {copy.items.map(item => (
-      <details class="home-faq-item">
-        <summary>
-          <span>{item.question}</span>
-          <svg class="home-faq-marker" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="m6 9 6 6 6-6" />
-          </svg>
-        </summary>
-        <p>{item.answer}</p>
-      </details>
-    ))}
+    {
+      copy.items.map(item => (
+        <details class="home-faq-item">
+          <summary>
+            <span class="home-faq-question">{item.question}</span>
+            <span class="home-faq-marker" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></svg>
+            </span>
+          </summary>
+          <p>{item.answer}</p>
+        </details>
+      ))
+    }
   </div>
 </HomeSection>
 
 <style>
   .home-faq-list {
-    max-width: 800px;
     border: 1px solid var(--gray-alpha-400);
-    border-radius: var(--radius-md);
-    overflow: hidden;
+    border-radius: var(--radius-xl);
+    background: var(--gray-100);
+    box-shadow: var(--shadow-card);
   }
 
   .home-faq-item + .home-faq-item {
-    border-top: 1px solid var(--gray-alpha-400);
+    border-top: 1px solid var(--gray-alpha-100);
   }
 
   .home-faq-item summary {
@@ -39,12 +45,22 @@ const { copy } = Astro.props as { copy: HomepageContent['faq'] }
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    padding: 16px 24px;
+    min-height: 56px;
+    padding: 20px 24px;
+    color: var(--gray-1000);
     font-size: 16px;
     font-weight: 600;
-    line-height: 24px;
+    line-height: 1.4;
     cursor: pointer;
     list-style: none;
+  }
+
+  .home-faq-item:first-child summary {
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  }
+
+  .home-faq-item:last-child:not([open]) summary {
+    border-radius: 0 0 var(--radius-xl) var(--radius-xl);
   }
 
   .home-faq-item summary::-webkit-details-marker {
@@ -52,28 +68,72 @@ const { copy } = Astro.props as { copy: HomepageContent['faq'] }
   }
 
   .home-faq-item summary:hover {
-    background: var(--gray-100);
+    background: var(--gray-200);
+  }
+
+  .home-faq-question {
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   .home-faq-marker {
-    flex: 0 0 20px;
-    width: 20px;
-    height: 20px;
+    display: inline-flex;
+    flex: 0 0 28px;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--glass-bg);
+    color: var(--gray-900);
+  }
+
+  .home-faq-marker svg {
+    width: 16px;
+    height: 16px;
     fill: none;
-    stroke: var(--gray-900);
+    stroke: currentColor;
     stroke-width: 2;
     stroke-linecap: round;
     stroke-linejoin: round;
   }
 
   .home-faq-item[open] .home-faq-marker {
+    background: var(--blue-100);
+    color: var(--blue-700);
+  }
+
+  .home-faq-item[open] .home-faq-marker svg {
     transform: rotate(180deg);
   }
 
   .home-faq-item p {
-    padding: 0 24px 16px;
+    padding: 0 24px 22px;
     color: var(--gray-900);
-    font-size: 14px;
-    line-height: 20px;
+    font-size: 15px;
+    line-height: 1.65;
+  }
+
+  @media (max-width: 600px) {
+    .home-faq-list {
+      border-radius: var(--radius-lg);
+    }
+
+    .home-faq-item:first-child summary {
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    }
+
+    .home-faq-item:last-child:not([open]) summary {
+      border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    }
+
+    .home-faq-item summary {
+      gap: 12px;
+      padding: 16px;
+    }
+
+    .home-faq-item p {
+      padding: 0 16px 18px;
+    }
   }
 </style>

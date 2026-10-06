@@ -34,7 +34,8 @@ export const esES: SiteContent = {
       workspace: {
         parse: {
           eyebrow: 'Comprobación rápida del enlace',
-          title: 'Descargador de vídeos de Vimeo: guarda cualquier vídeo público',
+          titleBrand: 'Descargador de vídeos de Vimeo',
+          titleTagline: 'Guarda cualquier vídeo público',
           helperText:
             'Pega un enlace público de vídeo de Vimeo, revisa las resoluciones que ofrece y descarga la que necesites.',
           linkLabel: 'Enlace de Vimeo',
@@ -58,6 +59,7 @@ export const esES: SiteContent = {
           resumeUnavailableText: 'El registro de recuperación local ha caducado.',
           resumeDismiss: 'Ignorar',
           resuming: 'Reanudando...',
+          extensionEntryLine: 'Descarga directamente en Vimeo con la extensión',
           largeFileExtensionInlineChromeTitle: 'Extensión para Chrome',
           largeFileExtensionInlineChromeDescription:
             'Extensión específica para Chrome que mantiene las descargas grandes de Vimeo fuera de la pestaña.',
