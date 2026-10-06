@@ -129,7 +129,7 @@
 - `docs/feat/008.管理后台/tech-节点本地与中心入口.md` §5：删除 `GET/POST /api/admin/tg/{clients,verify,login/start,login/code,login/2fa,login/resend,login/cancel,clients/delete}` 八行。这些是 Telegram 账号池的节点本地管理端点，源码中已无对应 router——唯一节点本地 router 是 `admin_node_monitor.node_local_router` 的 `/api/admin/node-monitor/network-rate`，与本文 §2 自述「当前只有 `admin_node_monitor.node_local_router`」一致化。
 - `docs/feat/008.管理后台/tech-节点本地与中心入口.md` §5 / §4（**2026-09-20 补注**）：上一条只删了 `/api/admin/tg/*` 八行，同节残留的 4 行 `/api/admin/channel-settings/{platform}/cookies*` 与 §4「给健康但停用的节点配置 session / cookie」同属 Telegram 账号池的渠道 cookie 能力，源码中同样没有对应 router：`backend/src/app/api/admin/` 下无 `channel_settings` 文件、`main.py` 未挂载该路径、admin 前端只调 `node-monitor/network-rate`（`admin/src/api/node-monitor.ts:26`）。本轮一并删除，§5 现存唯一节点本地接口为 `/api/admin/node-monitor/network-rate`；§4 的 `enabled=false` 理由改为「先查看健康但停用节点的本地监控数据，再决定是否启用」。
 - `backend/tests/test_server/services/test_service_node_health_service.py`：URL 拼接夹具路径 `/api/admin/tg/clients` 换成现存的 `/api/admin/node-monitor/network-rate`（断言强度不变）。
-- `backend/scripts/send_smtp_test_emails.py`：默认邮件主题与正文里的 `TG Download` → `Vimeo Video Downloader`（`from_name` 本就取配置里的 Vimeo 名，此前不一致）。
+- `backend/scripts/send_smtp_test_emails.py`：默认邮件主题与正文里的 `TG Download` → `Vimeo Downloader`（`from_name` 本就取配置里的 Vimeo 名，此前不一致）。
 
 **未改（逐条理由）**：
 
@@ -186,7 +186,7 @@
 
 ## 2026-09-19 生产占位域名统一到 vimeo-video-downloader.example
 
-**Why**：转型后插件仍在用 `vimeo-downloader.example.com`，与网站既有占位域 `vimeo-video-downloader.example`、产品名 `Vimeo Video Downloader` 及商店地址 `PLACEHOLDER_EXTENSION_ID` 不同域体系。两套占位值会让上线前的替换点分叉；其中后端 `public_website_base_url` 与网站 `return_to` 不同 host 会让 Google 登录被回跳白名单拒绝。
+**Why**：转型后插件仍在用 `vimeo-downloader.example.com`，与网站既有占位域 `vimeo-video-downloader.example`、产品名 `Vimeo Downloader` 及商店地址 `PLACEHOLDER_EXTENSION_ID` 不同域体系。两套占位值会让上线前的替换点分叉；其中后端 `public_website_base_url` 与网站 `return_to` 不同 host 会让 Google 登录被回跳白名单拒绝。
 
 **From → To**（各端只改自己的集中配置点，插件不依赖 `site.mjs`；统一值为 RFC 2606 保留域 `vimeo-video-downloader.example`）：
 
@@ -266,14 +266,14 @@
 
 ## 2026-09-18 整仓单平台转型：文档对齐 Vimeo 产品
 
-**Why**：仓库已从 Telegram 多平台产品转型为单平台产品 Vimeo Video Downloader，`docs/` 全程未同步，仍在描述已删除的平台、Provider、支付渠道与目录。
+**Why**：仓库已从 Telegram 多平台产品转型为单平台产品 Vimeo Downloader，`docs/` 全程未同步，仍在描述已删除的平台、Provider、支付渠道与目录。
 
 **From → To**：
 - `overview.md`：Telegram 多平台四端矩阵 → 单平台 Vimeo 的 4 个应用（backend / extension / website / admin）、端口、数据流与业务域依赖矩阵 002-011；明确 `website-tgd-pro/`、`extension-pro/` 已整体删除。
 - `tech-extension.md` / `tech-插件RPC.md`：站点 registry 只剩 `SITE_REGISTRATION`（单一 Vimeo），删除 `PLATFORM_REGISTRY` 与 `releaseStatus` 发布状态机；权限收为 `storage` / `identity` / `downloads`。
 - `tech-website.md`：构建改为 `astro check && astro build`，删除 `/tg-play-sw.js` 产物链与多平台落地页列表。
 - `tech-backend.md`：`MEDIA_PROVIDERS` 只剩 `vimeo_media`；删除 Telegram 链路、其余 6 个平台 Provider、Stars 支付；`async_token_bucket.py`、`tg_client_alarm_utils.py`、`ytdlp_runner.py` 的现状说明删净。
-- `tech-邮件发送.md` / `tech-counter.md` / `tech-可观测与SLS.md`：品牌名替换为 Vimeo Video Downloader；SLS project 名仍是外部阿里云资源名 `tg-download`（改名须先改云端），已在文中标注。（**2026-09-18 补注**：本条结论已被上一条改名取代，两端现行 project / logstore 为 `vimeo-download` / `vimeo-download-mark-log`，阿里云侧新资源待创建。）
+- `tech-邮件发送.md` / `tech-counter.md` / `tech-可观测与SLS.md`：品牌名替换为 Vimeo Downloader；SLS project 名仍是外部阿里云资源名 `tg-download`（改名须先改云端），已在文中标注。（**2026-09-18 补注**：本条结论已被上一条改名取代，两端现行 project / logstore 为 `vimeo-download` / `vimeo-download-mark-log`，阿里云侧新资源待创建。）
 - `references/index.md`：`sites/` 下现只剩 `vimeo/`。
 
 ## 2026-08-26 Redis token key 生命周期收口

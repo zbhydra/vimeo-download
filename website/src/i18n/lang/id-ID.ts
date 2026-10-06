@@ -7,13 +7,13 @@ export const idID: SiteContent = {
   },
   layout: {
     nav: {
-      brand: 'Vimeo Video Downloader',
+      brand: 'Vimeo Downloader',
       home: 'Beranda',
       pricing: 'Harga',
     },
     footer: {
       resources: 'Sumber daya',
-      rights: '© 2026 Vimeo Video Downloader. Seluruh hak dilindungi.'
+      rights: '© 2026 Vimeo Downloader. Seluruh hak dilindungi.'
     }
   },
   common: {
@@ -22,14 +22,12 @@ export const idID: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo Video Downloader – Alat Online Gratis dan Ekstensi Chrome',
+        title: 'Vimeo Downloader – Alat Online Gratis dan Ekstensi Chrome',
         description: 'Tempel tautan Vimeo untuk menyimpan video di browser, gratis dan tanpa masuk akun. Butuh audio, subtitle, gambar sampul, atau antrean? Pasang ekstensi Chrome.'
       },
       heroTrustPoints: [
         'Unduhan HD',
-        'Tanpa pendaftaran',
-        'Ramah seluler',
-        'Berjalan di Windows, Mac, Android, dan iPhone'
+        'Tanpa pendaftaran'
       ],
       workspace: {
         parse: {

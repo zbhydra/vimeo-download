@@ -8,10 +8,10 @@ import {
   DEVELOPER_EMAIL,
   OFFICIAL_X_HANDLE,
   OFFICIAL_X_URL,
-  PRODUCT_NAME
+  PRODUCT_NAME,
+  SITE_TITLE
 } from '../lib/site.mjs';
 import SiteConfirmModal from '../components/site/SiteConfirmModal.astro';
-import XBrandIcon from '../components/site/XBrandIcon.astro';
 
 type JsonLdPrimitive = string | number | boolean | null;
 type JsonLdValue = JsonLdPrimitive | JsonLdObject | JsonLdValue[];
@@ -41,7 +41,7 @@ const BASE = '/';
 
 const {
   locale,
-  title = 'Vimeo Video Download | Vimeo Video Downloader',
+  title = SITE_TITLE,
   description: descriptionProp,
   ogType = 'website',
   ogImage = `${BASE}og-image.png`,
@@ -156,8 +156,8 @@ const structuredDataItems = [
   <head>
     <meta charset="UTF-8" />
     <!-- Google tag (gtag.js) -->
-    <script is:inline async src="https://www.googletagmanager.com/gtag/js?id=G-LBSKJD0H16"></script>
-    <script is:inline define:vars={{ GA_ID: 'G-LBSKJD0H16' }}>
+    <script is:inline async src="https://www.googletagmanager.com/gtag/js?id=G-B5RGH4W50V"></script>
+    <script is:inline define:vars={{ GA_ID: 'G-B5RGH4W50V' }}>
       window.dataLayer = window.dataLayer || [];
       window.gtag = function gtag(){window.dataLayer.push(arguments);}
       window.gtag('js', new Date());
@@ -805,12 +805,6 @@ const structuredDataItems = [
         overflow-wrap: anywhere;
       }
 
-      .footer-link-group .footer-social-link {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-      }
-
       .footer-link-group a:hover {
         color: var(--gray-1000);
         text-decoration: underline;
@@ -1098,19 +1092,6 @@ const structuredDataItems = [
                 data-ga-target="contact"
               >
                 {companyContent.contact.navLabel}
-              </a>
-              <a
-                class="footer-social-link"
-                href={OFFICIAL_X_URL}
-                target="_blank"
-                rel="me noopener noreferrer"
-                aria-label={`${companyContent.officialXLabel} (${OFFICIAL_X_HANDLE})`}
-                data-ga-event="official_x_click"
-                data-ga-source="footer"
-                data-ga-target="official_x"
-              >
-                <XBrandIcon />
-                <span>{companyContent.officialXLabel}</span>
               </a>
             </div>
             <div class="footer-link-group" data-footer-resources>

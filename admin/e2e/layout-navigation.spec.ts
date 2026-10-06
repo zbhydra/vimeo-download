@@ -412,6 +412,6 @@ test.describe("标题显示", () => {
     await loginAsAdmin(page);
     await page.goto("/");
 
-    await expect(page.getByText("Vimeo Video Downloader 管理后台")).toBeVisible();
+    await expect(page.getByText("Vimeo Downloader 管理后台")).toBeVisible();
   });
 });

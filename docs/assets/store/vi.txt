@@ -1,11 +1,11 @@
-Vimeo Video Downloader — Lưu video, âm thanh, phụ đề và ảnh bìa Vimeo trong Chrome
+Vimeo Downloader — Lưu video, âm thanh, phụ đề và ảnh bìa Vimeo trong Chrome
 
 Tiện ích Chrome dành cho người xem Vimeo muốn bản sao cục bộ của video đang xem, kèm bảng trên trang để tải video, âm thanh, phụ đề và ảnh bìa.
 
 
 ĐÂY LÀ GÌ
 
-Vimeo Video Downloader là tiện ích Chrome dành cho các trang video Vimeo được hỗ trợ (vimeo.com, www.vimeo.com và player.vimeo.com). Tiện ích phân tích thông tin phát lại và cung cấp nút tải video, âm thanh, phụ đề và ảnh bìa.
+Vimeo Downloader là tiện ích Chrome dành cho các trang video Vimeo được hỗ trợ (vimeo.com, www.vimeo.com và player.vimeo.com). Tiện ích phân tích thông tin phát lại và cung cấp nút tải video, âm thanh, phụ đề và ảnh bìa.
 
 Đây không phải ứng dụng khách Vimeo, không phải bot và không phải trình tải xuống độc lập. Tiện ích phát hiện tài nguyên trên trang Vimeo được hỗ trợ và chạy tải xuống trong nền trình duyệt.
 
@@ -174,7 +174,7 @@ NGÔN NGỮ GIAO DIỆN ĐƯỢC HỖ TRỢ
 
 CÀI ĐẶT
 
-Nếu bạn muốn bản sao cục bộ của một video Vimeo mà bạn đã xem được, hãy cài Vimeo Video Downloader từ Chrome Web Store. Tiện ích chỉ hoạt động trên các trang Vimeo.
+Nếu bạn muốn bản sao cục bộ của một video Vimeo mà bạn đã xem được, hãy cài Vimeo Downloader từ Chrome Web Store. Tiện ích chỉ hoạt động trên các trang Vimeo.
 
 
 PHÁP LÝ VÀ TUÂN THỦ

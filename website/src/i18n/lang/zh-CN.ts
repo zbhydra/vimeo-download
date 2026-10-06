@@ -7,13 +7,13 @@ export const zhCN: SiteContent = {
   },
   layout: {
     nav: {
-      brand: 'Vimeo Video Downloader',
+      brand: 'Vimeo Downloader',
       home: '首页',
       pricing: '价格',
     },
     footer: {
       resources: '资源',
-      rights: '© 2026 Vimeo Video Downloader. 保留所有权利.'
+      rights: '© 2026 Vimeo Downloader. 保留所有权利.'
     }
   },
   common: {
@@ -27,9 +27,7 @@ export const zhCN: SiteContent = {
       },
       heroTrustPoints: [
         '高清下载',
-        '无需注册',
-        '移动端友好',
-        '支持 Windows、Mac、Android 和 iPhone'
+        '无需注册'
       ],
       workspace: {
         parse: {
@@ -78,7 +76,7 @@ export const zhCN: SiteContent = {
           unsafeFileTypeConfirmViewExtension: '查看扩展下载',
           unsafeFileTypeConfirmCancel: '取消',
           browserStorageInsufficientUseExtension:
-            '当前浏览器没有足够可靠的本地存储来下载这个文件（{file_size}）。可用空间约为 {available_space}。建议安装 Vimeo Video Downloader 插件后继续下载。',
+            '当前浏览器没有足够可靠的本地存储来下载这个文件（{file_size}）。可用空间约为 {available_space}。建议安装 Vimeo Downloader 插件后继续下载。',
           browserStorageInsufficientConfirmTitle: '浏览器存储空间不足',
           browserStorageInsufficientConfirmViewExtension: '查看插件下载',
           browserStorageInsufficientConfirmCancel: '取消',

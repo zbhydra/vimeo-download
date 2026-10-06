@@ -7,13 +7,13 @@ export const zhTW: SiteContent = {
   },
   layout: {
     nav: {
-      brand: 'Vimeo Video Downloader',
+      brand: 'Vimeo Downloader',
       home: '首頁',
       pricing: '價格',
     },
     footer: {
       resources: '資源',
-      rights: '© 2026 Vimeo Video Downloader. 保留所有權利.'
+      rights: '© 2026 Vimeo Downloader. 保留所有權利.'
     }
   },
   common: {
@@ -22,14 +22,12 @@ export const zhTW: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo Video Downloader – 免費線上工具與 Chrome 擴充功能',
+        title: 'Vimeo Downloader – 免費線上工具與 Chrome 擴充功能',
         description: '貼上 Vimeo 連結即可在瀏覽器中儲存影片，免費且無需登入。需要音訊、字幕、封面圖或下載佇列？加入 Chrome 擴充功能。'
       },
       heroTrustPoints: [
         '高清下載',
-        '不需註冊',
-        '行動裝置友善',
-        '支援 Windows、Mac、Android 和 iPhone'
+        '不需註冊'
       ],
       workspace: {
         parse: {

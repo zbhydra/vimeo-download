@@ -13,3 +13,15 @@ export function buildPricingUrl(source: PricingSource): string {
   url.searchParams.set('source', source)
   return url.toString()
 }
+
+/** 构建插件内独立订阅页 URL。 */
+export function buildExtensionPricingUrl(source: string): string {
+  if (typeof chrome !== 'undefined' && chrome.runtime?.getURL) {
+    const url = new URL(chrome.runtime.getURL('ext-pricing.html'))
+    url.searchParams.set('utm_source', 'extension')
+    url.searchParams.set('source', source)
+    return url.toString()
+  }
+
+  return buildPricingUrl('upgrade_modal')
+}

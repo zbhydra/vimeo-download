@@ -7,13 +7,13 @@ export const thTH: SiteContent = {
   },
   layout: {
     nav: {
-      brand: 'Vimeo Video Downloader',
+      brand: 'Vimeo Downloader',
       home: 'หน้าแรก',
       pricing: 'ราคา',
     },
     footer: {
       resources: 'แหล่งข้อมูล',
-      rights: '© 2026 Vimeo Video Downloader. สงวนลิขสิทธิ์ทั้งหมด'
+      rights: '© 2026 Vimeo Downloader. สงวนลิขสิทธิ์ทั้งหมด'
     }
   },
   common: {
@@ -22,14 +22,12 @@ export const thTH: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo Video Downloader – เครื่องมือออนไลน์ฟรีและส่วนขยาย Chrome',
+        title: 'Vimeo Downloader – เครื่องมือออนไลน์ฟรีและส่วนขยาย Chrome',
         description: 'วางลิงก์ Vimeo เพื่อบันทึกวิดีโอในเบราว์เซอร์ ฟรีและไม่ต้องเข้าสู่ระบบ ต้องการเสียง คำบรรยาย ภาพปก หรือคิวดาวน์โหลด? เพิ่มส่วนขยาย Chrome'
       },
       heroTrustPoints: [
         'ดาวน์โหลดคุณภาพ HD',
-        'ไม่ต้องสมัครสมาชิก',
-        'รองรับมือถือ',
-        'ใช้ได้บน Windows, Mac, Android และ iPhone'
+        'ไม่ต้องสมัครสมาชิก'
       ],
       workspace: {
         parse: {

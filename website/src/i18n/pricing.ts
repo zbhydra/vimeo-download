@@ -6,7 +6,7 @@ export function getPricingPageCopy(copy: PricingPageContent) {
   const { title, pageDescription, eyebrow } = copy.subscription
   return {
     ...copy,
-    seo: { title: `${title} | Vimeo Video Downloader`, description: pageDescription },
+    seo: { title: `${title} | Vimeo Downloader`, description: pageDescription },
     hero: { eyebrow, title, description: pageDescription }
   }
 }
@@ -397,7 +397,7 @@ export const pricingContent: PricingPageContent = {
   },
   subscriptionManagement: subscriptionManagementCopy.enUS,
   subscription: {
-    pageDescription: 'One subscription for unlimited downloads in the Vimeo Video Downloader extension — no daily quota.',
+    pageDescription: 'One subscription for unlimited downloads in the Vimeo Downloader extension — no daily quota.',
     title: 'Extension Unlimited',
     eyebrow: 'Extension access',
     benefits: [
@@ -485,7 +485,7 @@ export const zhCNPricingContent: PricingPageContent = {
     title: '账户',
     loading: '正在加载账户...',
     signedOutTitle: '登录后购买',
-    signedOutDescription: '购买会绑定到你的 Vimeo Video Downloader 账户。',
+    signedOutDescription: '购买会绑定到你的 Vimeo Downloader 账户。',
     signInCta: '登录',
     signedInLabel: '已登录',
     subscriptionLabel: '订阅',
@@ -545,7 +545,7 @@ export const zhCNPricingContent: PricingPageContent = {
   },
   subscriptionManagement: subscriptionManagementCopy.zhCN,
   subscription: {
-    pageDescription: '一次订阅，Vimeo Video Downloader 插件内无限下载——没有每日额度。',
+    pageDescription: '一次订阅，Vimeo Downloader 插件内无限下载——没有每日额度。',
     title: '无限下载',
     eyebrow: '插件订阅',
     benefits: ['插件内无限下载', '没有每日额度限制', '仅限插件——适用于电脑端 Vimeo'],
@@ -629,7 +629,7 @@ export const zhTWPricingContent: PricingPageContent = {
     title: '帳戶',
     loading: '正在載入帳戶...',
     signedOutTitle: '登入後購買',
-    signedOutDescription: '購買會綁定到你的 Vimeo Video Downloader 帳戶。',
+    signedOutDescription: '購買會綁定到你的 Vimeo Downloader 帳戶。',
     signInCta: '登入',
     signedInLabel: '已登入',
     subscriptionLabel: '訂閱',
@@ -690,7 +690,7 @@ export const zhTWPricingContent: PricingPageContent = {
   subscriptionManagement: subscriptionManagementCopy.zhTW,
   subscription: {
     ...zhCNPricingContent.subscription,
-    pageDescription: '一次訂閱，Vimeo Video Downloader 外掛內無限下載——沒有每日額度。',
+    pageDescription: '一次訂閱，Vimeo Downloader 外掛內無限下載——沒有每日額度。',
     title: '無限下載',
     eyebrow: '外掛訂閱',
     benefits: ['外掛內無限下載', '沒有每日額度限制', '僅限外掛——適用於電腦端 Vimeo'],
@@ -833,7 +833,7 @@ export const jaJPPricingContent: PricingPageContent = {
   },
   subscriptionManagement: subscriptionManagementCopy.jaJP,
   subscription: {
-    pageDescription: '1つのサブスクリプションで Vimeo Video Downloader 拡張機能内のダウンロードが無制限 — 1日の上限もありません。',
+    pageDescription: '1つのサブスクリプションで Vimeo Downloader 拡張機能内のダウンロードが無制限 — 1日の上限もありません。',
     title: '拡張機能 Unlimited',
     eyebrow: '拡張機能サブスクリプション',
     benefits: [
@@ -981,7 +981,7 @@ export const koKRPricingContent: PricingPageContent = {
   },
   subscriptionManagement: subscriptionManagementCopy.koKR,
   subscription: {
-    pageDescription: '하나의 구독으로 Vimeo Video Downloader 확장 프로그램에서 무제한 다운로드 — 일일 한도가 없습니다.',
+    pageDescription: '하나의 구독으로 Vimeo Downloader 확장 프로그램에서 무제한 다운로드 — 일일 한도가 없습니다.',
     title: '확장 프로그램 Unlimited',
     eyebrow: '확장 프로그램 구독',
     benefits: [
@@ -1129,7 +1129,7 @@ export const esESPricingContent: PricingPageContent = {
   },
   subscriptionManagement: subscriptionManagementCopy.esES,
   subscription: {
-    pageDescription: 'Una sola suscripción para descargas ilimitadas en la extensión Vimeo Video Downloader — sin límite diario.',
+    pageDescription: 'Una sola suscripción para descargas ilimitadas en la extensión Vimeo Downloader — sin límite diario.',
     title: 'Unlimited para extensión',
     eyebrow: 'Suscripción para la extensión',
     benefits: [
@@ -1277,7 +1277,7 @@ export const ptBRPricingContent: PricingPageContent = {
   },
   subscriptionManagement: subscriptionManagementCopy.ptBR,
   subscription: {
-    pageDescription: 'Uma assinatura para downloads ilimitados na extensão Vimeo Video Downloader — sem cota diária.',
+    pageDescription: 'Uma assinatura para downloads ilimitados na extensão Vimeo Downloader — sem cota diária.',
     title: 'Unlimited para extensão',
     eyebrow: 'Assinatura para a extensão',
     benefits: [
@@ -1425,7 +1425,7 @@ export const deDEPricingContent: PricingPageContent = {
   },
   subscriptionManagement: subscriptionManagementCopy.deDE,
   subscription: {
-    pageDescription: 'Ein Abo für unbegrenzte Downloads in der Vimeo Video Downloader Erweiterung — kein Tageslimit.',
+    pageDescription: 'Ein Abo für unbegrenzte Downloads in der Vimeo Downloader Erweiterung — kein Tageslimit.',
     title: 'Erweiterung Unlimited',
     eyebrow: 'Erweiterungs-Abo',
     benefits: [
@@ -1573,7 +1573,7 @@ export const frFRPricingContent: PricingPageContent = {
   },
   subscriptionManagement: subscriptionManagementCopy.frFR,
   subscription: {
-    pageDescription: 'Un seul abonnement pour des téléchargements illimités dans l’extension Vimeo Video Downloader — sans quota quotidien.',
+    pageDescription: 'Un seul abonnement pour des téléchargements illimités dans l’extension Vimeo Downloader — sans quota quotidien.',
     title: 'Unlimited pour extension',
     eyebrow: 'Abonnement pour l’extension',
     benefits: [
@@ -1721,7 +1721,7 @@ export const ruRUPricingContent: PricingPageContent = {
   },
   subscriptionManagement: subscriptionManagementCopy.ruRU,
   subscription: {
-    pageDescription: 'Одна подписка — безлимитные загрузки в расширении Vimeo Video Downloader: без дневного лимита.',
+    pageDescription: 'Одна подписка — безлимитные загрузки в расширении Vimeo Downloader: без дневного лимита.',
     title: 'Unlimited для расширения',
     eyebrow: 'Подписка для расширения',
     benefits: [
@@ -1869,7 +1869,7 @@ export const itITPricingContent: PricingPageContent = {
   },
   subscriptionManagement: subscriptionManagementCopy.itIT,
   subscription: {
-    pageDescription: 'Un solo abbonamento per download illimitati nell’estensione Vimeo Video Downloader — senza limite giornaliero.',
+    pageDescription: 'Un solo abbonamento per download illimitati nell’estensione Vimeo Downloader — senza limite giornaliero.',
     title: 'Unlimited per estensione',
     eyebrow: 'Abbonamento per l’estensione',
     benefits: [
@@ -2017,7 +2017,7 @@ export const viVNPricingContent: PricingPageContent = {
   },
   subscriptionManagement: subscriptionManagementCopy.viVN,
   subscription: {
-    pageDescription: 'Một gói đăng ký để tải không giới hạn trong tiện ích Vimeo Video Downloader — không giới hạn hằng ngày.',
+    pageDescription: 'Một gói đăng ký để tải không giới hạn trong tiện ích Vimeo Downloader — không giới hạn hằng ngày.',
     title: 'Unlimited cho tiện ích',
     eyebrow: 'Gói đăng ký tiện ích mở rộng',
     benefits: [
@@ -2165,7 +2165,7 @@ export const thTHPricingContent: PricingPageContent = {
   },
   subscriptionManagement: subscriptionManagementCopy.thTH,
   subscription: {
-    pageDescription: 'สมัครเพียงครั้งเดียวเพื่อดาวน์โหลดไม่จำกัดในส่วนขยาย Vimeo Video Downloader — ไม่มีขีดจำกัดรายวัน',
+    pageDescription: 'สมัครเพียงครั้งเดียวเพื่อดาวน์โหลดไม่จำกัดในส่วนขยาย Vimeo Downloader — ไม่มีขีดจำกัดรายวัน',
     title: 'Unlimited สำหรับส่วนขยาย',
     eyebrow: 'การสมัครสมาชิกส่วนขยาย',
     benefits: [
@@ -2313,7 +2313,7 @@ export const idIDPricingContent: PricingPageContent = {
   },
   subscriptionManagement: subscriptionManagementCopy.idID,
   subscription: {
-    pageDescription: 'Satu langganan untuk unduhan tanpa batas di ekstensi Vimeo Video Downloader — tanpa kuota harian.',
+    pageDescription: 'Satu langganan untuk unduhan tanpa batas di ekstensi Vimeo Downloader — tanpa kuota harian.',
     title: 'Unlimited untuk ekstensi',
     eyebrow: 'Langganan ekstensi',
     benefits: [

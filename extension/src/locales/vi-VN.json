@@ -2,7 +2,7 @@
   "downloadStatus.removeTask": "Xóa {filename}",
   "videoPanel.clip.invalid": "Nhập cả thời gian bắt đầu và kết thúc. Bắt đầu phải từ 0 trở lên, kết thúc phải sau bắt đầu.",
   "quota.loginMessage": "Đã đạt giới hạn tải xuống hằng ngày. Đăng nhập để kiểm tra hạn mức và gói đăng ký của tài khoản.",
-  "app.title": "Vimeo Video Downloader",
+  "app.title": "Vimeo Downloader",
   "app.openOfficialWebsite": "Truy cập trang web chính thức",
   "app.refresh": "Làm Mới",
   "app.supportContact": "Có câu hỏi? Liên hệ {email}.",

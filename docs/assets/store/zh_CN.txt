@@ -1,11 +1,11 @@
-Vimeo Video Downloader — 在 Chrome 中保存 Vimeo 视频、音频、字幕与封面图
+Vimeo Downloader — 在 Chrome 中保存 Vimeo 视频、音频、字幕与封面图
 
 一款面向 Vimeo 观看者的 Chrome 扩展：把你正在观看的视频保存到本地，并在页面上提供视频、音频、字幕、封面图四行下载面板。
 
 
 这是什么
 
-Vimeo Video Downloader 是一款运行在支持的 Vimeo 视频页面（vimeo.com、www.vimeo.com、player.vimeo.com）上的 Chrome 扩展。它解析播放器的播放信息，提供视频、音频轨、字幕和封面图的下载按钮。
+Vimeo Downloader 是一款运行在支持的 Vimeo 视频页面（vimeo.com、www.vimeo.com、player.vimeo.com）上的 Chrome 扩展。它解析播放器的播放信息，提供视频、音频轨、字幕和封面图的下载按钮。
 
 它不是 Vimeo 客户端、不是机器人、也不是独立下载器。它在支持的 Vimeo 页面上发现资源，下载任务在浏览器后台执行。
 
@@ -173,7 +173,7 @@ A：视频为 MP4，音频为 M4A 或 MP3，字幕为 VTT，封面图为 JPEG。
 
 安装
 
-如果你想把自己已经能观看的 Vimeo 视频存一份到本地，欢迎从 Chrome 应用商店安装 Vimeo Video Downloader。扩展只在 Vimeo 页面上生效。
+如果你想把自己已经能观看的 Vimeo 视频存一份到本地，欢迎从 Chrome 应用商店安装 Vimeo Downloader。扩展只在 Vimeo 页面上生效。
 
 
 法律与合规

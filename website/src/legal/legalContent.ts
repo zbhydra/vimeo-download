@@ -1,5 +1,5 @@
 /**
- * Legal page copy for Vimeo Video Downloader website.
+ * Legal page copy for Vimeo Downloader website.
  *
  * Legal text is kept in one module so every locale route can render the same
  * reviewed fallback until each translation is explicitly approved.
@@ -70,17 +70,17 @@ interface LegalContent {
 
 const termsLastUpdated = 'October 5, 2026'
 const privacyLastUpdated = 'September 18, 2026'
-const serviceName = 'Vimeo Video Downloader'
+const serviceName = 'Vimeo Downloader'
 
 const englishLegalContent: LegalContent = {
   terms: {
     navLabel: 'Terms',
     seoTitle: `Terms of Service | ${serviceName}`,
     seoDescription:
-      'Read the Vimeo Video Downloader Terms of Service, including acceptable use, account access, free website downloads, subscriptions, disclaimers, and contact details.',
+      'Read the Vimeo Downloader Terms of Service, including acceptable use, account access, free website downloads, subscriptions, disclaimers, and contact details.',
     title: 'Terms of Service',
     intro:
-      'These terms explain how you may use Vimeo Video Downloader, including the website, browser extension, download tools, account features, and subscription-related workflows.',
+      'These terms explain how you may use Vimeo Downloader, including the website, browser extension, download tools, account features, and subscription-related workflows.',
     updatedLabel: 'Last updated',
     updatedAt: termsLastUpdated,
     updatedAtIso: '2026-10-05',
@@ -226,11 +226,11 @@ const englishLegalContent: LegalContent = {
     navLabel: 'Privacy Policy',
     seoTitle: `Privacy Policy | ${serviceName}`,
     seoDescription:
-      'Read the Vimeo Video Downloader Privacy Policy, including what data is collected, how Google sign-in data is used, analytics, storage, sharing, retention, and contact details.',
+      'Read the Vimeo Downloader Privacy Policy, including what data is collected, how Google sign-in data is used, analytics, storage, sharing, retention, and contact details.',
     title: 'Privacy Policy',
-    intro: `This policy explains what information Vimeo Video Downloader collects, why we use it, how it is stored or shared, and what choices you have.
+    intro: `This policy explains what information Vimeo Downloader collects, why we use it, how it is stored or shared, and what choices you have.
 
-This policy covers the Vimeo Video Downloader website and browser extension.`,
+This policy covers the Vimeo Downloader website and browser extension.`,
     updatedLabel: 'Last updated',
     updatedAt: privacyLastUpdated,
     updatedAtIso: '2026-09-18',
@@ -253,7 +253,7 @@ This policy covers the Vimeo Video Downloader website and browser extension.`,
         blocks: [
           {
             kind: 'paragraph',
-            text: 'If you sign in with Google, we use the basic identity information Google provides, such as your email address and profile identity, to create or access your Vimeo Video Downloader account.'
+            text: 'If you sign in with Google, we use the basic identity information Google provides, such as your email address and profile identity, to create or access your Vimeo Downloader account.'
           },
           {
             kind: 'paragraph',
@@ -284,7 +284,7 @@ This policy covers the Vimeo Video Downloader website and browser extension.`,
         blocks: [
           {
             kind: 'paragraph',
-            text: 'The website may use analytics tools, including Google Analytics and Microsoft Clarity, to understand page usage, navigation, interactions, session replays, conversion, and product reliability. Analytics data is not used to sell user data or build personalized advertising profiles for Vimeo Video Downloader.'
+            text: 'The website may use analytics tools, including Google Analytics and Microsoft Clarity, to understand page usage, navigation, interactions, session replays, conversion, and product reliability. Analytics data is not used to sell user data or build personalized advertising profiles for Vimeo Downloader.'
           }
         ]
       },

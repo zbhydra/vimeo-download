@@ -7,13 +7,13 @@ export const ruRU: SiteContent = {
   },
   layout: {
     nav: {
-      brand: 'Vimeo Video Downloader',
+      brand: 'Vimeo Downloader',
       home: 'Главная',
       pricing: 'Цены',
     },
     footer: {
       resources: 'Ресурсы',
-      rights: '© 2026 Vimeo Video Downloader. Все права защищены.'
+      rights: '© 2026 Vimeo Downloader. Все права защищены.'
     }
   },
   common: {
@@ -22,14 +22,12 @@ export const ruRU: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo Video Downloader – бесплатный онлайн-инструмент и расширение Chrome',
+        title: 'Vimeo Downloader – бесплатный онлайн-инструмент и расширение Chrome',
         description: 'Вставьте ссылку Vimeo, чтобы сохранить видео в браузере бесплатно и без входа. Нужны аудио, субтитры, обложка или очередь? Добавьте расширение Chrome.'
       },
       heroTrustPoints: [
         'Скачивание в HD',
-        'Без регистрации',
-        'Удобно на мобильных',
-        'Работает на Windows, Mac, Android и iPhone'
+        'Без регистрации'
       ],
       workspace: {
         parse: {

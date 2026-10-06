@@ -18,7 +18,7 @@
 - `<SITE_ORIGIN>/llms.txt`
 - `<SITE_ORIGIN>/llms-full.txt`
 
-目标是让 LLM、AI 搜索和 agent 快速理解 Vimeo Video Downloader 的产品定位、核心页面、支持平台与限制说明。域名当前是占位值，与 `SITE_ORIGIN` 一起替换。
+目标是让 LLM、AI 搜索和 agent 快速理解 Vimeo Downloader 的产品定位、核心页面、支持平台与限制说明。域名当前是占位值，与 `SITE_ORIGIN` 一起替换。
 
 **llms.txt 不是 robots、sitemap 或训练授权文件**——只是一份 AI 可读目录，不能控制爬虫抓取，也不能保证搜索排名。
 
@@ -34,7 +34,7 @@ Astro 构建时复制到 `website/dist/`。两份文件手写维护，不从 sit
 ### 1.3 /llms.txt 短入口结构(以文件为准)
 
 ```
-# Vimeo Video Downloader
+# Vimeo Downloader
 > 一句话定位(在线工具 + Chrome 插件)
 ## Pages        # 首页 / Pricing / About / Contact / Terms / Privacy / 完整入口
 ## Sitemap
@@ -44,7 +44,7 @@ Astro 构建时复制到 `website/dist/`。两份文件手写维护，不从 sit
 ### 1.4 /llms-full.txt 完整入口结构(以文件为准)
 
 ```
-# Vimeo Video Downloader
+# Vimeo Downloader
 > Full content index ...
 ## Pages
 ## Language Entrances   # 14 个根语言首页
@@ -79,7 +79,7 @@ LLMs 文件**不包含**：
 
 构建产物校验：
 
-1. `dist/llms.txt`、`dist/llms-full.txt` 存在，且首行标题为 `# Vimeo Video Downloader`。
+1. `dist/llms.txt`、`dist/llms-full.txt` 存在，且首行标题为 `# Vimeo Downloader`。
 2. 两份文件互相链接，且都链接到 `sitemap.xml`。
 3. 两份文件引用的站内 URL 都落在 `SITE_HOST`，协议为 HTTPS，且在构建产物里真实存在。
 4. 短入口必需 URL：首页、Pricing、About、Contact、`llms-full.txt`、`sitemap.xml`。
@@ -117,7 +117,7 @@ LLMs 文件**不包含**：
 
 | 分组 | 标题 | 链接 |
 | --- | --- | --- |
-| Company | `companyContent.footerGroupLabel` | About、Contact、官方 X 账号(`OFFICIAL_X_URL`，带官方 X 点击埋点) |
+| Company | `companyContent.footerGroupLabel` | About、Contact |
 | Resources | `t.layout.footer.resources` | Terms、Privacy |
 
 站内链接统一带内部跳转埋点（来源 `footer`，目标为对应页），并使用当前语言前缀。底部是 `t.layout.footer.rights` 版权文字。

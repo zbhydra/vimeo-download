@@ -1,7 +1,7 @@
 [project]
 name = "app"
 version = "0.1.0"
-description = "Vimeo Video Downloader 后端"
+description = "Vimeo Downloader 后端"
 authors = [
     {name = "hydra", email = "zbhydra@163.com"}
 ]

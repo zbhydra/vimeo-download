@@ -7,13 +7,13 @@ export const viVN: SiteContent = {
   },
   layout: {
     nav: {
-      brand: 'Vimeo Video Downloader',
+      brand: 'Vimeo Downloader',
       home: 'Trang Chủ',
       pricing: 'Giá',
     },
     footer: {
       resources: 'Tài nguyên',
-      rights: '© 2026 Vimeo Video Downloader. Bảo lưu mọi quyền.'
+      rights: '© 2026 Vimeo Downloader. Bảo lưu mọi quyền.'
     }
   },
   common: {
@@ -22,14 +22,12 @@ export const viVN: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo Video Downloader – Công cụ trực tuyến miễn phí và tiện ích Chrome',
+        title: 'Vimeo Downloader – Công cụ trực tuyến miễn phí và tiện ích Chrome',
         description: 'Dán liên kết Vimeo để lưu video ngay trong trình duyệt, miễn phí và không cần đăng nhập. Cần âm thanh, phụ đề, ảnh bìa hoặc hàng đợi? Hãy thêm tiện ích Chrome.'
       },
       heroTrustPoints: [
         'Tải chất lượng HD',
-        'Không cần đăng ký',
-        'Thân thiện với di động',
-        'Chạy trên Windows, Mac, Android và iPhone'
+        'Không cần đăng ký'
       ],
       workspace: {
         parse: {

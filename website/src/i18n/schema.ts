@@ -143,8 +143,8 @@ export interface HomepageContent {
     title: string
     description: string
   }
-  /** Hero 信任徽标（恰好 4 个短文本）。 */
-  heroTrustPoints: [string, string, string, string]
+  /** Hero 信任徽标（恰好 2 个短文本）。 */
+  heroTrustPoints: [string, string]
   /** 下载工作区文案。 */
   workspace: DownloadWorkspaceContent
   /** SoftwareApplication 结构化数据，全站共用。 */

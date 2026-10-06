@@ -2,7 +2,7 @@
   "downloadStatus.removeTask": "{filename} entfernen",
   "videoPanel.clip.invalid": "Gib Start und Ende ein. Der Start muss mindestens 0 sein, das Ende muss nach dem Start liegen.",
   "quota.loginMessage": "Das tägliche Downloadlimit ist erreicht. Melde dich an, um dein Kontingent und dein Abonnement zu prüfen.",
-  "app.title": "Vimeo Video Downloader",
+  "app.title": "Vimeo Downloader",
   "app.openOfficialWebsite": "Offizielle Website besuchen",
   "app.refresh": "Aktualisieren",
   "app.supportContact": "Fragen? Kontaktieren Sie {email}.",

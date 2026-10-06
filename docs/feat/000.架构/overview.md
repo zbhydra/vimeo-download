@@ -15,7 +15,7 @@ monorepo，各前端子项目独立用 pnpm 管理（无根 workspace），后�
 | **admin** | `admin/` | Vue 3 + Naive UI + vue-router + Pinia | 独立 SPA 管理后台（节点 / 订单 / 渠道 / 远端配置 / mark-log 诊断），走 `/api/admin/*`。详见 `@tech-extension.md` 末尾 |
 | `scripts/` | — | Node | 仓库级构建脚本（Playwright 浏览器身份等） |
 
-> 产品名统一为 **Vimeo Video Downloader**。仓库内不再有第二个站点或第二个插件产品；`website-tgd-pro/`、`extension-pro/` 已随产品转型整体删除，文档中不得再引用（历史 changelog 与已标注作废/补注的条目除外——那里的词形是历史记录，不再描述现状）。
+> 产品名统一为 **Vimeo Downloader**。仓库内不再有第二个站点或第二个插件产品；`website-tgd-pro/`、`extension-pro/` 已随产品转型整体删除，文档中不得再引用（历史 changelog 与已标注作废/补注的条目除外——那里的词形是历史记录，不再描述现状）。
 
 ### 1.1 本地开发端口
 

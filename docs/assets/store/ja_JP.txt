@@ -1,11 +1,11 @@
-Vimeo Video Downloader — Vimeo の動画・音声・字幕・カバー画像を Chrome に保存
+Vimeo Downloader — Vimeo の動画・音声・字幕・カバー画像を Chrome に保存
 
 Vimeo を視聴している方向けの Chrome 拡張機能です。再生中の動画をローカルに保存でき、ページ上に動画・音声・字幕・カバー画像の 4 行パネルを表示します。
 
 
 これは何か
 
-Vimeo Video Downloader は、対応する Vimeo 動画ページ（vimeo.com、www.vimeo.com、player.vimeo.com）で動作する Chrome 拡張機能です。プレーヤーの再生情報を解析し、動画・音声・字幕・カバー画像のダウンロードボタンを提供します。
+Vimeo Downloader は、対応する Vimeo 動画ページ（vimeo.com、www.vimeo.com、player.vimeo.com）で動作する Chrome 拡張機能です。プレーヤーの再生情報を解析し、動画・音声・字幕・カバー画像のダウンロードボタンを提供します。
 
 Vimeo クライアントでも、ボットでも、単体のダウンローダーでもありません。対応する Vimeo ページでリソースを検出し、ダウンロードはブラウザのバックグラウンドで実行します。
 
@@ -174,7 +174,7 @@ A: 動画は MP4、音声は M4A または MP3、字幕は VTT、カバー画像
 
 インストール
 
-すでに視聴できる Vimeo 動画をローカルに保存したい方は、Chrome ウェブストアから Vimeo Video Downloader をインストールしてください。拡張機能は Vimeo のページでのみ動作します。
+すでに視聴できる Vimeo 動画をローカルに保存したい方は、Chrome ウェブストアから Vimeo Downloader をインストールしてください。拡張機能は Vimeo のページでのみ動作します。
 
 
 法的情報とコンプライアンス

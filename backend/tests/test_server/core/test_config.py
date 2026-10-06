@@ -30,7 +30,7 @@ smtp:
     password: "secret-a"
     use_tls: true
     from_email: "sender-a@example.com"
-    from_name: "Vimeo Video Downloader"
+    from_name: "Vimeo Downloader"
     timeout: 5
     weight: 30
   - host: "smtp-b.example.com"

@@ -22,7 +22,10 @@ export const SITE_ORIGIN = 'https://vimeodownloader.app'
 export const SITE_HOST = 'vimeodownloader.app'
 
 /** 产品名，用于结构化数据、meta author、sitemap XSL 等非多语言位置。 */
-export const PRODUCT_NAME = 'Vimeo Video Downloader'
+export const PRODUCT_NAME = 'Vimeo Downloader'
+
+/** 首页浏览器标题。 */
+export const SITE_TITLE = 'Vimeo Downloader - Download HD Video & Audio'
 
 /** 公开支持邮箱，出现在法务页、公司页与结构化数据里。 */
 export const DEVELOPER_EMAIL = `support@${SITE_HOST}`

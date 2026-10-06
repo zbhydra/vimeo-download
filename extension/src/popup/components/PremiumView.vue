@@ -3,6 +3,7 @@
     <dialog
       ref="dialog"
       class="premium-overlay"
+      :class="{ 'premium-page-overlay': props.page }"
       aria-labelledby="vdl-premium-title"
       :style="colorVars"
       @close="handleClose"
@@ -197,6 +198,15 @@ import {
   getPremiumSource,
   premiumViewVisible
 } from '@/core/composables/premiumView'
+
+interface Props {
+  /** 页面入口使用更宽的独立订阅页布局；popup 继续使用紧凑弹层。 */
+  page?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  page: false
+})
 
 /** 购买视图状态机阶段。 */
 type PremiumPhase =
@@ -866,6 +876,80 @@ function formatPrice(amount: number, currency: string): string {
 .premium-secondary-button:hover {
   border-color: var(--premium-primary);
   color: var(--premium-primary);
+}
+
+.premium-page-overlay .premium-header {
+  padding: 20px max(24px, calc((100vw - 960px) / 2));
+}
+
+.premium-page-overlay .premium-title {
+  font-size: 24px;
+}
+
+.premium-page-overlay .premium-body {
+  width: min(960px, 100%);
+  margin: 0 auto;
+  padding: 36px 24px 56px;
+  gap: 24px;
+  box-sizing: border-box;
+}
+
+.premium-page-overlay .premium-selling {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.premium-page-overlay .premium-selling-item {
+  min-height: 44px;
+  padding: 12px 14px;
+  border: 1px solid var(--premium-gray-200);
+  border-radius: 10px;
+  background: var(--premium-gray-50);
+  box-sizing: border-box;
+}
+
+.premium-page-overlay .premium-plans {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.premium-page-overlay .premium-plan {
+  min-height: 124px;
+  padding: 16px;
+}
+
+.premium-page-overlay .premium-plan-period {
+  font-size: 15px;
+}
+
+.premium-page-overlay .premium-plan-price {
+  font-size: 24px;
+}
+
+.premium-page-overlay .premium-plan-note,
+.premium-page-overlay .premium-message {
+  font-size: 13px;
+}
+
+.premium-page-overlay .premium-buy {
+  min-height: 48px;
+  font-size: 15px;
+}
+
+@media (max-width: 640px) {
+  .premium-page-overlay .premium-header {
+    padding: 16px;
+  }
+
+  .premium-page-overlay .premium-body {
+    padding: 24px 16px 40px;
+  }
+
+  .premium-page-overlay .premium-selling {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

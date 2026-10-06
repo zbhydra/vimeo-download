@@ -441,8 +441,21 @@ const { copy, extensionInstallUrl, supportEmail, showHero = false } = Astro.prop
   /*
     页头带（SiteStage band）与价格卡的叠放：
     band 内容底部留 240px，价格区用 -200px 上移，让 3 张卡跨在舞台底边上，两者之间留 40px 缓冲，
-    账号菜单展开时不会被卡片盖住。价格区 z-index 高于舞台，卡片之外的区域透明，舞台仍可见。
+    价格区 z-index 高于舞台，卡片之外的区域透明，舞台仍可见。
   */
+  .pricing-page > .site-stage {
+    isolation: auto;
+  }
+
+  .pricing-page > .site-stage .site-stage-content {
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  .pricing-page > .site-stage .pricing-account-stack {
+    pointer-events: auto;
+  }
+
   .pricing-band {
     display: grid;
     justify-items: center;

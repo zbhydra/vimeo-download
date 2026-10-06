@@ -113,7 +113,7 @@
     "security_content": "请勿将验证码告知他人，包括自称客服的人员。验证码 10 分钟内有效。",
     "ignore_message": "如果这不是您本人的操作，请忽略此邮件。",
     "auto_send_notice": "此邮件由系统自动发送，请勿直接回复",
-    "brand_name": "Vimeo Video Downloader",
+    "brand_name": "Vimeo Downloader",
     "brand_slogan": "安全 · 快速 · 便捷",
     "subject": "验证码登录"
   }

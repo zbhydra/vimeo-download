@@ -181,8 +181,8 @@ class LoggingSettings(BaseSettings):
 class APISettings(BaseSettings):
     """API配置"""
 
-    title: str = Field(default="Vimeo Video Downloader API")
-    description: str = Field(default="Vimeo Video Downloader backend API")
+    title: str = Field(default="Vimeo Downloader API")
+    description: str = Field(default="Vimeo Downloader backend API")
     version: str = Field(default="0.1.0")
     docs_url: str | None = Field(default="/docs")
     redoc_url: str | None = Field(default="/redoc")
@@ -284,7 +284,7 @@ class SMTPSettings(BaseSettings):
     )
     use_tls: bool = Field(default=True, description="是否使用 TLS")
     from_email: str = Field(min_length=1, description="发件人邮箱")
-    from_name: str = Field(default="Vimeo Video Downloader", description="发件人名称")
+    from_name: str = Field(default="Vimeo Downloader", description="发件人名称")
     timeout: int = Field(default=10, ge=1, description="连接超时时间（秒）")
     weight: int = Field(default=100, ge=1, description="发送权重")
 

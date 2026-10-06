@@ -62,7 +62,7 @@ website/src/i18n/
 - `schema.ts` 定义 `SiteContent` interface,每个业务子 interface 声明该模块全部文案字段及注释。当前顶层结构:
   - `site.description`:站点级默认 meta description,与首页 `meta.description` 同一措辞;
   - `layout.nav`(`brand` / `home` / `pricing`)、`layout.footer`(`resources` / `rights`)、`common.installCta`;
-  - `pages.homepage`(`HomepageContent`):`meta`(title / description)、`heroTrustPoints`(恰好 4 条)、`workspace`(`DownloadWorkspaceContent`,首屏下载器文案;`parse.title` 拆为 `parse.titleBrand` / `parse.titleTagline` 两个键,另有一行插件入口文案 `parse.extensionEntryLine`)、`softwareApplication`(结构化数据描述与能力清单),以及 8 个展示区块键 `intro` / `features` / `steps` / `comparison` / `scope` / `plans` / `faq` / `finalCta`(区块 `heading` 即该区块唯一的 H2);
+  - `pages.homepage`(`HomepageContent`):`meta`(title / description)、`heroTrustPoints`(恰好 2 条)、`workspace`(`DownloadWorkspaceContent`,首屏下载器文案;`parse.title` 拆为 `parse.titleBrand` / `parse.titleTagline` 两个键,另有一行插件入口文案 `parse.extensionEntryLine`)、`softwareApplication`(结构化数据描述与能力清单),以及 8 个展示区块键 `intro` / `features` / `steps` / `comparison` / `scope` / `plans` / `faq` / `finalCta`(区块 `heading` 即该区块唯一的 H2);
   - `pages.pricing`(`PricingPageContent`):Pricing 页、登录弹窗、订阅结算与好评赠送文案,由 `i18n/pricing.ts` 按语言提供。
 - 首页文案不含 Credits、签到、额度数字与价格;下载工作区文案不含登录、账户与积分购买。商店文案是首页展示区块的事实与术语来源(`docs/assets/store/`),映射见 `@../000.架构/plans/004.官网改版-插件展示与免费网页下载.md` §2.2。
 - 每个语言的 `lang/{locale}.ts` 导出一个 `SiteContent` 对象,TS 编译期强制 14 语言字段齐全,缺字段编译失败(`pnpm build` 里的 `astro check` 能拦住)。

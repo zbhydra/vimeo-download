@@ -29,18 +29,6 @@
         <Icon :name="IconName.COG_6_TOOTH" :size="IconSize.MD" />
       </button>
 
-      <!-- 刷新按钮 -->
-      <button
-        v-if="!resourceStore.loading && resourceStore.hasResources"
-        type="button"
-        class="icon-button refresh"
-        :title="t(I18N_KEYS.APP.REFRESH)"
-        :aria-label="t(I18N_KEYS.APP.REFRESH)"
-        @click="$emit('refresh')"
-      >
-        <Icon :name="IconName.ARROW_PATH" :size="IconSize.MD" />
-      </button>
-
       <!-- 登录按钮/用户菜单 -->
       <LoginButton
         @click="handleOpenLogin"
@@ -54,31 +42,21 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { I18N_KEYS } from '@/core/constants/i18n'
-import { useResourceStore } from '@/popup/stores/resourceStore'
 import { useAuthStore } from '@/core/stores/authStore'
 import { logger } from '@/core/utils/logger'
 import { COMMON_COLORS } from '@/core/constants/style'
 import { Icon, IconName, IconSize } from '@/core/components/icons'
 import { QuotaCounter } from '@/core/components/quota'
 import LoginButton from '@/core/components/auth/LoginButton.vue'
-import { buildHomeUrl, openExternalPage } from '@/core/utils/navigation'
+import { buildHomeUrl, openExtensionPricingPage, openExternalPage } from '@/core/utils/navigation'
 import { openLoginModal } from '@/core/composables/loginModal'
 import { openSettingsModal } from '@/core/composables/settingsModal'
-import { subscriptionApi } from '@/core/api/subscription'
-import { useToast } from '@/core/composables/useToast'
-
-// Emits
-defineEmits<{
-  refresh: []
-}>()
 
 // I18n
 const { t } = useI18n()
 
 // Stores
-const resourceStore = useResourceStore()
 const authStore = useAuthStore()
-const { showSuccess } = useToast()
 
 /** 头部品牌入口打开官网首页；打开失败已由 openExternalPage 记录日志。 */
 async function handleOpenOfficialWebsite(): Promise<void> {
@@ -105,18 +83,8 @@ async function handleLogout(): Promise<void> {
 /**
  * 请求订阅渠道管理入口并在新标签页打开；请求失败已由 HTTP 拦截器统一提示。
  */
-async function handleManageSubscription(): Promise<void> {
-  try {
-    const { url } = await subscriptionApi.createManagement()
-    if (!url) {
-      // 一次性买断等非自动续费订阅没有渠道管理页，明确告知而非静默失败。
-      showSuccess(t(I18N_KEYS.SUBSCRIPTION.MANAGE_UNAVAILABLE))
-      return
-    }
-    await openExternalPage(url, 'subscription_management')
-  } catch (error) {
-    logger.error('[AppHeader] 打开订阅管理入口失败:', error)
-  }
+function handleManageSubscription(): void {
+  void openExtensionPricingPage('subscription_management')
 }
 </script>
 

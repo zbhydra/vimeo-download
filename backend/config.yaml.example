@@ -37,8 +37,8 @@ logging:
   file: "log/app.log"
 
 api:
-  title: "Vimeo Video Downloader API"
-  description: "Vimeo Video Downloader backend API"
+  title: "Vimeo Downloader API"
+  description: "Vimeo Downloader backend API"
   version: "0.1.0"
   docs_url: "/docs"
   redoc_url: "/redoc"

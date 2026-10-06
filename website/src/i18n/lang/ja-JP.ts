@@ -7,13 +7,13 @@ export const jaJP: SiteContent = {
   },
   layout: {
     nav: {
-      brand: 'Vimeo Video Downloader',
+      brand: 'Vimeo Downloader',
       home: 'ホーム',
       pricing: '料金',
     },
     footer: {
       resources: 'リソース',
-      rights: '© 2026 Vimeo Video Downloader. All rights reserved.'
+      rights: '© 2026 Vimeo Downloader. All rights reserved.'
     }
   },
   common: {
@@ -22,14 +22,12 @@ export const jaJP: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo Video Downloader – 無料のオンラインツールと Chrome 拡張機能',
+        title: 'Vimeo Downloader – 無料のオンラインツールと Chrome 拡張機能',
         description: 'Vimeo のリンクを貼るだけで、ログイン不要・無料でブラウザに動画を保存できます。音声、字幕、カバー画像、キューが必要なら Chrome 拡張機能を追加してください。'
       },
       heroTrustPoints: [
         'HD ダウンロード',
-        '登録不要',
-        'モバイル対応',
-        'Windows、Mac、Android、iPhone で利用可能'
+        '登録不要'
       ],
       workspace: {
         parse: {

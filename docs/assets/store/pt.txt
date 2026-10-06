@@ -1,11 +1,11 @@
-Vimeo Video Downloader — Salve vídeos, áudio, legendas e imagens de capa do Vimeo no Chrome
+Vimeo Downloader — Salve vídeos, áudio, legendas e imagens de capa do Vimeo no Chrome
 
 Uma extensão do Chrome para quem assiste ao Vimeo e quer uma cópia local do vídeo que já está reproduzindo, com um painel na página para baixar vídeo, áudio, legendas e imagem de capa.
 
 
 O QUE É
 
-Vimeo Video Downloader é uma extensão do Chrome para páginas de vídeo Vimeo compatíveis (vimeo.com, www.vimeo.com e player.vimeo.com). Analisa as informações de reprodução do player e oferece botões para vídeo, áudio, legendas e imagem de capa.
+Vimeo Downloader é uma extensão do Chrome para páginas de vídeo Vimeo compatíveis (vimeo.com, www.vimeo.com e player.vimeo.com). Analisa as informações de reprodução do player e oferece botões para vídeo, áudio, legendas e imagem de capa.
 
 Não é um cliente do Vimeo, nem um bot, nem um baixador independente. Detecta recursos nas páginas Vimeo compatíveis e executa os downloads em segundo plano no navegador.
 
@@ -174,7 +174,7 @@ IDIOMAS DE INTERFACE SUPORTADOS
 
 INSTALAÇÃO
 
-Se você quer uma cópia local de um vídeo do Vimeo que já consegue assistir, instale o Vimeo Video Downloader pela Chrome Web Store. A extensão só é ativada em páginas do Vimeo.
+Se você quer uma cópia local de um vídeo do Vimeo que já consegue assistir, instale o Vimeo Downloader pela Chrome Web Store. A extensão só é ativada em páginas do Vimeo.
 
 
 ASPECTOS LEGAIS E CONFORMIDADE

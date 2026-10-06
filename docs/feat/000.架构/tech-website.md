@@ -82,7 +82,7 @@ website/
   - GA4 内联加载
   - 全站深色 token（Geist 语义名、深色值，另有品牌与装饰 token，`color-scheme: dark`）、按钮与焦点环全局样式，规则见 `../../references/specs/spec-website.md` §4
 - 页面通过 props 传 `title / description / structuredData`，布局内组装 meta。
-- 品牌实体信号统一使用 `Vimeo Video Downloader`，与 extension 的 `extensionName` 和商店文案逐字一致。
+- 品牌实体信号统一使用 `Vimeo Downloader`，与 extension 的 `extensionName` 和商店文案逐字一致。
 
 ## 7. SLS 日志双写（website）
 

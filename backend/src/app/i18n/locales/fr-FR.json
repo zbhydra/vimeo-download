@@ -105,7 +105,7 @@
     "security_content": "Ne partagez pas ce code avec personne, y compris ceux qui prétendent être le service client. Le code est valide pendant 10 minutes.",
     "ignore_message": "Si ce n'est pas votre action, veuillez ignorer cet e-mail.",
     "auto_send_notice": "Cet e-mail est envoyé automatiquement, veuillez ne pas répondre",
-    "brand_name": "Vimeo Video Downloader",
+    "brand_name": "Vimeo Downloader",
     "brand_slogan": "Sécurisé · Rapide · Pratique",
     "subject": "Connexion par Code de Vérification"
   }

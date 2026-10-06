@@ -1,6 +1,6 @@
-# Vimeo Video Downloader Official Website
+# Vimeo Downloader Official Website
 
-Official website for the Vimeo Video Downloader browser extension: a free in-browser
+Official website for the Vimeo Downloader browser extension: a free in-browser
 download tool on the home page, an overview of the extension, and the extension's
 Unlimited subscription at `/ext-pricing/`. The whole site uses a single dark visual
 theme; its rules live in `docs/references/specs/spec-website.md` §4.

@@ -95,7 +95,7 @@
     "security_content": "請勿將驗證碼告知他人，包括自稱客服的人員。驗證碼 10 分鐘內有效。",
     "ignore_message": "如果這不是您本人的操作，請忽略此郵件。",
     "auto_send_notice": "此郵件由系統自動發送，請勿直接回覆",
-    "brand_name": "Vimeo Video Downloader",
+    "brand_name": "Vimeo Downloader",
     "brand_slogan": "安全 · 快速 · 便捷",
     "subject": "驗證碼登入"
   }

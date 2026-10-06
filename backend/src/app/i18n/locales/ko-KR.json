@@ -95,7 +95,7 @@
     "security_content": "고객센터를 사칭하는 사람을 포함하여 누구에게도 인증 코드를 알려주지 마세요. 인증 코드는 10분 동안 유효합니다.",
     "ignore_message": "이것이 본인의 작업이 아닌 경우 이 이메일을 무시하세요.",
     "auto_send_notice": "이 이메일은 시스템에서 자동으로 전송되었습니다. 직접 회신하지 마세요",
-    "brand_name": "Vimeo Video Downloader",
+    "brand_name": "Vimeo Downloader",
     "brand_slogan": "안전 · 빠름 · 편리",
     "subject": "인증 코드 로그인"
   }

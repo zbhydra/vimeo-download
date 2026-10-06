@@ -1,11 +1,11 @@
-Vimeo Video Downloader — Simpan Video, Audio, Subtitle, dan Gambar Sampul Vimeo di Chrome
+Vimeo Downloader — Simpan Video, Audio, Subtitle, dan Gambar Sampul Vimeo di Chrome
 
 Ekstensi Chrome untuk penonton Vimeo yang ingin salinan lokal video yang sedang ditonton, dengan panel di halaman untuk mengunduh video, audio, subtitle, dan gambar sampul.
 
 
 APA INI
 
-Vimeo Video Downloader adalah ekstensi Chrome untuk halaman video Vimeo yang didukung (vimeo.com, www.vimeo.com, dan player.vimeo.com). Ekstensi mengurai informasi pemutaran dan menawarkan tombol unduh untuk video, audio, subtitle, dan gambar sampul.
+Vimeo Downloader adalah ekstensi Chrome untuk halaman video Vimeo yang didukung (vimeo.com, www.vimeo.com, dan player.vimeo.com). Ekstensi mengurai informasi pemutaran dan menawarkan tombol unduh untuk video, audio, subtitle, dan gambar sampul.
 
 Ini bukan klien Vimeo, bukan bot, dan bukan pengunduh mandiri. Ekstensi mendeteksi sumber daya di halaman Vimeo yang didukung dan menjalankan unduhan di latar belakang browser.
 
@@ -174,7 +174,7 @@ BAHASA ANTARMUKA YANG DIDUKUNG
 
 PEMASANGAN
 
-Jika Anda ingin salinan lokal dari video Vimeo yang sudah bisa Anda tonton, pasang Vimeo Video Downloader dari Chrome Web Store. Ekstensi hanya aktif di halaman Vimeo.
+Jika Anda ingin salinan lokal dari video Vimeo yang sudah bisa Anda tonton, pasang Vimeo Downloader dari Chrome Web Store. Ekstensi hanya aktif di halaman Vimeo.
 
 
 LEGAL DAN KEPATUHAN

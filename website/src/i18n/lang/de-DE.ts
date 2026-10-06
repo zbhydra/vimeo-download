@@ -7,13 +7,13 @@ export const deDE: SiteContent = {
   },
   layout: {
     nav: {
-      brand: 'Vimeo Video Downloader',
+      brand: 'Vimeo Downloader',
       home: 'Startseite',
       pricing: 'Preise',
     },
     footer: {
       resources: 'Ressourcen',
-      rights: '© 2026 Vimeo Video Downloader. Alle Rechte vorbehalten.'
+      rights: '© 2026 Vimeo Downloader. Alle Rechte vorbehalten.'
     }
   },
   common: {
@@ -22,19 +22,17 @@ export const deDE: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo Video Downloader – kostenloses Online-Tool und Chrome-Erweiterung',
+        title: 'Vimeo Downloader – kostenloses Online-Tool und Chrome-Erweiterung',
         description: 'Vimeo-Link einfügen und das Video im Browser speichern, kostenlos und ohne Anmeldung. Audio, Untertitel, Titelbilder oder eine Warteschlange? Dann die Chrome-Erweiterung hinzufügen.'
       },
       heroTrustPoints: [
         'HD-Downloads',
-        'Ohne Registrierung',
-        'Mobilfreundlich',
-        'Läuft unter Windows, Mac, Android und iPhone'
+        'Ohne Registrierung'
       ],
       workspace: {
         parse: {
           eyebrow: 'Schnelle Link-Prüfung',
-          titleBrand: 'Vimeo Video Downloader',
+          titleBrand: 'Vimeo Downloader',
           titleTagline: 'Jedes öffentliche Vimeo-Video speichern',
           helperText:
             'Füge einen öffentlichen Vimeo-Link ein, sieh dir die angebotenen Auflösungen an und lade die gewünschte herunter.',

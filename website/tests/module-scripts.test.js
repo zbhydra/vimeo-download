@@ -215,7 +215,7 @@ test('homepage keeps fonts and route CSS off the critical path while preserving 
   assert.equal(html.includes('fonts.gstatic.com'), false)
   assert.match(
     html,
-    /<script\b(?=[^>]*\basync\b)(?=[^>]*src="https:\/\/www\.googletagmanager\.com\/gtag\/js\?id=G-LBSKJD0H16")[^>]*>/i
+    /<script\b(?=[^>]*\basync\b)(?=[^>]*src="https:\/\/www\.googletagmanager\.com\/gtag\/js\?id=G-B5RGH4W50V")[^>]*>/i
   )
   assert.equal((html.match(/xyfmieibkw/g) ?? []).length, 1)
   assert.equal(/<link\b[^>]+rel="stylesheet"/i.test(html), false)
@@ -496,11 +496,11 @@ test('About and Contact pages expose localized trust content and structured data
     assert.equal(contactHtml.includes(DEVELOPER_EMAIL), true)
     assert.equal(
       (aboutHtml.match(new RegExp(`href="${OFFICIAL_X_URL}"`, 'g')) ?? []).length,
-      1
+      0
     )
     assert.equal(
       (contactHtml.match(new RegExp(`href="${OFFICIAL_X_URL}"`, 'g')) ?? []).length,
-      2
+      1
     )
     assert.match(contactHtml, /data-ga-source="contact"/)
     assert.equal(contactHtml.includes(`<meta name="twitter:site" content="${OFFICIAL_X_HANDLE}"`), true)
@@ -521,10 +521,10 @@ test('LLMs text indexes reference existing built website paths', async () => {
   const llmsFullTxt = await readFile(path.join(distDir, 'llms-full.txt'), 'utf8')
   const robotsTxt = await readFile(path.join(distDir, 'robots.txt'), 'utf8')
 
-  assert.match(llmsTxt, /^# Vimeo Video Downloader$/m)
+  assert.match(llmsTxt, /^# Vimeo Downloader$/m)
   assert.equal(llmsTxt.includes(`${siteUrl}/llms-full.txt`), true)
   assert.equal(llmsTxt.includes(`${siteUrl}/sitemap.xml`), true)
-  assert.match(llmsFullTxt, /^# Vimeo Video Downloader$/m)
+  assert.match(llmsFullTxt, /^# Vimeo Downloader$/m)
   assert.equal(llmsFullTxt.includes(`${siteUrl}/llms.txt`), true)
   assert.equal(llmsFullTxt.includes(`${siteUrl}/sitemap.xml`), true)
   assert.match(robotsTxt, /^Allow: \/llms\.txt$/m)
@@ -2746,7 +2746,7 @@ test('global install CTA click sends SLS and keepalive mark', async () => {
     }
   }
   globalThis.document = {
-    title: 'Vimeo Video Downloader',
+    title: 'Vimeo Downloader',
     documentElement: { lang: 'en-US' },
     addEventListener(type, listener) {
       if (type === 'click') {

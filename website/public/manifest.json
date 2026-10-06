@@ -1,5 +1,5 @@
 {
-  "name": "Vimeo Video Downloader",
+  "name": "Vimeo Downloader",
   "short_name": "Vimeo Downloader",
   "description": "Free online Vimeo video downloader in your browser, plus a Chrome extension for audio, subtitles, cover images, and queued downloads.",
   "start_url": "/",

@@ -220,7 +220,7 @@
 
 ## 2026-09-18 整仓单平台转型：下载域收敛到 Vimeo
 
-**Why**：仓库从 Telegram 多平台转型为单平台 Vimeo Video Downloader，下载域的平台矩阵、Provider 清单、限速链路与插件 E2E 全部需要按代码重写。
+**Why**：仓库从 Telegram 多平台转型为单平台 Vimeo Downloader，下载域的平台矩阵、Provider 清单、限速链路与插件 E2E 全部需要按代码重写。
 
 **From → To**：
 - `tech-站点适配.md`：8 平台矩阵 → 单平台 Vimeo。

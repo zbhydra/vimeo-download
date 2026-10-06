@@ -59,7 +59,7 @@ function mountHeader() {
     fallbackLocale: 'en-US',
     messages: {
       'en-US': {
-        'app.title': 'Vimeo Video Downloader',
+        'app.title': 'Vimeo Downloader',
         'app.refresh': 'Refresh',
         'app.openOfficialWebsite': 'Open official website'
       }

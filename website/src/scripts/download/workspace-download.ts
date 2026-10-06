@@ -246,7 +246,7 @@ function browserStoragePreflightMessage(
   result: Extract<DownloadStoragePreflightResult, { ok: false }>
 ): string {
   const fallback =
-    'This browser does not have enough reliable local storage for this file ({file_size}). Available storage is about {available_space}. Install Vimeo Video Downloader and download with the browser extension instead.'
+    'This browser does not have enough reliable local storage for this file ({file_size}). Available storage is about {available_space}. Install Vimeo Downloader and download with the browser extension instead.'
   const template = state.copy.errors.browserStorageInsufficientUseExtension ?? fallback
   return replaceDownloadTemplate(template, {
     file_size: formatStorageBytes(result.fileSizeBytes),

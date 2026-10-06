@@ -7,13 +7,13 @@ export const ptBR: SiteContent = {
   },
   layout: {
     nav: {
-      brand: 'Vimeo Video Downloader',
+      brand: 'Vimeo Downloader',
       home: 'Início',
       pricing: 'Preços',
     },
     footer: {
       resources: 'Recursos',
-      rights: '© 2026 Vimeo Video Downloader. Todos os direitos reservados.'
+      rights: '© 2026 Vimeo Downloader. Todos os direitos reservados.'
     }
   },
   common: {
@@ -22,14 +22,12 @@ export const ptBR: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo Video Downloader – Ferramenta online gratuita e extensão do Chrome',
+        title: 'Vimeo Downloader – Ferramenta online gratuita e extensão do Chrome',
         description: 'Cole um link do Vimeo para salvar o vídeo no navegador, de graça e sem login. Precisa de áudio, legendas, imagem de capa ou fila? Adicione a extensão do Chrome.'
       },
       heroTrustPoints: [
         'Downloads em HD',
-        'Sem cadastro',
-        'Compatível com celular',
-        'Funciona em Windows, Mac, Android e iPhone'
+        'Sem cadastro'
       ],
       workspace: {
         parse: {

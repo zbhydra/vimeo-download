@@ -28,7 +28,7 @@
 | `password` | str | 必填 | SMTP 授权码（QQ 邮箱等需用授权码而非登录密码） |
 | `use_tls` | bool | 缺省 True | 是否使用 TLS |
 | `from_email` | str | 必填 | 发件人邮箱 |
-| `from_name` | str | 缺省 `"Vimeo Video Downloader"` | 发件人名称 |
+| `from_name` | str | 缺省 `"Vimeo Downloader"` | 发件人名称 |
 | `weight` | int | ≥1，缺省 100 | 发送权重，只影响单次抽取概率 |
 
 根配置 `Settings.smtp` 是 `list[SMTPSettings]`（别名 `SMTPSettingsList = Annotated[list[SMTPSettings], Field(min_length=1)]`），即**至少 1 个账号**。

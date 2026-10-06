@@ -7,13 +7,13 @@ export const koKR: SiteContent = {
   },
   layout: {
     nav: {
-      brand: 'Vimeo Video Downloader',
+      brand: 'Vimeo Downloader',
       home: '홈',
       pricing: '요금',
     },
     footer: {
       resources: '자료',
-      rights: '© 2026 Vimeo Video Downloader. 모든 권리 보유.'
+      rights: '© 2026 Vimeo Downloader. 모든 권리 보유.'
     }
   },
   common: {
@@ -22,14 +22,12 @@ export const koKR: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo Video Downloader – 무료 온라인 도구와 Chrome 확장 프로그램',
+        title: 'Vimeo Downloader – 무료 온라인 도구와 Chrome 확장 프로그램',
         description: 'Vimeo 링크를 붙여넣으면 로그인 없이 무료로 동영상을 저장할 수 있습니다. 오디오, 자막, 커버 이미지, 다운로드 대기열이 필요하다면 Chrome 확장 프로그램을 추가하세요.'
       },
       heroTrustPoints: [
         'HD 다운로드',
-        '가입 불필요',
-        '모바일 친화적',
-        'Windows, Mac, Android, iPhone 지원'
+        '가입 불필요'
       ],
       workspace: {
         parse: {

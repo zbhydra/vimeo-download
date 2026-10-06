@@ -1,7 +1,7 @@
 <template>
   <div class="app-container">
     <!-- 顶部标题栏 -->
-    <AppHeader @refresh="handleRefresh" />
+    <AppHeader />
 
     <!-- 单视频操作面板 -->
     <VideoPanel @download="handleDownload" @refresh="handleRefresh" @open-site="handleOpenSite" />

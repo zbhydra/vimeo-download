@@ -31,7 +31,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--subject",
-        default="Vimeo Video Downloader SMTP test",
+        default="Vimeo Downloader SMTP test",
         help="Email subject.",
     )
     return parser.parse_args()
@@ -57,7 +57,7 @@ def build_message(
     message.set_content(
         "\n".join(
             [
-                "This is a Vimeo Video Downloader SMTP test email.",
+                "This is a Vimeo Downloader SMTP test email.",
                 f"SMTP account: {smtp_account_identifier(account, index)}",
                 f"Weight: {account.weight}",
             ]

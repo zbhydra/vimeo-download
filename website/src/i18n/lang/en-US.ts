@@ -7,13 +7,13 @@ export const enUS: SiteContent = {
   },
   layout: {
     nav: {
-      brand: 'Vimeo Video Downloader',
+      brand: 'Vimeo Downloader',
       home: 'Home',
       pricing: 'Pricing',
     },
     footer: {
       resources: 'Resources',
-      rights: '© 2026 Vimeo Video Downloader. All rights reserved.'
+      rights: '© 2026 Vimeo Downloader. All rights reserved.'
     }
   },
   common: {
@@ -22,19 +22,17 @@ export const enUS: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo Video Downloader – Free Online Tool and Chrome Extension',
+        title: 'Vimeo Downloader – Free Online Tool and Chrome Extension',
         description: 'Paste a Vimeo link to save the video in your browser, free and without signing in. Need audio, subtitles, cover images, or a queue? Add the Chrome extension.'
       },
       heroTrustPoints: [
         'HD downloads',
-        'No registration',
-        'Mobile friendly',
-        'Works on Windows, Mac, Android, and iPhone'
+        'No registration'
       ],
       workspace: {
         parse: {
           eyebrow: 'Quick link check',
-          titleBrand: 'Vimeo Video Downloader',
+          titleBrand: 'Vimeo Downloader',
           titleTagline: 'Save Any Public Vimeo Video',
           helperText:
             'Paste a public Vimeo video link, review the renditions Vimeo exposes, and download the resolution you need.',
@@ -80,7 +78,7 @@ export const enUS: SiteContent = {
           unsafeFileTypeConfirmViewExtension: 'View extension download',
           unsafeFileTypeConfirmCancel: 'Cancel',
           browserStorageInsufficientUseExtension:
-            'This browser does not have enough reliable local storage for this file ({file_size}). Available storage is about {available_space}. Install Vimeo Video Downloader and download with the browser extension instead.',
+            'This browser does not have enough reliable local storage for this file ({file_size}). Available storage is about {available_space}. Install Vimeo Downloader and download with the browser extension instead.',
           browserStorageInsufficientConfirmTitle: 'Not enough browser storage',
           browserStorageInsufficientConfirmViewExtension: 'View extension download',
           browserStorageInsufficientConfirmCancel: 'Cancel',

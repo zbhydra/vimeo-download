@@ -95,7 +95,7 @@
     "security_content": "認証コードを他者に共有しないでください。カスタマーサービスを自称する人物を含め、誰にも教えないでください。認証コードは 10 分間有効です。",
     "ignore_message": "これがあなた自身の操作でない場合は、このメールを無視してください。",
     "auto_send_notice": "このメールはシステムから自動送信されています。返信しないでください",
-    "brand_name": "Vimeo Video Downloader",
+    "brand_name": "Vimeo Downloader",
     "brand_slogan": "安全 · 高速 · 便利",
     "subject": "認証コードログイン"
   }

@@ -31,9 +31,7 @@ import { useAuthStore } from '@/core/stores/authStore'
 import { I18N_KEYS } from '@/core/constants/i18n'
 import { COMMON_COLORS } from '@/core/constants/style'
 import { logger } from '@/core/utils/logger'
-import { openPremiumView } from '@/core/composables/premiumView'
-import { openLoginModal } from '@/core/composables/loginModal'
-import type { PremiumSource } from '@/core/composables/premiumView'
+import { openExtensionPricingPage } from '@/core/utils/navigation'
 
 // Props
 interface Props {
@@ -69,22 +67,13 @@ const titleText = computed(() => {
   })
 })
 
-// 已订阅用户仍保留入口，但文案展示为 Unlimited，避免误导继续升级。
+// 已订阅用户仍保留入口，但文案展示为 Unlimited，统一进入独立订阅页。
 const actionButtonText = computed(() => {
   if (quotaStore.hasActiveSubscription) {
     return t(I18N_KEYS.SUBSCRIPTION.UNLIMITED)
   }
 
   return t(I18N_KEYS.QUOTA.UPGRADE_BUTTON)
-})
-
-// 区分免费升级按钮和已订阅 Unlimited 按钮，归因上保持两个入口可分辨。
-const actionButtonSource = computed<PremiumSource>(() => {
-  if (quotaStore.hasActiveSubscription) {
-    return 'popup_upgrade_now'
-  }
-
-  return 'popup_quota_counter'
 })
 
 /**
@@ -97,11 +86,11 @@ async function handleClick(): Promise<void> {
 
   if (quotaStore.isExhausted) {
     if (!authStore.isAuthenticated) {
-      openLoginModal('popup_quota_counter')
+      void openExtensionPricingPage('popup_quota_counter')
       return
     }
-    logger.info('[QuotaCounter] Quota exhausted, opening premium view')
-    openPremiumView('popup_quota_counter')
+    logger.info('[QuotaCounter] Quota exhausted, opening extension pricing page')
+    void openExtensionPricingPage('popup_quota_counter')
   }
 }
 
@@ -109,14 +98,8 @@ async function handleClick(): Promise<void> {
  * 处理升级按钮点击
  */
 async function handleUpgrade(): Promise<void> {
-  if (!authStore.isAuthenticated) {
-    openLoginModal('popup_upgrade_now')
-    return
-  }
-  logger.info('[QuotaCounter] Subscription action clicked, opening premium view', {
-    source: actionButtonSource.value
-  })
-  openPremiumView(actionButtonSource.value)
+  logger.info('[QuotaCounter] Subscription action clicked, opening extension pricing page')
+  void openExtensionPricingPage('popup_upgrade_now')
 }
 </script>
 

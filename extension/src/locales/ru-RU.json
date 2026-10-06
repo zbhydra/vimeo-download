@@ -2,7 +2,7 @@
   "downloadStatus.removeTask": "Удалить {filename}",
   "videoPanel.clip.invalid": "Введите начало и конец. Начало должно быть не меньше 0, а конец должен быть позже начала.",
   "quota.loginMessage": "Достигнут дневной лимит скачиваний. Войдите, чтобы проверить квоту и подписку аккаунта.",
-  "app.title": "Vimeo Video Downloader",
+  "app.title": "Vimeo Downloader",
   "app.openOfficialWebsite": "Открыть официальный сайт",
   "app.refresh": "Обновить",
   "app.supportContact": "Есть вопросы? Напишите на {email}.",

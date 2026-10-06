@@ -257,7 +257,7 @@ export default defineConfig({
       skipManifestValidation: true, // 禁用schema验证 ,不然会卡主很多
       // offscreen document 不在 manifest 里声明，由 background 在首个下载任务时惰性创建；
       // 这里只需把入口 HTML 纳入构建。路径与 src/core/rpc/constants.ts 的 OFFSCREEN_ENTRY_PATH 同步。
-      additionalInputs: ['src/offscreen.html'],
+      additionalInputs: ['src/offscreen.html', 'ext-pricing.html'],
       manifest: () => ({
         manifest_version: 3,
         minimum_chrome_version: '116',

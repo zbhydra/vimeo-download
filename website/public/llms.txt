@@ -1,4 +1,4 @@
-# Vimeo Video Downloader
+# Vimeo Downloader
 
 > Free online Vimeo downloader plus a Chrome extension. Paste a public Vimeo link on the home page to save the video in your browser without signing in. The extension adds audio, subtitles, cover images, quality selection and a download queue on the Vimeo page itself.
 
@@ -18,10 +18,10 @@
 
 ## Key Facts
 
-- Product name: Vimeo Video Downloader.
+- Product name: Vimeo Downloader.
 - Supported source platform: Vimeo only (vimeo.com, www.vimeo.com, player.vimeo.com).
 - Online tool: paste a public Vimeo link, no sign-in required; saves MP4 video.
 - Chrome extension: Chrome and other Chromium browsers; saves MP4 video, M4A or MP3 audio, VTT subtitles and JPEG cover images, with a cross-tab download queue.
 - Limits: does not bypass access controls, does not remove DRM, and is not affiliated with Vimeo, Inc.
 - Language coverage: 14 website locales, English by default.
-- Safety boundary: Vimeo Video Downloader never asks for Vimeo or Google passwords, verification codes, API credentials, or session files.
+- Safety boundary: Vimeo Downloader never asks for Vimeo or Google passwords, verification codes, API credentials, or session files.

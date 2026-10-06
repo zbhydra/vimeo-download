@@ -2,7 +2,7 @@
   "downloadStatus.removeTask": "移除 {filename}",
   "videoPanel.clip.invalid": "请填写起点和终点；起点不能小于 0，终点必须大于起点。",
   "quota.loginMessage": "今日下载次数已用完，请先登录查看账号额度与订阅权益。",
-  "app.title": "Vimeo Video Downloader",
+  "app.title": "Vimeo Downloader",
   "app.openOfficialWebsite": "前往官网",
   "app.refresh": "刷新",
   "app.supportContact": "如有任何问题，请联系 {email}。",

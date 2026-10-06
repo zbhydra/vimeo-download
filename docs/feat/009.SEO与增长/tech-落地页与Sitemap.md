@@ -116,7 +116,7 @@ XML 写入做实体转义。sitemap index 内每个 sitemap 的 `<lastmod>` 用�
 
 | 顺序 | 组件 | 文案键(`pages.homepage.*`) |
 | --- | --- | --- |
-| 首屏 | `components/download/DownloadWorkspace.astro` + 信任徽标 | `workspace`、`heroTrustPoints`(恰好 4 个) |
+| 首屏 | `components/download/DownloadWorkspace.astro` + 信任徽标 | `workspace`、`heroTrustPoints`(恰好 2 个) |
 | 1 | `HomeIntroSection` | `intro`（含 `panel` 四行面板示意；示意由 `ExtensionMockup.astro` 渲染，与 `HomeFinalCtaSection` 共用） |
 | 2 | `HomeFeaturesSection` | `features` |
 | 3 | `HomeStepsSection` | `steps` |
@@ -133,7 +133,7 @@ XML 写入做实体转义。sitemap index 内每个 sitemap 的 `<lastmod>` 用�
 - 展示区块纯静态、无客户端脚本；只有下载工作区运行前端状态机。
 - 展示区块文案不写「无限」承诺、额度数字与价格，不出现 Credits、签到、积分购买；方案概览的数值来自后端配置，由 Pricing 页呈现。
 - 文案事实与术语来源是 `docs/assets/store/<商店语言>.txt`，商店语言到站点 locale 的映射（如 `en_US`→`en-US`、`pt`→`pt-BR`）见 004 计划 §2.2。
-- 专有名词（`Vimeo`、`Vimeo Video Downloader`、`Chrome`、`MP4` / `M4A` / `MP3` / `VTT` 等）不翻译。
+- 专有名词（`Vimeo`、`Vimeo Downloader`、`Chrome`、`MP4` / `M4A` / `MP3` / `VTT` 等）不翻译。
 - 合规边界：不暗示可下载受限内容，不宣称绕过权限或去除 DRM。
 
 ### 3.2 响应式
@@ -173,7 +173,7 @@ XML 写入做实体转义。sitemap index 内每个 sitemap 的 `<lastmod>` 用�
 
 ### 4.3 规范品牌合同
 
-唯一品牌为 `Vimeo Video Downloader`，不追加其他品牌后缀。`schemaName`、导航品牌、页脚版权、Legal `serviceName`、sitemap XSL、`application-name`、`og:site_name` 与 `Organization.name` 均使用该名称；不保留其他品牌别名作为运行时回退。Chrome 商店命名属于商店域，见 `@../../assets/store/`。
+唯一品牌为 `Vimeo Downloader`，不追加其他品牌后缀。`schemaName`、导航品牌、页脚版权、Legal `serviceName`、sitemap XSL、`application-name`、`og:site_name` 与 `Organization.name` 均使用该名称；不保留其他品牌别名作为运行时回退。Chrome 商店命名属于商店域，见 `@../../assets/store/`。
 
 ### 4.4 结构化数据合规约束
 
