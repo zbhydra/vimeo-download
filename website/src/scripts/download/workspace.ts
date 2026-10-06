@@ -42,6 +42,7 @@ import {
   handleDownloadClick,
   handlePendingResumeContinue,
   handlePendingResumeDismiss,
+  revealExtensionGuide,
   restorePendingDownloadTask,
   type WorkspaceDownloadCallbacks
 } from './workspace-download'
@@ -198,6 +199,7 @@ async function handleParse(
       const linkHost = safeLinkHost(parseResult.canonicalLink || link)
       const parseDurationMs = elapsedMs(parseStartedAtMs)
       setParseErrorMessage(elements, state.copy.parse.noResults)
+      revealExtensionGuide(elements)
       recordParseFailureMark(
         state,
         link,
@@ -246,6 +248,7 @@ async function handleParse(
       elements,
       mapErrorToCopy(state.copy, parsedError, state.copy.errors.parseFailed)
     )
+    revealExtensionGuide(elements)
     recordParseFailureMark(
       state,
       link,

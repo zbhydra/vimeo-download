@@ -159,6 +159,7 @@ function handleDownloadError(
   if (isUnsafeFileTypeError(error)) {
     return confirmUnsafeFileTypeExtensionGuide(elements, state, message)
   }
+  revealExtensionGuide(elements)
   return Promise.resolve()
 }
 
@@ -202,7 +203,7 @@ function scrollElementBelowTopNavigation(element: HTMLElement): void {
   window.scrollTo({ top: scrollTop, behavior: 'smooth' })
 }
 
-function revealExtensionGuide(elements: WorkspaceElements): void {
+export function revealExtensionGuide(elements: WorkspaceElements): void {
   setHidden(elements.largeFileExtensionGuide, false)
   scrollElementBelowTopNavigation(elements.largeFileExtensionGuide)
 }
@@ -672,6 +673,7 @@ export async function handleDownloadClick(
       elements,
       plan.downloadDisabledReason || state.copy.errors.downloadFailed
     )
+    revealExtensionGuide(elements)
     return
   }
   if (!isWebDownloadMediaAllowed(resource)) {
@@ -923,8 +925,10 @@ export async function handleDownloadAllClick(
       setParseErrorMessage(elements, state.copy.downloadAll.allSuccess ?? 'All files downloaded.')
     } else if (successCount > 0) {
       setParseErrorMessage(elements, state.copy.downloadAll.partialFailed ?? 'Some files failed.')
+      revealExtensionGuide(elements)
     } else if (failedCount > 0) {
       setParseErrorMessage(elements, state.copy.downloadAll.allFailed ?? state.copy.errors.downloadFailed)
+      revealExtensionGuide(elements)
     }
     if (successCount > 0) {
       callbacks.onRenderResults()

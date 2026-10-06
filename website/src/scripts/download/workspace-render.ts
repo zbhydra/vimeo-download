@@ -173,7 +173,7 @@ function buildDownloadButtonLabel(label: string): HTMLElement {
   return text
 }
 
-/** 每次重新渲染结果都收起插件引导卡；它只在状态 3 等场景由下载流程重新展开。 */
+/** 每次重新渲染结果都收起插件引导卡；失败或只能用插件时由流程重新展开。 */
 function renderLargeFileExtensionGuide(elements: WorkspaceElements): void {
   setHidden(elements.largeFileExtensionGuide, true)
 }
