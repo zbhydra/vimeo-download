@@ -5,6 +5,7 @@ import { I18nService } from '@/locales'
 import { logger } from '@/core/utils/logger'
 import { BackgroundChannel } from '@/popup/rpc/background.rpc'
 import PricingApp from './PricingApp.vue'
+import '../style.css'
 import './pricing.css'
 
 const backgroundClient = new BackgroundChannel()
