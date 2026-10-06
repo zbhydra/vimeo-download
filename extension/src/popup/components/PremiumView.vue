@@ -223,6 +223,13 @@ type PremiumPhase =
 /** 支付失败原因，对应各自的用户文案。 */
 type FailedReason = 'orderGone' | 'cancelled' | 'fulfillment' | 'timeout' | 'generic' | 'gateway'
 
+/** 匿名购买在登录成功后恢复的精确商品渠道。 */
+interface PendingPurchase {
+  productId: string
+  productPriceId: number
+  paymentMethod: string
+}
+
 const { t } = useI18n()
 const dialog = useNativeDialog(premiumViewVisible)
 
@@ -260,6 +267,7 @@ const actionError = ref('')
 const failedReason = ref<FailedReason>('generic')
 const orderNo = ref<string | null>(null)
 const supportMail = ref('')
+const pendingPurchase = ref<PendingPurchase | null>(null)
 /** 自动轮询开始时间，用于 10 分钟超时判断。 */
 const pollStartedAt = ref<number | null>(null)
 let pollTimer: ReturnType<typeof setInterval> | null = null
@@ -331,12 +339,17 @@ async function enterView(): Promise<void> {
   pollStartedAt.value = null
 
   if (!authStore.isAuthenticated) {
-    phase.value = 'gate'
+    await loadPlans()
     return
   }
   phase.value = 'loading'
   const userId = authStore.user?.user_id
   try {
+    if (pendingPurchase.value) {
+      await loadPlans()
+      await continuePendingPurchase()
+      return
+    }
     const reference = await background.getLatestOrderReference()
     if (!premiumViewVisible.value || authStore.user?.user_id !== userId) {
       return
@@ -345,6 +358,7 @@ async function enterView(): Promise<void> {
       await loadPlans()
       return
     }
+    pendingPurchase.value = null
     orderNo.value = reference.orderNo
     phase.value = 'pending'
     pollStartedAt.value = Date.now()
@@ -365,12 +379,24 @@ async function loadPlans(): Promise<void> {
   try {
     const configs = await subscriptionApi.listCheckoutConfigs()
     plans.value = configs
+    const pending = pendingPurchase.value
+    const pendingPlan = pending
+      ? (configs.find(plan => plan.product_id === pending.productId) ?? null)
+      : null
+    const pendingChannel = pendingPlan?.payment_channels.find(
+      channel =>
+        channel.product_price_id === pending?.productPriceId &&
+        channel.payment_method === pending.paymentMethod
+    )
     // 默认选中年付（与官网主推一致），无年付时选第一个套餐。
     const defaultPlan = configs.find(plan => plan.period === 'year') ?? configs[0] ?? null
-    selectedPlanId.value = defaultPlan?.product_id ?? null
-    selectedChannelMethod.value = defaultPlan
-      ? (getDefaultOrderPaymentChannel(defaultPlan.payment_channels)?.payment_method ?? null)
-      : null
+    const selectedPlan = pendingChannel && pendingPlan ? pendingPlan : defaultPlan
+    selectedPlanId.value = selectedPlan?.product_id ?? null
+    selectedChannelMethod.value =
+      pendingChannel?.payment_method ??
+      (selectedPlan
+        ? (getDefaultOrderPaymentChannel(selectedPlan.payment_channels)?.payment_method ?? null)
+        : null)
     phase.value = configs.length > 0 ? 'ready' : 'empty'
   } catch (error) {
     logger.error('[PremiumView] 拉取订阅套餐配置失败:', error)
@@ -396,6 +422,16 @@ async function handleBuy(): Promise<void> {
   const plan = selectedPlan.value
   const channel = selectedChannel.value
   if (!plan || !channel || phase.value === 'creating') {
+    return
+  }
+
+  if (!authStore.isAuthenticated) {
+    pendingPurchase.value = {
+      productId: plan.product_id,
+      productPriceId: channel.product_price_id,
+      paymentMethod: channel.payment_method
+    }
+    openLoginModal(getPremiumSource())
     return
   }
 
@@ -447,6 +483,30 @@ async function handleBuy(): Promise<void> {
     phase.value = 'ready'
     actionError.value = t(I18N_KEYS.PREMIUM.ERROR_GENERIC)
   }
+}
+
+/** 登录成功后恢复匿名用户刚选择的商品；价格渠道失效时保留套餐页，不误买默认项。 */
+async function continuePendingPurchase(): Promise<void> {
+  const pending = pendingPurchase.value
+  if (!pending || phase.value !== 'ready' || !authStore.isAuthenticated) {
+    return
+  }
+
+  const plan = selectedPlan.value
+  const channel = selectedChannel.value
+  if (
+    !plan ||
+    !channel ||
+    plan.product_id !== pending.productId ||
+    channel.product_price_id !== pending.productPriceId ||
+    channel.payment_method !== pending.paymentMethod
+  ) {
+    pendingPurchase.value = null
+    return
+  }
+
+  pendingPurchase.value = null
+  await handleBuy()
 }
 
 /** 轮询订单状态直到终态或超时；单次网络错误保留现场等下一轮。 */
