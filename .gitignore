@@ -45,6 +45,7 @@ backend/deploy/.env.prod-*
 admin/deploy/.env.prod
 admin/deploy/.env.prod-*
 backend/config.yaml
+backend/deploy/key/git_key
 
 
 
