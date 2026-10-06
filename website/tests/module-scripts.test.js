@@ -687,10 +687,10 @@ async function patchCompiledBrowserModuleFiles(rootDir) {
       /import\.meta\.env\.PUBLIC_SHARED_COOKIE_DOMAIN/g,
       `'${SITE_HOST}'`
     )
-    source = source.replace(/import\.meta\.env\.PUBLIC_ALI_SLS_PROJECT/g, "'vimeo-download'")
-    source = source.replace(/import\.meta\.env\.PUBLIC_ALI_SLS_HOST/g, "'ap-southeast-1.log.aliyuncs.com'")
+    source = source.replace(/import\.meta\.env\.PUBLIC_ALI_SLS_PROJECT/g, "'vimeo-download-logs'")
+    source = source.replace(/import\.meta\.env\.PUBLIC_ALI_SLS_HOST/g, "'ap-northeast-1.log.aliyuncs.com'")
     source = source.replace(/import\.meta\.env\.PUBLIC_ALI_SLS_ENDPOINT/g, "''")
-    source = source.replace(/import\.meta\.env\.PUBLIC_ALI_SLS_LOGSTORE/g, "'vimeo-download-mark-log'")
+    source = source.replace(/import\.meta\.env\.PUBLIC_ALI_SLS_LOGSTORE/g, "'vimeo-download-mark-logs'")
     source = source.replace(/import\.meta\.env\.PUBLIC_ALI_SLS_ENABLED/g, "''")
     source = source.replace(/import\.meta\.env\.PUBLIC_ALI_SLS_TOPIC/g, "'mark-log'")
     source = source.replace(/import\.meta\.env\.PUBLIC_ALI_SLS_SOURCE/g, "''")
@@ -2066,7 +2066,7 @@ test('website first opened mark reports once after first_opened_at is stored', a
     assert.equal(Number.isInteger(firstOpenedAt), true)
     assert.equal(firstOpenedAt > 0, true)
     assert.equal(browser.calls.length, 2)
-    assert.equal(browser.calls[0].path, '/logstores/vimeo-download-mark-log/track')
+    assert.equal(browser.calls[0].path, '/logstores/vimeo-download-mark-logs/track')
     assert.equal(browser.calls[0].method, 'GET')
     assert.equal(browser.calls[0].credentials, 'omit')
     assert.equal(browser.calls[0].keepalive, true)
@@ -2240,8 +2240,8 @@ async function assertSlsMarkBuildsWebTrackingUrl(sourceFile, tempPrefix, expecte
     const url = new URL(module.buildSlsMarkUrl(config, fields))
 
     assert.equal(config.enabled, true)
-    assert.equal(url.origin, 'https://vimeo-download.ap-southeast-1.log.aliyuncs.com')
-    assert.equal(url.pathname, '/logstores/vimeo-download-mark-log/track')
+    assert.equal(url.origin, 'https://vimeo-download-logs.ap-northeast-1.log.aliyuncs.com')
+    assert.equal(url.pathname, '/logstores/vimeo-download-mark-logs/track')
     assert.equal(url.searchParams.get('APIVersion'), '0.6.0')
     assert.equal(url.searchParams.get('__topic__'), 'mark-log')
     assert.equal(url.searchParams.get('__source__'), expectedSite)
@@ -2415,7 +2415,7 @@ test('frontend captured error SLS callback sends uncaught Error to SLS only', as
 
     assert.equal(calls.length, 1)
     const url = new URL(calls[0].url)
-    assert.equal(url.pathname, '/logstores/vimeo-download-mark-log/track')
+    assert.equal(url.pathname, '/logstores/vimeo-download-mark-logs/track')
     assert.equal(url.searchParams.get('mark_type'), 'web_frontend_uncaught_error')
     assert.equal(url.searchParams.get('device_id'), browser.deviceId)
     assert.equal(calls.some(call => new URL(call.url).pathname === '/api/client/mark/record'), false)
@@ -2604,7 +2604,7 @@ test('homepage record mark keeps backend post when SLS fails', async () => {
     await flushBrowserTasks()
 
     assert.equal(calls.length, 2)
-    assert.equal(calls[0].path, '/logstores/vimeo-download-mark-log/track')
+    assert.equal(calls[0].path, '/logstores/vimeo-download-mark-logs/track')
     assert.equal(calls[0].method, 'GET')
     assert.equal(calls[0].credentials, 'omit')
     assert.equal(calls[0].keepalive, true)
@@ -2663,7 +2663,7 @@ test('homepage record mark sends SLS before backend failure is thrown', async ()
 
     assert.deepEqual(
       calls.map(call => call.path),
-      ['/logstores/vimeo-download-mark-log/track', '/api/client/mark/record']
+      ['/logstores/vimeo-download-mark-logs/track', '/api/client/mark/record']
     )
   } finally {
     restoreBrowser()
@@ -2790,8 +2790,8 @@ test('global install CTA click sends SLS and keepalive mark', async () => {
     await flushBrowserTasks()
 
     assert.equal(fetchCalls.length, 2)
-    assert.equal(new URL(fetchCalls[0].href).hostname, 'vimeo-download.ap-southeast-1.log.aliyuncs.com')
-    assert.equal(fetchCalls[0].path, '/logstores/vimeo-download-mark-log/track')
+    assert.equal(new URL(fetchCalls[0].href).hostname, 'vimeo-download-logs.ap-northeast-1.log.aliyuncs.com')
+    assert.equal(fetchCalls[0].path, '/logstores/vimeo-download-mark-logs/track')
     assert.equal(fetchCalls[0].credentials, 'omit')
     assert.equal(fetchCalls[0].keepalive, true)
     assert.equal(new URL(fetchCalls[0].href).searchParams.get('mark_type'), 'web_extension_install_click')

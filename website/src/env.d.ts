@@ -10,9 +10,9 @@ interface ImportMetaEnv {
   readonly PUBLIC_SHARED_COOKIE_DOMAIN?: string
   /** 阿里云 SLS project 名称；未配置 endpoint 时与 PUBLIC_ALI_SLS_HOST 拼出 endpoint。 */
   readonly PUBLIC_ALI_SLS_PROJECT?: string
-  /** 阿里云 SLS 公网 host，例如 ap-southeast-1.log.aliyuncs.com。 */
+  /** 阿里云 SLS 公网 host，例如 ap-northeast-1.log.aliyuncs.com。 */
   readonly PUBLIC_ALI_SLS_HOST?: string
-  /** 阿里云 SLS WebTracking endpoint，例如 https://vimeo-download.ap-southeast-1.log.aliyuncs.com。 */
+  /** 阿里云 SLS WebTracking endpoint，例如 https://vimeo-download-logs.ap-northeast-1.log.aliyuncs.com。 */
   readonly PUBLIC_ALI_SLS_ENDPOINT?: string
   /** 阿里云 SLS logstore 名称。 */
   readonly PUBLIC_ALI_SLS_LOGSTORE?: string

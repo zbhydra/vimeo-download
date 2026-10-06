@@ -7,6 +7,7 @@
  */
 
 import { upgradeModalManager } from '@/core/content/services/UpgradeModalManager'
+import { MARK_TYPE } from '@/core/api/mark/types'
 import type { ExtensionEvents } from '@/core/events/types'
 import { BackgroundChannel } from '@/content/rpc/background.rpc'
 import { ChromeEventSubscriber } from '@/core/rpc/ChromeEventBus'
@@ -95,6 +96,11 @@ class VimeoContentController {
     }
 
     this.started = true
+    void this.backgroundClient
+      .recordMark({ mark_type: MARK_TYPE.CONTENT_OPEN, mark_msg: '' })
+      .catch(error => {
+        logger.error('[VimeoContent] content_open 打点失败:', error)
+      })
     await waitForInjectedReady('Vimeo')
     // 两条配置链互不依赖：任一条失败都只记日志，不阻断另一条也不阻断后续渲染。
     await Promise.all([synchronizeRuntimeConfig(), synchronizeVimeoConfig()])

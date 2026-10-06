@@ -17,13 +17,13 @@
 
 | 项 | 值 |
 | --- | --- |
-| Project | `vimeo-download` |
-| Region | 新加坡 |
-| 公网 Host | `ap-southeast-1.log.aliyuncs.com` |
-| Logstore | `vimeo-download-mark-log` |
+| Project | `vimeo-download-logs` |
+| Region | 日本 |
+| 公网 Host | `ap-northeast-1.log.aliyuncs.com` |
+| Logstore | `vimeo-download-mark-logs` |
 | WebTracking | 匿名 GET 写入;需随 Logstore 创建时开启 |
 
-> **部署侧待办**:`vimeo-download` / `vimeo-download-mark-log` 尚未在阿里云创建。extension 生产构建默认值与 `website/.env.production`(不入库,由部署侧提供)已改用上述新名;资源创建并开启 WebTracking 前,website / extension 的生产上报全部静默失败,不阻塞主链路。
+> 阿里云资源已创建：`vimeo-download-logs` / `vimeo-download-mark-logs`，并使用日本区域公网 Host。生产构建默认值与 `website/.env.production` 已对齐；仍需确认 Logstore 已开启 WebTracking。
 
 ## 3. 环境变量
 
@@ -31,14 +31,14 @@ website 读取 `import.meta.env.PUBLIC_ALI_SLS_*`；extension 运行时代码不
 
 | 变量 | 用途 |
 | --- | --- |
-| `PUBLIC_ALI_SLS_PROJECT` | SLS Project 名(`vimeo-download`) |
-| `PUBLIC_ALI_SLS_HOST` | 公网 host(`ap-southeast-1.log.aliyuncs.com`) |
-| `PUBLIC_ALI_SLS_ENDPOINT` | 完整 endpoint,可替代 `PROJECT`+`HOST`(如 `https://vimeo-download.ap-southeast-1.log.aliyuncs.com`) |
-| `PUBLIC_ALI_SLS_LOGSTORE` | Logstore(`vimeo-download-mark-log`) |
+| `PUBLIC_ALI_SLS_PROJECT` | SLS Project 名(`vimeo-download-logs`) |
+| `PUBLIC_ALI_SLS_HOST` | 公网 host(`ap-northeast-1.log.aliyuncs.com`) |
+| `PUBLIC_ALI_SLS_ENDPOINT` | 完整 endpoint,可替代 `PROJECT`+`HOST`(如 `https://vimeo-download-logs.ap-northeast-1.log.aliyuncs.com`) |
+| `PUBLIC_ALI_SLS_LOGSTORE` | Logstore(`vimeo-download-mark-logs`) |
 | `PUBLIC_ALI_SLS_TOPIC` | `__topic__` 值,默认 `mark-log` |
 | `PUBLIC_ALI_SLS_SOURCE` | `__source__` 值;未配时回落到固定站点名 `website` |
 | `PUBLIC_ALI_SLS_ENABLED` | `false` 时整体关闭 |
-| `EXTENSION_ALI_SLS_*` | 插件端同字段覆盖；生产构建未配置时默认 project/host/logstore/topic/source 为 `vimeo-download` / `ap-southeast-1.log.aliyuncs.com` / `vimeo-download-mark-log` / `mark-log` / `extension`，dev 未配置时关闭 |
+| `EXTENSION_ALI_SLS_*` | 插件端同字段覆盖；生产构建未配置时默认 project/host/logstore/topic/source 为 `vimeo-download-logs` / `ap-northeast-1.log.aliyuncs.com` / `vimeo-download-mark-logs` / `mark-log` / `extension`，dev 未配置时关闭 |
 
 ## 4. WebTracking URL 协议
 
@@ -91,6 +91,7 @@ https://{project}.{host}/logstores/{logstore}/track?APIVersion=0.6.0&__topic__=m
 | `download_success` | extension 单个资源完成实际下载 | `resource_type`、`source_kind` |
 | `download_failed` | extension 单个资源下载抛错 | `error_name`、`error_message`、`resource_type`、`source_kind` |
 | `download_quota_insufficient` | extension 单个资源因额度不足未开始下载 | `resource_type`、`source_kind` |
+| `content_open` | Vimeo content script 初始化 | 空字符串 |
 
 边界:
 - **HTTP 4xx / 5xx 业务错误**不触发 `web_backend_connect_failed`(服务器已返回响应,不属于「连不上或超时」)。
@@ -128,6 +129,7 @@ https://{project}.{host}/logstores/{logstore}/track?APIVersion=0.6.0&__topic__=m
 - **首次访问事件**:website 确认 `homepage_first_opened_at` 后,若本机没有 `homepage_web_first_opened_submitted_at` 提交标记,异步上报 `web_first_opened`,同时写 SLS 与后端 `mark_logs`,并写入提交标记。`localStorage` 不可用或写入失败时仍上报,`mark_msg` 为 `{"reason":"localStorage_unavailable"}`;这种场景不能跨刷新去重,Dashboard 排查时按 reason 区分。
 - **后端不可用**:后端 mark 失败/超时,业务静默处理;SLS 可达则留客户端侧日志,排障时与后端 `mark_logs` 对照判断丢失窗口。
 - **插件 mark-log**:旧的插件后端 mark 写入已改为只写 SLS；content 与 popup 事件均通过 background 发起。下载生命周期统一由 content 的共享下载队列上报，失败只打 `logger.error`，不影响下载。
+- **content 初始化**：Vimeo content script 启动后立即记录一次 `content_open`，只表示 content 已加载，不代表资源解析成功。
 - **插件升级弹窗曝光**:`UpgradeModal` 从隐藏进入显示 → 广播 `upgradeModalOpened` → background 异步写 `upgrade_modal_open`;已显示时不重复,关闭后重开重新记录,来源不进入事件合同。
 
 ## 10. 与源文档差异

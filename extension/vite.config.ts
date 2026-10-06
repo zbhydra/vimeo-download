@@ -17,10 +17,10 @@ const DEFAULT_DEV_WEBSITE_BASE_URL = 'http://localhost:7910'
 // 生产 API / 官网 origin 从 src/core/constants/deployment.ts 的生产域名派生。
 const DEFAULT_PROD_API_BASE_URL = `https://api.${PROD_HOST}`
 const DEFAULT_PROD_WEBSITE_BASE_URL = `https://${PROD_HOST}`
-// 生产打点的 SLS project / logstore 需与阿里云侧资源同名；资源缺失时上报静默失败，不阻塞下载主链路。
-const DEFAULT_PROD_ALI_SLS_PROJECT = 'vimeo-download'
-const DEFAULT_PROD_ALI_SLS_HOST = 'ap-southeast-1.log.aliyuncs.com'
-const DEFAULT_PROD_ALI_SLS_LOGSTORE = 'vimeo-download-mark-log'
+// 生产打点的 SLS project / logstore 与阿里云侧资源同名；上报失败不阻塞下载主链路。
+const DEFAULT_PROD_ALI_SLS_PROJECT = 'vimeo-download-logs'
+const DEFAULT_PROD_ALI_SLS_HOST = 'ap-northeast-1.log.aliyuncs.com'
+const DEFAULT_PROD_ALI_SLS_LOGSTORE = 'vimeo-download-mark-logs'
 const DEFAULT_ALI_SLS_TOPIC = 'mark-log'
 const DEFAULT_ALI_SLS_SOURCE = 'extension'
 

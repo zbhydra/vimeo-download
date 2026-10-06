@@ -14,8 +14,8 @@ describe('API domain configuration', () => {
     vi.stubGlobal('__WEBSITE_BASE_URL__', 'https://vimeodownloader.app')
     vi.stubGlobal('__ALI_SLS_MARK_CONFIG__', {
       enabled: true,
-      endpoint: 'https://vimeo-download.ap-southeast-1.log.aliyuncs.com',
-      logstore: 'vimeo-download-mark-log',
+      endpoint: 'https://vimeo-download-logs.ap-northeast-1.log.aliyuncs.com',
+      logstore: 'vimeo-download-mark-logs',
       topic: 'mark-log',
       source: 'extension'
     })
@@ -38,8 +38,8 @@ describe('API domain configuration', () => {
     expect('GOOGLE_AUTH' in configModule).toBe(false)
     expect(ALI_SLS_MARK).toEqual({
       enabled: true,
-      endpoint: 'https://vimeo-download.ap-southeast-1.log.aliyuncs.com',
-      logstore: 'vimeo-download-mark-log',
+      endpoint: 'https://vimeo-download-logs.ap-northeast-1.log.aliyuncs.com',
+      logstore: 'vimeo-download-mark-logs',
       topic: 'mark-log',
       source: 'extension'
     })
@@ -83,7 +83,7 @@ describe('API domain configuration', () => {
       expect(config.hostPermissions).not.toContain('http://localhost:7900/*')
       expect(config.hostPermissions).not.toContain('http://localhost:7910/*')
       expect(config.hostPermissions).not.toContain(
-        'https://vimeo-download.ap-southeast-1.log.aliyuncs.com/*'
+        'https://vimeo-download-logs.ap-northeast-1.log.aliyuncs.com/*'
       )
       // API 域依赖后端通配 CORS，不申请 host_permissions 豁免
       expect(config.hostPermissions).not.toContain(
@@ -106,7 +106,7 @@ describe('API domain configuration', () => {
     // 官网域只在 popup 里以新标签打开，不需要 host_permissions
     expect(config.hostPermissions).not.toContain('http://localhost:7910/*')
     expect(config.hostPermissions).not.toContain(
-      'https://vimeo-download.ap-southeast-1.log.aliyuncs.com/*'
+      'https://vimeo-download-logs.ap-northeast-1.log.aliyuncs.com/*'
     )
     expect(config.hostPermissions).not.toContain('https://api.vimeodownloader.app/*')
     expect(config.hostPermissions).not.toContain('https://vimeodownloader.app/*')

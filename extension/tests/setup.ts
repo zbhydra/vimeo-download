@@ -14,8 +14,8 @@ vi.stubGlobal('__DEV__', true)
 vi.stubGlobal('__WEBSITE_BASE_URL__', 'http://localhost:7910')
 vi.stubGlobal('__ALI_SLS_MARK_CONFIG__', {
   enabled: false,
-  endpoint: 'https://vimeo-download.ap-southeast-1.log.aliyuncs.com',
-  logstore: 'vimeo-download-mark-log',
+  endpoint: 'https://vimeo-download-logs.ap-northeast-1.log.aliyuncs.com',
+  logstore: 'vimeo-download-mark-logs',
   topic: 'mark-log',
   source: 'extension'
 })

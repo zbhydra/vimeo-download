@@ -27,7 +27,9 @@ export const MARK_TYPE = {
   /** 登录未完成，阶段与原因放在 mark_msg */
   LOGIN_FAILED: 'login_failed',
   /** 打开升级订阅弹窗 */
-  UPGRADE_MODAL_OPEN: 'upgrade_modal_open'
+  UPGRADE_MODAL_OPEN: 'upgrade_modal_open',
+  /** Vimeo content script 初始化 */
+  CONTENT_OPEN: 'content_open'
 } as const
 
 export type MarkType = (typeof MARK_TYPE)[keyof typeof MARK_TYPE]

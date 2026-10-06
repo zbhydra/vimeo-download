@@ -5,8 +5,8 @@ import type { StorageValue } from '../../src/core/storage'
 
 const enabledSlsConfig = {
   enabled: true,
-  endpoint: 'https://vimeo-download.ap-southeast-1.log.aliyuncs.com',
-  logstore: 'vimeo-download-mark-log',
+  endpoint: 'https://vimeo-download-logs.ap-northeast-1.log.aliyuncs.com',
+  logstore: 'vimeo-download-mark-logs',
   topic: 'mark-log',
   source: 'extension'
 }
@@ -82,8 +82,8 @@ describe('extension SLS mark', () => {
     const [requestUrl, requestInit] = fetchMock.mock.calls[0] as [string, RequestInit]
     const url = new URL(requestUrl)
 
-    expect(url.origin).toBe('https://vimeo-download.ap-southeast-1.log.aliyuncs.com')
-    expect(url.pathname).toBe('/logstores/vimeo-download-mark-log/track')
+    expect(url.origin).toBe('https://vimeo-download-logs.ap-northeast-1.log.aliyuncs.com')
+    expect(url.pathname).toBe('/logstores/vimeo-download-mark-logs/track')
     expect(url.searchParams.get('APIVersion')).toBe('0.6.0')
     expect(url.searchParams.get('__topic__')).toBe('mark-log')
     expect(url.searchParams.get('__source__')).toBe('extension')

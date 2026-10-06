@@ -137,7 +137,7 @@ Upgrade 的购买动作由宿主提供：popup 打开 Premium，content 打开�
 - `core/api/mark/mark-sanitizer.ts` 对 `mark_msg` 做 URL query、token、Cookie、Authorization、直链脱敏后再上报。
 - popup 与 content 的行为事件统一通过 `BackgroundMessageRouter.recordMark()` 交给 background 写 SLS；background 内部事件直接使用同一安装身份。
 - 共享弹窗按登录态分别广播 `upgradeModalOpened` 或 `loginModalOpened`；background 统一写入对应曝光事件。登录事件口径见 [可观测与 SLS](./tech-可观测与SLS.md#插件登录漏斗)。
-- `vite.config.ts` 生产构建默认使用 `vimeo-download / ap-southeast-1.log.aliyuncs.com / vimeo-download-mark-log`（**阿里云侧同名 project / logstore 尚未创建**，创建并开启 WebTracking 前生产上报静默失败，不阻塞下载主链路），dev 未配置时关闭；可用 `EXTENSION_ALI_SLS_*` 覆盖，也兼容 `PUBLIC_ALI_SLS_*`。SLS WebTracking 对匿名 GET 返回通配 CORS，不申请该域名的 `host_permissions`。
+- `vite.config.ts` 生产构建默认使用 `vimeo-download-logs / ap-northeast-1.log.aliyuncs.com / vimeo-download-mark-logs`；阿里云资源已创建，仍需确认 Logstore 已开启 WebTracking。dev 未配置时关闭；可用 `EXTENSION_ALI_SLS_*` 覆盖，也兼容 `PUBLIC_ALI_SLS_*`。SLS WebTracking 对匿名 GET 返回通配 CORS，不申请该域名的 `host_permissions`。
 
 ---
 

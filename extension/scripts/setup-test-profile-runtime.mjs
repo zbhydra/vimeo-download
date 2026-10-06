@@ -185,7 +185,7 @@ export async function launchExtensionProfile(siteName, profileDir) {
 
   try {
     await installE2eBrowserIdentity(context)
-    await context.route('https://vimeo-download.ap-southeast-1.log.aliyuncs.com/**', async route => {
+    await context.route('https://vimeo-download-logs.ap-northeast-1.log.aliyuncs.com/**', async route => {
       await route.fulfill({ status: 204, body: '' })
     })
     return context
