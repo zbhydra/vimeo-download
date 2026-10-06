@@ -8,7 +8,14 @@
     <!-- 已登录状态：显示用户头像和下拉菜单 -->
     <div v-else class="user-menu-wrapper">
       <button class="user-avatar-btn" :title="authStore.displayName" @click="toggleMenu">
-        <Icon :name="IconName.USER" :size="IconSize.MD" />
+        <img
+          v-if="authStore.user?.avatar_url && !avatarLoadFailed"
+          class="user-avatar-image"
+          :src="authStore.user.avatar_url"
+          :alt="authStore.displayName"
+          @error="avatarLoadFailed = true"
+        />
+        <Icon v-else :name="IconName.USER" :size="IconSize.MD" />
         <span v-if="authStore.displayName" class="user-name">
           {{ truncateName(authStore.displayName) }}
         </span>
@@ -18,7 +25,14 @@
       <div v-if="showMenu" class="user-dropdown">
         <div class="user-info">
           <div class="user-icon-large">
-            <Icon :name="IconName.USER" :size="IconSize.XL" />
+            <img
+              v-if="authStore.user?.avatar_url && !avatarLoadFailed"
+              class="user-avatar-image"
+              :src="authStore.user.avatar_url"
+              :alt="authStore.displayName"
+              @error="avatarLoadFailed = true"
+            />
+            <Icon v-else :name="IconName.USER" :size="IconSize.XL" />
           </div>
           <div class="user-details">
             <div class="user-name-full">{{ authStore.displayName }}</div>
@@ -33,7 +47,7 @@
           <span>{{ t(I18N_KEYS.SUBSCRIPTION.MANAGE) }}</span>
         </button>
         <button class="dropdown-item logout" @click="handleLogout">
-          <Icon :name="IconName.ARROW_RIGHT_ON_RECTANGLE" :size="IconSize.MD" />
+          <Icon :name="IconName.LOGOUT" :size="IconSize.MD" />
           <span>{{ t(I18N_KEYS.AUTH.LOGOUT) }}</span>
         </button>
       </div>
@@ -42,7 +56,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/core/stores/authStore'
 import { useQuotaStore } from '@/core/stores/quotaStore'
@@ -65,6 +79,14 @@ const quotaStore = useQuotaStore()
 
 // 下拉菜单显示状态
 const showMenu = ref(false)
+const avatarLoadFailed = ref(false)
+
+watch(
+  () => authStore.user?.avatar_url,
+  () => {
+    avatarLoadFailed.value = false
+  }
+)
 
 /**
  * 切换下拉菜单
@@ -171,6 +193,13 @@ onUnmounted(() => {
   transition: background 0.2s ease;
 }
 
+.user-avatar-image {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 .user-avatar-btn:hover {
   background: var(--login-gray-200);
 }
@@ -232,6 +261,11 @@ onUnmounted(() => {
   border-radius: 50%;
   background: var(--login-gray-100);
   color: var(--login-gray-600);
+}
+
+.user-icon-large .user-avatar-image {
+  width: 40px;
+  height: 40px;
 }
 
 .user-details {

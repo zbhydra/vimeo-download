@@ -7,6 +7,7 @@ export enum IconName {
   ARROW_DOWN = 'arrow-down',
   ARROW_DOWN_TRAY = 'arrow-down-tray',
   ARROW_RIGHT_ON_RECTANGLE = 'arrow-right-on-rectangle',
+  LOGOUT = 'logout',
 
   // Media Types
   FILM = 'film',
