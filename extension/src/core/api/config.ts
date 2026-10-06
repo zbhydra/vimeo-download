@@ -126,10 +126,6 @@ export const STORAGE_KEYS = {
   FIRST_OPENED_AT: 'first_opened_at',
   /** 生产构建 DEBUG 日志开关 */
   DEBUG_LOGGING: 'debug_logging',
-  /** 评分引导是否已完成（已评分或已永久关闭），不再展示 */
-  HAS_RATED: 'has_rated',
-  /** 下载成功累计次数，用于首次成功触发评分引导 */
-  DOWNLOAD_SUCCESS_COUNT: 'download_success_count',
   /** 本插件最后一次订单定位；只保存用户 ID 与订单号，状态以服务端为准。 */
   LATEST_ORDER_REFERENCE: 'latest_order_reference',
   /** 下载历史（任务终态回写），值为 DownloadHistoryEntry 数组 */

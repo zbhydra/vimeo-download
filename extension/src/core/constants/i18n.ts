@@ -241,16 +241,6 @@ export const I18N_KEYS = {
     FAILED_MESSAGE: 'notification.downloadFailedMessage'
   },
 
-  /** 评分引导（popup footer） */
-  RATING: {
-    /** 引导文案 */
-    PROMPT: 'rating.prompt',
-    /** 低分致谢文案 */
-    THANKS: 'rating.thanks',
-    /** 单星按钮可访问名，参数 `stars` 为星数（1-5） */
-    STAR_ARIA: 'rating.starAria'
-  },
-
   /** 应用错误相关 */
   APP_ERROR: {
     /** 关闭按钮 */

@@ -664,7 +664,6 @@ offscreen 分片拉取遇到 `403` / `404` / `410`（VimeoRetryableDownloadError
 
 - 通知能力异常只记日志，不反噬下载链路；取消终态不发通知。
 - 文案经 background 侧 I18nService 按用户界面语言（`settings.language`，与 popup 共享同一份 locale 字典）解析，不另建 `chrome.i18n` 文案；正文携带目标文件名。
-- 成功终态先由 background 持久写入成功次数，再广播 `downloadTaskSucceeded`；popup 只重读事实判断评分资格（§12.10）。
 
 ### 8.9 HLS AES-128 加密交付
 
@@ -799,7 +798,7 @@ vimeo:{videoId}:image:thumbnail
 
 ### 12.1 尺寸与骨架
 
-固定 `448px` 宽，最小 `300px`、最大 `600px` 高（`src/style.css` 的 `--popup-width` / `--popup-min-height` / `--popup-max-height`）。`header` 一行放不下时功能控件折到第二行（`AppHeader.vue` 的 `flex-wrap`；最宽 locale fr-FR 的 header 功能控件约 575px，折两行属预期），文案不省略也不裁切。`header`（品牌 / 额度 / 设置齿轮 / 登录）与 `footer`（支持邮箱）固定，主区从上到下是：视频选择器（仅多视频时出现，见 §12.3）→ 视频信息 → 档位行（Video / 直接下载 / Audio / Subtitle / Image，见 §12.5）→ 时间裁剪；内容超过上限时只有主区内部滚动。主区之下、footer 之上依次是底部任务队列、运营条（公告跑马灯 + 评分引导，见 §12.10）。header 的设置齿轮打开设置弹层（界面语言 + 保存位置 + 文件名规则 + 下载历史入口，见 §12.7 / §12.11），语言切换入口唯一化——独立 `LanguageSwitcher` 组件已删除。
+固定 `448px` 宽，最小 `300px`、最大 `600px` 高（`src/style.css` 的 `--popup-width` / `--popup-min-height` / `--popup-max-height`）。`header` 一行放不下时功能控件折到第二行（`AppHeader.vue` 的 `flex-wrap`；最宽 locale fr-FR 的 header 功能控件约 575px，折两行属预期），文案不省略也不裁切。`header`（品牌 / 额度 / 设置齿轮 / 登录）与 `footer`（支持邮箱）固定，主区从上到下是：视频选择器（仅多视频时出现，见 §12.3）→ 视频信息 → 档位行（Video / 直接下载 / Audio / Subtitle / Image，见 §12.5）→ 时间裁剪；内容超过上限时只有主区内部滚动。主区之下、footer 之上依次是底部任务队列、运营条公告跑马灯（见 §12.10）。header 的设置齿轮打开设置弹层（界面语言 + 保存位置 + 文件名规则 + 下载历史入口，见 §12.7 / §12.11），语言切换入口唯一化——独立 `LanguageSwitcher` 组件已删除。
 
 宽度变化的附带影响：popup 内升级弹窗（`core/content/components/UpgradeModal.vue`，宽度上限 `400px`）只在视口窄于 `400px` 时命中 `@media (max-width: 400px)` 收窄内边距；popup 宽度 448px 下该断点不命中，弹窗用满 400px、内边距 32px。该断点在 Content Script 注入页仍生效（媒体查询按页面视口求值），故保留。
 
@@ -882,21 +881,15 @@ content 的 Vimeo 缓存按视频分组持有资源(见 §11):播放页走 `repl
 - 作用范围是全部档位：直连类与 DASH/HLS 的产物最终都由 background 经 `chrome.downloads.download` 写入「下载目录/所填子目录」（§8.1、§8.2），不再存在「页面内合成后 `anchor.download` 落默认目录」的第二条交付路径。
 - 文件名保持单段（`/` 仍被替换成空格），只有保存子目录允许保留 `/` 作为分隔符，且绝对路径、盘符、`..`、`~`、空段一律丢弃，交给 Chrome 的永远是非空相对路径。
 
-### 12.10 运营条（公告跑马灯 + 评分引导）
+### 12.10 运营条（公告跑马灯）
 
-popup footer 上方依次是公告跑马灯与评分引导，两者都是模块级单例控制器驱动、只在 popup 渲染。
+popup footer 上方展示公告跑马灯，只在 popup 渲染。
 
 **公告跑马灯**（`AnnouncementBar.vue`）：
 
 - 数据源是远端配置新顶层分组 `announcement`（`{text, url?, enabled}`，`core/api/remote-config/announcement.ts`）：`getRemoteConfig` 的调用目标从 content 放开到 content + popup，popup 经既有 `createRemoteConfigStore` 稀疏覆盖合并到包内默认值（默认无公告）；字段类型非法只丢弃该字段，`url` 只接受 http(s) 绝对地址（防伪协议注入）。
 - 展示条件：`enabled` 且 `text` 非空白；文本/链接全部来自远端配置，不走 i18n。单段 CSS 平移动画右进左出循环，时长按文本长度线性放大（保底 10s），`reduced-motion` 时退化为静态省略文本。
 - `url` 存在时整条可点击、经 `openExternalPage` 外跳；× 关闭只作用于当前 popup 会话（不写存储），重开 popup 后有效公告重新展示。
-
-**评分引导**（`RatingPrompt.vue`，`core/composables/ratingPrompt.ts`）：
-
-- 触发：background 在真实成功终态写 `download_success_count` 后通知 popup；重开也读取持久事实。资格为未评分、当前已登录且成功次数大于零，实际渲染再次受当前 auth 门控；此前游客成功也可在登录后获得资格，不依赖成功发生时 popup 存活。
-- 交互：五星星级条；1-3 星展示致谢后自动收起，4-5 星打开 `EXTENSION_STORE_URL`（`core/constants/deployment.ts`，扩展未上架，当前为占位地址，上架后替换）。任意交互（评分 / 点 ×）写入 `has_rated` 永久消失。
-- 存储异常按「未评分、零计数」兜底，只记日志不阻塞 UI。
 
 ### 12.8 明确不做
 
@@ -985,7 +978,7 @@ extension/src/sites/vimeo/
 - `extension/src/popup/components/HistoryView.vue`:下载历史视图（全屏覆盖层:搜索/排序/分页/单删/清空/CSV 导出,见 §12.11）。
 - `extension/src/popup/utils/historyCsv.ts`:CSV 导出纯函数（零依赖 RFC 4180 转义 + BOM,见 §12.11）。
 - `extension/src/popup/utils/historyPresentation.ts`:历史视图过滤/排序/分页/相对时间纯逻辑。
-- `extension/src/popup/components/AnnouncementBar.vue` / `RatingPrompt.vue`:运营条——公告跑马灯与评分引导（见 §12.10）。
+- `extension/src/popup/components/AnnouncementBar.vue`:运营条公告跑马灯（见 §12.10）。
 - `extension/src/popup/components/TrimSlider.vue`:时间裁剪双滑杆(双 handle 键盘/aria 完整,与裁剪数字输入双向绑定同一状态,见 §12.6 / §12.9)。
 - `extension/src/popup/components/VideoSelector.vue`:多视频选择器(combobox 触发按钮 + listbox 浮层,列表项带小封面与标题,见 §12.3 / §12.9)。
 - `extension/src/popup/components/VideoThumb.vue`:封面缩略图(图片 ↔ 占位兜底,信息卡与选择器共用,`:key` 防换源残留)。

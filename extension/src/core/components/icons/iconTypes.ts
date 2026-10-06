@@ -27,9 +27,7 @@ export enum IconName {
   CHECK = 'check',
   CHEVRON_DOWN = 'chevron-down',
   /** 设置齿轮（Heroicons cog-6-tooth） */
-  COG_6_TOOTH = 'cog-6-tooth',
-  /** 实心五角星，评分引导用（Heroicons star） */
-  STAR = 'star'
+  COG_6_TOOTH = 'cog-6-tooth'
 }
 
 /**

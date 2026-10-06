@@ -114,14 +114,6 @@ test('真实 player 的 FIFO、MP4、MP3 裁剪、额度与原生输入边界', 
     .serviceWorkers()
     .find(candidate => candidate.url().startsWith(`chrome-extension://${extensionId}/`))
   if (!worker) throw new Error('[VIMEO_REAL_WORKER_MISSING] 活跃扩展 SW 未找到')
-  await expect
-    .poll(async () =>
-      worker.evaluate(async () => {
-        const stored = await chrome.storage.local.get('download_success_count')
-        return stored.download_success_count as number
-      })
-    )
-    .toBe(2)
   const history = await worker.evaluate(async () => {
     const stored = await chrome.storage.local.get('download_history')
     return stored.download_history as DownloadHistoryEntry[]
@@ -131,7 +123,6 @@ test('真实 player 的 FIFO、MP4、MP3 裁剪、额度与原生输入边界', 
   popup = await openPopupPage(context, extensionId)
   expect((await readQueue(popup)).tasks).toHaveLength(0)
   await expect(popup.locator('.download-queue')).toHaveCount(0)
-  await expect(popup.locator('.rating-prompt')).toHaveCount(0)
   await popup.close()
   await page.close()
 })

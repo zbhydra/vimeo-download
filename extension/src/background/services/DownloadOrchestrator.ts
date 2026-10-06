@@ -39,7 +39,6 @@ import type { ExtensionEvents } from '@/core/events/types'
 import { ChromeEventEmitter } from '@/core/rpc/ChromeEventBus'
 import type { DownloadTaskSnapshot, MediaResource } from '@/core/types'
 import { SettingsManager } from '@/core/storage/settings'
-import { recordDownloadSuccess } from '@/core/storage/downloadSuccess'
 import { logger } from '@/core/utils/logger'
 import { recordBackgroundMark } from './ExtensionMarkReporter'
 import { buildDownloadFilename, buildResourceFilename } from './downloadFilename'
@@ -930,20 +929,9 @@ export class DownloadOrchestrator {
     void recordBackgroundMark(markType, buildDownloadMarkMessage(task.resource, error))
   }
 
-  /**
-   * 任务终态挂钩：发系统通知，成功事实落盘后通知 popup 刷新评分资格。
-   * 挂钩失败（通知 API 异常、无接收方）不影响编排循环本身。
-   */
+  /** 任务终态挂钩：发系统通知。 */
   private async notifyTaskFinished(task: OrchestratorTask, succeeded: boolean): Promise<void> {
     void notifyDownloadFinished({ filename: task.finalName, succeeded })
-
-    if (succeeded) {
-      await recordDownloadSuccess()
-      this.eventEmitter.emit('downloadTaskSucceeded', {
-        taskId: task.snapshot.taskId,
-        resourceId: task.snapshot.resourceId
-      })
-    }
   }
 
   /**

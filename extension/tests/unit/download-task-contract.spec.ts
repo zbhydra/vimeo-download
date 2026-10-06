@@ -262,8 +262,5 @@ describe('下载任务合同', () => {
     returnId?.(55)
     await vi.waitFor(() => expect(orchestrator.getSnapshot().tasks).toHaveLength(0))
     expect(chrome.downloads.cancel).toHaveBeenCalledWith(55)
-    expect(chrome.runtime.sendMessage).not.toHaveBeenCalledWith(
-      expect.objectContaining({ event: 'downloadTaskSucceeded' })
-    )
   })
 })

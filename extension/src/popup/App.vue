@@ -9,9 +9,8 @@
     <!-- 底部下载管理区：有任务时常驻，无任务不渲染 -->
     <DownloadQueue />
 
-    <!-- 运营条：远端公告跑马灯 + 评分引导（footer 上方） -->
+    <!-- 运营条：远端公告跑马灯 -->
     <AnnouncementBar />
-    <RatingPrompt />
 
     <!-- 底部联系入口 -->
     <AppFooter />
@@ -42,7 +41,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useResourceStore } from '@/popup/stores/resourceStore'
 import { useDownloadStatusStore } from '@/popup/stores/downloadStatusStore'
 import { useAuthStore } from '@/core/stores/authStore'
@@ -59,7 +58,6 @@ import AppHeader from './components/AppHeader.vue'
 import DownloadQueue from './components/DownloadQueue.vue'
 import AppFooter from './components/AppFooter.vue'
 import AnnouncementBar from './components/AnnouncementBar.vue'
-import RatingPrompt from './components/RatingPrompt.vue'
 import SettingsModal from './components/SettingsModal.vue'
 import UpgradeModal from '@/core/content/components/UpgradeModal.vue'
 import LoginModal from './components/LoginModal.vue'
@@ -67,7 +65,6 @@ import PremiumView from './components/PremiumView.vue'
 import HistoryView from './components/HistoryView.vue'
 import Toast from '@/core/components/Toast.vue'
 import { useToast } from '@/core/composables/useToast'
-import { refreshRatingPrompt } from '@/core/composables/ratingPrompt'
 import type { MediaResource } from '@/core/types'
 
 // Stores
@@ -77,13 +74,6 @@ const authStore = useAuthStore()
 const quotaStore = useQuotaStore()
 const { toastState } = useToast()
 
-watch(
-  () => authStore.isAuthenticated,
-  authenticated => {
-    void refreshRatingPrompt(authenticated)
-  }
-)
-
 // 升级弹窗状态
 const showUpgradeModal = ref(false)
 /** 当前升级弹窗对应的下一次额度刷新时间。 */
@@ -92,7 +82,6 @@ const upgradeModalResetAt = ref<number>()
 // 事件订阅器
 const eventSubscriber = new ChromeEventSubscriber<ExtensionEvents>()
 let upgradeModalUnsubscribe: (() => void) | null = null
-let downloadSuccessUnsubscribe: (() => void) | null = null
 
 // 记录打点（异步，不阻塞业务）
 function recordMark(markType: MarkType): void {
@@ -106,9 +95,6 @@ onMounted(async () => {
   upgradeModalUnsubscribe = eventSubscriber.on('showUpgradeModal', payload => {
     upgradeModalResetAt.value = payload.resetAt
     showUpgradeModal.value = true
-  })
-  downloadSuccessUnsubscribe = eventSubscriber.on('downloadTaskSucceeded', () => {
-    void refreshRatingPrompt(authStore.isAuthenticated)
   })
   eventSubscriber.on('quotaConsumed', () => {
     quotaStore.refreshQuota().catch(error => {
@@ -128,7 +114,6 @@ onMounted(async () => {
     downloadStatusStore.initialize(targetTab),
     authStore.initialize()
   ])
-  await refreshRatingPrompt(authStore.isAuthenticated)
 })
 
 onUnmounted(() => {
@@ -136,10 +121,6 @@ onUnmounted(() => {
   if (upgradeModalUnsubscribe) {
     upgradeModalUnsubscribe()
     upgradeModalUnsubscribe = null
-  }
-  if (downloadSuccessUnsubscribe) {
-    downloadSuccessUnsubscribe()
-    downloadSuccessUnsubscribe = null
   }
   eventSubscriber.destroy()
   downloadStatusStore.destroy()

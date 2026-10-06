@@ -63,6 +63,4 @@ export interface ExtensionEvents extends EventDefinition {
   loginModalOpened: void
   /** 当前页面未完成下载任务发生变化。 */
   downloadQueueUpdated: DownloadQueueSnapshot
-  /** 下载任务到达成功终态（落盘回执确认）；popup 用于评分引导的成功计数。 */
-  downloadTaskSucceeded: { taskId: string; resourceId: string }
 }
