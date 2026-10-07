@@ -1,70 +1,43 @@
 <template>
-  <div class="quota-counter-wrapper">
-    <div
-      v-if="quotaStore.showCounter"
-      class="quota-counter"
-      :class="{ 'quota-exhausted': quotaStore.isExhausted }"
-      :title="titleText"
-      @click="handleClick"
-    >
-      <span class="quota-text">{{ counterText }}</span>
-    </div>
-
-    <!-- 免费用户是升级 CTA，用醒目配色 + 光晕吸引点击；已订阅的 Unlimited 保持低调，避免误导继续付费 -->
-    <button
-      v-if="quotaStore.showSubscriptionAction"
-      class="upgrade-button"
-      :class="{ 'upgrade-cta': !quotaStore.hasActiveSubscription }"
-      :title="actionButtonText"
-      @click="handleUpgrade"
-    >
-      {{ actionButtonText }}
-    </button>
-  </div>
+  <!--
+    额度与订阅入口合成一个按钮：两者点击去向相同（订阅页），合并后 header 少一个控件，
+    448px 宽的 popup 才能单行放下。不限次时只剩入口文案。
+    免费用户是升级 CTA，用醒目配色 + 光晕吸引点击；已订阅的 Unlimited 保持低调，避免误导继续付费。
+  -->
+  <button
+    v-if="quotaStore.showSubscriptionAction"
+    type="button"
+    class="quota-action"
+    :class="{
+      'quota-action-cta': !quotaStore.hasActiveSubscription,
+      'quota-exhausted': quotaStore.isExhausted
+    }"
+    :title="titleText"
+    @click="handleClick"
+  >
+    <span v-if="quotaStore.showCounter" class="quota-count">{{ counterText }}</span>
+    <span>{{ actionButtonText }}</span>
+  </button>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useQuotaStore } from '@/core/stores/quotaStore'
-import { useAuthStore } from '@/core/stores/authStore'
 import { I18N_KEYS } from '@/core/constants/i18n'
 import { COMMON_COLORS } from '@/core/constants/style'
 import { logger } from '@/core/utils/logger'
 import { openExtensionPricingPage } from '@/core/utils/navigation'
-
-// Props
-interface Props {
-  /** 点击时是否跳转到 options（默认 true） */
-  enableClick?: boolean
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  enableClick: true
-})
 
 // I18n
 const { t } = useI18n()
 
 // Store
 const quotaStore = useQuotaStore()
-const authStore = useAuthStore()
 
 // 计数器显示文本
 const counterText = computed(() => {
   return `${quotaStore.remaining}/${quotaStore.dailyLimit}`
-})
-
-// 提示文本
-const titleText = computed(() => {
-  if (quotaStore.isExhausted) {
-    if (!authStore.isAuthenticated) return t(I18N_KEYS.AUTH.LOGIN)
-    return t(I18N_KEYS.QUOTA.TOOLTIP_EXHAUSTED)
-  }
-  return t(I18N_KEYS.QUOTA.TOOLTIP_NORMAL, {
-    remaining: quotaStore.remaining.toString(),
-    total: quotaStore.dailyLimit.toString()
-  })
 })
 
 // 已订阅用户仍保留入口，但文案展示为 Unlimited，统一进入独立订阅页。
@@ -76,71 +49,28 @@ const actionButtonText = computed(() => {
   return t(I18N_KEYS.QUOTA.UPGRADE_BUTTON)
 })
 
-/**
- * 处理点击事件
- */
-async function handleClick(): Promise<void> {
-  if (!props.enableClick) {
-    return
-  }
+// 有计数时提示额度明细，否则提示入口文案
+const titleText = computed(() => {
+  if (!quotaStore.showCounter) return actionButtonText.value
+  if (quotaStore.isExhausted) return t(I18N_KEYS.QUOTA.TOOLTIP_EXHAUSTED)
+  return t(I18N_KEYS.QUOTA.TOOLTIP_NORMAL, {
+    remaining: quotaStore.remaining.toString(),
+    total: quotaStore.dailyLimit.toString()
+  })
+})
 
-  if (quotaStore.isExhausted) {
-    if (!authStore.isAuthenticated) {
-      void openExtensionPricingPage('popup_quota_counter')
-      return
-    }
-    logger.info('[QuotaCounter] Quota exhausted, opening extension pricing page')
-    void openExtensionPricingPage('popup_quota_counter')
-  }
-}
-
-/**
- * 处理升级按钮点击
- */
-async function handleUpgrade(): Promise<void> {
+/** 打开独立订阅页。 */
+function handleClick(): void {
   logger.info('[QuotaCounter] Subscription action clicked, opening extension pricing page')
   void openExtensionPricingPage('popup_upgrade_now')
 }
 </script>
 
 <style scoped>
-.quota-counter-wrapper {
+.quota-action {
   display: flex;
   align-items: center;
   gap: 6px;
-}
-
-.quota-counter {
-  display: flex;
-  align-items: center;
-  padding: 4px 8px;
-  border-radius: 6px;
-  background: transparent;
-  cursor: default;
-  transition: all 0.2s ease;
-  user-select: none;
-}
-
-.quota-counter.quota-exhausted {
-  cursor: pointer;
-}
-
-.quota-counter.quota-exhausted:hover {
-  background: v-bind('COMMON_COLORS.ERROR_BG');
-}
-
-.quota-text {
-  font-size: 12px;
-  font-weight: 500;
-  color: v-bind('COMMON_COLORS.GRAY_600');
-  white-space: nowrap;
-}
-
-.quota-counter.quota-exhausted .quota-text {
-  color: v-bind('COMMON_COLORS.ERROR');
-}
-
-.upgrade-button {
   padding: 4px 8px;
   border: 1px solid v-bind('COMMON_COLORS.GRAY_300');
   border-radius: 6px;
@@ -153,15 +83,27 @@ async function handleUpgrade(): Promise<void> {
   white-space: nowrap;
 }
 
-.upgrade-button:hover {
+.quota-action:hover {
   background: v-bind('COMMON_COLORS.PRIMARY');
   color: white;
   border-color: v-bind('COMMON_COLORS.PRIMARY');
 }
 
+/* 计数做成按钮内的浅色徽标，与入口文案区分开 */
+.quota-count {
+  padding: 0 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.25);
+  font-variant-numeric: tabular-nums;
+}
+
+.quota-exhausted .quota-count {
+  background: v-bind('COMMON_COLORS.ERROR');
+}
+
 /* 琥珀色与头部的蓝色 Login 形成互补对比，在灰白底上最先被看到 */
-.upgrade-button.upgrade-cta {
-  padding: 4px 10px;
+.quota-action.quota-action-cta {
+  padding: 4px 10px 4px 6px;
   border-color: transparent;
   background: linear-gradient(
     135deg,
@@ -173,7 +115,7 @@ async function handleUpgrade(): Promise<void> {
   animation: upgrade-cta-pulse 2.2s ease-out infinite;
 }
 
-.upgrade-button.upgrade-cta:hover {
+.quota-action.quota-action-cta:hover {
   border-color: transparent;
   background: linear-gradient(
     135deg,
@@ -198,15 +140,15 @@ async function handleUpgrade(): Promise<void> {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .upgrade-button {
+  .quota-action {
     transition: none;
   }
 
-  .upgrade-button.upgrade-cta {
+  .quota-action.quota-action-cta {
     animation: none;
   }
 
-  .upgrade-button.upgrade-cta:hover {
+  .quota-action.quota-action-cta:hover {
     transform: none;
   }
 }

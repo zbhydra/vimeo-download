@@ -3,10 +3,10 @@
   /*
    * 单视频面板固定宽度：高度随内容生长到上限后由面板内部滚动。
    *
-   * 宽度不足时被裁掉的部分不会出现滚动条，只能靠宽度本身解决：header 控件并排放不下时
-   * 折到第二行（flex-wrap，见 AppHeader.vue），footer 句子长于一行时换行（overflow-wrap）。
-   * 448px = 初版 672px 应用户要求缩小三分之一（2026-09-26）；窄宽下最宽 locale（fr-FR
-   * header 约 575px）折为两行属预期，文案不裁切。
+   * 宽度不足时被裁掉的部分不会出现滚动条，只能靠宽度本身解决：header 控件压到最少后
+   * 常见 locale 单行放下，订阅文案过长的 locale 才折到第二行（flex-wrap，见 AppHeader.vue）；
+   * footer 句子长于一行时换行（overflow-wrap）。448px = 初版 672px 应用户要求缩小三分之一
+   * （2026-09-26）。
    */
   --popup-width: 448px;
   --popup-min-height: 300px;

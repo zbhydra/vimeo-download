@@ -798,7 +798,7 @@ vimeo:{videoId}:image:thumbnail
 
 ### 12.1 尺寸与骨架
 
-固定 `448px` 宽，最小 `300px`、最大 `600px` 高（`src/style.css` 的 `--popup-width` / `--popup-min-height` / `--popup-max-height`）。`header` 一行放不下时功能控件折到第二行（`AppHeader.vue` 的 `flex-wrap`；最宽 locale fr-FR 的 header 功能控件约 575px，折两行属预期），文案不省略也不裁切。`header`（品牌 / 额度 / 设置齿轮 / 登录）与 `footer`（支持邮箱）固定，主区从上到下是：视频选择器（仅多视频时出现，见 §12.3）→ 视频信息 → 档位行（Video / 直接下载 / Audio / Subtitle / Image，见 §12.5）→ 时间裁剪；内容超过上限时只有主区内部滚动。主区之下、footer 之上依次是底部任务队列、运营条公告跑马灯（见 §12.10）。header 的设置齿轮打开设置弹层（界面语言 + 保存位置 + 文件名规则 + 下载历史入口，见 §12.7 / §12.11），语言切换入口唯一化——独立 `LanguageSwitcher` 组件已删除。
+固定 `448px` 宽，最小 `300px`、最大 `600px` 高（`src/style.css` 的 `--popup-width` / `--popup-min-height` / `--popup-max-height`）。`header` 控件压到最少（额度计数并入订阅按钮 `QuotaCounter.vue`，已登录只显示头像、全名与邮箱在下拉菜单），常见 locale 单行放下；订阅文案过长的 locale（fr-FR、ja-JP）仍折到第二行兜底（`AppHeader.vue` 的 `flex-wrap`），文案不省略也不裁切。`header`（品牌 / 额度与订阅入口 / 设置齿轮 / 登录）与 `footer`（支持邮箱）固定，主区从上到下是：视频选择器（仅多视频时出现，见 §12.3）→ 视频信息 → 档位行（Video / 直接下载 / Audio / Subtitle / Image，见 §12.5）→ 时间裁剪；内容超过上限时只有主区内部滚动。主区之下、footer 之上依次是底部任务队列、运营条公告跑马灯（见 §12.10）。header 的设置齿轮打开设置弹层（界面语言 + 保存位置 + 文件名规则 + 下载历史入口，见 §12.7 / §12.11），语言切换入口唯一化——独立 `LanguageSwitcher` 组件已删除。
 
 宽度变化的附带影响：popup 内升级弹窗（`core/content/components/UpgradeModal.vue`，宽度上限 `400px`）只在视口窄于 `400px` 时命中 `@media (max-width: 400px)` 收窄内边距；popup 宽度 448px 下该断点不命中，弹窗用满 400px、内边距 32px。该断点在 Content Script 注入页仍生效（媒体查询按页面视口求值），故保留。
 

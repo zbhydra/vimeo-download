@@ -7,7 +7,12 @@
 
     <!-- 已登录状态：显示用户头像和下拉菜单 -->
     <div v-else class="user-menu-wrapper">
-      <button class="user-avatar-btn" :title="authStore.displayName" @click="toggleMenu">
+      <button
+        class="user-avatar-btn"
+        :title="authStore.displayName"
+        :aria-label="authStore.displayName"
+        @click="toggleMenu"
+      >
         <img
           v-if="authStore.user?.avatar_url && !avatarLoadFailed"
           class="user-avatar-image"
@@ -16,9 +21,6 @@
           @error="avatarLoadFailed = true"
         />
         <Icon v-else :name="IconName.USER" :size="IconSize.MD" />
-        <span v-if="authStore.displayName" class="user-name">
-          {{ truncateName(authStore.displayName) }}
-        </span>
       </button>
 
       <!-- 下拉菜单 -->
@@ -123,16 +125,6 @@ function handleManage(): void {
   }, 0)
 }
 
-/**
- * 截断过长的用户名
- */
-function truncateName(name: string): string {
-  if (name.length > 10) {
-    return name.substring(0, 10) + '...'
-  }
-  return name
-}
-
 // 点击外部关闭菜单
 function handleClickOutside(event: MouseEvent): void {
   const target = event.target as Node
@@ -181,11 +173,11 @@ onUnmounted(() => {
   align-items: center;
 }
 
+/* 只放头像：全名和邮箱在下拉菜单里展示，header 不再为用户名留宽度 */
 .user-avatar-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
+  padding: 2px;
   border: none;
   border-radius: 6px;
   background: transparent;
@@ -209,15 +201,6 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   color: var(--login-gray-600);
-}
-
-.user-name {
-  font-size: 13px;
-  color: var(--login-gray-800);
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* 下拉菜单 */
