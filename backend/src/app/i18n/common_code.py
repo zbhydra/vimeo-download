@@ -114,6 +114,7 @@ class CommonCode(IntEnum):
 
     # ========== 订阅活动 (26000-26999) ==========
     SUBSCRIPTION_REVIEW_REWARD_BUSY = 26001  # 好评赠送领取暂时繁忙
+    SUBSCRIPTION_ACTIVE_EXISTS = 26002  # 当前用户已有有效订阅
 
     # ========== 管理后台 (30001-30999) ==========
     ADMIN_AUTH_FAILED = 30001  # 管理员账号或密码错误

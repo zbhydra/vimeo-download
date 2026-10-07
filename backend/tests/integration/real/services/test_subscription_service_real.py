@@ -216,6 +216,6 @@ async def test_real_check_product_rejects_active_lifetime_user(
             )
         )
 
-    assert exc_info.value.code == CommonCode.INVALID_REQUEST
+    assert exc_info.value.code == CommonCode.SUBSCRIPTION_ACTIVE_EXISTS
     assert exc_info.value.data is not None
     assert exc_info.value.data.get("reason") == "active_subscription_exists"

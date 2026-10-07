@@ -93,7 +93,8 @@
     "CHECKIN_ALREADY_CLAIMED": "You have already claimed today's check-in reward",
     "CHECKIN_CAMPAIGN_ENDED": "The check-in campaign has ended",
     "CHECKIN_CONFIG_INVALID": "Check-in configuration is invalid",
-    "SUBSCRIPTION_REVIEW_REWARD_BUSY": "Le serveur est occupé. Veuillez réessayer plus tard."
+    "SUBSCRIPTION_REVIEW_REWARD_BUSY": "Le serveur est occupé. Veuillez réessayer plus tard.",
+    "SUBSCRIPTION_ACTIVE_EXISTS": "Vous avez déjà un abonnement actif. Vous ne pouvez pas en acheter un autre."
   },
   "email": {
     "title": "Code de Vérification",

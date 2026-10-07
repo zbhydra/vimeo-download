@@ -633,7 +633,7 @@ async def test_check_product_rejects_active_subscription(
             )
         )
 
-    assert exc_info.value.code == CommonCode.INVALID_REQUEST
+    assert exc_info.value.code == CommonCode.SUBSCRIPTION_ACTIVE_EXISTS
     assert exc_info.value.data == {
         "reason": "active_subscription_exists",
         "expires_at": expires_at,

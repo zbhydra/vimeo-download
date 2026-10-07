@@ -29,6 +29,9 @@ export const PAYMENT_UNSUPPORTED_METHOD_CODE = 21004
 /** 后端价格配置已变化，需要重新拉取 checkout configs。 */
 export const PAYMENT_PRICE_UPDATED_CODE = 21005
 
+/** 当前用户已有有效订阅，不能重复购买。 */
+export const SUBSCRIPTION_ACTIVE_EXISTS_CODE = 26002
+
 /** 订单状态：待支付。 */
 export const ORDER_STATUS_PENDING = 1
 
@@ -309,6 +312,11 @@ export function isOrderCheckoutAuthFailure(error: Error): boolean {
 /** 当前错误是否价格更新。 */
 export function isPaymentPriceUpdatedError(error: Error): boolean {
   return error instanceof HomepageApiError && error.code === PAYMENT_PRICE_UPDATED_CODE
+}
+
+/** 当前错误是否为已有有效订阅。 */
+export function isActiveSubscriptionExistsError(error: Error): boolean {
+  return error instanceof HomepageApiError && error.code === SUBSCRIPTION_ACTIVE_EXISTS_CODE
 }
 
 /** 当前错误是否支付网关失败。 */

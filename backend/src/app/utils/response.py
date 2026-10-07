@@ -59,7 +59,7 @@ class ResponseUtils:
             locale = LocaleContext(language=DEFAULT_LANGUAGE)
 
         message = translator.translate(f"resp_code.{code.name}", locale.language)
-        response_status = status_code or _http_status_from_common_code(code)
+        response_status = _http_status_from_common_code(code, status_code)
 
         return ResponseUtils.json(
             code.value,
@@ -69,7 +69,11 @@ class ResponseUtils:
         )
 
 
-def _http_status_from_common_code(code: CommonCode) -> int:
-    if 400 <= code.value <= 599:
-        return code.value
+def _http_status_from_common_code(
+    code: CommonCode,
+    requested_status_code: int | None = None,
+) -> int:
+    """业务响应只允许 HTTP 200；鉴权失败保留 HTTP 401。"""
+    if code.value == 401 or requested_status_code == 401:
+        return 401
     return 200

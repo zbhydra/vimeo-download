@@ -83,7 +83,8 @@
     "CHECKIN_ALREADY_CLAIMED": "You have already claimed today's check-in reward",
     "CHECKIN_CAMPAIGN_ENDED": "The check-in campaign has ended",
     "CHECKIN_CONFIG_INVALID": "Check-in configuration is invalid",
-    "SUBSCRIPTION_REVIEW_REWARD_BUSY": "서버가 사용 중입니다. 잠시 후 다시 시도해 주세요."
+    "SUBSCRIPTION_REVIEW_REWARD_BUSY": "서버가 사용 중입니다. 잠시 후 다시 시도해 주세요.",
+    "SUBSCRIPTION_ACTIVE_EXISTS": "이미 활성 구독이 있어 추가로 구매할 수 없습니다."
   },
   "email": {
     "title": "인증 코드",

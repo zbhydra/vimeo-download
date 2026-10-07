@@ -16,6 +16,7 @@ import {
   getOrderStatus,
   hasOrderCheckoutPollingTimedOut,
   isOrderCheckoutAuthFailure,
+  isActiveSubscriptionExistsError,
   isPaymentGatewayError,
   isPaymentPriceUpdatedError,
   isRecoverableOrderStatusError,
@@ -254,6 +255,9 @@ function openPaymentUrl(url: string): void {
 function mapOrderCheckoutError(copy: OrderCheckoutCopy, error: Error): string {
   if (isPaymentPriceUpdatedError(error)) {
     return copy.priceUpdated
+  }
+  if (isActiveSubscriptionExistsError(error)) {
+    return copy.alreadyActive
   }
   if (isPaymentGatewayError(error)) {
     return copy.gatewayFailed

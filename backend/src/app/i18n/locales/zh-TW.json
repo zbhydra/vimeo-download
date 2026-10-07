@@ -83,7 +83,8 @@
     "CHECKIN_ALREADY_CLAIMED": "今天已經簽到領取",
     "CHECKIN_CAMPAIGN_ENDED": "簽到活動已結束",
     "CHECKIN_CONFIG_INVALID": "簽到配置異常",
-    "SUBSCRIPTION_REVIEW_REWARD_BUSY": "伺服器忙碌，請稍後重試"
+    "SUBSCRIPTION_REVIEW_REWARD_BUSY": "伺服器忙碌，請稍後重試",
+    "SUBSCRIPTION_ACTIVE_EXISTS": "您已有有效訂閱，暫不能重複購買。"
   },
   "email": {
     "title": "驗證碼",

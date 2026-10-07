@@ -101,7 +101,8 @@
     "CHECKIN_ALREADY_CLAIMED": "今天已经签到领取",
     "CHECKIN_CAMPAIGN_ENDED": "签到活动已结束",
     "CHECKIN_CONFIG_INVALID": "签到配置异常",
-    "SUBSCRIPTION_REVIEW_REWARD_BUSY": "服务器繁忙，请稍后重试"
+    "SUBSCRIPTION_REVIEW_REWARD_BUSY": "服务器繁忙，请稍后重试",
+    "SUBSCRIPTION_ACTIVE_EXISTS": "你已有有效订阅，暂不能重复购买。"
   },
   "email": {
     "title": "验证码",

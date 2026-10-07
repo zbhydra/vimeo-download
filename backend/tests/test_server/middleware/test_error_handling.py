@@ -18,7 +18,7 @@ from app.middleware.error_handling import ErrorHandlingMiddleware
 
 def assert_internal_server_error_response(response: Response) -> None:
     assert isinstance(response, JSONResponse)
-    assert response.status_code == 500
+    assert response.status_code == 200
 
     content = json.loads(bytes(response.body).decode())
     assert content["code"] == CommonCode.INTERNAL_SERVER_ERROR.value
@@ -259,7 +259,7 @@ class TestErrorHandlingMiddleware:
         for result in results:
             if not isinstance(result, Exception):
                 request_id, status_code = result
-                assert status_code == 500
+                assert status_code == 200
 
     @pytest.mark.asyncio
     async def test_middleware_mixed_success_and_failure(self, middleware):
@@ -299,7 +299,7 @@ class TestErrorHandlingMiddleware:
         for result in results:
             if not isinstance(result, Exception):
                 request_id, actual_status, success = result
-                expected_status = 200 if success else 500
+                expected_status = 200
                 assert actual_status == expected_status
 
                 if success:

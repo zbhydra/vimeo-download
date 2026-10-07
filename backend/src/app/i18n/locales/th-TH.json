@@ -93,7 +93,8 @@
     "CHECKIN_ALREADY_CLAIMED": "You have already claimed today's check-in reward",
     "CHECKIN_CAMPAIGN_ENDED": "The check-in campaign has ended",
     "CHECKIN_CONFIG_INVALID": "Check-in configuration is invalid",
-    "SUBSCRIPTION_REVIEW_REWARD_BUSY": "เซิร์ฟเวอร์กำลังทำงานหนัก โปรดลองอีกครั้งในภายหลัง"
+    "SUBSCRIPTION_REVIEW_REWARD_BUSY": "เซิร์ฟเวอร์กำลังทำงานหนัก โปรดลองอีกครั้งในภายหลัง",
+    "SUBSCRIPTION_ACTIVE_EXISTS": "คุณมีการสมัครสมาชิกที่ใช้งานอยู่แล้ว จึงซื้อซ้ำไม่ได้"
   },
   "email": {
     "title": "รหัสยืนยัน",

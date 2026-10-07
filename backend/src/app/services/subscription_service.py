@@ -61,7 +61,7 @@ class SubscriptionService(BaseService[UserSubscriptionModel]):
             subscription = await self.get_user_subscription(param.user_id)
             if subscription.expires_at is not None:
                 raise AppCommonException(
-                    CommonCode.INVALID_REQUEST,
+                    CommonCode.SUBSCRIPTION_ACTIVE_EXISTS,
                     ext_msg=(
                         "subscription_check_product: user already has active "
                         "subscription, reject duplicate subscription checkout: "

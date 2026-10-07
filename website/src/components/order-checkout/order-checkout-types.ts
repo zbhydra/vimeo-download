@@ -53,6 +53,8 @@ export interface OrderCheckoutCopy {
   failed: string
   /** 创建订单失败文案。 */
   createFailed: string
+  /** 当前用户已有有效订阅。 */
+  alreadyActive: string
   /** 支付数据不合法文案。 */
   invalidPaymentData: string
   /** 价格更新文案。 */
@@ -102,6 +104,7 @@ export interface OrderCheckoutModalContent {
     | 'successTitle'
     | 'successDescription'
     | 'createFailed'
+    | 'alreadyActive'
     | 'invalidPaymentData'
     | 'priceUpdated'
     | 'gatewayFailed'
