@@ -102,7 +102,6 @@ const termsPath = `${currentLocalePath}terms/`;
 const privacyPath = `${currentLocalePath}privacy/`;
 const aboutPath = `${currentLocalePath}about/`;
 const contactPath = `${currentLocalePath}contact/`;
-const pricingPath = `${currentLocalePath}ext-pricing/`;
 const languageOptionLinks = Object.entries(localePaths)
   .filter(([key]) => availableLocales.some(availableLocale => availableLocale === key))
   .map(([key, path]) => {
@@ -119,7 +118,6 @@ const guidesPath = (await getGuideLocales()).includes(locale) ? getGuidesPath(lo
 const guidesContent = getGuidesContent(locale);
 const normalizedCurrentPath = normalizePathname(currentPath);
 const isHomeActive = normalizedCurrentPath === currentLocalePath;
-const isPricingActive = normalizedCurrentPath === pricingPath;
 const schemaName = PRODUCT_NAME;
 const siteHomeUrl = new URL('/', Astro.site).href;
 const websiteId = new URL('/#website', Astro.site).href;
@@ -977,16 +975,6 @@ const structuredDataItems = [
           >
             {t.layout.nav.home}
           </a>
-          <a
-            href={pricingPath}
-            class={isPricingActive ? 'active' : ''}
-            aria-current={isPricingActive ? 'page' : undefined}
-            data-ga-event="internal_workflow_click"
-            data-ga-source="nav"
-            data-ga-target="pricing"
-          >
-            {t.layout.nav.pricing}
-          </a>
         </div>
 
         <div class="nav-actions">
@@ -1058,16 +1046,6 @@ const structuredDataItems = [
             aria-current={isHomeActive ? 'page' : undefined}
           >
             {t.layout.nav.home}
-          </a>
-          <a
-            href={pricingPath}
-            class={isPricingActive ? 'active' : ''}
-            aria-current={isPricingActive ? 'page' : undefined}
-            data-ga-event="internal_workflow_click"
-            data-ga-source="mobile_nav"
-            data-ga-target="pricing"
-          >
-            {t.layout.nav.pricing}
           </a>
           <a
             href={chromeWebStoreUrl}

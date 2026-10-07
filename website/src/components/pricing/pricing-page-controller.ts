@@ -572,7 +572,7 @@ function renderSubscriptionCard(
       setMessage(subscription.error, copy.subscription.alreadyActive)
       return
     }
-    void openSubscriptionCheckout(elements, copy, state, plan, subscription).catch(error => {
+    void openSubscriptionCheckout(copy, state, plan, subscription).catch(error => {
       console.error(error)
       setMessage(subscription.error, error instanceof Error ? error.message : copy.subscription.createFailed)
     })
@@ -599,7 +599,6 @@ function renderReviewRewardBanner(elements: PricingElements, state: PricingState
 
 /** 打开指定订阅商品的公共支付方式选择弹窗。 */
 async function openSubscriptionCheckout(
-  elements: PricingElements,
   copy: PricingCopy,
   state: PricingState,
   plan: SubscriptionCheckoutPlan,
@@ -636,26 +635,6 @@ async function openSubscriptionCheckout(
   }
 
   setMessage(subscription.error, '')
-  const confirmController = window.pricingSubscriptionConfirmController
-  if (!confirmController) {
-    throw new Error(
-      '[pricing-page-controller] Missing window.pricingSubscriptionConfirmController for subscription confirmation.'
-    )
-  }
-  const confirmationResult = await confirmController.open({
-    reviewRewardEnabled: state.reviewRewardEnabled,
-    reviewRewardClaimedCount: state.reviewRewardClaimedCount,
-    requestContext: buildRequestContext(state),
-    returnFocus: subscription.buy
-  })
-  if (confirmationResult === 'auth_invalid') {
-    handleReviewRewardAuthInvalid(elements, copy, state)
-    return
-  }
-  if (confirmationResult !== 'continue') {
-    return
-  }
-
   await window.orderCheckoutController?.open({
     source: 'pricing_subscription',
     initialPaymentMethod: channel.payment_method,
@@ -752,7 +731,7 @@ async function handlePricingAuthSuccess(
       state.subscriptionPlans.find(item => item.product_id === pendingPurchase.productId) ?? null
     const card = plan ? findSubscriptionCard(elements, plan.product_id) : null
     if (plan && card) {
-      await openSubscriptionCheckout(elements, copy, state, plan, card, pendingPurchase)
+      await openSubscriptionCheckout(copy, state, plan, card, pendingPurchase)
     }
   }
 }
