@@ -9,8 +9,28 @@
       @close="handleClose"
     >
       <header class="premium-header">
-        <h2 id="vdl-premium-title" class="premium-title">{{ t(I18N_KEYS.PREMIUM.TITLE) }}</h2>
-        <div v-if="props.page" class="premium-account">
+        <!-- 页面模式由标题承接 showModal 的初始焦点，避免账号按钮一打开就显示焦点框 -->
+        <h2
+          id="vdl-premium-title"
+          class="premium-title"
+          :autofocus="props.page"
+          :tabindex="props.page ? -1 : undefined"
+        >
+          {{ t(I18N_KEYS.PREMIUM.TITLE) }}
+        </h2>
+        <button
+          v-if="!props.page"
+          type="button"
+          class="premium-close"
+          :aria-label="t(I18N_KEYS.APP_ERROR.DISMISS)"
+          @click="handleClose"
+        >
+          <Icon :name="IconName.X_MARK" :size="IconSize.SM" />
+        </button>
+      </header>
+
+      <main class="premium-body">
+        <div v-if="props.page" class="premium-page-account">
           <template v-if="authStore.isAuthenticated && authStore.user">
             <button
               type="button"
@@ -28,6 +48,12 @@
                 accountInitial
               }}</span>
               <span class="premium-account-email">{{ authStore.user.email }}</span>
+              <span v-if="isActiveSubscription && accountStatus" class="premium-account-plan">
+                {{ accountStatus.display_name }}
+                <template v-if="accountStatus.expires_at">
+                  · {{ formatExpiry(accountStatus.expires_at) }}</template
+                >
+              </span>
             </button>
             <div v-if="accountMenuOpen" class="premium-account-menu">
               <span>{{ authStore.user.email }}</span>
@@ -47,18 +73,7 @@
             {{ t(I18N_KEYS.AUTH.LOGIN) }}
           </button>
         </div>
-        <button
-          v-if="!props.page"
-          type="button"
-          class="premium-close"
-          :aria-label="t(I18N_KEYS.APP_ERROR.DISMISS)"
-          @click="handleClose"
-        >
-          <Icon :name="IconName.X_MARK" :size="IconSize.SM" />
-        </button>
-      </header>
 
-      <main class="premium-body">
         <!-- 登录门控：未登录先登录，登录成功后回到本视图 -->
         <div v-if="phase === 'gate'" class="premium-center">
           <div class="premium-hero-icon" aria-hidden="true">
@@ -89,7 +104,7 @@
 
         <!-- 套餐选择与发起支付 -->
         <template v-else-if="phase === 'ready' || phase === 'creating'">
-          <ul class="premium-selling">
+          <ul v-if="!props.page" class="premium-selling">
             <li class="premium-selling-item">
               <Icon class="premium-selling-icon" :name="IconName.CHECK" :size="IconSize.SM" />
               <span>{{ t(I18N_KEYS.PREMIUM.SELLING_UNLIMITED) }}</span>
@@ -104,7 +119,87 @@
             </li>
           </ul>
 
-          <div class="premium-plans" role="radiogroup" :aria-label="t(I18N_KEYS.PREMIUM.TITLE)">
+          <p v-if="props.page && isActiveSubscription" class="premium-page-notice" role="status">
+            {{ t(I18N_KEYS.PREMIUM.ERROR_ACTIVE_SUBSCRIPTION) }}
+          </p>
+
+          <div v-if="props.page" class="premium-page-plans">
+            <article
+              v-for="(plan, index) in plans"
+              :key="plan.product_id"
+              class="premium-page-plan"
+              :class="{ 'is-popular': index === 0 }"
+            >
+              <span v-if="index === 0" class="premium-page-popular">
+                <Icon :name="IconName.STAR" :size="IconSize.XS" />
+                {{ t(I18N_KEYS.PREMIUM.POPULAR) }}
+              </span>
+              <div class="premium-page-plan-head">
+                <h3 class="premium-page-plan-name">{{ periodLabel(plan.period) }}</h3>
+                <span v-if="savingsPercent(plan) > 0" class="premium-page-save">
+                  {{ t(I18N_KEYS.PREMIUM.SAVE, { percent: savingsPercent(plan) }) }}
+                </span>
+              </div>
+              <p class="premium-page-plan-quota">{{ quotaHint(plan) }}</p>
+              <div class="premium-page-price-row">
+                <span class="premium-page-price">
+                  {{ formatPrice(plan.display_amount, plan.display_currency) }}
+                </span>
+                <span class="premium-page-price-suffix">{{ priceSuffix(plan.period) }}</span>
+              </div>
+              <button
+                type="button"
+                class="premium-page-buy"
+                :disabled="phase === 'creating' || isActiveSubscription"
+                @click="selectPlanAndBuy(plan.product_id)"
+              >
+                {{
+                  t(
+                    isActiveSubscription
+                      ? I18N_KEYS.PREMIUM.SUBSCRIBED
+                      : phase === 'creating' && plan.product_id === selectedPlanId
+                        ? I18N_KEYS.PREMIUM.CREATING
+                        : buyLabelKey
+                  )
+                }}
+              </button>
+              <p class="premium-page-secure">
+                <Icon :name="IconName.LOCK_CLOSED" :size="IconSize.XS" />
+                {{ t(I18N_KEYS.PREMIUM.SECURE_CHECKOUT) }}
+              </p>
+              <ul class="premium-page-benefits">
+                <li>
+                  <Icon :name="IconName.CHECK" :size="IconSize.MD" color="var(--premium-primary)" />
+                  <span>{{ t(I18N_KEYS.PREMIUM.SELLING_UNLIMITED) }}</span>
+                </li>
+                <li>
+                  <Icon :name="IconName.CHECK" :size="IconSize.MD" color="var(--premium-primary)" />
+                  <span>{{ t(I18N_KEYS.PREMIUM.SELLING_QUALITY) }}</span>
+                </li>
+                <li>
+                  <Icon :name="IconName.CHECK" :size="IconSize.MD" color="var(--premium-primary)" />
+                  <span>{{ t(I18N_KEYS.PREMIUM.SELLING_TRIMMING) }}</span>
+                </li>
+              </ul>
+              <p class="premium-page-billing">
+                <Icon :name="IconName.CHECK" :size="IconSize.MD" color="var(--premium-success)" />
+                {{
+                  t(
+                    plan.auto_renew
+                      ? I18N_KEYS.PREMIUM.AUTO_RENEW
+                      : I18N_KEYS.PREMIUM.BILLING_ONE_TIME
+                  )
+                }}
+              </p>
+            </article>
+          </div>
+
+          <div
+            v-else
+            class="premium-plans"
+            role="radiogroup"
+            :aria-label="t(I18N_KEYS.PREMIUM.TITLE)"
+          >
             <button
               v-for="plan in plans"
               :key="plan.product_id"
@@ -127,27 +222,8 @@
             </button>
           </div>
 
-          <div v-if="selectedPlanChannels.length > 1" class="premium-channels">
-            <span class="premium-channels-label">
-              {{ t(I18N_KEYS.PREMIUM.PAYMENT_METHOD) }}
-            </span>
-            <div class="premium-channel-list" role="radiogroup">
-              <button
-                v-for="channel in selectedPlanChannels"
-                :key="channel.payment_method"
-                type="button"
-                role="radio"
-                :aria-checked="channel.payment_method === selectedChannelMethod"
-                class="premium-channel"
-                :class="{ 'is-selected': channel.payment_method === selectedChannelMethod }"
-                @click="selectedChannelMethod = channel.payment_method"
-              >
-                {{ channel.payment_method_name || channel.payment_method }}
-              </button>
-            </div>
-          </div>
-
           <button
+            v-if="!props.page"
             type="button"
             class="premium-primary-button premium-buy"
             :disabled="phase === 'creating'"
@@ -163,7 +239,7 @@
               )
             }}
           </button>
-          <p v-if="isActiveSubscription" class="premium-error" role="status">
+          <p v-if="!props.page && isActiveSubscription" class="premium-error" role="status">
             {{ t(I18N_KEYS.PREMIUM.ERROR_ACTIVE_SUBSCRIPTION) }}
           </p>
           <p v-if="actionError" class="premium-error" role="alert">{{ actionError }}</p>
@@ -208,36 +284,108 @@
       ref="confirmationDialog"
       class="premium-confirm-dialog"
       aria-labelledby="premium-confirm-title"
+      :style="colorVars"
       @close="handleConfirmationClose"
     >
-      <h3 id="premium-confirm-title">{{ t(I18N_KEYS.PREMIUM.CONFIRM_TITLE) }}</h3>
-      <p>{{ t(I18N_KEYS.PREMIUM.CONFIRM_MESSAGE) }}</p>
-      <label class="premium-confirm-agreement">
-        <input v-model="agreementAccepted" type="checkbox" checked />
-        <span>
-          {{ t(I18N_KEYS.PREMIUM.CONFIRM_AGREEMENT) }}
-          <button type="button" class="premium-confirm-link" @click="openTerms">
-            {{ t(I18N_KEYS.AUTH.MODAL_TERMS_LINK) }}
-          </button>
-          <span aria-hidden="true"> · </span>
-          <button type="button" class="premium-confirm-link" @click="openPrivacy">
-            {{ t(I18N_KEYS.AUTH.MODAL_PRIVACY_LINK) }}
-          </button>
-        </span>
-      </label>
-      <div class="premium-confirm-actions">
-        <button type="button" class="premium-secondary-button" @click="confirmationVisible = false">
-          {{ t(I18N_KEYS.PREMIUM.CONFIRM_CANCEL) }}
-        </button>
+      <header class="premium-confirm-header">
+        <div>
+          <p class="premium-confirm-kicker">{{ t(I18N_KEYS.PREMIUM.CONFIRM_TITLE) }}</p>
+          <h3 id="premium-confirm-title">{{ t(I18N_KEYS.PREMIUM.CONFIRM_PAYMENT_TITLE) }}</h3>
+        </div>
         <button
           type="button"
-          class="premium-primary-button"
-          :disabled="!agreementAccepted"
-          @click="confirmPurchase"
+          class="premium-close"
+          :aria-label="t(I18N_KEYS.APP_ERROR.DISMISS)"
+          @click="confirmationVisible = false"
         >
-          {{ t(I18N_KEYS.PREMIUM.CONFIRM_CONTINUE) }}
+          <Icon :name="IconName.X_MARK" :size="IconSize.SM" />
         </button>
+      </header>
+
+      <div class="premium-confirm-body">
+        <section v-if="selectedPlan" class="premium-confirm-summary">
+          <p class="premium-confirm-summary-label">
+            {{ t(I18N_KEYS.PREMIUM.CONFIRM_SELECTED_PLAN) }}
+          </p>
+          <p class="premium-confirm-summary-values">
+            <span>{{ periodLabel(selectedPlan.period) }}</span>
+            <span>{{
+              formatPrice(selectedPlan.display_amount, selectedPlan.display_currency)
+            }}</span>
+          </p>
+          <p class="premium-confirm-summary-usage">
+            {{ priceSuffix(selectedPlan.period) }} ·
+            {{
+              t(
+                selectedPlan.auto_renew
+                  ? I18N_KEYS.PREMIUM.AUTO_RENEW
+                  : I18N_KEYS.PREMIUM.BILLING_ONE_TIME
+              )
+            }}
+            · {{ quotaHint(selectedPlan) }}
+          </p>
+        </section>
+
+        <div
+          class="premium-channel-list"
+          role="radiogroup"
+          :aria-label="t(I18N_KEYS.PREMIUM.CONFIRM_PAYMENT_TITLE)"
+        >
+          <button
+            v-for="channel in selectedPlanChannels"
+            :key="channel.payment_method"
+            type="button"
+            role="radio"
+            :aria-checked="channel.payment_method === selectedChannelMethod"
+            class="premium-channel"
+            :class="{ 'is-selected': channel.payment_method === selectedChannelMethod }"
+            @click="selectedChannelMethod = channel.payment_method"
+          >
+            <span class="premium-channel-icon" aria-hidden="true">
+              <img v-if="channel.payment_method === 'paypal'" :src="PAYPAL_ICON_URL" alt="" />
+              <Icon
+                v-else-if="channel.payment_method === 'clink'"
+                :name="IconName.CREDIT_CARD"
+                :size="IconSize.MD"
+              />
+            </span>
+            <span>{{ channel.payment_method_name || channel.payment_method }}</span>
+          </button>
+        </div>
       </div>
+
+      <footer class="premium-confirm-footer">
+        <label class="premium-confirm-agreement">
+          <input v-model="agreementAccepted" type="checkbox" checked />
+          <span>
+            {{ t(I18N_KEYS.PREMIUM.CONFIRM_AGREEMENT) }}
+            <button type="button" class="premium-confirm-link" @click="openTerms">
+              {{ t(I18N_KEYS.AUTH.MODAL_TERMS_LINK) }}
+            </button>
+            <span aria-hidden="true"> · </span>
+            <button type="button" class="premium-confirm-link" @click="openPrivacy">
+              {{ t(I18N_KEYS.AUTH.MODAL_PRIVACY_LINK) }}
+            </button>
+          </span>
+        </label>
+        <div class="premium-confirm-actions">
+          <button
+            type="button"
+            class="premium-secondary-button"
+            @click="confirmationVisible = false"
+          >
+            {{ t(I18N_KEYS.PREMIUM.CONFIRM_CANCEL) }}
+          </button>
+          <button
+            type="button"
+            class="premium-primary-button"
+            :disabled="!agreementAccepted || !selectedChannel"
+            @click="confirmPurchase"
+          >
+            {{ t(I18N_KEYS.PREMIUM.CONFIRM_CONTINUE) }}
+          </button>
+        </div>
+      </footer>
     </dialog>
   </Teleport>
 </template>
@@ -288,6 +436,9 @@ import {
   getPremiumSource,
   premiumViewVisible
 } from '@/core/composables/premiumView'
+
+/** 扩展自带的 PayPal 品牌图标（public/payment-icons），与官网结算弹窗同源素材。 */
+const PAYPAL_ICON_URL = '/payment-icons/paypal-monogram.png'
 
 interface Props {
   /** 页面入口使用更宽的独立订阅页布局；popup 继续使用紧凑弹层。 */
@@ -557,12 +708,15 @@ async function loadPlans(): Promise<void> {
   }
 }
 
-/** 切换套餐时重置为该套餐的默认支付渠道。 */
+/** 切换套餐时沿用已选支付方式；新套餐不支持该方式时回到默认渠道。 */
 function selectPlan(productId: string): void {
   selectedPlanId.value = productId
-  const plan = plans.value.find(item => item.product_id === productId)
-  selectedChannelMethod.value =
-    getDefaultOrderPaymentChannel(plan?.payment_channels ?? [])?.payment_method ?? null
+  const channels = plans.value.find(item => item.product_id === productId)?.payment_channels ?? []
+  selectedChannelMethod.value = channels.some(
+    channel => channel.payment_method === selectedChannelMethod.value
+  )
+    ? selectedChannelMethod.value
+    : (getDefaultOrderPaymentChannel(channels)?.payment_method ?? null)
   actionError.value = ''
 }
 
@@ -579,12 +733,12 @@ async function handleBuy(): Promise<void> {
     return
   }
 
-  if (!agreementAccepted.value) {
-    confirmationVisible.value = true
-    return
-  }
+  confirmationVisible.value = true
+}
 
-  await createPurchase(plan, channel)
+async function selectPlanAndBuy(productId: string): Promise<void> {
+  selectPlan(productId)
+  await handleBuy()
 }
 
 /** 用户确认条款后才进入登录门控或创建订单。 */
@@ -942,6 +1096,35 @@ function periodLabel(period: SubscriptionCheckoutPlan['period']): string {
   }
 }
 
+/** 独立订阅页价格后缀。 */
+function priceSuffix(period: SubscriptionCheckoutPlan['period']): string {
+  switch (period) {
+    case 'month':
+      return t(I18N_KEYS.PREMIUM.PRICE_SUFFIX_MONTH)
+    case 'quarter':
+      return t(I18N_KEYS.PREMIUM.PRICE_SUFFIX_QUARTER)
+    case 'year':
+      return t(I18N_KEYS.PREMIUM.PRICE_SUFFIX_YEAR)
+    case 'lifetime':
+      return t(I18N_KEYS.PREMIUM.PRICE_SUFFIX_LIFETIME)
+  }
+}
+
+/** 季付 / 年付相对同币种月付的节省百分比；无可比月付或不省钱时返回 0。 */
+function savingsPercent(plan: SubscriptionCheckoutPlan): number {
+  const months = plan.period === 'quarter' ? 3 : plan.period === 'year' ? 12 : 0
+  const monthly = plans.value.find(
+    item => item.period === 'month' && item.display_currency === plan.display_currency
+  )
+  if (!months || !monthly) {
+    return 0
+  }
+  return Math.max(
+    0,
+    Math.round((1 - plan.display_amount / (monthly.display_amount * months)) * 100)
+  )
+}
+
 /** 套餐额度提示；-1 表示无限。 */
 function quotaHint(plan: SubscriptionCheckoutPlan): string {
   if (plan.daily_limit < 0) {
@@ -996,9 +1179,11 @@ function formatPrice(amount: number, currency: string): string {
   color: var(--premium-gray-900);
 }
 
-.premium-account {
+.premium-page-account {
   position: relative;
-  margin-left: auto;
+  display: flex;
+  justify-content: center;
+  width: 100%;
 }
 
 .premium-account-button,
@@ -1083,37 +1268,147 @@ function formatPrice(amount: number, currency: string): string {
 }
 
 .premium-confirm-dialog {
-  width: min(420px, calc(100vw - 32px));
-  padding: 20px;
+  width: min(520px, calc(100vw - 32px));
+  padding: 0;
   border: 0;
-  border-radius: 10px;
-  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.24);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.28);
+  color: var(--premium-gray-900);
 }
 
 .premium-confirm-dialog::backdrop {
   background: rgba(15, 23, 42, 0.42);
 }
 
-.premium-confirm-dialog h3 {
-  margin: 0 0 8px;
-  color: var(--premium-gray-900);
-  font-size: 17px;
+.premium-confirm-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--premium-gray-200);
 }
 
-.premium-confirm-dialog p {
-  margin: 0 0 14px;
+.premium-confirm-kicker {
+  margin: 0 0 2px;
+  color: var(--premium-gray-500);
+  font-size: 12px;
+}
+
+.premium-confirm-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.premium-confirm-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 20px;
+}
+
+.premium-confirm-summary {
+  padding: 14px 16px;
+  border: 1px solid var(--premium-gray-200);
+  border-radius: 12px;
+  background: var(--premium-gray-50);
+}
+
+.premium-confirm-summary-label {
+  margin: 0;
+  color: var(--premium-gray-500);
+  font-size: 12px;
+}
+
+.premium-confirm-summary-values {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 4px 0 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.premium-confirm-summary-values span + span {
+  color: var(--premium-primary);
+}
+
+.premium-confirm-summary-usage {
+  margin: 6px 0 0;
   color: var(--premium-gray-600);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.5;
+}
+
+.premium-channel-list {
+  display: grid;
+  gap: 8px;
+}
+
+.premium-channel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 0 14px;
+  border: 1px solid var(--premium-gray-300);
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--premium-gray-900);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.premium-channel:hover {
+  border-color: var(--premium-primary);
+}
+
+.premium-channel.is-selected {
+  border-color: var(--premium-primary);
+  background: #eff6ff;
+  box-shadow: 0 0 0 1px var(--premium-primary);
+}
+
+.premium-channel-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: var(--premium-gray-50);
+  color: var(--premium-gray-600);
+}
+
+.premium-channel-icon img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  padding: 5px;
+  box-sizing: border-box;
+  object-fit: contain;
+}
+
+.premium-confirm-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 20px 18px;
+  border-top: 1px solid var(--premium-gray-200);
 }
 
 .premium-confirm-agreement {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  color: var(--premium-gray-800);
+  color: var(--premium-gray-600);
   font-size: 12px;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
 .premium-confirm-link {
@@ -1121,15 +1416,27 @@ function formatPrice(amount: number, currency: string): string {
   border: 0;
   background: transparent;
   color: var(--premium-primary);
+  font-size: inherit;
   text-decoration: underline;
   cursor: pointer;
 }
 
 .premium-confirm-actions {
   display: flex;
-  justify-content: flex-end;
+  flex-shrink: 0;
   gap: 8px;
-  margin-top: 18px;
+}
+
+/* popup 宽度下条款与按钮上下排列 */
+@media (max-width: 480px) {
+  .premium-confirm-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .premium-confirm-actions {
+    justify-content: flex-end;
+  }
 }
 
 .premium-close {
@@ -1293,42 +1600,6 @@ function formatPrice(amount: number, currency: string): string {
   color: var(--premium-gray-500);
 }
 
-.premium-channels {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.premium-channels-label {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--premium-gray-500);
-}
-
-.premium-channel-list {
-  display: flex;
-  gap: 8px;
-}
-
-.premium-channel {
-  flex: 1;
-  min-height: 34px;
-  padding: 0 10px;
-  border: 1px solid var(--premium-gray-300);
-  border-radius: 8px;
-  background: #ffffff;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--premium-gray-800);
-  cursor: pointer;
-}
-
-.premium-channel.is-selected {
-  border-color: var(--premium-primary);
-  color: var(--premium-primary);
-  box-shadow: 0 0 0 1px var(--premium-primary);
-}
-
 .premium-buy {
   margin-top: 2px;
 }
@@ -1379,119 +1650,319 @@ function formatPrice(amount: number, currency: string): string {
   color: var(--premium-primary);
 }
 
+/* ---------- 独立订阅页（page 模式） ---------- */
+
+.premium-page-overlay {
+  overflow-y: auto;
+  background:
+    radial-gradient(1200px 520px at 50% -160px, rgba(37, 99, 235, 0.12), transparent 70%),
+    var(--premium-gray-50);
+}
+
 .premium-page-overlay .premium-header {
-  min-height: 88px;
-  padding: 20px max(28px, calc((100vw - 1120px) / 2));
-  border-bottom-color: #dbe3ee;
-  background: #f7f9fc;
+  justify-content: center;
+  padding: 28px 24px 0;
+  border-bottom: 0;
+  background: transparent;
 }
 
 .premium-page-overlay .premium-title {
-  font-size: 32px;
-  letter-spacing: -0.02em;
+  outline: none;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  text-align: center;
 }
 
 .premium-page-overlay .premium-body {
-  width: min(1120px, 100%);
+  width: min(1040px, 100%);
+  flex: none;
   margin: 0 auto;
-  padding: 72px 28px 88px;
-  gap: 48px;
+  padding: 16px 24px 40px;
+  gap: 16px;
+  overflow: visible;
   box-sizing: border-box;
 }
 
-.premium-page-overlay .premium-selling {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 24px;
+.premium-page-overlay .premium-message {
+  font-size: 14px;
 }
 
-.premium-page-overlay .premium-selling-item {
-  min-height: 88px;
-  padding: 20px 28px;
-  border: 1px solid var(--premium-gray-200);
-  border-radius: 16px;
-  background: #f8fafc;
-  box-sizing: border-box;
-  font-size: 18px;
+.premium-page-account .premium-account-button,
+.premium-page-account .premium-account-login {
+  min-height: 40px;
+  padding: 5px 16px 5px 5px;
+  border-color: var(--premium-gray-200);
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+  font-size: 14px;
+}
+
+.premium-page-account .premium-account-login {
+  padding: 5px 22px;
+  font-weight: 600;
+}
+
+.premium-page-account .premium-account-button {
+  gap: 10px;
+  max-width: min(600px, 100%);
+}
+
+.premium-page-account .premium-account-avatar,
+.premium-page-account .premium-account-initial {
+  width: 28px;
+  height: 28px;
+  font-size: 13px;
+}
+
+.premium-page-account .premium-account-email {
+  color: var(--premium-gray-800);
+  font-size: 14px;
   font-weight: 500;
 }
 
-.premium-page-overlay .premium-plans {
+.premium-account-plan {
+  overflow: hidden;
+  padding-left: 10px;
+  border-left: 1px solid var(--premium-gray-200);
+  color: var(--premium-gray-500);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.premium-page-account .premium-account-menu {
+  top: calc(100% + 8px);
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.premium-page-notice {
+  margin: 0 auto;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  background: var(--premium-warning-bg);
+  color: var(--premium-gray-800);
+  font-size: 13px;
+  text-align: center;
+}
+
+.premium-page-plans {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+  align-items: stretch;
+  padding-top: 12px;
 }
 
-.premium-page-overlay .premium-plan {
-  min-height: 246px;
-  padding: 32px;
-  border-color: #cbd8e8;
-  border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
-  gap: 12px;
+.premium-page-plan {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 26px 24px 20px;
+  border: 1px solid var(--premium-gray-200);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.05);
 }
 
-.premium-page-overlay .premium-plan-period {
-  font-size: 24px;
+.premium-page-plan.is-popular {
+  border: 2px solid var(--premium-primary);
+  box-shadow: 0 12px 32px rgba(37, 99, 235, 0.14);
 }
 
-.premium-page-overlay .premium-plan-price {
-  margin-top: 4px;
-  font-size: 40px;
-  line-height: 1;
+.premium-page-popular {
+  position: absolute;
+  top: -13px;
+  left: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 26px;
+  padding: 0 12px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, var(--premium-primary), #6366f1);
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.28);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
-.premium-page-overlay .premium-plan-note,
-.premium-page-overlay .premium-message {
+.premium-page-plan-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.premium-page-plan-name {
+  margin: 0;
+  color: var(--premium-gray-900);
   font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
 }
 
-.premium-page-overlay .premium-plan-note {
-  margin-top: 6px;
-  line-height: 1.5;
+.premium-page-plan-quota {
+  margin: 2px 0 0;
+  color: var(--premium-gray-500);
+  font-size: 13px;
 }
 
-.premium-page-overlay .premium-plan.is-selected {
-  border-width: 3px;
-  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.12);
+.premium-page-price-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  margin-top: 16px;
 }
 
-.premium-page-overlay .premium-buy {
+.premium-page-price {
+  color: var(--premium-gray-900);
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.premium-page-price-suffix {
+  color: var(--premium-gray-500);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.premium-page-save {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  background: var(--premium-success-bg);
+  color: #15803d;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.premium-page-buy {
   width: 100%;
-  min-height: 64px;
-  border-radius: 14px;
-  font-size: 20px;
+  min-height: 42px;
+  margin-top: 18px;
+  padding: 0 16px;
+  border: 1px solid var(--premium-gray-300);
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--premium-gray-900);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.premium-page-buy:hover:not(:disabled) {
+  border-color: var(--premium-primary);
+  color: var(--premium-primary);
+}
+
+.premium-page-plan.is-popular .premium-page-buy {
+  border-color: var(--premium-primary);
+  background: var(--premium-primary);
+  color: #ffffff;
+}
+
+.premium-page-plan.is-popular .premium-page-buy:hover:not(:disabled) {
+  background: var(--premium-primary-dark);
+  color: #ffffff;
+}
+
+.premium-page-buy:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.premium-page-secure {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 8px 0 0;
+  color: var(--premium-gray-500);
+  font-size: 12px;
+}
+
+.premium-page-benefits {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0;
+  padding: 16px 0 0;
+  border-top: 1px solid var(--premium-gray-200);
+  list-style: none;
+}
+
+.premium-page-benefits li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--premium-gray-800);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.premium-page-benefits :deep(.icon) {
+  flex-shrink: 0;
+}
+
+.premium-page-billing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* auto 把计费说明压到卡片底部，三张卡底部对齐 */
+  margin: auto 0 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--premium-gray-50);
+  color: var(--premium-gray-600);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.premium-page-billing :deep(.icon) {
+  flex-shrink: 0;
+}
+
+.premium-page-overlay .premium-error {
+  width: min(560px, 100%);
+  margin: 0 auto;
+  font-size: 13px;
+  text-align: center;
 }
 
 @media (max-width: 640px) {
   .premium-page-overlay .premium-header {
-    padding: 16px;
-    min-height: 72px;
+    padding: 20px 16px 0;
+  }
+
+  .premium-page-overlay .premium-title {
+    font-size: 24px;
   }
 
   .premium-page-overlay .premium-body {
-    padding: 36px 16px 48px;
-    gap: 28px;
+    padding: 12px 16px 32px;
+    gap: 14px;
   }
 
-  .premium-page-overlay .premium-selling {
+  .premium-page-plans {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 24px;
   }
 
-  .premium-page-overlay .premium-selling-item {
-    min-height: 64px;
-    padding: 16px 18px;
-    font-size: 16px;
-  }
-
-  .premium-page-overlay .premium-plan {
-    min-height: 208px;
-    padding: 24px;
-  }
-
-  .premium-page-overlay .premium-plan-price {
-    font-size: 34px;
+  .premium-account-plan {
+    display: none;
   }
 }
 

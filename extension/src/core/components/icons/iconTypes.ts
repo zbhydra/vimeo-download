@@ -25,6 +25,9 @@ export enum IconName {
   X_MARK = 'x-mark',
   CLOCK = 'clock',
   CHECK = 'check',
+  LOCK_CLOSED = 'lock-closed',
+  CREDIT_CARD = 'credit-card',
+  STAR = 'star',
   CHEVRON_DOWN = 'chevron-down',
   /** 设置齿轮（Heroicons cog-6-tooth） */
   COG_6_TOOTH = 'cog-6-tooth'

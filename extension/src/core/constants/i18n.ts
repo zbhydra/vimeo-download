@@ -320,6 +320,24 @@ export const I18N_KEYS = {
   PREMIUM: {
     /** 视图标题 */
     TITLE: 'premium.title',
+    /** 最受欢迎套餐徽标 */
+    POPULAR: 'premium.popular',
+    /** 价格后缀：按月 */
+    PRICE_SUFFIX_MONTH: 'premium.priceSuffix.month',
+    /** 价格后缀：按季 */
+    PRICE_SUFFIX_QUARTER: 'premium.priceSuffix.quarter',
+    /** 价格后缀：按年 */
+    PRICE_SUFFIX_YEAR: 'premium.priceSuffix.year',
+    /** 价格后缀：终身买断 */
+    PRICE_SUFFIX_LIFETIME: 'premium.priceSuffix.lifetime',
+    /** 相对月付的节省比例，参数 `percent` 为整数百分比 */
+    SAVE: 'premium.save',
+    /** 购买按钮下的安全支付提示 */
+    SECURE_CHECKOUT: 'premium.secureCheckout',
+    /** 已有有效订阅时的套餐按钮文案 */
+    SUBSCRIBED: 'premium.subscribed',
+    /** 一次性套餐的计费说明 */
+    BILLING_ONE_TIME: 'premium.billing.oneTime',
     /** 登录门控文案 */
     GATE_MESSAGE: 'premium.gateMessage',
     /** 卖点：无限下载 */
@@ -344,14 +362,17 @@ export const I18N_KEYS = {
     QUOTA_UNLIMITED: 'premium.plan.quotaUnlimited',
     /** 套餐额度：每日限量，参数 `limit` 为次数 */
     QUOTA_PER_DAY: 'premium.plan.quotaPerDay',
-    /** 支付方式选择标题 */
-    PAYMENT_METHOD: 'premium.paymentMethod',
     /** 发起支付按钮 */
     BUY: 'premium.buy',
     SIGN_IN_TO_BUY: 'premium.signInToBuy',
     SIGN_IN_TO_UPGRADE: 'premium.signInToUpgrade',
+    /** 确认弹窗眉标 */
     CONFIRM_TITLE: 'premium.confirm.title',
-    CONFIRM_MESSAGE: 'premium.confirm.message',
+    /** 确认弹窗标题：选择支付方式 */
+    CONFIRM_PAYMENT_TITLE: 'premium.confirm.paymentTitle',
+    /** 确认弹窗已选套餐摘要标签 */
+    CONFIRM_SELECTED_PLAN: 'premium.confirm.selectedPlan',
+    /** 条款勾选前缀，模板在其后拼接服务条款与隐私政策链接，文案本身不含条款名称 */
     CONFIRM_AGREEMENT: 'premium.confirm.agreement',
     CONFIRM_CONTINUE: 'premium.confirm.continue',
     CONFIRM_CANCEL: 'premium.confirm.cancel',
