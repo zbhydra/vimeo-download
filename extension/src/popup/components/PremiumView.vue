@@ -1380,76 +1380,118 @@ function formatPrice(amount: number, currency: string): string {
 }
 
 .premium-page-overlay .premium-header {
-  padding: 20px max(24px, calc((100vw - 960px) / 2));
+  min-height: 88px;
+  padding: 20px max(28px, calc((100vw - 1120px) / 2));
+  border-bottom-color: #dbe3ee;
+  background: #f7f9fc;
 }
 
 .premium-page-overlay .premium-title {
-  font-size: 24px;
+  font-size: 32px;
+  letter-spacing: -0.02em;
 }
 
 .premium-page-overlay .premium-body {
-  width: min(960px, 100%);
+  width: min(1120px, 100%);
   margin: 0 auto;
-  padding: 36px 24px 56px;
-  gap: 24px;
+  padding: 72px 28px 88px;
+  gap: 48px;
   box-sizing: border-box;
 }
 
 .premium-page-overlay .premium-selling {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  gap: 24px;
 }
 
 .premium-page-overlay .premium-selling-item {
-  min-height: 44px;
-  padding: 12px 14px;
+  min-height: 88px;
+  padding: 20px 28px;
   border: 1px solid var(--premium-gray-200);
-  border-radius: 10px;
-  background: var(--premium-gray-50);
+  border-radius: 16px;
+  background: #f8fafc;
   box-sizing: border-box;
+  font-size: 18px;
+  font-weight: 500;
 }
 
 .premium-page-overlay .premium-plans {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
+  gap: 24px;
 }
 
 .premium-page-overlay .premium-plan {
-  min-height: 124px;
-  padding: 16px;
+  min-height: 246px;
+  padding: 32px;
+  border-color: #cbd8e8;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+  gap: 12px;
 }
 
 .premium-page-overlay .premium-plan-period {
-  font-size: 15px;
+  font-size: 24px;
 }
 
 .premium-page-overlay .premium-plan-price {
-  font-size: 24px;
+  margin-top: 4px;
+  font-size: 40px;
+  line-height: 1;
 }
 
 .premium-page-overlay .premium-plan-note,
 .premium-page-overlay .premium-message {
-  font-size: 13px;
+  font-size: 18px;
+}
+
+.premium-page-overlay .premium-plan-note {
+  margin-top: 6px;
+  line-height: 1.5;
+}
+
+.premium-page-overlay .premium-plan.is-selected {
+  border-width: 3px;
+  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.12);
 }
 
 .premium-page-overlay .premium-buy {
-  min-height: 48px;
-  font-size: 15px;
+  width: 100%;
+  min-height: 64px;
+  border-radius: 14px;
+  font-size: 20px;
 }
 
 @media (max-width: 640px) {
   .premium-page-overlay .premium-header {
     padding: 16px;
+    min-height: 72px;
   }
 
   .premium-page-overlay .premium-body {
-    padding: 24px 16px 40px;
+    padding: 36px 16px 48px;
+    gap: 28px;
   }
 
   .premium-page-overlay .premium-selling {
     grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .premium-page-overlay .premium-selling-item {
+    min-height: 64px;
+    padding: 16px 18px;
+    font-size: 16px;
+  }
+
+  .premium-page-overlay .premium-plan {
+    min-height: 208px;
+    padding: 24px;
+  }
+
+  .premium-page-overlay .premium-plan-price {
+    font-size: 34px;
   }
 }
 
