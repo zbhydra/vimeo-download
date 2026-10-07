@@ -24,6 +24,7 @@
 - `scripts/`：`download/`（下载状态机与下载方法）/ `runtime/`（api/auth/mark/device/sls/ga4/frontend-error-capture）/ `site/`（confirm/language-switcher）。
 - `layouts/Layout.astro`：唯一 HTML 外壳，全局 CSS 变量 + nav/footer + 全局错误捕获启动。
 - `i18n/`：纯 TS 字典。
+- `content/guides/{slug}/{locale}.md` + `content.config.ts`：Guides 文章正文（Astro 内容集合）；`guides/guidesContent.ts`：Guides 外框文案（14 语言）与文章读取。长篇文章正文只走内容集合，界面文案仍走 TS 字典。
 - 下载工作区：组件在 `components/download/`，状态机与下载方法在 `scripts/download/`，页面直接使用 `DownloadWorkspace.astro`。
 
 ## 4. 组件与样式
@@ -48,7 +49,7 @@
 - **唯一实现**：
   - 深色舞台（底色渐变、极光、网格、星点、光束、格式标签）只在 `components/site/SiteStage.astro`，有 `hero` / `band` / `card` 三种变体，页面组件不得另写；格式标签贴视口边缘定位，视口 < 1200 px 时隐藏，因为内容区两侧无空间；
   - 插件界面示意（页内面板、popup）只在一个共用组件里，其调暗的浅色（网页底、popup 底、Vimeo 青）不进全局；
-  - 法务页与公司页的页头带（`SiteStage band` + H1 + 引言 + 更新日期胶囊）只在 `components/site/SiteBandHeader.astro`，两页消费它，不得各写一份。
+  - 法务页、公司页与 Guides 页的页头带（`SiteStage band` + 可选面包屑 + H1 + 引言 + 更新日期胶囊）只在 `components/site/SiteBandHeader.astro`，这几类页面消费它，不得各写一份。
 - **按钮**：全站共享样式在 Layout 全局块，页面不得各写一份。
   - `.btn-primary`：`--gradient-button` 底、白字、`--shadow-glow`；
   - `.btn-secondary`：玻璃样式（`--glass-bg` 底、`rgba(255,255,255,.16)` 描边、`--gray-1000` 字）；
@@ -86,8 +87,8 @@
 ## 8. 路由
 
 - Astro 文件路由，全 SSG。
-- 语言路由：en-US 走根路径，其余 locale 走 `[lang]/`，由 `getStaticPaths` 枚举 `localePaths`（**非运行时检测**）。
-- 页面集合：首页（首屏下载器 + 插件展示）、`pricing`、`about`、`contact`、`terms`、`privacy`，各有根英文页 + `[lang]/` 镜像；支付回跳页 `paypal/`、`clink/` 仅英文、无镜像。没有平台落地页、更新日志页与第二个购买页，新增页面族须同步 `sitemap/languageSitemap.mjs` 的页面族源文件映射（未登记路径构建失败）。
+- 语言路由：en-US 走根路径，其余 locale 走 `[lang]/`，由 `getStaticPaths` 枚举 `localePaths`（**非运行时检测**）。页面不在全部语言存在时，向 Layout 传 `availableLocales`，语言切换器只列存在的语言。
+- 页面集合：首页（首屏下载器 + 插件展示）、`pricing`、`about`、`contact`、`terms`、`privacy`，各有根英文页 + `[lang]/` 镜像；`guides/`（索引 + 文章）也有根英文页与 `[lang]/` 镜像，但只为有文章正文的语言生成，不做语言回退；支付回跳页 `paypal/`、`clink/` 仅英文、无镜像。没有平台落地页、更新日志页与第二个购买页，新增页面族须同步 `sitemap/languageSitemap.mjs` 的页面族源文件映射（未登记路径构建失败）。
 
 ## 9. i18n
 

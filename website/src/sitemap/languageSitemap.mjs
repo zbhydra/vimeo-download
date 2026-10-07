@@ -354,6 +354,27 @@ function getRouteSourceFiles(routePath) {
     ]
   }
 
+  if (normalized === '/guides/') {
+    return [
+      'src/pages/guides/index.astro',
+      'src/pages/[lang]/guides/index.astro',
+      'src/components/pages/GuidesIndexPage.astro',
+      'src/guides/guidesContent.ts',
+      'src/content/guides'
+    ]
+  }
+
+  const guideSlug = normalized.match(/^\/guides\/([^/]+)\/$/)?.[1]
+  if (guideSlug) {
+    return [
+      'src/pages/guides/[slug].astro',
+      'src/pages/[lang]/guides/[slug].astro',
+      'src/components/pages/GuidePage.astro',
+      'src/guides/guidesContent.ts',
+      `src/content/guides/${guideSlug}`
+    ]
+  }
+
   throw new Error(`languageSitemap: route source files are not mapped for routePath=${normalized}`)
 }
 

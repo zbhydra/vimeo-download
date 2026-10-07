@@ -1,6 +1,6 @@
-# 009 · 落地页与 Sitemap(首页内容结构 + 多语言 Sitemap 生成器 + SEO meta)
+# 009 · 落地页与 Sitemap(首页内容结构 + Guides 文章页 + 多语言 Sitemap 生成器 + SEO meta)
 
-> 技术实现文档。覆盖：website 首页(工具首屏 + 8 个展示区块)的组件与文案合同、结构化数据、自定义 Astro sitemap 集成(14 语言拆分 + lastmod)、SEO meta 来源治理。
+> 技术实现文档。覆盖：website 首页(工具首屏 + 8 个展示区块)的组件与文案合同、结构化数据、Guides 文章页(内容集合、路由、渲染与收录规则)、自定义 Astro sitemap 集成(14 语言拆分 + lastmod)、SEO meta 来源治理。
 >
 > 关联：
 > - 本域产品：`@feat.md`
@@ -76,6 +76,8 @@
 | `/terms/`、`/privacy/` | 对应 page + `[lang]/` + `components/pages/LegalPage.astro` + `components/site/SiteBandHeader.astro`（页头带）+ `legal/legalContent.ts` |
 | `/about/`、`/contact/` | 对应 page + `[lang]/` + `components/pages/CompanyPage.astro` + `components/site/SiteBandHeader.astro`（页头带）+ `company/companyContent.ts` |
 | `/ext-pricing/` | `pages/ext-pricing.astro` + `[lang]/` + `components/pages/PricingPage.astro` + `i18n/pricing.ts` + `components/pricing/` 的页壳、登录弹窗、页控制器 + `components/order-checkout/OrderCheckoutModal.astro` |
+| `/guides/` | `pages/guides/index.astro` + `[lang]/` + `components/pages/GuidesIndexPage.astro` + `guides/guidesContent.ts` + `content/guides/`（任一文章变化都会改变索引页） |
+| `/guides/{slug}/` | `pages/guides/[slug].astro` + `[lang]/` + `components/pages/GuidePage.astro` + `guides/guidesContent.ts` + `content/guides/{slug}/`（该文章全部语言的正文） |
 
 以上路径均相对 `website/src/`。支付回跳页不在映射里：它们声明 noindex，在计算 lastmod 之前已被 §2.7 排除。
 
@@ -174,6 +176,8 @@ XML 写入做实体转义。sitemap index 内每个 sitemap 的 `<lastmod>` 用�
 | Pricing `/ext-pricing/` | `i18n/pricing.ts` 的 `getPricingPageCopy` 由订阅文案生成 seo |
 | Legal `/terms/` `/privacy/` | `legalContent.ts` 的 `seoTitle` / `seoDescription` |
 | Company `/about/` `/contact/` | `companyContent.ts` 的 `seoTitle` / `seoDescription` |
+| Guides 索引 `/guides/` | `guidesContent.ts` 的 `indexSeoTitle` / `indexSeoDescription`（14 语言齐全） |
+| Guides 文章 `/guides/{slug}/` | 文章 frontmatter 的 `seoTitle` / `description`；不强制带品牌后缀，避免标题在 SERP 截断 |
 
 站点级默认 description 是 `site.description`，与首页 `meta.description` 同一措辞。构建产物验收按西文 title ≤60、description 140-160 字符，CJK title ≤40、description 70-90 字符扫描；这些阈值不作为运行时常量。
 
@@ -218,6 +222,8 @@ hreflang 只在「内容对等、且允许索引」的语言版本之间互指�
 | 首页、Pricing、About、Contact | 默认（14 语言） | `index, follow` |
 | Terms、Privacy：该语言有自己的审校译本 | `LEGAL_CONTENT_LOCALES`（有译本的语言） | `index, follow` |
 | Terms、Privacy：只渲染英文回退稿 | 空 | `noindex, follow` |
+| Guides 索引页 | 有文章的语言 | `index, follow` |
+| Guides 文章页 | 这篇文章实际存在的语言 | `index, follow` |
 | 支付回跳页 | 空 | `noindex, nofollow, noarchive` |
 
 某语言有没有法务译本，由 `legal/legalContent.ts` 的 `legalContentByLocale` 决定，`LEGAL_CONTENT_LOCALES` 与 `getLegalContentLocale` 都从它派生。
@@ -229,7 +235,87 @@ hreflang 只在「内容对等、且允许索引」的语言版本之间互指�
 
 新增某语言的译本后，该语言法务页的索引、hreflang 与 sitemap（§2.7）自动恢复，不需要改路由或 sitemap 代码。
 
-## 5. 验收/验证命令
+语言切换器是另一个声明：Layout 的 `availableLocales` 是「本页实际存在的语言版本」（默认 14 语言），切换器只列这些语言，不足 2 个时不渲染。它与 `alternateLocales` 分开，因为法务页的英文回退路由存在（可切换过去）却不参与 hreflang。当前取值：
+
+| 页面族 | `availableLocales` |
+| --- | --- |
+| 首页、Pricing、About、Contact、Terms、Privacy | 默认（14 语言） |
+| Guides 索引页 | 有文章的语言 |
+| Guides 文章页 | 这篇文章实际存在的语言 |
+| 支付回跳页 | 只有 en-US（不显示切换器） |
+
+## 5. Guides 文章页(website)
+
+### 5.1 文件
+
+```
+website/
+├── astro.config.mjs                     # markdown：关闭 smartypants，挂 rehypeTableCellLabels
+└── src/
+    ├── content.config.ts                # 内容集合 guides：glob 加载 + frontmatter schema
+    ├── content/guides/{slug}/{locale}.md # 文章正文，一篇一个目录、一个语言一个文件
+    ├── guides/guidesContent.ts          # 外框文案（14 语言）+ 文章读取、路径、语言判定
+    ├── lib/rehypeTableCellLabels.mjs    # 给表格正文单元格写入同列表头文字（data-label）
+    ├── components/pages/GuidePage.astro        # 文章页
+    ├── components/pages/GuidesIndexPage.astro  # 索引页
+    └── pages/
+        ├── guides/index.astro、guides/[slug].astro           # en-US
+        └── [lang]/guides/index.astro、[lang]/guides/[slug].astro # 其他语言，只为有正文的语言生成
+```
+
+文章源稿与决策记录在 `docs/seo-skill/{slug}/`，不是运行时数据源；发布时把确认后的正文同步到 `content/guides/`。
+
+### 5.2 内容模型
+
+- 集合 id 用文件相对路径去掉扩展名（`{slug}/{locale}`），不用默认的小写 slug，否则 `en-US` 会变成 `en-us`，对不上 `Locale`。路径不是两段、或 locale 不在 14 语言里时构建失败。
+- frontmatter（全部必填）：
+
+| 字段 | 用途 |
+| --- | --- |
+| `title` | H1；Article `headline`；索引页卡片标题 |
+| `seoTitle` | `<title>` |
+| `description` | meta description；索引页卡片摘要 |
+| `publishedAt` | Article `datePublished` |
+| `updatedAt` | Article `dateModified`；页头日期胶囊（按页面语言、UTC 格式化，避免美洲时区显示成前一天） |
+
+- 正文从二级标题起写，不写 H1、不写日期行；FAQ 的问题写成三级标题。
+- 文章顺序：`publishedAt` 升序，同一天按标题排序。
+
+### 5.3 外框文案
+
+`guidesContent.ts` 的 `GuidesContent` 为 14 语言齐全的 `Record<Locale, …>`（多语言规则要求新增文案全语言同步）：栏目名（页脚入口、面包屑）、面包屑无障碍名称、日期标签、索引页 title / description / H1 / 引言。外框文案齐全不代表该语言有页面：页面是否生成只看正文。面包屑的 Home 复用 `layout.nav.home`。
+
+### 5.4 路由与语言判定
+
+| 判定 | 规则 |
+| --- | --- |
+| 某语言是否有 Guides | 至少有一篇该语言正文 |
+| 索引页 | en-US 走 `/guides/`；其他语言只为有 Guides 的语言生成 `/{prefix}/guides/` |
+| 文章页 | 每个 `{slug}/{locale}` 生成一页；没有回退语言 |
+| 页脚入口 | Layout 判定当前语言有 Guides 时，在 Resources 组首位渲染，埋点 `internal_workflow_click` / `footer` / `guides` |
+| hreflang / 语言切换器 | 见 §4.6：都取「这篇文章实际存在的语言」 |
+
+`[lang]/` 路由当前不生成任何页面（只有英文正文），它们保证某语言补上正文后，路由、页脚入口、hreflang 一起出现，不会出现入口指向 404。
+
+### 5.5 渲染
+
+- 页头复用 `SiteBandHeader`：`breadcrumb` 插槽放面包屑（Home › Guides），日期胶囊不带冒号。
+- 正文由 Markdown 渲染为普通 HTML，样式写在 `GuidePage.astro` 的 `.guide-content :global(...)` 下，取值全部来自 Layout token。
+- 关闭 smartypants：文章逐字引用界面文案（如 `Checking browser storage...`），不得被改成弯引号或省略号；smartypants 还会把表格单元格开头的引号判成右引号。
+- GFM 会把 `www.` 开头的文字自动转成链接；正文里的主机名一律写成行内代码。
+- 表格：桌面首列 30%；600px 以下 `table / tbody / tr / td` 改为块级，表头只留给读屏，每行成卡片，非首格用 `data-label` 显示列名。`data-label` 由 rehype 插件在构建时从同列表头取文字，所以不需要额外文案。
+
+### 5.6 结构化数据
+
+| 页面 | 类型 | 要点 |
+| --- | --- | --- |
+| 文章页 | `Article` | `headline` = H1；`author`、`publisher` 都引用 `/#organization`；`inLanguage`；没有真实配图时不写 `image` |
+| 文章页 | `BreadcrumbList` | Home → Guides → 本文，三级都带 `item` |
+| 索引页 | `CollectionPage` | `name` = H1，`publisher` 引用 `/#organization` |
+
+文章与索引页都不输出插件应用结构化数据；不加 `FAQPage`、`HowTo`。
+
+## 6. 验收/验证命令
 
 ```bash
 cd website
@@ -237,6 +323,7 @@ pnpm build
 pnpm test:module-scripts
 # 抽查构建产物:
 #   dist/index.html, dist/zh-cn/index.html (首页多语言抽查)
+#   dist/guides/index.html, dist/guides/*/index.html (Guides 抽查)
 #   dist/sitemap.xml, dist/sitemap_index.xml, dist/sitemap-0.xml, dist/*-sitemap.xml
 #   dist/llms.txt, dist/llms-full.txt, dist/robots.txt
 xmllint --noout dist/sitemap.xml dist/sitemap_index.xml dist/sitemap-0.xml dist/*-sitemap.xml

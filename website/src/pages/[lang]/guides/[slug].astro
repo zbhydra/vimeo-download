@@ -1,0 +1,20 @@
+---
+import GuidePage from '../../../components/pages/GuidePage.astro'
+import { getGuides, type Guide } from '../../../guides/guidesContent'
+import { defaultLocale, localePaths } from '../../../i18n/ui'
+
+/** 只为非默认语言里实际存在的文章生成页面，文章没有回退语言。 */
+export async function getStaticPaths() {
+  const guides = await getGuides()
+  return guides
+    .filter(guide => guide.locale !== defaultLocale)
+    .map(guide => ({
+      params: { lang: localePaths[guide.locale], slug: guide.slug },
+      props: { guide }
+    }))
+}
+
+const { guide } = Astro.props as { guide: Guide }
+---
+
+<GuidePage guide={guide} />

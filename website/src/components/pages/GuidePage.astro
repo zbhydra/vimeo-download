@@ -1,0 +1,380 @@
+---
+/**
+ * Guides 文章页。
+ *
+ * Render flow:
+ * route -> Guide（内容集合条目）-> SiteBandHeader（面包屑 + H1 + 更新日期）+ Markdown 正文 -> Layout SEO/schema。
+ *
+ * 索引规则：文章只在有该语言正文的路由生成，hreflang 与语言切换器只覆盖同一篇文章实际存在的语言（见 guidesContent.ts）。
+ * 结构化数据：Article + BreadcrumbList。作者与发布者都是站点的 Organization（运营主体），不虚构个人作者；没有真实配图时不写 image。
+ *
+ * 正文由 Markdown 渲染，元素不带本组件的 scoped 属性，所以正文样式用 `.guide-content :global(...)` 命中。
+ * 手机上表格按行折成卡片，列名来自 rehypeTableCellLabels 写入的 data-label。
+ */
+import { render } from 'astro:content'
+import Layout from '../../layouts/Layout.astro'
+import SiteBandHeader from '../site/SiteBandHeader.astro'
+import { getContent } from '../../i18n/content'
+import { localePaths } from '../../i18n/ui'
+import { getGuides, getGuidesContent, getGuidesPath, type Guide } from '../../guides/guidesContent'
+
+interface Props {
+  guide: Guide
+}
+
+const { guide } = Astro.props as Props
+const { locale, slug, entry } = guide
+const { Content } = await render(entry)
+const t = getContent(locale)
+const guidesContent = getGuidesContent(locale)
+const guideLocales = (await getGuides()).filter(item => item.slug === slug).map(item => item.locale)
+const homePath = localePaths[locale] ? `/${localePaths[locale]}/` : '/'
+const guidesPath = getGuidesPath(locale)
+const pageUrl = new URL(getGuidesPath(locale, slug), Astro.site).href
+const organizationId = new URL('/#organization', Astro.site).href
+const toIsoDate = (date: Date) => date.toISOString().slice(0, 10)
+// frontmatter 的日期按 UTC 零点解析，格式化也必须用 UTC，否则美洲时区的构建会显示成前一天。
+const updatedAt = new Intl.DateTimeFormat(locale, { dateStyle: 'long', timeZone: 'UTC' }).format(entry.data.updatedAt)
+const articleSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: entry.data.title,
+  description: entry.data.description,
+  url: pageUrl,
+  mainEntityOfPage: pageUrl,
+  inLanguage: locale,
+  datePublished: toIsoDate(entry.data.publishedAt),
+  dateModified: toIsoDate(entry.data.updatedAt),
+  author: { '@id': organizationId },
+  publisher: { '@id': organizationId }
+}
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: t.layout.nav.home, item: new URL(homePath, Astro.site).href },
+    { '@type': 'ListItem', position: 2, name: guidesContent.sectionLabel, item: new URL(guidesPath, Astro.site).href },
+    { '@type': 'ListItem', position: 3, name: entry.data.title, item: pageUrl }
+  ]
+}
+---
+
+<Layout
+  locale={locale}
+  title={entry.data.seoTitle}
+  description={entry.data.description}
+  ogType="article"
+  includeSoftwareApplicationSchema={false}
+  structuredData={[articleSchema, breadcrumbSchema]}
+  alternateLocales={guideLocales}
+  availableLocales={guideLocales}
+>
+  <article class="guide-page" data-guide={slug}>
+    <SiteBandHeader
+      title={entry.data.title}
+      updatedLabel={guidesContent.updatedLabel}
+      updatedAt={updatedAt}
+      updatedAtIso={toIsoDate(entry.data.updatedAt)}
+    >
+      <nav slot="breadcrumb" class="guide-breadcrumb" aria-label={guidesContent.breadcrumbLabel}>
+        <ol>
+          <li><a href={homePath}>{t.layout.nav.home}</a></li>
+          <li><a href={guidesPath}>{guidesContent.sectionLabel}</a></li>
+        </ol>
+      </nav>
+    </SiteBandHeader>
+
+    <div class="container guide-layout">
+      <div class="guide-content">
+        <Content />
+      </div>
+    </div>
+  </article>
+</Layout>
+
+<style>
+  /* 链接左右各留 6px 凑够 44px 点按宽度，整行左移 6px 让首个链接的文字与 H1 对齐。 */
+  .guide-breadcrumb ol {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    margin: 0 0 12px -6px;
+    padding: 0;
+    list-style: none;
+    font-size: 14px;
+  }
+
+  .guide-breadcrumb li {
+    display: flex;
+    align-items: center;
+  }
+
+  /* 分隔符是纯装饰的描边箭头，读屏不会读出字符。 */
+  .guide-breadcrumb li + li::before {
+    width: 6px;
+    height: 6px;
+    margin: 0 4px;
+    border-top: 1.5px solid var(--gray-700);
+    border-right: 1.5px solid var(--gray-700);
+    transform: rotate(45deg);
+    content: '';
+  }
+
+  .guide-breadcrumb a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 6px;
+    color: var(--gray-900);
+  }
+
+  .guide-breadcrumb a:hover {
+    color: var(--blue-700);
+  }
+
+  .guide-layout {
+    padding-top: 56px;
+    padding-bottom: 96px;
+  }
+
+  .guide-content {
+    max-width: 760px;
+    overflow-wrap: break-word;
+  }
+
+  .guide-content > :global(:first-child) {
+    margin-top: 0;
+  }
+
+  .guide-content :global(p),
+  .guide-content :global(li) {
+    color: var(--gray-900);
+    font-size: 16px;
+    line-height: 1.75;
+  }
+
+  .guide-content :global(p) {
+    margin-top: 16px;
+  }
+
+  /* 首段是对搜索问题的直接回答，比正文略大、略亮。 */
+  .guide-content > :global(p:first-child) {
+    color: var(--gray-1000);
+    font-size: 18px;
+    line-height: 1.7;
+  }
+
+  .guide-content :global(h2),
+  .guide-content :global(h3) {
+    color: var(--gray-1000);
+    scroll-margin-top: calc(var(--header-height) + 24px);
+  }
+
+  .guide-content :global(h2) {
+    margin-top: 56px;
+    font-size: 26px;
+    font-weight: 650;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+  }
+
+  .guide-content :global(h3) {
+    margin-top: 32px;
+    font-size: 19px;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  .guide-content :global(h2 + p),
+  .guide-content :global(h3 + p) {
+    margin-top: 12px;
+  }
+
+  .guide-content :global(ul),
+  .guide-content :global(ol) {
+    margin-top: 16px;
+  }
+
+  .guide-content :global(li + li) {
+    margin-top: 10px;
+  }
+
+  .guide-content :global(ul) {
+    padding: 0;
+    list-style: none;
+  }
+
+  .guide-content :global(ul > li) {
+    position: relative;
+    padding-left: 18px;
+  }
+
+  .guide-content :global(ul > li::before) {
+    position: absolute;
+    top: 0.75em;
+    left: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--blue-700);
+    content: '';
+  }
+
+  .guide-content :global(ol) {
+    padding-left: 24px;
+  }
+
+  .guide-content :global(ol > li) {
+    padding-left: 4px;
+  }
+
+  .guide-content :global(ol > li::marker) {
+    color: var(--blue-700);
+    font-weight: 600;
+  }
+
+  .guide-content :global(a) {
+    color: var(--blue-700);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .guide-content :global(a:hover) {
+    color: var(--blue-800);
+  }
+
+  .guide-content :global(strong) {
+    color: var(--gray-1000);
+    font-weight: 600;
+  }
+
+  .guide-content :global(code) {
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    background: var(--gray-200);
+    color: var(--gray-1000);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.875em;
+    overflow-wrap: anywhere;
+  }
+
+  .guide-content :global(table) {
+    width: 100%;
+    margin-top: 24px;
+    border: 1px solid var(--gray-alpha-400);
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: var(--radius-lg);
+  }
+
+  .guide-content :global(th),
+  .guide-content :global(td) {
+    padding: 14px 16px;
+    font-size: 15px;
+    line-height: 1.6;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .guide-content :global(th) {
+    background: var(--gray-100);
+    color: var(--gray-1000);
+    font-weight: 600;
+  }
+
+  /*
+    表格外框是圆角，表头的底色要跟着圆角收边。
+    首列是报错原文、原因或情形，给 30% 宽度减少折行；手机上表格折成卡片，不受影响。
+  */
+  .guide-content :global(th:first-child) {
+    width: 30%;
+    border-top-left-radius: calc(var(--radius-lg) - 1px);
+  }
+
+  .guide-content :global(th:last-child) {
+    border-top-right-radius: calc(var(--radius-lg) - 1px);
+  }
+
+  .guide-content :global(td) {
+    border-top: 1px solid var(--gray-alpha-400);
+    color: var(--gray-900);
+  }
+
+  @media (max-width: 600px) {
+    .guide-layout {
+      padding-top: 40px;
+      padding-bottom: 64px;
+    }
+
+    .guide-content > :global(p:first-child) {
+      font-size: 17px;
+    }
+
+    .guide-content :global(h2) {
+      margin-top: 44px;
+      font-size: 22px;
+    }
+
+    .guide-content :global(h3) {
+      font-size: 18px;
+    }
+
+    /* 手机上表格按行折成卡片，页面不出现横向滚动。 */
+    .guide-content :global(table),
+    .guide-content :global(tbody),
+    .guide-content :global(tr),
+    .guide-content :global(td) {
+      display: block;
+    }
+
+    .guide-content :global(table) {
+      border: 0;
+    }
+
+    /* 表头只留给读屏，列名由每个单元格的 data-label 显示。 */
+    .guide-content :global(thead) {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    .guide-content :global(tbody tr) {
+      padding: 16px;
+      border: 1px solid var(--gray-alpha-400);
+      border-radius: var(--radius-lg);
+      background: var(--gray-100);
+    }
+
+    .guide-content :global(tbody tr + tr) {
+      margin-top: 12px;
+    }
+
+    .guide-content :global(td) {
+      padding: 0;
+      border-top: 0;
+    }
+
+    .guide-content :global(td + td) {
+      margin-top: 10px;
+    }
+
+    .guide-content :global(td:first-child) {
+      color: var(--gray-1000);
+      font-weight: 600;
+    }
+
+    .guide-content :global(td + td[data-label]::before) {
+      display: block;
+      margin-bottom: 2px;
+      color: var(--gray-700);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      content: attr(data-label);
+    }
+  }
+</style>

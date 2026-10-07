@@ -37,6 +37,7 @@ Astro 构建时复制到 `website/dist/`。两份文件手写维护，不从 sit
 # Vimeo Downloader
 > 一句话定位(在线工具 + Chrome 插件)
 ## Pages        # 首页 / Pricing / About / Contact / Terms / Privacy / 完整入口
+## Guides       # Guides 索引页 + 每篇英文文章
 ## Sitemap
 ## Key Facts
 ```
@@ -47,6 +48,7 @@ Astro 构建时复制到 `website/dist/`。两份文件手写维护，不从 sit
 # Vimeo Downloader
 > Full content index ...
 ## Pages
+## Guides               # 与短入口相同
 ## Language Entrances   # 14 个根语言首页
 ## Sitemaps             # 索引、别名、扁平 sitemap、14 个语言 sitemap
 ## Key Facts
@@ -60,7 +62,8 @@ Astro 构建时复制到 `website/dist/`。两份文件手写维护，不从 sit
 
 - 每条链接一行 Markdown，附页面用途说明；保持英文（默认语言 en-US，面向通用 AI agent）。
 - 只写当前源码能确认的页面与能力；`Key Facts` 与首页文案、商店文案一致，不写额度数字、价格与「无限」承诺。
-- 只允许真实存在的站内 URL：首页、Pricing、About、Contact、Terms、Privacy、sitemap 与两份 llms 入口。
+- 只允许真实存在的站内 URL：首页、Pricing、About、Contact、Terms、Privacy、Guides 索引页与文章、sitemap 与两份 llms 入口。
+- Guides 只列英文文章（当前只有英文）；新增或下线文章时同步两份文件的 `## Guides`。
 
 ### 1.6 robots.txt 显式 Allow
 
@@ -85,7 +88,7 @@ LLMs 文件**不包含**：
 4. 短入口必需 URL：首页、Pricing、About、Contact、`llms-full.txt`、`sitemap.xml`。
 5. 完整入口必需 URL：上述之外再加 `llms.txt`、`sitemap_index.xml`、`sitemap-0.xml`，以及 14 个语言首页与 14 个语言 sitemap。
 6. 不含 `mailto:` 与明文邮箱；`robots.txt` 含两条 Allow。
-7. 索引不含已删除路由（平台落地页、`vimeo-downloader`、`changelog`）。
+7. 索引不含已删除路由（平台落地页、`vimeo-downloader`、`changelog`）。按完整路径段 `/{route}/` 匹配，`/guides/vimeo-downloader-not-working/` 这类文章路径不算退役路由。
 
 ## 2. 导航与 Install CTA(以代码为准)
 
@@ -101,7 +104,7 @@ LLMs 文件**不包含**：
    - 左侧图标是 `public/googe-ext-logo-192px.svg` 图片，`alt` 为空，装饰用。
    - 可访问名称与按钮文字均取 `t.common.installCta`。
    - 沿用外链点击埋点（来源为 `nav`）。
-5. **语言切换器**：`includeLanguageSwitcher` 为真时渲染。
+5. **语言切换器**：只列 Layout `availableLocales`（本页实际存在的语言，默认 14 语言）；不足 2 个时不渲染，见 `@tech-落地页与Sitemap.md` §4.6。
 
 ### 2.2 移动导航
 
@@ -118,11 +121,13 @@ LLMs 文件**不包含**：
 | 分组 | 标题 | 链接 |
 | --- | --- | --- |
 | Company | `companyContent.footerGroupLabel` | About、Contact |
-| Resources | `t.layout.footer.resources` | Terms、Privacy |
+| Resources | `t.layout.footer.resources` | Guides（仅当前语言有文章时）、Terms、Privacy |
 
 站内链接统一带内部跳转埋点（来源 `footer`，目标为对应页），并使用当前语言前缀。
 
 Terms / Privacy 的链接文案取 `companyContent.termsLabel` / `privacyLabel`，14 语言本地化；不取法务正文，因为法务正文在没有译本的语言里会回退成英文。
+
+Guides 链接文案取 `guidesContent.sectionLabel`，目标为当前语言的 Guides 索引页，埋点目标为 `guides`；当前语言没有文章时不渲染，规则见 `@tech-落地页与Sitemap.md` §5.4。
 
 底部两行：
 1. `t.layout.footer.rights`：版权文字；

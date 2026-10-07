@@ -119,7 +119,7 @@ export function getStaticPaths() {
 
 ### 3.4 页头语言切换导航
 
-- `Layout.astro` 根据当前页面去掉 locale 前缀后的 pathname,为 14 种语言生成同页目标路径。
+- `Layout.astro` 根据当前页面去掉 locale 前缀后的 pathname,为页面传入的 `availableLocales`(本页实际存在的语言,默认 14 种)生成同页目标路径;不足 2 种时不渲染切换器(Guides 文章、支付回跳页)。
 - 客户端语言切换控制器读取目标路径并导航;导航地址继承当前 URL 的完整 query,因此 extension 来源、入口按钮和活动参数在切换语言后保持不变。
 - query 只属于运行时导航上下文,不进入 canonical 或 hreflang alternate URL。
 - 选择语言后写入一年有效期的 `user-language` Cookie;页面语言本身仍以目标 URL 路径为准。

@@ -1,0 +1,21 @@
+---
+import GuidesIndexPage from '../../../components/pages/GuidesIndexPage.astro'
+import { getGuideLocales } from '../../../guides/guidesContent'
+import { defaultLocale, localePaths } from '../../../i18n/ui'
+import type { Locale } from '../../../i18n/content'
+
+/** 只为至少有一篇文章的非默认语言生成索引页。 */
+export async function getStaticPaths() {
+  const guideLocales = await getGuideLocales()
+  return guideLocales
+    .filter(locale => locale !== defaultLocale)
+    .map(locale => ({
+      params: { lang: localePaths[locale] },
+      props: { locale }
+    }))
+}
+
+const { locale } = Astro.props as { locale: Locale }
+---
+
+<GuidesIndexPage locale={locale} />

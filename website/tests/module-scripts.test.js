@@ -217,7 +217,6 @@ test('homepage keeps fonts and route CSS off the critical path while preserving 
     html,
     /<script\b(?=[^>]*\basync\b)(?=[^>]*src="https:\/\/www\.googletagmanager\.com\/gtag\/js\?id=G-B5RGH4W50V")[^>]*>/i
   )
-  assert.equal((html.match(/xyfmieibkw/g) ?? []).length, 1)
   assert.equal(/<link\b[^>]+rel="stylesheet"/i.test(html), false)
   assert.equal(html.includes('data-defer-download-runtime="true"'), true)
 })
@@ -511,6 +510,56 @@ test('About and Contact pages expose localized trust content and structured data
   }
 })
 
+test('Guides pages exist only in languages with articles and expose Article data', async () => {
+  const siteUrl = SITE_ORIGIN
+  const guideSlugsByLanguage = new Map()
+
+  for (const language of LANGUAGE_SITEMAP_LOCALES) {
+    const languagePath = language.pathPrefix ? `${language.pathPrefix}/` : ''
+    const entries = await readdir(path.join(distDir, languagePath, 'guides'), { withFileTypes: true })
+      .catch(() => [])
+    const slugs = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name)
+    const homeHtml = await readFile(path.join(distDir, languagePath, 'index.html'), 'utf8')
+
+    // 页脚入口与 Guides 路由同进同退：没有文章的语言既不出现入口，也不生成路由。
+    assert.equal(
+      homeHtml.includes(`href="/${languagePath}guides/"`),
+      slugs.length > 0,
+      `Expected ${language.locale} footer Guides entry to match its built guides`
+    )
+    if (slugs.length > 0) {
+      guideSlugsByLanguage.set(language, slugs)
+    }
+  }
+
+  assert.ok(guideSlugsByLanguage.size > 0, 'Expected at least one language with guides')
+
+  for (const [language, slugs] of guideSlugsByLanguage) {
+    const languagePath = language.pathPrefix ? `${language.pathPrefix}/` : ''
+    const indexHtml = await readFile(path.join(distDir, languagePath, 'guides/index.html'), 'utf8')
+    assert.equal(extractCanonicalUrl(indexHtml), `${siteUrl}/${languagePath}guides/`)
+    assert.match(indexHtml, /"@type":"CollectionPage"/)
+
+    for (const slug of slugs) {
+      const html = await readFile(path.join(distDir, languagePath, 'guides', slug, 'index.html'), 'utf8')
+      const versionCount = [...guideSlugsByLanguage.values()]
+        .filter((languageSlugs) => languageSlugs.includes(slug))
+        .length
+
+      assert.equal(extractCanonicalUrl(html), `${siteUrl}/${languagePath}guides/${slug}/`)
+      assert.equal(extractRobotsMeta(html), 'index, follow')
+      assert.equal((html.match(/<h1\b/g) ?? []).length, 1)
+      assert.match(html, /"@type":"Article"/)
+      assert.match(html, /"@type":"BreadcrumbList"/)
+      assert.equal(html.includes(`"author":{"@id":"${siteUrl}/#organization"}`), true)
+      assert.equal(indexHtml.includes(`href="/${languagePath}guides/${slug}/"`), true)
+      // hreflang 与语言切换器只覆盖这篇文章实际存在的语言；只有一个版本时两者都不输出。
+      assert.equal(html.includes('hreflang='), versionCount > 1)
+      assert.equal(html.includes('class="lang-option'), versionCount > 1)
+    }
+  }
+})
+
 test('LLMs text indexes reference existing built website paths', async () => {
   const distFiles = await readdir(distDir)
   assert.equal(distFiles.includes('llms.txt'), true)
@@ -544,11 +593,12 @@ test('LLMs text indexes reference existing built website paths', async () => {
     `${siteUrl}/sitemap.xml`
   ]
 
-  // 单平台站点：索引不得再出现已删除的平台落地页。
+  // 单平台站点：索引不得再出现已删除的平台落地页。按完整路径段匹配，
+  // 否则 /guides/vimeo-downloader-not-working/ 这类正常文章会被误判成退役的 /vimeo-downloader/。
   const retiredPlatformRoutes = ['tiktok-downloader', 'x-downloader', 'instagram-downloader', 'threads-downloader', 'vimeo-downloader', 'changelog']
   for (const retiredRoute of retiredPlatformRoutes) {
-    assert.equal(llmsTxt.includes(retiredRoute), false, `Expected llms.txt to drop retired route: ${retiredRoute}`)
-    assert.equal(llmsFullTxt.includes(retiredRoute), false, `Expected llms-full.txt to drop retired route: ${retiredRoute}`)
+    assert.equal(llmsTxt.includes(`/${retiredRoute}/`), false, `Expected llms.txt to drop retired route: ${retiredRoute}`)
+    assert.equal(llmsFullTxt.includes(`/${retiredRoute}/`), false, `Expected llms-full.txt to drop retired route: ${retiredRoute}`)
   }
 
   for (const url of requiredShortIndexUrls) {

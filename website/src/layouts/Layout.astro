@@ -2,6 +2,7 @@
 import { getContent, type Locale } from '../i18n/content';
 import { defaultLocale, localeNames, localePaths, hreflangMap, locales } from '../i18n/ui';
 import { getCompanyContent } from '../company/companyContent';
+import { getGuideLocales, getGuidesContent, getGuidesPath } from '../guides/guidesContent';
 import {
   CHROME_WEB_STORE_URL,
   DEVELOPER_EMAIL,
@@ -33,7 +34,11 @@ interface Props {
    * 默认全部语言；不足 2 个时不输出 hreflang，因为没有可互指的对等版本。
    */
   alternateLocales?: readonly Locale[];
-  includeLanguageSwitcher?: boolean;
+  /**
+   * 本页实际存在的语言版本，默认全部语言。语言切换器只列这些语言，不足 2 个时不显示。
+   * 与 alternateLocales 不同：法务页渲染英文回退稿的语言路由存在，但不参与 hreflang。
+   */
+  availableLocales?: readonly Locale[];
   /** 独立流程页不渲染站点导航与页脚。 */
   standalone?: boolean;
 }
@@ -52,7 +57,7 @@ const {
   structuredData = [],
   robots = 'index, follow',
   alternateLocales = locales,
-  includeLanguageSwitcher = true,
+  availableLocales = locales,
   standalone = false,
 } = Astro.props;
 
@@ -98,14 +103,20 @@ const privacyPath = `${currentLocalePath}privacy/`;
 const aboutPath = `${currentLocalePath}about/`;
 const contactPath = `${currentLocalePath}contact/`;
 const pricingPath = `${currentLocalePath}ext-pricing/`;
-const languageOptionLinks = Object.entries(localePaths).map(([key, path]) => {
-  const langPrefix = path === '' ? '' : `/${path}`;
-  const targetPath = `${langPrefix}${normalizedPagePathWithoutLocale}`;
-  return {
-    locale: key as Locale,
-    path: targetPath === '' ? '/' : targetPath
-  };
-});
+const languageOptionLinks = Object.entries(localePaths)
+  .filter(([key]) => availableLocales.some(availableLocale => availableLocale === key))
+  .map(([key, path]) => {
+    const langPrefix = path === '' ? '' : `/${path}`;
+    const targetPath = `${langPrefix}${normalizedPagePathWithoutLocale}`;
+    return {
+      locale: key as Locale,
+      path: targetPath === '' ? '/' : targetPath
+    };
+  });
+const showLanguageSwitcher = languageOptionLinks.length > 1;
+// 页脚 Guides 入口只在当前语言有文章时出现，文章没有回退语言。
+const guidesPath = (await getGuideLocales()).includes(locale) ? getGuidesPath(locale) : undefined;
+const guidesContent = getGuidesContent(locale);
 const normalizedCurrentPath = normalizePathname(currentPath);
 const isHomeActive = normalizedCurrentPath === currentLocalePath;
 const isPricingActive = normalizedCurrentPath === pricingPath;
@@ -999,7 +1010,7 @@ const structuredDataItems = [
             <span>{t.common.installCta}</span>
           </a>
 
-          {includeLanguageSwitcher && (
+          {showLanguageSwitcher && (
             <div class="lang-switcher">
               <button class="lang-btn">
                 <svg class="lang-btn-globe" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -1111,6 +1122,16 @@ const structuredDataItems = [
             </div>
             <div class="footer-link-group" data-footer-resources>
               <p class="footer-link-title">{t.layout.footer.resources}</p>
+              {guidesPath && (
+                <a
+                  href={guidesPath}
+                  data-ga-event="internal_workflow_click"
+                  data-ga-source="footer"
+                  data-ga-target="guides"
+                >
+                  {guidesContent.sectionLabel}
+                </a>
+              )}
               <a
                 href={termsPath}
                 data-ga-event="internal_workflow_click"

@@ -1,0 +1,134 @@
+---
+/**
+ * Guides 索引页：列出当前语言的全部文章，标题链接到文章页。
+ *
+ * 只在至少有一篇文章的语言生成（见 guidesContent.ts）；hreflang 与语言切换器覆盖所有有文章的语言。
+ */
+import Layout from '../../layouts/Layout.astro'
+import SiteBandHeader from '../site/SiteBandHeader.astro'
+import { type Locale } from '../../i18n/content'
+import { getGuideLocales, getGuidesContent, getGuidesPath, getLocaleGuides } from '../../guides/guidesContent'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props as Props
+const guidesContent = getGuidesContent(locale)
+const guides = await getLocaleGuides(locale)
+const guideLocales = await getGuideLocales()
+const collectionSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  url: new URL(getGuidesPath(locale), Astro.site).href,
+  name: guidesContent.indexTitle,
+  description: guidesContent.indexSeoDescription,
+  inLanguage: locale,
+  publisher: {
+    '@id': new URL('/#organization', Astro.site).href
+  }
+}
+---
+
+<Layout
+  locale={locale}
+  title={guidesContent.indexSeoTitle}
+  description={guidesContent.indexSeoDescription}
+  includeSoftwareApplicationSchema={false}
+  structuredData={[collectionSchema]}
+  alternateLocales={guideLocales}
+  availableLocales={guideLocales}
+>
+  <div class="guides-index" data-guides-index>
+    <SiteBandHeader title={guidesContent.indexTitle}>
+      <p class="site-band-intro">{guidesContent.indexIntro}</p>
+    </SiteBandHeader>
+
+    <div class="container guides-list-section">
+      <ul class="guides-list">
+        {guides.map(guide => (
+          <li class="guide-card">
+            <h2><a href={getGuidesPath(locale, guide.slug)}>{guide.entry.data.title}</a></h2>
+            <p>{guide.entry.data.description}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .guides-list-section {
+    padding-top: 56px;
+    padding-bottom: 96px;
+  }
+
+  .guides-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .guide-card {
+    position: relative;
+    padding: 28px;
+    border: 1px solid var(--gray-alpha-400);
+    border-radius: var(--radius-xl);
+    background: var(--gray-100);
+    box-shadow: var(--shadow-card);
+    transition: border-color var(--transition-fast);
+  }
+
+  .guide-card:hover,
+  .guide-card:focus-within {
+    border-color: var(--blue-400);
+  }
+
+  .guide-card h2 {
+    margin: 0;
+    color: var(--gray-1000);
+    font-size: 20px;
+    font-weight: 650;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+  }
+
+  /* 整张卡可点：标题链接的伪元素铺满卡片，读屏只读标题。 */
+  .guide-card a::after {
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-xl);
+    content: '';
+  }
+
+  .guide-card p {
+    margin-top: 10px;
+    color: var(--gray-900);
+    font-size: 15px;
+    line-height: 1.65;
+  }
+
+  @media (max-width: 960px) {
+    .guides-list {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  @media (max-width: 600px) {
+    .guides-list-section {
+      padding-top: 40px;
+      padding-bottom: 64px;
+    }
+
+    .guide-card {
+      padding: 20px;
+    }
+
+    .guide-card h2 {
+      font-size: 18px;
+    }
+  }
+</style>

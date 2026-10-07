@@ -1,5 +1,17 @@
 # 000 · 架构 · 变更记录
 
+## 2026-10-07 Guides 内容集合与 Layout 语言切换器合同
+
+**Why**：上线 Guides 长尾文章（只有英文）。文章不做语言回退，所以「页面在所有语言都存在」不再成立，语言切换器不能再固定列出 14 语言。产品与收录规则见 `@../009.SEO与增长/feat.md`「Guides 文章页」，变更明细见 `@../009.SEO与增长/changelog.md` 同日条目。
+
+**变更**：
+- `tech-website.md`：
+  - 技术栈补内容集合 `guides` 与 Markdown 配置；
+  - 目录树补 `content.config.ts`、`content/guides/`、`guides/guidesContent.ts`、`lib/rehypeTableCellLabels.mjs` 与 Guides 页面组件；
+  - `SiteBandHeader` 消费方补 Guides，并新增面包屑插槽；
+  - 页面集合补 Guides；
+  - Layout 的 `includeLanguageSwitcher` 换成 `availableLocales`（本页实际存在的语言），页脚按语言显示 Guides 入口。
+
 ## 2026-10-06 Layout SEO 合同：hreflang 按对等版本输出，title 必传，新增 WebSite 与 og:site_name
 
 **Why**：13 个语言的法务页只渲染英文回退稿，不应与英文版互指 hreflang；首页 title 曾被一个英文常量覆盖全部语言。规则见 `@../009.SEO与增长/tech-落地页与Sitemap.md` §4.6，变更明细见 `@../009.SEO与增长/changelog.md` 同日条目。

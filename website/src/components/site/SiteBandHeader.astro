@@ -1,7 +1,8 @@
 ---
 /**
- * 法务页与公司页共用的页头带：SiteStage band + 唯一的 H1 + 引言 + 更新日期胶囊。
+ * 法务页、公司页与 Guides 页共用的页头带：SiteStage band + 唯一的 H1 + 引言 + 更新日期胶囊。
  *
+ * - `breadcrumb` slot：H1 上方的面包屑（Guides 文章页），样式由调用方负责；不传时不输出任何内容。
  * - 默认 slot：引言段落，调用方写 `<p class="site-band-intro">`（slot 内容属于调用方作用域，类名由本组件的 :global 规则命中）。
  * - `actions` slot：日期胶囊之后的操作区（公司页的按钮组）；空的具名 slot 不输出任何内容，外面也没有包裹元素。
  * - 日期胶囊只在 `updatedAt` 与 `updatedAtIso` 同时存在时出现；`updatedColon` 为真时在标签后补冒号并去掉日期前的额外间距。
@@ -26,6 +27,7 @@ const { title, updatedLabel, updatedAt, updatedAtIso, updatedColon = false } = A
 
 <SiteStage variant="band">
   <header class="container site-band-header">
+    <slot name="breadcrumb" />
     <h1>{title}</h1>
     <slot />
     {updatedAt && updatedAtIso && (

@@ -10,7 +10,15 @@
 - [Contact](https://vimeodownloader.app/contact/): Public support channel for account, download, extension, billing and privacy questions.
 - [Terms of Service](https://vimeodownloader.app/terms/): Terms for using the website and the extension.
 - [Privacy Policy](https://vimeodownloader.app/privacy/): What data is collected and how it is used.
-- [Full content index](https://vimeodownloader.app/llms-full.txt): The same pages plus language entrances and per-language sitemaps.
+- [Full content index](https://vimeodownloader.app/llms-full.txt): The same pages and guides, plus language entrances and per-language sitemaps.
+
+## Guides
+
+- [Guides](https://vimeodownloader.app/guides/): Index of the English how-to and troubleshooting guides.
+- [How to download a Vimeo video](https://vimeodownloader.app/guides/how-to-download-a-vimeo-video/): Vimeo's Download button, your own videos, the offline list in the Vimeo app, and the online tool for public videos.
+- [Why a Vimeo video has no Download button](https://vimeodownloader.app/guides/vimeo-download-button-missing/): The three reasons Vimeo lists and what owners and viewers can do.
+- [Vimeo Downloader not working](https://vimeodownloader.app/guides/vimeo-downloader-not-working/): Each error message the online tool shows, what it means and what to try.
+- [Is it legal to download Vimeo videos?](https://vimeodownloader.app/guides/is-it-legal-to-download-vimeo-videos/): How the owner's settings, Vimeo's Terms of Service and copyright law apply. General information, not legal advice.
 
 ## Sitemap
 

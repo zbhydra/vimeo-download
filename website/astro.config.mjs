@@ -2,6 +2,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'astro/config'
 import languageSitemap from './src/sitemap/languageSitemap.mjs'
+import rehypeTableCellLabels from './src/lib/rehypeTableCellLabels.mjs'
 import { SITE_ORIGIN } from './src/lib/site.mjs'
 
 // Production and development both serve from the root path.
@@ -24,6 +25,12 @@ export default defineConfig({
   integrations: [
     languageSitemap()
   ],
+  markdown: {
+    // 文章逐字引用界面文案（如 "Checking browser storage..."），不能被改成弯引号或省略号；
+    // smartypants 还会把表格单元格开头的引号判成右引号。全站文案本来就用直引号。
+    smartypants: false,
+    rehypePlugins: [rehypeTableCellLabels]
+  },
   build: {
     format: 'directory',
     // SSG 页面由 CDN 压缩传输；内联当前路由 CSS 可消除移动网络上的额外关键往返。

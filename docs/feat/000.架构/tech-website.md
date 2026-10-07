@@ -7,6 +7,7 @@
 
 - **Astro 5**（`website/astro.config.mjs`，站点源集中在 `src/lib/site.mjs` 的 `SITE_ORIGIN`，`base='/'`）。生产域当前仍是占位值，上线前必须替换。
 - 集成：只有自定义 `languageSitemap()`（`src/sitemap/`）。无 Vue、无 React；交互是 `.astro` 组件内的命令式 DOM 脚本。
+- 内容集合：只有 `guides`（`src/content.config.ts`，Astro 内置 Content Layer，无额外依赖），正文是 Markdown。Markdown 关闭 smartypants（正文逐字引用界面文案），挂自写的 `rehypeTableCellLabels`。规则见 `@../009.SEO与增长/tech-落地页与Sitemap.md` §5。
 - 下载引擎：`mediabunny`。
 - TypeScript：`tsconfig.json` 继承 `astro/tsconfigs/strict`，除 `mediabunny` 的类型路径外无自定义 alias。
 - 构建：`pnpm build` = `astro check && astro build`，无 Service Worker 前置步骤；e2e：Playwright（对接本地真实 backend，不使用 mock）。
@@ -29,13 +30,17 @@ website/
     │   ├── pricing/          # Pricing 页壳、登录 / 订阅确认弹窗与控制器
     │   ├── order-checkout/   # 订阅结算弹窗与订单协议
     │   ├── payment-return/   # PayPal / Clink 回跳页共用组件与脚本
-    │   ├── pages/            # 页面装配：Home / Pricing / Company / Legal
-    │   └── site/             # 站级：深色舞台 SiteStage（hero / band / card 三变体，唯一实现）、SiteBandHeader（法务页与公司页的页头带：SiteStage band + H1 + 引言 + 日期胶囊，这两页页头的唯一实现）、确认框、X 图标
+    │   ├── pages/            # 页面装配：Home / Pricing / Company / Legal / Guide / GuidesIndex
+    │   └── site/             # 站级：深色舞台 SiteStage（hero / band / card 三变体，唯一实现）、SiteBandHeader（法务页、公司页与 Guides 页的页头带：SiteStage band + 可选面包屑 + H1 + 引言 + 日期胶囊，这几类页头的唯一实现）、确认框、X 图标
+    ├── content.config.ts     # 内容集合 guides 的加载与 frontmatter schema
+    ├── content/guides/       # Guides 文章正文：{slug}/{locale}.md
+    ├── guides/guidesContent.ts # Guides 外框文案（14 语言）+ 文章读取、路径、语言判定
     ├── i18n/                 # ui / content / schema / pricing / payment-return + lang/*
     ├── layouts/Layout.astro  # 唯一布局
     ├── legal/ company/       # terms/privacy、about/contact 文案
     ├── lib/site.mjs          # 站点身份唯一配置点
-    ├── pages/                # index / ext-pricing / about / contact / terms / privacy、[lang]/、clink/、paypal/
+    ├── lib/rehypeTableCellLabels.mjs # Markdown 表格单元格写入列名 data-label（手机表格卡片用）
+    ├── pages/                # index / ext-pricing / about / contact / terms / privacy / guides/、[lang]/、clink/、paypal/
     ├── scripts/
     │   ├── globalClickEvents.ts  # 全站点击埋点
     │   ├── download/         # 下载状态机、下载方法、媒体接口
@@ -44,7 +49,7 @@ website/
     └── sitemap/languageSitemap.mjs
 ```
 
-页面集合（14 语言；en-US 无前缀）：首页、Pricing、About、Contact、Terms、Privacy；支付回跳页 `paypal/{success,cancel}`、`clink/{success,cancel}` 仅英文、无语言镜像。产品口径见 `@../009.SEO与增长/feat.md`、`@../011.Pricing页/feat.md`。
+页面集合（14 语言；en-US 无前缀）：首页、Pricing、About、Contact、Terms、Privacy；Guides（索引页 + 文章）只在有文章正文的语言生成，目前只有英文；支付回跳页 `paypal/{success,cancel}`、`clink/{success,cancel}` 仅英文、无语言镜像。产品口径见 `@../009.SEO与增长/feat.md`、`@../011.Pricing页/feat.md`。
 
 ## 3. 多语言机制
 
@@ -77,9 +82,11 @@ website/
 - **唯一布局 `src/layouts/Layout.astro`** 集中注入：
   - canonical URL
   - hreflang alternate 链：页面用 `alternateLocales` 声明内容对等且可索引的语言版本。默认 14 语言并含 `x-default` → en-US；不足 2 个时不输出。规则见 `@../009.SEO与增长/tech-落地页与Sitemap.md` §4.6
+  - 语言切换器：页面用 `availableLocales` 声明本页实际存在的语言版本（默认 14 语言），切换器只列这些语言，不足 2 个时不渲染；规则同见 §4.6
+  - 页脚 Resources 组：当前语言有 Guides 文章时在首位显示 Guides 入口
   - Open Graph / Twitter card（`og:site_name` 为品牌词；`twitter:site` 绑定官方 X 账号）
   - JSON-LD：
-    - `SoftwareApplication`：仅首页和 Pricing 输出，Company、Legal、PaymentReturn 传 `includeSoftwareApplicationSchema={false}`；类别 `BrowserExtension`，`featureList` 为插件能力。
+    - `SoftwareApplication`：仅首页和 Pricing 输出，Company、Legal、Guides、PaymentReturn 传 `includeSoftwareApplicationSchema={false}`；类别 `BrowserExtension`，`featureList` 为插件能力。
     - 全站 `WebSite`：站点名称。
     - `Organization`：带 `legalName`、公开 `ContactPoint`，以及指向 Chrome Web Store 与官方 X 的 `sameAs`。
     - 页面级 `structuredData` props 可叠加，首页、Pricing 各注入一份 FAQPage。

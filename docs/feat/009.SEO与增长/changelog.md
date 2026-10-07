@@ -1,5 +1,50 @@
 # 009 · SEO 与增长 - 变更记录
 
+## 2026-10-07 上线 Guides 长尾文章（英文 4 篇）
+
+**Why**：hydra 确认了 `docs/seo-skill/` 的英文源稿，并确认在线工具只针对公开视频。现在发布不依赖插件的 4 篇：
+- how-to-download-a-vimeo-video
+- is-it-legal-to-download-vimeo-videos
+- vimeo-download-button-missing
+- vimeo-downloader-not-working
+
+只存音频、存字幕两篇依赖插件，等插件上架后再发布。
+
+**变更**：
+- `feat.md`：
+  - 新增「Guides 文章页」：文章清单、语言与收录规则、界面元素；
+  - 页面集合、页脚、导航语言切换器、业务流程、验收与埋点同步。
+- `tech-落地页与Sitemap.md`：
+  - §2.5 补 `/guides/` 与 `/guides/{slug}/` 的源文件映射；
+  - §4.2 补 Guides 的 SEO 字段来源；
+  - §4.6 补 Guides 的 hreflang 取值与 `availableLocales`（语言切换器）规则；
+  - 新增 §5：内容模型、路由与语言判定、渲染、结构化数据；原 §5 改为 §6。
+- `tech-LLMs与增长入口.md`：
+  - 两份 llms 入口新增 `## Guides`；
+  - 允许的站内 URL 补 Guides；
+  - 退役路由按完整路径段匹配；
+  - 语言切换器改按 `availableLocales` 渲染；
+  - 页脚 Resources 组补 Guides。
+- 代码：
+  - 新增内容集合 `guides` 与 4 篇英文正文。上线前相对源稿的改动：
+    - 去掉扩展相关段落与截图占位；
+    - 日期移到页头；
+    - FAQ 问题改成三级标题；
+    - 在线工具对私密、密码保护、付费视频统一写作「不支持」（源稿两处写的是「不保证可用」）；
+    - 「Video only」改成「一个带声音的 MP4」，避免误读成没有声音。
+  - 新增 `GuidePage`、`GuidesIndexPage`，root 与 `[lang]/` 路由，以及 `guidesContent.ts`（外框文案 14 语言齐全）。
+  - Markdown 关闭 smartypants；新增 `rehypeTableCellLabels`，供手机表格卡片显示列名。
+  - `SiteBandHeader` 新增 `breadcrumb` 插槽。
+  - `Layout`：
+    - `includeLanguageSwitcher` 换成 `availableLocales`，语言切换器只列本页存在的语言；
+    - 页脚 Resources 组按语言显示 Guides 入口。
+  - `languageSitemap`：登记 Guides 页面族。
+  - `llms.txt` / `llms-full.txt`：新增 Guides。
+  - `module-scripts.test.js`：
+    - 新增 Guides 用例；
+    - 退役路由检查改为按路径段匹配；
+    - 删除首页「Clarity ID 恰好出现一次」的断言。Clarity 已在 2026-10-06 删除，这条断言从那次提交起一直失败。
+
 ## 2026-10-06 上线后修正：品牌词落位、法务页多语言去重、运营主体公示、在线工具能力文案
 
 **Why**：上线当天的 SEO 审计（`docs/scratch/vimeodownloader.app-audit/`）发现四个问题。
