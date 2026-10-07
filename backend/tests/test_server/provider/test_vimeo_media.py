@@ -1,14 +1,49 @@
 """Vimeo 链接规范化及原生播放器材料选轨合同。"""
 
 from importlib import import_module
+import time
 
 import pytest
 
+from app.contracts.media_download import MediaDownloadTokenClaims
 from app.exceptions.common_exception import AppCommonException
 from app.i18n.common_code import CommonCode
 
 svc = import_module("app.provider.media.vimeo_media")
 provider = svc.vimeo_media
+
+
+@pytest.mark.parametrize(
+    ("device_id", "issued_ip", "expected"),
+    [("device-1", "203.0.113.1", "device-1"), (None, "203.0.113.2", "203.0.113.2")],
+)
+def test_vimeo_download_rate_limit_uses_signed_device_or_legacy_ip(
+    device_id: str | None,
+    issued_ip: str,
+    expected: str,
+) -> None:
+    """材料刷新限流按 token 设备身份，旧 token 回退签发 IP。"""
+    now = int(time.time())
+    claims = MediaDownloadTokenClaims(
+        typ="media_download",
+        v=1,
+        platform="vimeo",
+        download_mode="direct",
+        link="https://vimeo.com/1194296700",
+        sid="vimeo:1194296700:direct:1",
+        size=1,
+        uid=None,
+        credits_cost=0,
+        issued_ip=issued_ip,
+        active_download_limit=3,
+        iat=now,
+        exp=now + 3600,
+        jti="test-jti",
+        extra={},
+        device_id=device_id,
+    )
+
+    assert svc._download_rate_limit_identifier(claims) == expected
 
 
 def test_vimeo_links_normalize_to_canonical():

@@ -92,7 +92,7 @@
 | 资源形态 | 单视频；progressive MP4 或 DASH 双轨(`direct` / `client_mux`) |
 | 元数据缓存 | 解析结果缓存 30 分钟(`ex=1800`) |
 | 解析限流 | 平台共性 3 次/10 秒 per user/device |
-| 下载材料刷新限流 | `vimeo_direct_intent` 固定窗口 6 次/60 秒 |
+| 下载材料刷新限流 | `vimeo_direct_intent` 固定窗口 6 次/60 秒；按签名 token 的 `device_id` 分桶，旧 token 缺失时按 `issued_ip` 回退 |
 | CORS | Vimeo CDN 返回 `Access-Control-Allow-Origin: *`，浏览器侧请求必须 `credentials: omit`；携带 Cookie 会被 CORS 拒绝 |
 | 直链刷新 | `direct` / `client_mux` 方法内部最多刷新一次 intent(见 `@tech-下载方法与续传.md` §8.5)；DASH 清单在下载材料生成时重新捕获临时签名 |
 | 范围外 | 私密/密码保护/付费/OTT/DRM 内容；在线播放；后端代理下载 |
@@ -137,7 +137,7 @@
 - **CDN 请求 no-referrer**:Vimeo CDN 请求和 tracks 请求用 `no-referrer` 策略(`@tech-链路与授权.md` §2.5)。
 - **直链刷新**:direct / client_mux 在新下载过程中最多通过「下载授权 -> `download-v2`」刷新一次 direct/tracks JSON(`@tech-下载方法与续传.md` §8.5)。OPFS Continue 不重新授权;restartable Restart 是新的传输动作，清理当前记录后重新走「下载授权 -> `download-v2`」。
 - **缓存 TTL**:Vimeo 解析结果缓存 30 分钟。
-- **解析限流**:平台共性 3 次/10 秒 per user/device;下载材料刷新 6 次/60 秒。完整口径见 `@tech-速率治理.md`。
+- **解析限流**:平台共性 3 次/10 秒 per user/device;Vimeo 下载材料刷新按签名 token 的 `device_id` 分桶 6 次/60 秒，旧 token 缺失时按 `issued_ip` 回退。完整口径见 `@tech-速率治理.md`。
 - **Website/backend 配额扣减**:按用户口径，同一用户同一资源 6 小时内只扣一次(`@tech-链路与授权.md` §3.3)。该规则不适用于扩展本地下载；扩展按当前 document 的 canonical 资源任务逐项扣除，同一未完成任务重复提交不再次扣除。
 - **Download all**:`queueDefault=allow` 的 mode 且资源数 > 1 时展示;`client_mux`(deny)资源不进队列;含 client_mux 资源的结果不展示 Download all。详见 `@tech-下载方法与续传.md` §5。
 - **Capabilities 与 mode 解耦**:`capabilities.{download,play}` 只给 UI 展示;`download_mode` 以后端 parse 结果为准。前端 fallback resource 才允许根据 platform 推断默认 mode，函数名 `resolveFallbackDownloadMode()`。详见 `@tech-下载方法与续传.md` §1。

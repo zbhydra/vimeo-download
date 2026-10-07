@@ -3,11 +3,12 @@
 > 覆盖后端下载并发治理与 website 客户端下载速率上报。
 > 关联:`@tech-链路与授权.md`(下载授权链路) `@tech-下载方法与续传.md`(各 mode 的能力合同) `@tech-后端媒体Provider架构.md`(ProviderPolicy 与下载生命周期)
 
-速率治理剩两个维度:执行侧的**活跃下载并发**、观察侧的**客户端速率上报**——是不同侧面,非重复。
+速率治理包含三个维度:执行侧的**活跃下载并发**、Provider 的**下载材料刷新频率**、观察侧的**客户端速率上报**——是不同侧面,非重复。
 
 | 维度 | 现状 | 观察对象 | 作用 |
 | --- | --- | --- | --- |
 | 并发治理 | 已实施（当前 Provider 未启用） | 后端进程内的活跃下载流 | 阻止单身份长期占满后端流资源 |
+| 下载材料刷新频率 | 已实施（当前 Vimeo） | 已签名 token 的设备身份或旧 token 签发 IP | 限制重复刷新临时下载材料 |
 | 客户端上报 | 已实施 | 浏览器本次下载平均速率 | 埋点观测,落到 mark-log / SLS |
 
 **已下线**:后端输出带宽限速(`ProxyBandwidthLimitService`、`proxy_total_rate_limit_mb_per_second`、`proxy_user_rate_limit_bytes_per_second`、`dl_user_rate_mb_s` 配置项)与 TG 客户端上游速率统计,都随对应链路一并删除。当前没有任何平台产出 `download_mode = "proxy"`，服务端不代理媒体字节，因此不存在服务端限速对象。
@@ -27,7 +28,7 @@
 - `client_mux` tracks 下载;浏览器直连 tracks,同上。
 - 后端输出带宽限速;**当前不存在**服务端代理字节的输出限速。
 - Redis 跨进程/跨节点精确并发计数。
-- 按平台的下载调用频率限制。
+- 其他平台尚未定义的下载调用频率限制。
 
 ### 1.2 计数口径
 
@@ -48,9 +49,11 @@
 - 释放阶段先还 active 计数，再做 Provider cleanup，避免清理慢阻塞续传。
 - `ActiveDownloadGuard.release()` 可重复调用，重复释放不会减成负数。
 
-### 1.4 平台下载频率限制
+### 1.4 平台下载材料刷新频率
 
-当前只定义 ProviderPolicy 驱动的活跃并发，不定义 direct/client_mux 调用频率限制，也不定义按平台的下载次数限制。后续某个平台需要「下载 N 次/分钟」时，必须先在本文件新增公共执行口径，至少写清身份键、挂载层级、错误码和是否影响节点切换；不得把该限制私塞进 Provider。
+Vimeo 的 `vimeo_direct_intent` 使用 `RedisFixedLimiter` 对下载材料刷新按已签名 token 的 `device_id` 限制 6 次/60 秒；旧 token 缺少 `device_id` 时按 token 的 `issued_ip` 回退，仍为 6 次/60 秒。该限制在 Provider 执行层生效，不区分账号分支，也不增加 IP 辅助桶。
+
+后续其他平台需要「下载 N 次/分钟」时，必须先在本文件新增公共执行口径，至少写清身份键、挂载层级、错误码和是否影响节点切换；不得把该限制私塞进 Provider。
 
 解析频率限制属解析链路，见 `@tech-链路与授权.md` 与各平台 Provider；它不经过本节。
 

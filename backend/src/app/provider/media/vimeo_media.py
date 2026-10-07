@@ -12,6 +12,7 @@ from urllib.parse import parse_qs, urlencode, urljoin, urlsplit, urlunsplit
 from playwright.async_api import Response
 from pydantic import AliasPath, BaseModel, Field
 
+from app.contracts.media_download import MediaDownloadTokenClaims
 from app.contracts.media_platform import PLATFORM_VIMEO
 from app.core.redis import redis_client
 from app.exceptions.common_exception import AppCommonException
@@ -124,6 +125,11 @@ _ANONYMOUS_IDENTITY = """(() => {
 })();"""
 
 
+def _download_rate_limit_identifier(claims: MediaDownloadTokenClaims) -> str:
+    """按已签名 token 的匿名设备身份限流，兼容旧 token 的签发 IP。"""
+    return claims.device_id or claims.issued_ip
+
+
 class VimeoMedia(BaseMedia):
     """公开 Vimeo 页面匿名解析与 direct/client_mux 材料生成。"""
 
@@ -199,7 +205,9 @@ class VimeoMedia(BaseMedia):
     async def _download(self, request: MediaDownloadRequest) -> JsonDownloadResult:
         # 授权快照只固定资源身份；每次执行都重新捕获临时签名，不能偷偷切换轨道。
         if not await self._direct_intent_limiter.is_allowed(
-            "anonymous", limit=6, window=60
+            _download_rate_limit_identifier(request.claims),
+            limit=6,
+            window=60,
         ):
             raise AppCommonException(
                 CommonCode.RATE_LIMIT_EXCEEDED_MEDIA,
