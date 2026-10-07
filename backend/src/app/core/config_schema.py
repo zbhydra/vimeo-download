@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from urllib.parse import quote
 
 import yaml  # type: ignore
-from pydantic import Field, TypeAdapter, ValidationError, field_validator
+from pydantic import Field, TypeAdapter, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -181,19 +181,11 @@ class LoggingSettings(BaseSettings):
 class APISettings(BaseSettings):
     """API配置"""
 
+    model_config = SettingsConfigDict(extra="ignore")
+
     title: str = Field(default="Vimeo Downloader API")
     description: str = Field(default="Vimeo Downloader backend API")
     version: str = Field(default="0.1.0")
-    docs_url: str | None = Field(default="/docs")
-    redoc_url: str | None = Field(default="/redoc")
-
-    @field_validator("docs_url", "redoc_url", mode="before")
-    @classmethod
-    def _empty_url_to_none(cls, value: object) -> object:
-        """把部署模板里的空字符串文档路由转换成 FastAPI 关闭文档所需的 None。"""
-        if value == "":
-            return None
-        return value
 
 
 class AuthSettings(BaseSettings):

@@ -100,10 +100,8 @@ def test_download_role_only_mounts_node_and_media_v2_routes(monkeypatch):
 
 
 def test_business_role_keeps_current_business_routes(monkeypatch):
-    """business role 保留当前业务路由，并移除旧媒体下载入口。"""
+    """business role 保留当前业务路由，并关闭 API 文档入口。"""
     monkeypatch.setattr(settings.app, "role", "business")
-    monkeypatch.setattr(settings.api, "docs_url", "/docs")
-    monkeypatch.setattr(settings.api, "redoc_url", "/redoc")
 
     app = create_app()
     paths = _paths(app)
@@ -130,9 +128,9 @@ def test_business_role_keeps_current_business_routes(monkeypatch):
     assert "/api/external/system/dashboard" in paths
     assert "/internal/service-node/health" in paths
     assert "/internal/service-node/dashboard-snapshot" in paths
-    assert "/docs" in paths
-    assert "/redoc" in paths
-    assert "/openapi.json" in paths
+    assert "/docs" not in paths
+    assert "/redoc" not in paths
+    assert "/openapi.json" not in paths
 
 
 def test_node_local_monitor_paths_use_jwt_only_dependency(monkeypatch):

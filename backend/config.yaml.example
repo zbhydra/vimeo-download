@@ -40,8 +40,6 @@ api:
   title: "Vimeo Downloader API"
   description: "Vimeo Downloader backend API"
   version: "0.1.0"
-  docs_url: "/docs"
-  redoc_url: "/redoc"
 
 auth:
   jwt_secret_key: "{JWT_SECRET_KEY}"

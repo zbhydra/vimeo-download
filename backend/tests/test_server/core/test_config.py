@@ -103,23 +103,6 @@ class TestConfig:
         assert loaded_settings.smtp[1].host == "smtp-b.example.com"
         assert loaded_settings.smtp[1].weight == 100
 
-    def test_api_empty_docs_urls_normalize_to_none(self, tmp_path):
-        """api.docs_url / redoc_url 空字符串会关闭 FastAPI 文档。"""
-        loaded_settings = Settings(
-            write_config(
-                tmp_path,
-                SMTP_LIST_CONFIG
-                + """
-api:
-  docs_url: ""
-  redoc_url: ""
-""",
-            )
-        )
-
-        assert loaded_settings.api.docs_url is None
-        assert loaded_settings.api.redoc_url is None
-
     def test_download_role_loads_without_smtp(self, tmp_path):
         """download role 不要求 SMTP 业务配置。"""
         loaded_settings = Settings(

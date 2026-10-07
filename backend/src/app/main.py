@@ -233,7 +233,6 @@ def _include_api_info(app_instance: FastAPI) -> None:
         return {
             "message": f"Welcome to {settings.app.name}",
             "version": settings.app.version,
-            # "docs": settings.api.docs_url,
         }
 
 
@@ -433,24 +432,16 @@ def _current_role() -> AppRole:
     return role
 
 
-def _docs_urls_for_role(role: AppRole) -> tuple[str | None, str | None, str | None]:
-    """按 role 返回 FastAPI 文档路由 URL。"""
-    if role == "download":
-        return None, None, None
-    return settings.api.docs_url, settings.api.redoc_url, "/openapi.json"
-
-
 def create_app() -> FastAPI:
     """按 app.role 创建 FastAPI 应用实例。"""
     role = _current_role()
-    docs_url, redoc_url, openapi_url = _docs_urls_for_role(role)
     app_instance = FastAPI(
         title=settings.api.title,
         description=settings.api.description,
         lifespan=_create_lifespan(role),
-        docs_url=docs_url,
-        redoc_url=redoc_url,
-        openapi_url=openapi_url,
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
     )
     _add_middlewares(app_instance)
     _include_service_node_routes(app_instance)
