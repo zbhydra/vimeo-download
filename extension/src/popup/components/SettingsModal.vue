@@ -115,6 +115,67 @@
           </div>
         </div>
 
+        <div class="settings-field">
+          <span class="settings-field-label">{{ t(I18N_KEYS.SETTINGS.SPLIT_MODE_LABEL) }}</span>
+          <label class="settings-choice">
+            <input
+              type="radio"
+              name="settings-split-mode"
+              value="auto"
+              :checked="splitMode === 'auto'"
+              @change="handleSplitModeChange"
+            />
+            <span>
+              <strong>{{ t(I18N_KEYS.SETTINGS.SPLIT_MODE_AUTO) }}</strong>
+              <small>{{ t(I18N_KEYS.SETTINGS.SPLIT_MODE_AUTO_DESCRIPTION) }}</small>
+            </span>
+          </label>
+          <div v-if="splitMode === 'auto'" class="settings-threshold">
+            <label class="settings-threshold-label" for="settings-auto-split-threshold">
+              {{ t(I18N_KEYS.SETTINGS.SPLIT_MODE_THRESHOLD) }}
+            </label>
+            <input
+              id="settings-auto-split-threshold"
+              class="settings-control settings-number-control"
+              type="number"
+              :min="AUTO_SPLIT_THRESHOLD_MIN_GB"
+              :max="AUTO_SPLIT_THRESHOLD_MAX_GB"
+              :step="AUTO_SPLIT_THRESHOLD_STEP_GB"
+              :value="autoSplitThresholdGB"
+              :aria-label="t(I18N_KEYS.SETTINGS.SPLIT_MODE_THRESHOLD)"
+              @change="persistAutoSplitThreshold"
+            />
+            <span class="settings-threshold-unit">{{
+              t(I18N_KEYS.SETTINGS.SPLIT_MODE_THRESHOLD_UNIT)
+            }}</span>
+          </div>
+          <label class="settings-choice">
+            <input
+              type="radio"
+              name="settings-split-mode"
+              value="never"
+              :checked="splitMode === 'never'"
+              @change="handleSplitModeChange"
+            />
+            <span>
+              <strong>{{ t(I18N_KEYS.SETTINGS.SPLIT_MODE_NEVER) }}</strong>
+              <small>{{ t(I18N_KEYS.SETTINGS.SPLIT_MODE_NEVER_DESCRIPTION) }}</small>
+            </span>
+          </label>
+        </div>
+
+        <label class="settings-toggle">
+          <input
+            type="checkbox"
+            :checked="useBackgroundBlobDownload"
+            @change="handleBackgroundBlobDownloadChange"
+          />
+          <span>
+            <strong>{{ t(I18N_KEYS.SETTINGS.BACKGROUND_BLOB_LABEL) }}</strong>
+            <small>{{ t(I18N_KEYS.SETTINGS.BACKGROUND_BLOB_DESCRIPTION) }}</small>
+          </span>
+        </label>
+
         <!-- 下载历史：唯一入口，进入全屏历史视图并收起本弹层 -->
         <button type="button" class="settings-history-row" @click="handleOpenHistory">
           <span class="settings-history-label">{{ t(I18N_KEYS.HISTORY.TITLE) }}</span>
@@ -143,7 +204,15 @@ import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { I18nService } from '@/locales'
 import { LANGUAGES, LanguageService } from '@/core/services/languageService'
-import { DEFAULT_DOWNLOAD_PATH, SettingsManager } from '@/core/storage/settings'
+import {
+  AUTO_SPLIT_THRESHOLD_MAX_GB,
+  AUTO_SPLIT_THRESHOLD_MIN_GB,
+  AUTO_SPLIT_THRESHOLD_STEP_GB,
+  DEFAULT_DOWNLOAD_PATH,
+  normalizeAutoSplitThresholdGB,
+  SettingsManager,
+  type SplitMode
+} from '@/core/storage/settings'
 import { LANGUAGE_AUTO, I18N_KEYS, type LanguageSetting } from '@/core/constants/i18n'
 import { closeSettingsModal, settingsModalVisible } from '@/core/composables/settingsModal'
 import { openHistoryView } from '@/core/composables/historyView'
@@ -183,6 +252,11 @@ const languageSetting = ref<LanguageSetting>(LANGUAGE_AUTO)
 
 /** 保存位置输入框；空串表示回退默认子目录。 */
 const downloadPath = ref(DEFAULT_DOWNLOAD_PATH)
+
+/** 大文件下载设置；值来自 SettingsManager 的统一归一化结果。 */
+const splitMode = ref<SplitMode>('auto')
+const autoSplitThresholdGB = ref(1.5)
+const useBackgroundBlobDownload = ref(false)
 
 /**
  * 文件名模板与编辑模式。
@@ -233,6 +307,9 @@ watch(settingsModalVisible, async visible => {
     languageSetting.value = settings.language ?? LANGUAGE_AUTO
     downloadPath.value = settings.downloadPath ?? DEFAULT_DOWNLOAD_PATH
     filenamePattern.value = settings.filenamePattern ?? FILENAME_PATTERN_DEFAULT
+    splitMode.value = settings.splitMode
+    autoSplitThresholdGB.value = settings.autoSplitThresholdGB
+    useBackgroundBlobDownload.value = settings.useBackgroundBlobDownload
     // 存储值非默认模板即说明用户在自定义模式；等号场景落回默认，与存储单一真相一致。
     customMode.value = filenamePattern.value !== FILENAME_PATTERN_DEFAULT
   } catch (error) {
@@ -243,6 +320,44 @@ watch(settingsModalVisible, async visible => {
 /** 判断下拉值是否为合法的语言设置（Auto 或受支持的 locale）。 */
 function isLanguageSetting(value: string): value is LanguageSetting {
   return value === LANGUAGE_AUTO || LANGUAGES.some(lang => lang.value === value)
+}
+
+async function handleSplitModeChange(event: Event): Promise<void> {
+  const value = (event.target as HTMLInputElement).value
+  if (value !== 'auto' && value !== 'never') {
+    return
+  }
+
+  splitMode.value = value
+  try {
+    await SettingsManager.updateSettings({ splitMode: value })
+  } catch (error) {
+    logger.error(`[SettingsModal] 分割模式写入失败: splitMode=${value}`, error)
+  }
+}
+
+async function persistAutoSplitThreshold(event: Event): Promise<void> {
+  const value = (event.target as HTMLInputElement).value
+  const normalized = normalizeAutoSplitThresholdGB(value)
+  autoSplitThresholdGB.value = normalized
+  if (event.target instanceof HTMLInputElement) {
+    event.target.value = String(normalized)
+  }
+  try {
+    await SettingsManager.updateSettings({ autoSplitThresholdGB: normalized })
+  } catch (error) {
+    logger.error(`[SettingsModal] 自动分割阈值写入失败: threshold=${normalized}`, error)
+  }
+}
+
+async function handleBackgroundBlobDownloadChange(event: Event): Promise<void> {
+  const value = (event.target as HTMLInputElement).checked
+  useBackgroundBlobDownload.value = value
+  try {
+    await SettingsManager.updateSettings({ useBackgroundBlobDownload: value })
+  } catch (error) {
+    logger.error(`[SettingsModal] 备用下载方式写入失败: enabled=${value}`, error)
+  }
 }
 
 /** 语言即改即生效：写 settings.language，I18nService 监听设置变化后同步全部 vue-i18n 实例。 */
@@ -266,9 +381,12 @@ async function handleLanguageChange(event: Event): Promise<void> {
  * 这里只把空值回填成默认子目录（与 background 兜底同源、共用常量），非法段（`..`、
  * `C:\x`、`~/x`）的判定与丢弃全在 background 侧，输入框会原样保留用户填的这类值。
  */
-async function persistSavePath(): Promise<void> {
+async function persistSavePath(event?: Event): Promise<void> {
   const normalized = downloadPath.value.trim() || DEFAULT_DOWNLOAD_PATH
   downloadPath.value = normalized
+  if (event?.target instanceof HTMLInputElement) {
+    event.target.value = normalized
+  }
   try {
     await SettingsManager.updateSettings({ downloadPath: normalized })
   } catch (error) {
@@ -448,6 +566,60 @@ select.settings-control {
 
 .settings-control:hover {
   border-color: var(--settings-gray-400);
+}
+
+.settings-choice,
+.settings-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--settings-gray-900);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.settings-choice input,
+.settings-toggle input {
+  flex: 0 0 auto;
+  margin: 2px 0 0;
+  accent-color: var(--settings-primary);
+}
+
+.settings-choice span,
+.settings-toggle span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-choice small,
+.settings-toggle small {
+  color: var(--settings-gray-500);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.settings-threshold {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 2px 24px;
+}
+
+.settings-threshold-label {
+  color: var(--settings-gray-500);
+  font-size: 11px;
+}
+
+.settings-number-control {
+  width: 88px;
+  min-height: 30px;
+  padding: 0 8px;
+}
+
+.settings-threshold-unit {
+  color: var(--settings-gray-500);
+  font-size: 11px;
 }
 
 .settings-history-row {

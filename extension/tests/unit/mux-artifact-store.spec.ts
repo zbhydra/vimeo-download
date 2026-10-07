@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { installOpfsMock, MockOpfsDirectoryHandle, restoreOpfsMock } from '../mocks/opfs'
 import {
+  openMuxInputWriter,
   openMuxArtifactWriter,
   removeMuxArtifact,
   sweepMuxArtifacts
@@ -60,5 +61,18 @@ describe('muxArtifactStore 生命周期', () => {
 
   it('清扫时目录不存在（首次使用）不报错', async () => {
     await expect(sweepMuxArtifacts()).resolves.toBeUndefined()
+  })
+
+  it('输入 writer 按精确文件名落盘并可清理', async () => {
+    const writer = await openMuxInputWriter('bg-task-input-video')
+    await writer.write(Uint8Array.from([1, 2]))
+    await writer.write(Uint8Array.from([3, 4]))
+
+    const file = await writer.finalize()
+    expect(file.name).toBe('bg-task-input-video')
+    expect(Array.from(new Uint8Array(await file.arrayBuffer()))).toEqual([1, 2, 3, 4])
+
+    await removeMuxArtifact(writer.fileName)
+    expect((await muxDir()).hasEntry('bg-task-input-video')).toBe(false)
   })
 })

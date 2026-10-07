@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   cancel: vi.fn(),
   list: vi.fn(),
   release: vi.fn(),
+  save: vi.fn(),
   ensure: vi.fn(),
   settings: vi.fn()
 }))
@@ -24,6 +25,7 @@ vi.mock('@/background/rpc/offscreen.rpc', () => ({
     cancelTask = mocks.cancel
     listActiveTasks = mocks.list
     releaseTaskArtifact = mocks.release
+    saveTaskArtifact = mocks.save
   }
 }))
 vi.mock('@/background/services/offscreenDocument', () => ({
@@ -113,6 +115,7 @@ describe('下载任务合同', () => {
     mocks.start.mockResolvedValue({ started: true })
     mocks.cancel.mockResolvedValue({ accepted: true })
     mocks.release.mockResolvedValue({ released: true })
+    mocks.save.mockResolvedValue({ started: true })
     mocks.list.mockResolvedValue({ tasks: [] })
     vi.spyOn(chrome.downloads, 'download').mockImplementation(() => Promise.resolve(55))
     vi.spyOn(chrome.downloads, 'search').mockImplementation(() =>
@@ -244,6 +247,44 @@ describe('下载任务合同', () => {
       { filename: 'vimeoMediaDownloader/video-a.mp4', conflictAction: 'uniquify' },
       { filename: 'vimeoMediaDownloader/video-b.mp4', conflictAction: 'uniquify' }
     ])
+  })
+
+  it('备用 blob 交付走 offscreen anchor，并等待 background 落盘回执后释放产物', async () => {
+    mocks.settings.mockResolvedValue({
+      downloadPath: 'vimeoMediaDownloader',
+      filenamePattern: '{title}',
+      useBackgroundBlobDownload: true
+    })
+    await restore('offscreen-blob', resource('audio'))
+    await fail('offscreen-blob')
+    mocks.start.mockImplementation(async () => {
+      await orchestrator.handleTaskComplete({
+        taskId: 'offscreen-blob',
+        blobUrl: 'blob:offscreen-contract',
+        filename: 'ignored-by-background.m4a',
+        mimeType: 'audio/mp4'
+      })
+      return { started: true }
+    })
+    mocks.save.mockImplementation(async ({ blobUrl }: { blobUrl: string }) => {
+      const addListener = chrome.downloads.onCreated.addListener as ReturnType<typeof vi.fn>
+      addListener.mock.calls.at(-1)?.[0]({ id: 55, url: blobUrl })
+      return { started: true }
+    })
+
+    expect(orchestrator.retryTask('offscreen-blob')).toBe(true)
+    await vi.waitFor(() => expect(mocks.save).toHaveBeenCalledWith({
+      taskId: 'offscreen-blob',
+      blobUrl: 'blob:offscreen-contract',
+      filename: 'vimeoMediaDownloader/audio.m4a'
+    }))
+    await vi.waitFor(() => expect(orchestrator.getSnapshot().tasks).toHaveLength(0))
+    expect(chrome.downloads.download).not.toHaveBeenCalled()
+    expect(chrome.downloads.search).toHaveBeenCalledWith({ id: 55 })
+    expect(mocks.release).toHaveBeenCalledWith({
+      taskId: 'offscreen-blob',
+      blobUrl: 'blob:offscreen-contract'
+    })
   })
 
   it('直连 downloadId 返回时取消，不能把已 complete 的结果记成功', async () => {

@@ -59,6 +59,13 @@ export function parseMediaResource(value: JsonValue | undefined, label: string):
   if (size !== undefined) {
     resource.size = size
   }
+  const bitrate = optionalNumber(value.bitrate)
+  if (bitrate !== undefined) {
+    resource.bitrate = bitrate
+  }
+  if (value.streamingMode === 'auto' || value.streamingMode === 'never') {
+    resource.streamingMode = value.streamingMode
+  }
   const thumbnail = optionalString(value.thumbnail)
   if (thumbnail !== undefined) {
     resource.thumbnail = thumbnail

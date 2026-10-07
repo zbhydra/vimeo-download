@@ -60,19 +60,19 @@ interface VimeoPacketWindow {
  * @param taskId 任务 ID，用作 OPFS 临时文件名（全局唯一）
  */
 export async function muxVimeoVideoToMp4(
-  videoBlob: Blob,
-  audioBlob: Blob | null,
+  videoBlob: Blob | File,
+  audioBlob: Blob | File | null,
   range: VimeoTimeRange | undefined,
   taskId: string
 ): Promise<MuxOutputArtifact> {
   const videoInput = new Input({
     formats: [MP4],
-    source: new BlobSource(videoBlob)
+    source: new BlobSource(videoBlob, { maxCacheSize: 8 * 1024 * 1024 })
   })
   const audioInput = audioBlob
     ? new Input({
         formats: [MP4],
-        source: new BlobSource(audioBlob)
+        source: new BlobSource(audioBlob, { maxCacheSize: 8 * 1024 * 1024 })
       })
     : null
 
@@ -150,13 +150,13 @@ export async function muxVimeoVideoToMp4(
  * @param taskId 任务 ID，用作 OPFS 临时文件名（全局唯一）
  */
 export async function remuxVimeoAudioToM4a(
-  audioBlob: Blob,
+  audioBlob: Blob | File,
   range: VimeoTimeRange | undefined,
   taskId: string
 ): Promise<MuxOutputArtifact> {
   const audioInput = new Input({
     formats: [MP4],
-    source: new BlobSource(audioBlob)
+    source: new BlobSource(audioBlob, { maxCacheSize: 8 * 1024 * 1024 })
   })
 
   let writer: MuxArtifactWriter | null = null
@@ -207,17 +207,17 @@ export async function remuxVimeoAudioToM4a(
  * @param taskId 任务 ID，用作 OPFS 临时文件名（全局唯一）
  */
 export async function remuxVimeoMuxedMp4ToMp4(
-  inputBlob: Blob,
+  inputBlob: Blob | File,
   range: VimeoTimeRange | undefined,
   taskId: string
 ): Promise<MuxOutputArtifact> {
   const videoInput = new Input({
     formats: [MP4],
-    source: new BlobSource(inputBlob)
+    source: new BlobSource(inputBlob, { maxCacheSize: 8 * 1024 * 1024 })
   })
   const audioInput = new Input({
     formats: [MP4],
-    source: new BlobSource(inputBlob)
+    source: new BlobSource(inputBlob, { maxCacheSize: 8 * 1024 * 1024 })
   })
 
   let writer: MuxArtifactWriter | null = null

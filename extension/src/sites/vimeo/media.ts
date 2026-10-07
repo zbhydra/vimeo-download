@@ -29,6 +29,7 @@ import {
   type VimeoDelivery,
   type VimeoOptionKind,
   type VimeoSourceDescriptor,
+  type VimeoSegmentWindow,
   type VimeoTimeRange
 } from './shared'
 import { vimeoConfig } from './runtimeConfig'
@@ -118,6 +119,8 @@ export interface VimeoDashSegment {
   url: string
   /** segment 字节数。 */
   size?: number
+  startSeconds?: number
+  durationSeconds?: number
 }
 
 /** DASH track。 */
@@ -182,6 +185,7 @@ export interface VimeoHlsSegment {
   url: string
   /** AES-128 加密参数；缺失表示明文分片（无 KEY 声明或 METHOD=NONE）。 */
   encryption?: VimeoHlsEncryption
+  durationSeconds?: number
 }
 
 /**
@@ -267,6 +271,8 @@ export interface VimeoDownloadOption {
   audioTrackId?: string
   /** HLS media playlist URL。 */
   hlsPlaylistUrl?: string
+  videoSegmentTimeline?: VimeoSegmentWindow[]
+  audioSegmentTimeline?: VimeoSegmentWindow[]
   /** 下载描述符。 */
   descriptor: VimeoSourceDescriptor
 }
@@ -384,7 +390,12 @@ export function buildVimeoDownloadOptions(
         createDashVideoOptions(config, dashPlaylist.playlistUrl, track, bestAudioTrack)
       )
     : []
-  const safeDashVideoOptions = dashVideoOptions.filter(option => !isKnownOversized(option.size))
+  const safeDashVideoOptions = dashVideoOptions.filter(
+    option =>
+      !isKnownOversized(option.size) ||
+      (option.videoSegmentTimeline !== undefined &&
+        (!option.audioTrackId || option.audioSegmentTimeline !== undefined))
+  )
   const hlsVideoOptions =
     safeDashVideoOptions.length === 0
       ? sortHlsMediaPlaylists(hlsPlaylists).map(playlist => createHlsVideoOption(config, playlist))
@@ -465,6 +476,98 @@ export function applyVimeoTimeRange(resource: MediaResource, range: VimeoTimeRan
   }
 }
 
+/** 自动分割所需的媒体大小估算；未知大小时按码率与时长估算。 */
+export function estimateVimeoResourceBytes(resource: MediaResource): number | undefined {
+  if (resource.size !== undefined && Number.isFinite(resource.size) && resource.size > 0) {
+    return resource.size
+  }
+  if (
+    resource.bitrate !== undefined &&
+    resource.duration !== undefined &&
+    Number.isFinite(resource.bitrate) &&
+    Number.isFinite(resource.duration) &&
+    resource.bitrate > 0 &&
+    resource.duration > 0
+  ) {
+    return (resource.bitrate * resource.duration) / 8
+  }
+  return undefined
+}
+
+/** 按目标字节数生成自适应媒体时间窗；原始片段范围会被正确求交。 */
+export function splitVimeoResourceBySize(
+  resource: MediaResource,
+  targetBytes: number
+): MediaResource[] {
+  if (!Number.isFinite(targetBytes) || targetBytes <= 0) {
+    return [resource]
+  }
+  const descriptor = decodeVimeoSourceDescriptor(resource.documentId)
+  if (
+    !descriptor ||
+    (descriptor.delivery !== 'dash' && descriptor.delivery !== 'hls') ||
+    descriptor.kind !== 'video' ||
+    !descriptor.videoSegmentTimeline ||
+    !resource.duration ||
+    !Number.isFinite(resource.duration) ||
+    resource.duration <= 0
+  ) {
+    return [resource]
+  }
+
+  const sourceStart = descriptor.startSeconds ?? 0
+  const sourceEnd = Math.min(descriptor.endSeconds ?? resource.duration, resource.duration)
+  const duration = sourceEnd - sourceStart
+  if (!(duration > 0)) {
+    return [resource]
+  }
+
+  const baseEstimatedBytes = estimateVimeoResourceBytes(resource)
+  const estimatedBytes =
+    baseEstimatedBytes === undefined
+      ? undefined
+      : baseEstimatedBytes * (duration / resource.duration)
+  const safeTargetBytes = Math.min(targetBytes, vimeoConfig.muxMaxBytes * 0.8)
+  if (!estimatedBytes || estimatedBytes <= safeTargetBytes) {
+    return [resource]
+  }
+
+  const timeline = descriptor.videoSegmentTimeline.filter(
+    window => window.endSeconds > sourceStart && window.startSeconds < sourceEnd
+  )
+  if (timeline.length === 0) return [resource]
+  const epsilon = 1e-6
+  if (
+    timeline[0].startSeconds > sourceStart + epsilon ||
+    timeline[timeline.length - 1].endSeconds < sourceEnd - epsilon ||
+    timeline.some(
+      (window, index) =>
+        index > 0 && Math.abs(window.startSeconds - timeline[index - 1].endSeconds) > epsilon
+    )
+  ) {
+    return [resource]
+  }
+  const targetDuration = duration * (safeTargetBytes / estimatedBytes)
+  const ranges: VimeoTimeRange[] = []
+  let partStart = Math.max(sourceStart, timeline[0].startSeconds)
+  let partEnd = partStart
+  for (const window of timeline) {
+    const end = Math.min(sourceEnd, window.endSeconds)
+    if (end <= partStart) continue
+    if (partEnd > partStart && end - partStart > targetDuration) {
+      ranges.push({ startSeconds: partStart, endSeconds: partEnd })
+      partStart = Math.max(sourceStart, window.startSeconds)
+    }
+    partEnd = end
+  }
+  if (partEnd > partStart) ranges.push({ startSeconds: partStart, endSeconds: partEnd })
+  const parts: MediaResource[] = []
+  for (const range of ranges) {
+    parts.push(applyVimeoTimeRange(resource, range))
+  }
+  return parts
+}
+
 /** 从下载选项构造 MediaResource。 */
 export function createVimeoResource(option: VimeoDownloadOption, index: number): MediaResource {
   const resourceType =
@@ -489,6 +592,7 @@ export function createVimeoResource(option: VimeoDownloadOption, index: number):
     duration: option.duration,
     groupMetadata: option.groupMetadata,
     size: option.size,
+    bitrate: option.bitrate,
     thumbnail: option.kind === 'image' ? option.url : undefined,
     mimeType: option.mimeType,
     documentId: encodeVimeoSourceDescriptor(option.descriptor),
@@ -678,9 +782,15 @@ export function parseVimeoHlsMediaPlaylist(
   }
 
   const segments: VimeoHlsSegment[] = []
+  let pendingDuration: number | undefined
   let mediaSequence = 0
   let key: ParsedHlsEncryption | null = null
   for (const line of lines) {
+    if (line.startsWith('#EXTINF:')) {
+      const duration = Number.parseFloat(line.slice('#EXTINF:'.length).split(',')[0] ?? '')
+      pendingDuration = Number.isFinite(duration) ? duration : undefined
+      continue
+    }
     if (line.startsWith('#EXT-X-KEY:')) {
       const parsed = parseHlsKey(line, playlistUrl)
       if (parsed === undefined) {
@@ -706,6 +816,7 @@ export function parseVimeoHlsMediaPlaylist(
     }
     segments.push({
       url: segmentUrl,
+      ...(pendingDuration !== undefined ? { durationSeconds: pendingDuration } : {}),
       ...(key
         ? {
             encryption: {
@@ -716,6 +827,7 @@ export function parseVimeoHlsMediaPlaylist(
           }
         : {})
     })
+    pendingDuration = undefined
   }
 
   const codecs = variant.codecs
@@ -984,6 +1096,32 @@ function appendClipFilename(filename: string, range: VimeoTimeRange): string {
   return filename.replace(/(\.[^.]*)$/, `-clip-${range.startSeconds}-${range.endSeconds}s$1`)
 }
 
+function buildDashSegmentTimeline(segments: VimeoDashSegment[]): VimeoSegmentWindow[] | undefined {
+  if (segments.length === 0 || segments.some(segment => segment.durationSeconds === undefined)) {
+    return undefined
+  }
+  let cursor = 0
+  return segments.map(segment => {
+    const start = segment.startSeconds ?? cursor
+    const end = start + (segment.durationSeconds ?? 0)
+    cursor = end
+    return { startSeconds: start, endSeconds: end }
+  })
+}
+
+function buildHlsSegmentTimeline(segments: VimeoHlsSegment[]): VimeoSegmentWindow[] | undefined {
+  if (segments.length === 0 || segments.some(segment => segment.durationSeconds === undefined)) {
+    return undefined
+  }
+  let cursor = 0
+  return segments.map(segment => {
+    const end = cursor + (segment.durationSeconds ?? 0)
+    const window = { startSeconds: cursor, endSeconds: end }
+    cursor = end
+    return window
+  })
+}
+
 /** 读取 DASH tracks。 */
 function readDashTracks(value: JsonValue | undefined, kind: 'video' | 'audio'): VimeoDashTrack[] {
   if (!Array.isArray(value)) {
@@ -1041,7 +1179,9 @@ function readDashSegments(value: JsonValue | undefined): VimeoDashSegment[] {
 
     segments.push({
       url,
-      size: readPositiveInt(item.size)
+      size: readPositiveInt(item.size),
+      startSeconds: readFiniteNumber(item.start_seconds) ?? readFiniteNumber(item.start),
+      durationSeconds: readFiniteNumber(item.duration_seconds) ?? readFiniteNumber(item.duration)
     })
   }
 
@@ -1162,6 +1302,8 @@ function createDashVideoOption(
     mimeType: 'video/mp4',
     dashPlaylistUrl,
     videoTrackId: videoTrack.id,
+    videoSegmentTimeline: buildDashSegmentTimeline(videoTrack.segments),
+    ...(audioTrack ? { audioSegmentTimeline: buildDashSegmentTimeline(audioTrack.segments) } : {}),
     ...(audioTrack ? { audioTrackId: audioTrack.id } : {})
   })
 }
@@ -1212,7 +1354,8 @@ function createDashAudioOption(
     size: estimateDashTrackBytes(audioTrack),
     mimeType: 'audio/mp4',
     dashPlaylistUrl,
-    audioTrackId: audioTrack.id
+    audioTrackId: audioTrack.id,
+    audioSegmentTimeline: buildDashSegmentTimeline(audioTrack.segments)
   })
 }
 
@@ -1238,7 +1381,8 @@ function createHlsVideoOption(
     fps: playlist.fps,
     bitrate: playlist.bandwidth,
     mimeType: 'video/mp4',
-    hlsPlaylistUrl: playlist.playlistUrl
+    hlsPlaylistUrl: playlist.playlistUrl,
+    videoSegmentTimeline: buildHlsSegmentTimeline(playlist.segments)
   })
 }
 
@@ -1326,7 +1470,9 @@ function createOption(
       dashPlaylistUrl: input.dashPlaylistUrl,
       videoTrackId: input.videoTrackId,
       audioTrackId: input.audioTrackId,
-      hlsPlaylistUrl: input.hlsPlaylistUrl
+      hlsPlaylistUrl: input.hlsPlaylistUrl,
+      videoSegmentTimeline: input.videoSegmentTimeline,
+      audioSegmentTimeline: input.audioSegmentTimeline
     }
   }
 }

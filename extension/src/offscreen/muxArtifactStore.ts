@@ -99,27 +99,39 @@ export async function openMuxArtifactByteWriter(
   stem: string,
   extension: string
 ): Promise<MuxByteArtifactWriter> {
-  const fileName = `${stem}.${extension}`
+  return openMuxByteWriter(`${stem}.${extension}`)
+}
+
+/** 在 OPFS 临时目录创建指定文件名的裸字节写入端。 */
+async function openMuxByteWriter(fileName: string): Promise<MuxByteArtifactWriter> {
   const directory = await muxTempDirectory()
   const fileHandle = await directory.getFileHandle(fileName, { create: true })
   const writable = await fileHandle.createWritable()
+  const streamWriter = writable instanceof WritableStream ? writable.getWriter() : null
 
   return {
     fileName,
-    write: chunk => writable.write(chunk),
+    write: chunk => (streamWriter ? streamWriter.write(chunk) : writable.write(chunk)),
     finalize: () => {
       // 与 StreamTarget.finalize 同口径：close 后才允许读回文件引用。
-      return writable.close().then(() => fileHandle.getFile())
+      return (streamWriter ? streamWriter.close() : writable.close()).then(() =>
+        fileHandle.getFile()
+      )
     },
     async dispose(): Promise<void> {
       try {
-        await writable.abort()
+        await (streamWriter ? streamWriter.abort() : writable.abort())
       } catch (error) {
         logger.warn(`[MuxArtifactStore] 中止可写流失败: fileName=${fileName}`, error)
       }
       await removeMuxArtifact(fileName)
     }
   }
+}
+
+/** 打开 adaptive 输入临时文件；仅用于 never streaming，写完后交 Mediabunny BlobSource(File)。 */
+export async function openMuxInputWriter(fileName: string): Promise<MuxByteArtifactWriter> {
+  return openMuxByteWriter(fileName)
 }
 
 /**

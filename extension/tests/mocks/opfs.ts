@@ -8,18 +8,28 @@
  */
 
 /** 与 Mediabunny StreamTargetChunk 对齐的写入块。 */
-interface MockOpfsWriteChunk {
+interface MockOpfsPositionedWrite {
   type: 'write'
   data: Uint8Array
   position: number
 }
 
+type MockOpfsWriteChunk = MockOpfsPositionedWrite | Uint8Array
+
 /** mock 文件内容：按写入顺序应用的定位写序列。 */
 class MockOpfsFileContent {
-  private readonly writes: MockOpfsWriteChunk[] = []
+  private readonly writes: MockOpfsPositionedWrite[] = []
 
   /** 应用一次定位写。 */
   write(chunk: MockOpfsWriteChunk): void {
+    if (chunk instanceof Uint8Array) {
+      const position = this.writes.reduce(
+        (max, previous) => Math.max(max, previous.position + previous.data.byteLength),
+        0
+      )
+      this.writes.push({ type: 'write', data: chunk.slice(), position })
+      return
+    }
     this.writes.push({ type: 'write', data: chunk.data.slice(), position: chunk.position })
   }
 

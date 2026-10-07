@@ -14,8 +14,10 @@ import {
   applyVimeoTimeRange,
   buildVimeoDownloadOptions,
   createVimeoResource,
+  estimateVimeoResourceBytes,
   parseVimeoConfig,
-  parseVimeoDashPlaylist
+  parseVimeoDashPlaylist,
+  splitVimeoResourceBySize
 } from '@/sites/vimeo/media'
 import { vimeoResourceBuffer } from '@/sites/vimeo/content/resourceBuffer'
 import {
@@ -191,6 +193,59 @@ describe('Vimeo 片段区间选项模型', () => {
     ).toBeNull()
     expect(parseVimeoTimeRange({ startSeconds: 0, endSeconds: 0 })).toBeNull()
     expect(parseVimeoTimeRange({})).toBeNull()
+  })
+
+  it('按估算大小生成稳定时间窗，并与已有片段范围求交', () => {
+    const base = dashVideoResource()
+    const descriptor = decodeVimeoSourceDescriptor(base.documentId)
+    const full = {
+      ...base,
+      duration: 100,
+      size: 1000,
+      bitrate: undefined,
+      documentId: encodeVimeoSourceDescriptor({
+        ...descriptor!,
+        videoSegmentTimeline: [
+          { startSeconds: 0, endSeconds: 30 },
+          { startSeconds: 30, endSeconds: 60 },
+          { startSeconds: 60, endSeconds: 100 }
+        ]
+      })
+    }
+    expect(estimateVimeoResourceBytes(full)).toBe(1000)
+    expect(estimateVimeoResourceBytes({ ...full, size: undefined, bitrate: 80 })).toBe(1000)
+    expect(
+      splitVimeoResourceBySize({ ...full, size: 1024 ** 3 }, 1.5 * 1024 ** 3)
+    ).toHaveLength(2)
+    const parts = splitVimeoResourceBySize(full, 400)
+    expect(parts).toHaveLength(3)
+    expect(parts.map(part => decodeVimeoSourceDescriptor(part.documentId))).toEqual([
+      expect.objectContaining({ startSeconds: 0, endSeconds: 30 }),
+      expect.objectContaining({ startSeconds: 30, endSeconds: 60 }),
+      expect.objectContaining({ startSeconds: 60, endSeconds: 100 })
+    ])
+
+    const clipped = applyVimeoTimeRange(full, { startSeconds: 20, endSeconds: 80 })
+    const clippedParts = splitVimeoResourceBySize(
+      { ...clipped, duration: 100, size: 1000 },
+      400
+    )
+    expect(clippedParts.map(part => decodeVimeoSourceDescriptor(part.documentId))).toEqual([
+      expect.objectContaining({ startSeconds: 20, endSeconds: 60 }),
+      expect.objectContaining({ startSeconds: 60, endSeconds: 80 })
+    ])
+
+    const incomplete = {
+      ...full,
+      documentId: encodeVimeoSourceDescriptor({
+        ...decodeVimeoSourceDescriptor(full.documentId)!,
+        videoSegmentTimeline: [
+          { startSeconds: 0, endSeconds: 30 },
+          { startSeconds: 40, endSeconds: 100 }
+        ]
+      })
+    }
+    expect(splitVimeoResourceBySize(incomplete, 400)).toEqual([incomplete])
   })
 })
 

@@ -228,4 +228,45 @@ describe('SettingsModal', () => {
     )
     expect(wrapper.find('.pattern-input').exists()).toBe(false)
   })
+
+  it('大文件设置默认可见，阈值归一化并写回，模式与备用开关可操作', async () => {
+    wrapper = await mountOpened()
+
+    const threshold = wrapper.get<HTMLInputElement>('#settings-auto-split-threshold')
+    expect(threshold.element.value).toBe('1.5')
+    expect(wrapper.findAll<HTMLInputElement>('input[type="radio"]')[0].element.checked).toBe(true)
+    expect(wrapper.get<HTMLInputElement>('input[type="checkbox"]').element.checked).toBe(false)
+
+    await threshold.setValue('9')
+    await threshold.trigger('change')
+    await flushPromises()
+    expect((storageData.get('settings') as { autoSplitThresholdGB: number }).autoSplitThresholdGB).toBe(
+      8
+    )
+    expect(threshold.element.value).toBe('8')
+
+    await threshold.setValue('0.1')
+    await threshold.trigger('change')
+    await flushPromises()
+    expect((storageData.get('settings') as { autoSplitThresholdGB: number }).autoSplitThresholdGB).toBe(
+      0.5
+    )
+    expect(threshold.element.value).toBe('0.5')
+
+    await wrapper.findAll<HTMLInputElement>('input[type="radio"]')[1].setValue(true)
+    await flushPromises()
+    expect((storageData.get('settings') as { splitMode: string }).splitMode).toBe('never')
+    expect(wrapper.find('#settings-auto-split-threshold').exists()).toBe(false)
+
+    await wrapper.findAll<HTMLInputElement>('input[type="radio"]')[0].setValue(true)
+    await flushPromises()
+    expect(wrapper.find('#settings-auto-split-threshold').exists()).toBe(true)
+
+    const backup = wrapper.get<HTMLInputElement>('input[type="checkbox"]')
+    await backup.setValue(true)
+    await flushPromises()
+    expect((storageData.get('settings') as { useBackgroundBlobDownload: boolean }).useBackgroundBlobDownload).toBe(
+      true
+    )
+  })
 })

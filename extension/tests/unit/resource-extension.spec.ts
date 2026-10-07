@@ -7,8 +7,25 @@ import {
   getDefaultResourceExtension,
   getExtensionFromMimeType
 } from '@/core/constants/resource'
+import { parseMediaResource } from '@/core/utils/mediaResource'
 
 describe('getDefaultResourceExtension', () => {
+  it('保留 bitrate，供 background 自动分割估算使用', () => {
+    const resource = parseMediaResource(
+      {
+        id: 'video',
+        messageId: '1',
+        index: 0,
+        url: 'https://example.com/video',
+        type: 'video',
+        sourceKind: 'vimeo-hls-video',
+        bitrate: 2_000_000,
+        metadata: { messageId: '1' }
+      },
+      'resource'
+    )
+    expect(resource.bitrate).toBe(2_000_000)
+  })
   it('优先使用 mimeType 推断扩展名', () => {
     expect(getDefaultResourceExtension(RESOURCE_TYPES.IMAGE, 'image/png')).toBe('.png')
     expect(getDefaultResourceExtension(RESOURCE_TYPES.AUDIO, 'audio/ogg')).toBe('.ogg')

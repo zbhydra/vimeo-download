@@ -49,7 +49,10 @@ describe('语言设置 Auto 模型', () => {
     expect(SettingsManager.getDefaultSettings()).toEqual({
       language: LANGUAGE_AUTO,
       downloadPath: DEFAULT_DOWNLOAD_PATH,
-      filenamePattern: FILENAME_PATTERN_DEFAULT
+      filenamePattern: FILENAME_PATTERN_DEFAULT,
+      splitMode: 'auto',
+      autoSplitThresholdGB: 1.5,
+      useBackgroundBlobDownload: false
     })
   })
 

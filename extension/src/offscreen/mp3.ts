@@ -74,7 +74,10 @@ export async function transcodeMuxArtifactToMp3(
 
 /** 解码 + 编码主链；只负责 MP3 产物自身，输入产物的收尾在调用方。 */
 async function encodeMp3(m4aFile: File, taskId: string): Promise<MuxOutputArtifact> {
-  const input = new Input({ formats: [MP4], source: new BlobSource(m4aFile) })
+  const input = new Input({
+    formats: [MP4],
+    source: new BlobSource(m4aFile, { maxCacheSize: 8 * 1024 * 1024 })
+  })
   let writer: MuxByteArtifactWriter | null = null
   try {
     const track = await input.getPrimaryAudioTrack()

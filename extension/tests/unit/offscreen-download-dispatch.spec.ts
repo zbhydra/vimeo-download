@@ -22,6 +22,7 @@ const mocks = vi.hoisted(() => ({
   remuxAudio: vi.fn(),
   remuxMuxed: vi.fn(),
   transcodeMp3: vi.fn(),
+  openMuxInputWriter: vi.fn(),
   removeMuxArtifact: vi.fn(),
   sweepMuxArtifacts: vi.fn()
 }))
@@ -49,6 +50,7 @@ vi.mock('@/offscreen/mp3', () => ({
 
 vi.mock('@/offscreen/muxArtifactStore', () => ({
   sweepMuxArtifacts: mocks.sweepMuxArtifacts,
+  openMuxInputWriter: mocks.openMuxInputWriter,
   removeMuxArtifact: mocks.removeMuxArtifact
 }))
 
@@ -107,6 +109,7 @@ function dashVideoResource(
   options: {
     audioTrackId?: string
     range?: VimeoTimeRange
+    timeline?: { startSeconds: number; endSeconds: number }
     taskIdSuffix?: string
   } = {}
 ): MediaResource {
@@ -124,6 +127,9 @@ function dashVideoResource(
     dashPlaylistUrl: PLAYLIST_URL,
     videoTrackId: 'video-track',
     ...(options.audioTrackId ? { audioTrackId: options.audioTrackId } : {}),
+    ...(options.timeline
+      ? { videoSegmentTimeline: [options.timeline] }
+      : {}),
     ...(options.range ?? {})
   }
 
@@ -293,6 +299,17 @@ describe('OffscreenTaskRunner 下载分派', () => {
       mimeType: 'audio/mpeg',
       tempFileName: `${artifact.tempFileName}.mp3`
     }))
+    mocks.openMuxInputWriter.mockImplementation(async (fileName: string) => {
+      const chunks: Uint8Array[] = []
+      return {
+        fileName,
+        write: vi.fn(async (chunk: Uint8Array) => {
+          chunks.push(chunk.slice())
+        }),
+        finalize: vi.fn(async () => new File(chunks, fileName)),
+        dispose: vi.fn(async () => undefined)
+      }
+    })
     URL.createObjectURL = createObjectUrlMock
     URL.revokeObjectURL = revokeObjectUrlMock
   })
@@ -313,11 +330,16 @@ describe('OffscreenTaskRunner 下载分派', () => {
         .mockResolvedValueOnce(segmentResponse(AUDIO_SEGMENT_URL, 'audio/mp4'))
     )
 
-    expect(offscreenTaskRunner.startTask('dispatch-clip-video', dashVideoResource({ range: CLIP }))).toBe(true)
+    expect(
+      offscreenTaskRunner.startTask(
+        'dispatch-clip-video',
+        dashVideoResource({ range: CLIP, timeline: { startSeconds: 10, endSeconds: 40 } })
+      )
+    ).toBe(true)
     await vi.waitFor(() => expect(mocks.taskComplete).toHaveBeenCalledTimes(1))
 
     expect(mocks.muxVideo).toHaveBeenCalledTimes(1)
-    expect(mocks.muxVideo.mock.calls[0][2]).toEqual(CLIP)
+    expect(mocks.muxVideo.mock.calls[0][2]).toEqual({ startSeconds: 2.5, endSeconds: 20 })
   })
 
   it('没有区间时保持整片调用形态，不传裁剪参数', async () => {
@@ -354,6 +376,52 @@ describe('OffscreenTaskRunner 下载分派', () => {
     expect(mocks.remuxAudio.mock.calls[0][1]).toEqual(CLIP)
   })
 
+  it('streamingMode=never 时按分片写 OPFS 输入并在 remux 后清理', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(jsonResponse(dashPlaylistPayload(), PLAYLIST_URL))
+        .mockResolvedValueOnce(segmentResponse(AUDIO_SEGMENT_URL, 'audio/mp4'))
+    )
+
+    const resource = dashAudioResource()
+    resource.streamingMode = 'never'
+    expect(offscreenTaskRunner.startTask('dispatch-never-audio', resource)).toBe(true)
+    await vi.waitFor(() => expect(mocks.taskComplete).toHaveBeenCalledTimes(1))
+
+    expect(mocks.openMuxInputWriter).toHaveBeenCalledWith('dispatch-never-audio-input-audio')
+    const writer = mocks.openMuxInputWriter.mock.results[0].value as Promise<{
+      write: ReturnType<typeof vi.fn>
+    }>
+    const resolvedWriter = await writer
+    expect(resolvedWriter.write).toHaveBeenCalledTimes(2)
+    expect(mocks.remuxAudio.mock.calls[0][0]).toBeInstanceOf(File)
+    expect(mocks.removeMuxArtifact).toHaveBeenCalledWith('dispatch-never-audio-input-audio')
+  })
+
+  it('签名 restart 后仍保留 never 模式并使用 OPFS File 输入', async () => {
+    const resource = dashAudioResource()
+    resource.streamingMode = 'never'
+    mocks.refreshSignatureRequest.mockResolvedValue({
+      mode: 'restart',
+      resource: dashAudioResource()
+    })
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(responseWithUrl('', 403, PLAYLIST_URL, 'application/json'))
+      .mockResolvedValueOnce(jsonResponse(dashPlaylistPayload(), PLAYLIST_URL))
+      .mockResolvedValueOnce(segmentResponse(AUDIO_SEGMENT_URL, 'audio/mp4'))
+    vi.stubGlobal('fetch', fetchMock)
+
+    expect(offscreenTaskRunner.startTask('dispatch-restart-never', resource)).toBe(true)
+    await vi.waitFor(() => expect(mocks.taskComplete).toHaveBeenCalledTimes(1))
+
+    expect(mocks.openMuxInputWriter).toHaveBeenCalledWith('dispatch-restart-never-input-audio')
+    expect(mocks.remuxAudio.mock.calls.at(-1)?.[0]).toBeInstanceOf(File)
+    await vi.waitFor(() => expect(offscreenTaskRunner.listActiveTasks()).toHaveLength(0))
+  })
+
   it('音频资源缺省按 m4a 交付，不进 MP3 转码链', async () => {
     vi.stubGlobal(
       'fetch',
@@ -383,13 +451,14 @@ describe('OffscreenTaskRunner 下载分派', () => {
         .mockResolvedValueOnce(segmentResponse(AUDIO_SEGMENT_URL, 'audio/mp4'))
     )
 
-    expect(
-      offscreenTaskRunner.startTask('dispatch-audio-mp3', dashAudioResource(undefined, 'mp3'))
-    ).toBe(true)
+    const resource = dashAudioResource(undefined, 'mp3')
+    resource.streamingMode = 'never'
+    expect(offscreenTaskRunner.startTask('dispatch-audio-mp3', resource)).toBe(true)
     await vi.waitFor(() => expect(mocks.taskComplete).toHaveBeenCalledTimes(1))
 
     // 转码输入是 remux 产物（OPFS File 引用），不是下载 blob。
     expect(mocks.transcodeMp3).toHaveBeenCalledTimes(1)
+    expect(mocks.openMuxInputWriter).toHaveBeenCalledWith('dispatch-audio-mp3-input-audio')
     const [transcodeInput, transcodeTaskId] = mocks.transcodeMp3.mock.calls[0]
     expect(transcodeTaskId).toBe('dispatch-audio-mp3')
     expect(transcodeInput).toMatchObject({ tempFileName: 'dispatch-audio-mp3.m4a' })
@@ -423,6 +492,31 @@ describe('OffscreenTaskRunner 下载分派', () => {
     ])
     expect(mocks.remuxMuxed).toHaveBeenCalledTimes(1)
     expect(mocks.remuxMuxed.mock.calls[0][1]).toEqual(CLIP)
+  })
+
+  it('HLS streamingMode=never 时按顺序写单个 OPFS 输入并清理', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        responseWithUrl(hlsMediaPlaylistText(), 200, HLS_MEDIA_URL, 'application/vnd.apple.mpegurl')
+      )
+      .mockResolvedValueOnce(segmentResponse(HLS_INIT_URL, 'video/mp4'))
+      .mockResolvedValueOnce(segmentResponse(HLS_SEGMENT_URLS[0], 'video/mp4'))
+      .mockResolvedValueOnce(segmentResponse(HLS_SEGMENT_URLS[1], 'video/mp4'))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const resource = hlsResource()
+    resource.streamingMode = 'never'
+    expect(offscreenTaskRunner.startTask('dispatch-never-hls', resource)).toBe(true)
+    await vi.waitFor(() => expect(mocks.taskComplete).toHaveBeenCalledTimes(1))
+
+    expect(mocks.openMuxInputWriter).toHaveBeenCalledWith('dispatch-never-hls-input-hls')
+    const resolvedWriter = (await mocks.openMuxInputWriter.mock.results[0].value) as {
+      write: ReturnType<typeof vi.fn>
+    }
+    expect(resolvedWriter.write).toHaveBeenCalledTimes(3)
+    expect(mocks.remuxMuxed.mock.calls[0][0]).toBeInstanceOf(File)
+    expect(mocks.removeMuxArtifact).toHaveBeenCalledWith('dispatch-never-hls-input-hls')
   })
 
   it('无音轨描述符只下载视频分片并走单轨 mux', async () => {

@@ -74,6 +74,13 @@ function createOffscreenRpcHandlers(): RpcServeHandlers {
       const taskId = requireStringField(body, 'taskId', 'releaseTaskArtifact.taskId')
       const blobUrl = requireStringField(body, 'blobUrl', 'releaseTaskArtifact.blobUrl')
       return { released: offscreenTaskRunner.releaseTaskArtifact(taskId, blobUrl) }
+    },
+    saveTaskArtifact: params => {
+      const body = requireJsonObject(params, 'saveTaskArtifact')
+      const taskId = requireStringField(body, 'taskId', 'saveTaskArtifact.taskId')
+      const blobUrl = requireStringField(body, 'blobUrl', 'saveTaskArtifact.blobUrl')
+      const filename = requireStringField(body, 'filename', 'saveTaskArtifact.filename')
+      return { started: offscreenTaskRunner.saveTaskArtifact(taskId, blobUrl, filename) }
     }
   }
 }

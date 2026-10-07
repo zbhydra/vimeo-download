@@ -48,7 +48,7 @@ import { muxVimeoVideoToMp4, remuxVimeoAudioToM4a, remuxVimeoMuxedMp4ToMp4 } fro
 import { transcodeMuxArtifactToMp3 } from './mp3'
 import { AES_128_KEY_LENGTH, decryptAes128Segment } from './decrypt'
 import type { MuxOutputArtifact } from './muxArtifactStore'
-import { removeMuxArtifact, sweepMuxArtifacts } from './muxArtifactStore'
+import { openMuxInputWriter, removeMuxArtifact, sweepMuxArtifacts } from './muxArtifactStore'
 
 const RETRYABLE_STATUS_CODES = new Set([403, 404, 410])
 const VALID_MEDIA_STATUS_CODES = new Set([200, 206])
@@ -140,6 +140,12 @@ interface ByteBudget {
   totalBytes?: number
   /** 上一次已发送的整数进度，避免同一百分比重复派发。 */
   lastReportedProgress: number | null
+}
+
+/** 分片输入；never 模式落 OPFS，auto 模式保留现有 Blob 聚合路径。 */
+interface DownloadedInput {
+  source: Blob | File
+  tempFileName?: string
 }
 
 /** 已交付、等待 background 落盘回执后释放的产物。 */
@@ -250,6 +256,23 @@ export class OffscreenTaskRunner {
     return true
   }
 
+  /** 通过隐藏 anchor 触发浏览器保存；产物继续由 background 持有直至落盘回执。 */
+  saveTaskArtifact(taskId: string, blobUrl: string, filename: string): boolean {
+    const held = this.deliveredArtifacts.get(taskId)
+    if (!held || held.blobUrl !== blobUrl) {
+      logger.warn(`[OffscreenTaskRunner] 保存请求与持有产物不匹配: taskId=${taskId}`)
+      return false
+    }
+    const anchor = document.createElement('a')
+    anchor.href = blobUrl
+    anchor.download = filename
+    anchor.hidden = true
+    document.body.append(anchor)
+    anchor.click()
+    anchor.remove()
+    return true
+  }
+
   /** 任务主流程：整任务重跑只允许一次，最终状态经 background 通道回传。 */
   private async runTask(task: RunnerTask): Promise<void> {
     let restarts = 0
@@ -327,48 +350,91 @@ export class OffscreenTaskRunner {
   /** DASH audio-only 下载；MP3 目标格式在 m4a remux 产物上继续转码，m4a 走透传零改动。 */
   private async downloadDashAudio(task: RunnerTask): Promise<void> {
     const playlist = await this.loadDashPlaylistWithRefresh(task)
-    const audioTrack = this.requireDashTrack(task, playlist, 'audio')
+    const audioTrack = selectDashTrackWindow(
+      this.requireDashTrack(task, playlist, 'audio'),
+      task.descriptor.audioSegmentTimeline,
+      readDescriptorTimeRange(task.descriptor)
+    )
     const totalBytes = estimateDashTrackBytes(audioTrack)
     this.assertKnownMuxSize(task, totalBytes, 'DASH audio')
     const budget = this.createByteBudget(task, totalBytes)
-    const audioBlob = await this.downloadDashTrackBlob(task, playlist, audioTrack, 'audio', budget)
-    const remuxed = await remuxVimeoAudioToM4a(
-      audioBlob,
-      readDescriptorTimeRange(task.descriptor),
-      task.taskId
+    const audioInput = await this.downloadDashTrackInput(
+      task,
+      playlist,
+      audioTrack,
+      'audio',
+      budget
     )
-    if (task.resource.targetFormat === AUDIO_TARGET_FORMATS.MP3) {
-      const mp3 = await transcodeMuxArtifactToMp3(remuxed, task.taskId)
-      await this.deliver(task, mp3, this.resolveArtifactFilename(task, 'mp3'))
-      return
+    try {
+      const remuxed = await remuxVimeoAudioToM4a(
+        audioInput.source,
+        rebaseDescriptorRange(
+          readDescriptorTimeRange(task.descriptor),
+          task.descriptor.audioSegmentTimeline
+        ),
+        task.taskId
+      )
+      if (task.resource.targetFormat === AUDIO_TARGET_FORMATS.MP3) {
+        const mp3 = await transcodeMuxArtifactToMp3(remuxed, task.taskId)
+        await this.deliver(task, mp3, this.resolveArtifactFilename(task, 'mp3'))
+        return
+      }
+      await this.deliver(task, remuxed, this.resolveArtifactFilename(task, 'm4a'))
+    } finally {
+      await this.disposeDownloadedInput(audioInput)
     }
-    await this.deliver(task, remuxed, this.resolveArtifactFilename(task, 'm4a'))
   }
 
   /** DASH video mux 下载；描述符没有 audio track 时输出纯视频文件。 */
   private async downloadDashVideo(task: RunnerTask): Promise<void> {
     const playlist = await this.loadDashPlaylistWithRefresh(task)
-    const videoTrack = this.requireDashTrack(task, playlist, 'video')
+    const videoTrack = selectDashTrackWindow(
+      this.requireDashTrack(task, playlist, 'video'),
+      task.descriptor.videoSegmentTimeline,
+      readDescriptorTimeRange(task.descriptor)
+    )
     const audioTrack = task.descriptor.audioTrackId
-      ? this.requireDashTrack(task, playlist, 'audio')
+      ? selectDashTrackWindow(
+          this.requireDashTrack(task, playlist, 'audio'),
+          task.descriptor.audioSegmentTimeline,
+          readDescriptorTimeRange(task.descriptor)
+        )
       : null
+    const muxRange = rebaseDescriptorRange(
+      readDescriptorTimeRange(task.descriptor),
+      task.descriptor.videoSegmentTimeline
+    )
     const totalBytes = sumKnownSizes(
       estimateDashTrackBytes(videoTrack),
       audioTrack ? estimateDashTrackBytes(audioTrack) : 0
     )
     this.assertKnownMuxSize(task, totalBytes, audioTrack ? 'DASH video+audio' : 'DASH video')
     const budget = this.createByteBudget(task, totalBytes)
-    const videoBlob = await this.downloadDashTrackBlob(task, playlist, videoTrack, 'video', budget)
-    const audioBlob = audioTrack
-      ? await this.downloadDashTrackBlob(task, playlist, audioTrack, 'audio', budget)
-      : null
-    const muxed = await muxVimeoVideoToMp4(
-      videoBlob,
-      audioBlob,
-      readDescriptorTimeRange(task.descriptor),
-      task.taskId
+    const videoInput = await this.downloadDashTrackInput(
+      task,
+      playlist,
+      videoTrack,
+      'video',
+      budget
     )
-    await this.deliver(task, muxed, this.resolveArtifactFilename(task, 'mp4'))
+    let audioInput: DownloadedInput | null = null
+    try {
+      audioInput = audioTrack
+        ? await this.downloadDashTrackInput(task, playlist, audioTrack, 'audio', budget)
+        : null
+      const muxed = await muxVimeoVideoToMp4(
+        videoInput.source,
+        audioInput?.source ?? null,
+        muxRange,
+        task.taskId
+      )
+      await this.deliver(task, muxed, this.resolveArtifactFilename(task, 'mp4'))
+    } finally {
+      await this.disposeDownloadedInput(videoInput)
+      if (audioInput) {
+        await this.disposeDownloadedInput(audioInput)
+      }
+    }
   }
 
   /**
@@ -384,83 +450,146 @@ export class OffscreenTaskRunner {
     const buffers: ArrayBuffer[] = []
     const aesKeys = new Map<string, ArrayBuffer>()
     let playlist = await this.loadHlsMediaPlaylistWithRefresh(task)
+    const range = readDescriptorTimeRange(task.descriptor)
+    const filteredSegments = filterHlsSegments(
+      playlist.segments,
+      task.descriptor.videoSegmentTimeline,
+      range
+    )
+    const muxRange = rebaseDescriptorRange(range, task.descriptor.videoSegmentTimeline)
+    if (filteredSegments !== playlist.segments) {
+      playlist = { ...playlist, segments: filteredSegments }
+    }
+    const inputWriter =
+      task.resource.streamingMode === 'never'
+        ? await openMuxInputWriter(`${task.taskId}-input-hls`)
+        : null
 
-    let initDone = false
-    let segmentIndex = 0
-    while (!initDone || segmentIndex < playlist.segments.length) {
-      this.assertNotCancelled(task)
-      const isInit = !initDone
-      const segmentUrl = isInit ? playlist.initSegmentUrl : playlist.segments[segmentIndex].url
-      const encryption = isInit ? undefined : playlist.segments[segmentIndex].encryption
-      try {
-        const data = await this.fetchSegment(task, segmentUrl, budget)
-        buffers.push(
-          encryption
+    let inputFinalized = false
+    try {
+      let initDone = false
+      let segmentIndex = 0
+      while (!initDone || segmentIndex < playlist.segments.length) {
+        this.assertNotCancelled(task)
+        const isInit = !initDone
+        const segmentUrl = isInit ? playlist.initSegmentUrl : playlist.segments[segmentIndex].url
+        const encryption = isInit ? undefined : playlist.segments[segmentIndex].encryption
+        try {
+          const data = await this.fetchSegment(task, segmentUrl, budget)
+          const input = encryption
             ? await decryptAes128Segment(
                 await this.fetchHlsAesKey(task, encryption.keyUrl, aesKeys),
                 encryption.iv,
                 data
               )
             : data
-        )
-      } catch (error) {
-        const refreshed = await this.resolveRetryableRefresh(task, error)
-        if (!refreshed) {
-          throw error
+          if (inputWriter) {
+            await inputWriter.write(new Uint8Array(input))
+          } else {
+            buffers.push(input)
+          }
+        } catch (error) {
+          const refreshed = await this.resolveRetryableRefresh(task, error)
+          if (!refreshed) {
+            throw error
+          }
+          // 按新签名 playlist 重建后原地重试同一位置。
+          const refreshedPlaylist = await this.loadHlsMediaPlaylist(
+            refreshed,
+            task.controller.signal
+          )
+          playlist = {
+            ...refreshedPlaylist,
+            segments: filterHlsSegments(
+              refreshedPlaylist.segments,
+              task.descriptor.videoSegmentTimeline,
+              range
+            )
+          }
+          continue
         }
-        // 按新签名 playlist 重建后原地重试同一位置。
-        playlist = await this.loadHlsMediaPlaylist(refreshed, task.controller.signal)
-        continue
+        if (isInit) {
+          initDone = true
+        } else {
+          segmentIndex += 1
+        }
       }
-      if (isInit) {
-        initDone = true
-      } else {
-        segmentIndex += 1
+
+      const input = inputWriter
+        ? { source: await inputWriter.finalize(), tempFileName: inputWriter.fileName }
+        : { source: new Blob(buffers, { type: 'video/mp4' }) }
+      inputFinalized = inputWriter !== null
+      try {
+        const remuxed = await remuxVimeoMuxedMp4ToMp4(input.source, muxRange, task.taskId)
+        await this.deliver(task, remuxed, this.resolveArtifactFilename(task, 'mp4'))
+      } finally {
+        await this.disposeDownloadedInput(input)
+      }
+    } finally {
+      if (inputWriter && !inputFinalized) {
+        await inputWriter.dispose()
       }
     }
-
-    const inputBlob = new Blob(buffers, { type: 'video/mp4' })
-    const remuxed = await remuxVimeoMuxedMp4ToMp4(
-      inputBlob,
-      readDescriptorTimeRange(task.descriptor),
-      task.taskId
-    )
-    await this.deliver(task, remuxed, this.resolveArtifactFilename(task, 'mp4'))
   }
 
   /** 下载单条 DASH track 的 init+segments；签名失效时重签并按索引续跑。 */
-  private async downloadDashTrackBlob(
+  private async downloadDashTrackInput(
     task: RunnerTask,
     initialPlaylist: VimeoDashPlaylist,
     initialTrack: VimeoDashTrack,
     kind: 'video' | 'audio',
     budget: ByteBudget
-  ): Promise<Blob> {
+  ): Promise<DownloadedInput> {
     let playlist = initialPlaylist
     let track = initialTrack
     const initBuffer = decodeBase64ToArrayBuffer(track.initSegment)
     this.addBytesToBudget(task, budget, initBuffer.byteLength, 'DASH init segment')
-    const buffers: ArrayBuffer[] = [initBuffer]
+    const inputWriter =
+      task.resource.streamingMode === 'never'
+        ? await openMuxInputWriter(`${task.taskId}-input-${kind}`)
+        : null
+    const buffers: ArrayBuffer[] = inputWriter ? [] : [initBuffer]
 
-    let segmentIndex = 0
-    while (segmentIndex < track.segments.length) {
-      this.assertNotCancelled(task)
-      const segmentUrl = resolveDashSegmentUrl(playlist, track, track.segments[segmentIndex])
-      try {
-        buffers.push(await this.fetchSegment(task, segmentUrl, budget))
-        segmentIndex += 1
-      } catch (error) {
-        const refreshed = await this.resolveRetryableRefresh(task, error)
-        if (!refreshed) {
-          throw error
-        }
-        // track 一致性守卫已在 background 通过：按新签名 playlist 重建同 track，游标不回退。
-        playlist = await this.loadDashPlaylist(refreshed, task.controller.signal)
-        track = this.requireDashTrack(task, playlist, kind)
+    try {
+      if (inputWriter) {
+        await inputWriter.write(new Uint8Array(initBuffer))
       }
-    }
+      let segmentIndex = 0
+      while (segmentIndex < track.segments.length) {
+        this.assertNotCancelled(task)
+        const segmentUrl = resolveDashSegmentUrl(playlist, track, track.segments[segmentIndex])
+        try {
+          const segment = await this.fetchSegment(task, segmentUrl, budget)
+          if (inputWriter) {
+            await inputWriter.write(new Uint8Array(segment))
+          } else {
+            buffers.push(segment)
+          }
+          segmentIndex += 1
+        } catch (error) {
+          const refreshed = await this.resolveRetryableRefresh(task, error)
+          if (!refreshed) {
+            throw error
+          }
+          // track 一致性守卫已在 background 通过：按新签名 playlist 重建同 track，游标不回退。
+          playlist = await this.loadDashPlaylist(refreshed, task.controller.signal)
+          track = selectDashTrackWindow(
+            this.requireDashTrack(task, playlist, kind),
+            kind === 'video'
+              ? task.descriptor.videoSegmentTimeline
+              : task.descriptor.audioSegmentTimeline,
+            readDescriptorTimeRange(task.descriptor)
+          )
+        }
+      }
 
-    return new Blob(buffers, { type: track.mimeType })
+      return inputWriter
+        ? { source: await inputWriter.finalize(), tempFileName: inputWriter.fileName }
+        : { source: new Blob(buffers, { type: track.mimeType }) }
+    } catch (error) {
+      await inputWriter?.dispose()
+      throw error
+    }
   }
 
   // ============================================================================
@@ -621,8 +750,12 @@ export class OffscreenTaskRunner {
       )
     }
 
-    // 重签只更新来源，目标输出格式始终由用户选定的任务持有。
-    const resource = { ...response.resource, targetFormat: task.resource.targetFormat }
+    // 重签只更新来源，输出格式与低内存模式始终由用户选定的任务持有。
+    const resource = {
+      ...response.resource,
+      ...(task.resource.streamingMode ? { streamingMode: task.resource.streamingMode } : {}),
+      targetFormat: task.resource.targetFormat
+    }
     if (response.mode === 'restart') {
       throw new RestartTaskError(resource, descriptor)
     }
@@ -752,6 +885,7 @@ export class OffscreenTaskRunner {
     knownBytes: number | undefined,
     stage: string
   ): void {
+    if (task.resource.streamingMode === 'never') return
     if (knownBytes !== undefined && knownBytes > vimeoConfig.muxMaxBytes) {
       throw new Error(
         `[OffscreenTaskRunner] ${stage} 已知大小超过 mux 上限: id=${task.resource.id}, bytes=${knownBytes}, limit=${vimeoConfig.muxMaxBytes}`
@@ -768,7 +902,7 @@ export class OffscreenTaskRunner {
   ): void {
     budget.bytes += bytes
     task.receivedBytes = budget.bytes
-    if (budget.bytes > vimeoConfig.muxMaxBytes) {
+    if (task.resource.streamingMode !== 'never' && budget.bytes > vimeoConfig.muxMaxBytes) {
       throw new Error(
         `[OffscreenTaskRunner] mux 累计字节超过上限: id=${task.resource.id}, stage=${stage}, bytes=${budget.bytes}, limit=${vimeoConfig.muxMaxBytes}`
       )
@@ -785,6 +919,13 @@ export class OffscreenTaskRunner {
     if (progress !== budget.lastReportedProgress) {
       budget.lastReportedProgress = progress
       this.sendProgress(task, progress)
+    }
+  }
+
+  /** 清理 never 模式的 OPFS 输入；auto 模式没有临时文件。 */
+  private async disposeDownloadedInput(input: DownloadedInput): Promise<void> {
+    if (input.tempFileName) {
+      await removeMuxArtifact(input.tempFileName)
     }
   }
 
@@ -973,9 +1114,59 @@ export class OffscreenTaskRunner {
   }
 }
 
+function filterHlsSegments<T extends { durationSeconds?: number }>(
+  segments: T[],
+  timeline: ReadonlyArray<{ startSeconds: number; endSeconds: number }> | undefined,
+  range: VimeoTimeRange | undefined
+): T[] {
+  if (!timeline || !range || timeline.length !== segments.length) {
+    return segments
+  }
+  const filtered = segments.filter((_segment, index) => {
+    const window = timeline[index]
+    return (
+      window !== undefined &&
+      window.endSeconds > range.startSeconds &&
+      window.startSeconds < range.endSeconds
+    )
+  })
+  return filtered.length > 0 ? filtered : segments
+}
+
 /** 读取描述符中的片段区间；未裁剪时返回 undefined。 */
 function readDescriptorTimeRange(descriptor: VimeoSourceDescriptor): VimeoTimeRange | undefined {
   return parseVimeoTimeRange(descriptor) ?? undefined
+}
+
+function selectDashTrackWindow(
+  track: VimeoDashTrack,
+  timeline: ReadonlyArray<{ startSeconds: number; endSeconds: number }> | undefined,
+  range: VimeoTimeRange | undefined
+): VimeoDashTrack {
+  if (!timeline || !range || timeline.length !== track.segments.length) {
+    return track
+  }
+  const segments = track.segments.filter((_segment, index) => {
+    const window = timeline[index]
+    return (
+      window !== undefined &&
+      window.endSeconds > range.startSeconds &&
+      window.startSeconds < range.endSeconds
+    )
+  })
+  return segments.length > 0 ? { ...track, segments } : track
+}
+
+function rebaseDescriptorRange(
+  range: VimeoTimeRange | undefined,
+  timeline: ReadonlyArray<{ startSeconds: number; endSeconds: number }> | undefined
+): VimeoTimeRange | undefined {
+  if (!range || !timeline) return range
+  const first = timeline.find(window => window.endSeconds > range.startSeconds)
+  if (!first) return range
+  const startSeconds = Math.max(0, range.startSeconds - first.startSeconds)
+  const endSeconds = Math.max(startSeconds, range.endSeconds - first.startSeconds)
+  return endSeconds > startSeconds ? { startSeconds, endSeconds } : undefined
 }
 
 /** base64 init_segment 转 ArrayBuffer。 */

@@ -162,7 +162,18 @@ export const I18N_KEYS = {
     /** 实时预览标签 */
     FILENAME_PATTERN_PREVIEW_LABEL: 'settings.filenamePattern.preview',
     /** 重置回默认模板按钮 */
-    FILENAME_PATTERN_RESET: 'settings.filenamePattern.reset'
+    FILENAME_PATTERN_RESET: 'settings.filenamePattern.reset',
+    /** 大文件下载分割模式 */
+    SPLIT_MODE_LABEL: 'settings.splitMode.label',
+    SPLIT_MODE_AUTO: 'settings.splitMode.auto',
+    SPLIT_MODE_AUTO_DESCRIPTION: 'settings.splitMode.autoDescription',
+    SPLIT_MODE_NEVER: 'settings.splitMode.never',
+    SPLIT_MODE_NEVER_DESCRIPTION: 'settings.splitMode.neverDescription',
+    SPLIT_MODE_THRESHOLD: 'settings.splitMode.threshold',
+    SPLIT_MODE_THRESHOLD_UNIT: 'settings.splitMode.thresholdUnit',
+    /** 备用 Blob 下载开关 */
+    BACKGROUND_BLOB_LABEL: 'settings.backgroundBlob.label',
+    BACKGROUND_BLOB_DESCRIPTION: 'settings.backgroundBlob.description'
   },
 
   /** 下载历史视图（popup 内全屏覆盖层） */

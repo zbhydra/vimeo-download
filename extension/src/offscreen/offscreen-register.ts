@@ -14,6 +14,8 @@ import type {
   OffscreenListActiveTasksResponse,
   OffscreenReleaseTaskArtifactRequest,
   OffscreenReleaseTaskArtifactResponse,
+  OffscreenSaveTaskArtifactRequest,
+  OffscreenSaveTaskArtifactResponse,
   OffscreenStartTaskRequest,
   OffscreenStartTaskResponse
 } from './types'
@@ -46,6 +48,13 @@ export const Handler = {
     _params: OffscreenReleaseTaskArtifactRequest
   ): Promise<OffscreenReleaseTaskArtifactResponse> {
     return declarationOnly('offscreen.releaseTaskArtifact')
+  },
+
+  /** 以 offscreen 隐藏 anchor 触发 blob 保存。 */
+  saveTaskArtifact(
+    _params: OffscreenSaveTaskArtifactRequest
+  ): Promise<OffscreenSaveTaskArtifactResponse> {
+    return declarationOnly('offscreen.saveTaskArtifact')
   }
 }
 
@@ -61,7 +70,8 @@ export const METHOD_TARGETS = {
   /** 对账只由 background 发起。 */
   listActiveTasks: ['background'],
   /** 产物释放只由 background 确认落盘后发起。 */
-  releaseTaskArtifact: ['background']
+  releaseTaskArtifact: ['background'],
+  saveTaskArtifact: ['background']
 } as const satisfies Record<keyof OffscreenHandler, readonly ['background']>
 
 /** offscreen 方法允许传输。 */
@@ -73,7 +83,8 @@ export const METHOD_TRANSPORTS = {
   /** listActiveTasks 使用 Chrome message。 */
   listActiveTasks: ['chrome'],
   /** releaseTaskArtifact 使用 Chrome message。 */
-  releaseTaskArtifact: ['chrome']
+  releaseTaskArtifact: ['chrome'],
+  saveTaskArtifact: ['chrome']
 } as const satisfies Record<keyof OffscreenHandler, readonly ['chrome']>
 
 /** offscreen 方法请求体限制，单位字节。 */
@@ -85,7 +96,8 @@ export const METHOD_REQUEST_LIMITS = {
   /** listActiveTasks 无业务参数。 */
   listActiveTasks: 1024,
   /** releaseTaskArtifact 携带任务 ID 与 blob URL。 */
-  releaseTaskArtifact: 2048
+  releaseTaskArtifact: 2048,
+  saveTaskArtifact: 4096
 } as const satisfies Record<keyof OffscreenHandler, number>
 
 /** offscreen 方法响应体限制，单位字节。 */
@@ -97,7 +109,8 @@ export const METHOD_RESPONSE_LIMITS = {
   /** listActiveTasks 返回活跃任务及完整资源；单并发下通常 0~1 条。 */
   listActiveTasks: 65536,
   /** releaseTaskArtifact 返回释放结果。 */
-  releaseTaskArtifact: 1024
+  releaseTaskArtifact: 1024,
+  saveTaskArtifact: 1024
 } as const satisfies Record<keyof OffscreenHandler, number>
 
 /** register 占位函数，避免声明被业务代码误调用。 */

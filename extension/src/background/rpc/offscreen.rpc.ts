@@ -67,6 +67,17 @@ export class OffscreenChannel {
     >('releaseTaskArtifact', params, options)
   }
 
+  /** 调用 saveTaskArtifact 能力。 */
+  saveTaskArtifact(
+    params: RpcMethodParams<OffscreenHandler, 'saveTaskArtifact'>,
+    options?: RpcCallOptions
+  ): Promise<RpcMethodResult<OffscreenHandler, 'saveTaskArtifact'>> {
+    return this.transport.call<
+      RpcMethodResult<OffscreenHandler, 'saveTaskArtifact'>,
+      RpcMethodParams<OffscreenHandler, 'saveTaskArtifact'>
+    >('saveTaskArtifact', params, options)
+  }
+
   /** 销毁 RPC transport。 */
   destroy(): void {
     this.transport.destroy()

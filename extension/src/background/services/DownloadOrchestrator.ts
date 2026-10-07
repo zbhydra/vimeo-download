@@ -40,6 +40,8 @@ import { ChromeEventEmitter } from '@/core/rpc/ChromeEventBus'
 import type { DownloadTaskSnapshot, MediaResource } from '@/core/types'
 import { SettingsManager } from '@/core/storage/settings'
 import { logger } from '@/core/utils/logger'
+import { splitVimeoResourceBySize } from '@/sites/vimeo/media'
+import { decodeVimeoSourceDescriptor } from '@/sites/vimeo/shared'
 import { recordBackgroundMark } from './ExtensionMarkReporter'
 import { buildDownloadFilename, buildResourceFilename } from './downloadFilename'
 import { recordDownloadTaskOutcome } from './downloadHistoryWriteback'
@@ -95,7 +97,17 @@ function consumeFilenameSuggestion(url: string): string | null {
   return filename
 }
 
+function appendPartFilename(filename: string, resource: MediaResource, part: number): string {
+  const descriptor = decodeVimeoSourceDescriptor(resource.documentId)
+  const suffix =
+    descriptor?.startSeconds !== undefined && descriptor.endSeconds !== undefined
+      ? `-part-${part}-${descriptor.startSeconds}-${descriptor.endSeconds}s`
+      : `-part-${part}`
+  return filename.replace(/(\.[^.]+)$/, `${suffix}$1`)
+}
+
 const determiningFilename = chrome.downloads.onDeterminingFilename
+const blobDownloadWaiters = new Map<string, Set<(downloadId: number) => void>>()
 if (determiningFilename) {
   determiningFilename.addListener((item, suggest) => {
     const key = filenameSuggestions.has(item.url)
@@ -109,6 +121,23 @@ if (determiningFilename) {
     const filename = consumeFilenameSuggestion(key)
     if (filename) {
       suggest({ filename, conflictAction: 'uniquify' })
+    }
+  })
+}
+
+const createdDownloads = chrome.downloads.onCreated
+if (createdDownloads) {
+  createdDownloads.addListener(item => {
+    if (!item.url.startsWith('blob:')) {
+      return
+    }
+    const waiters = blobDownloadWaiters.get(item.url)
+    if (!waiters) {
+      return
+    }
+    blobDownloadWaiters.delete(item.url)
+    for (const resolve of waiters) {
+      resolve(item.id)
     }
   })
 }
@@ -197,10 +226,42 @@ export class DownloadOrchestrator {
 
     // 历史回写需要发起页 URL，入队时快照一次（终态时 tab 可能已被关闭或导航走）。
     const pageUrl = await resolveTabUrl(tabId)
-    const filenames = await Promise.all(resources.map(resource => buildResourceFilename(resource)))
+    const settings = await this.readDownloadSettings()
+    const expanded =
+      settings.splitMode === 'never'
+        ? resources.map(resource => ({
+            resource: { ...resource, streamingMode: 'never' as const },
+            part: null as number | null
+          }))
+        : resources.flatMap(resource => {
+            const parts = splitVimeoResourceBySize(
+              resource,
+              settings.autoSplitThresholdGB * 1024 * 1024 * 1024
+            )
+            return parts.map((part, index) => ({
+              resource: { ...part, streamingMode: 'auto' as const },
+              part: parts.length > 1 ? index + 1 : null
+            }))
+          })
+    const filenames = await Promise.all(
+      expanded.map(({ resource, part }) =>
+        buildResourceFilename(resource)
+          .catch(error => {
+            logger.error(
+              `[DownloadOrchestrator] 生成下载文件名失败，使用资源文件名: resourceId=${resource.id}`,
+              error
+            )
+            return resource.filename ?? 'vimeo-download'
+          })
+          .then(filename =>
+            part === null ? filename : appendPartFilename(filename, resource, part)
+          )
+      )
+    )
 
     let count = 0
-    for (const [index, resource] of resources.entries()) {
+    for (const [index, entry] of expanded.entries()) {
+      const resource = entry.resource
       if (
         !isBrowserManagedSourceKind(resource.sourceKind) &&
         !isAdaptiveSourceKind(resource.sourceKind)
@@ -230,6 +291,16 @@ export class DownloadOrchestrator {
       this.pump()
     }
     return { accepted: count > 0, count }
+  }
+
+  /** 设置读取失败时使用本地默认值继续下载。 */
+  private async readDownloadSettings() {
+    try {
+      return await SettingsManager.getSettings()
+    } catch (error) {
+      logger.error('[DownloadOrchestrator] 读取下载设置失败，使用本地默认值', error)
+      return SettingsManager.getDefaultSettings()
+    }
   }
 
   /** 取消任务：waiting/failed 直接移除，downloading 按执行通道转发取消。 */
@@ -370,12 +441,14 @@ export class DownloadOrchestrator {
       }
       const filename = buildDownloadFilename(settings.downloadPath, task.finalName)
       registerFilenameSuggestion(request.blobUrl, filename, false)
-      const downloadId = await chrome.downloads.download({
-        url: request.blobUrl,
-        filename,
-        conflictAction: 'uniquify',
-        saveAs: false
-      })
+      const downloadId = settings.useBackgroundBlobDownload
+        ? await this.startOffscreenBlobDownload(request.taskId, request.blobUrl, filename)
+        : await chrome.downloads.download({
+            url: request.blobUrl,
+            filename,
+            conflictAction: 'uniquify',
+            saveAs: false
+          })
       task.downloadId = downloadId
       if (task.cancelRequested) {
         await chrome.downloads.cancel(downloadId)
@@ -418,6 +491,49 @@ export class DownloadOrchestrator {
           : { kind: 'failed', error: error instanceof Error ? error : new Error(String(error)) }
       )
       return { accepted: true }
+    }
+  }
+
+  /** 备用交付：由 offscreen anchor 创建下载，background 通过 onCreated 接管 ID。 */
+  private async startOffscreenBlobDownload(
+    taskId: string,
+    blobUrl: string,
+    filename: string
+  ): Promise<number> {
+    const downloadIdPromise = new Promise<number>((resolve, reject) => {
+      function wrappedResolve(downloadId: number): void {
+        clearTimeout(timer)
+        resolve(downloadId)
+      }
+      const timer = setTimeout(() => {
+        const waiters = blobDownloadWaiters.get(blobUrl)
+        waiters?.delete(wrappedResolve)
+        if (waiters?.size === 0) {
+          blobDownloadWaiters.delete(blobUrl)
+        }
+        reject(
+          new Error(
+            `[DownloadOrchestrator] offscreen anchor 未创建下载: taskId=${taskId}, blobUrl=${blobUrl}`
+          )
+        )
+      }, 10_000)
+      const waiters = blobDownloadWaiters.get(blobUrl) ?? new Set()
+      waiters.add(wrappedResolve)
+      blobDownloadWaiters.set(blobUrl, waiters)
+    })
+    void downloadIdPromise.catch(() => undefined)
+
+    try {
+      const result = await this.offscreenClient.saveTaskArtifact({ taskId, blobUrl, filename })
+      if (!result.started) {
+        throw new Error(
+          `[DownloadOrchestrator] offscreen 拒绝保存产物: taskId=${taskId}, blobUrl=${blobUrl}`
+        )
+      }
+      return await downloadIdPromise
+    } catch (error) {
+      blobDownloadWaiters.delete(blobUrl)
+      throw error
     }
   }
 

@@ -161,6 +161,7 @@
           </button>
         </div>
       </section>
+      <p v-if="autoSplitWarning" class="split-warning">{{ autoSplitWarning }}</p>
 
       <!--
         时间裁剪：双滑杆与数字输入绑定同一状态（clipStart/clipEnd），滑杆交互按 0.1s 钳制后
@@ -228,9 +229,15 @@ import { I18N_KEYS } from '@/core/constants/i18n'
 import { DESIGN_TOKENS } from '@/core/constants/design'
 import { AUDIO_TARGET_FORMATS, type AudioTargetFormat } from '@/core/types'
 import type { MediaResource } from '@/core/types'
+import { SettingsManager } from '@/core/storage/settings'
+import { logger } from '@/core/utils/logger'
 import { formatMediaDuration } from '@/core/utils/downloadStatus'
 import { Icon, IconName, IconSize } from '@/core/components/icons'
-import { applyVimeoTimeRange, supportsVimeoTimeRange } from '@/sites/vimeo/media'
+import {
+  applyVimeoTimeRange,
+  estimateVimeoResourceBytes,
+  supportsVimeoTimeRange
+} from '@/sites/vimeo/media'
 import { useResourceStore } from '../stores/resourceStore'
 import TrimSlider from './TrimSlider.vue'
 import VideoSelector from './VideoSelector.vue'
@@ -249,6 +256,13 @@ import {
 
 const { t } = useI18n()
 const store = useResourceStore()
+
+const downloadSettings = ref(SettingsManager.getDefaultSettings())
+void SettingsManager.getSettings()
+  .then(settings => {
+    downloadSettings.value = settings
+  })
+  .catch(error => logger.error('[VideoPanel] 读取下载设置失败', error))
 
 const emit = defineEmits<{
   download: [resource: MediaResource]
@@ -321,6 +335,17 @@ const rows = computed(() =>
 const visibleRows = computed(() =>
   rows.value.filter(row => row.kind !== 'direct' || row.options.length > 0)
 )
+const autoSplitWarning = computed(() => {
+  if (downloadSettings.value.splitMode !== 'auto') {
+    return ''
+  }
+  const resource = resourcesById.value.get(selectedResourceId('video') ?? '')
+  const estimatedBytes = resource ? estimateVimeoResourceBytes(resource) : undefined
+  const thresholdBytes = downloadSettings.value.autoSplitThresholdGB * 1024 ** 3
+  return estimatedBytes !== undefined && estimatedBytes > thresholdBytes
+    ? t(I18N_KEYS.SETTINGS.SPLIT_MODE_AUTO_DESCRIPTION)
+    : ''
+})
 const resourcesById = computed(
   () => new Map((selectedVideo.value?.resources ?? []).map(resource => [resource.id, resource]))
 )
@@ -742,6 +767,13 @@ function downloadTitle(row: VideoPanelRow): string {
   display: flex;
   flex-direction: column;
   padding: 8px 0;
+}
+
+.split-warning {
+  margin: 8px 0 0;
+  color: v-bind('DESIGN_TOKENS.GRAY_700');
+  font-size: v-bind('DESIGN_TOKENS.FS_12');
+  line-height: v-bind('DESIGN_TOKENS.LH_16');
 }
 
 /* 标签列按最长行名定宽：headless Chromium 实测 13px/500 下 ru `Изображение` 89.5px，旧的 68px 会把它省略。 */

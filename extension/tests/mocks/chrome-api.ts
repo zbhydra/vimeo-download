@@ -265,6 +265,11 @@ const downloads = {
     addListener: vi.fn(),
     removeListener: vi.fn(),
     hasListener: vi.fn()
+  },
+  onCreated: {
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    hasListener: vi.fn()
   }
 }
 

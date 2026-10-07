@@ -131,5 +131,7 @@ export const STORAGE_KEYS = {
   /** 定价页匿名用户确认后的待购商品；登录成功后只恢复这一项。 */
   PENDING_PREMIUM_PURCHASE: 'pending_premium_purchase',
   /** 下载历史（任务终态回写），值为 DownloadHistoryEntry 数组 */
-  DOWNLOAD_HISTORY: 'download_history'
+  DOWNLOAD_HISTORY: 'download_history',
+  /** 扩展设置（语言、保存位置与大文件下载模式） */
+  SETTINGS: 'settings'
 } as const

@@ -68,3 +68,15 @@ export interface OffscreenReleaseTaskArtifactResponse {
   /** blob URL 是否已被 revoke。 */
   released: boolean
 }
+
+/** background 请求 offscreen 以隐藏 anchor 触发 blob 保存。 */
+export interface OffscreenSaveTaskArtifactRequest {
+  taskId: string
+  blobUrl: string
+  filename: string
+}
+
+/** 隐藏 anchor 是否已触发。 */
+export interface OffscreenSaveTaskArtifactResponse {
+  started: boolean
+}

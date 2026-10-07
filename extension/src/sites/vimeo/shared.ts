@@ -67,6 +67,15 @@ export interface VimeoSourceDescriptor {
   startSeconds?: number
   /** 片段裁剪终点（秒，相对媒体起点）。 */
   endSeconds?: number
+  /** 可安全筛选的媒体分片时间线；缺失时下载器必须保守取整轨。 */
+  videoSegmentTimeline?: VimeoSegmentWindow[]
+  audioSegmentTimeline?: VimeoSegmentWindow[]
+}
+
+/** 单个媒体分片在媒体时间轴上的范围。 */
+export interface VimeoSegmentWindow {
+  startSeconds: number
+  endSeconds: number
 }
 
 /** 片段裁剪时间区间（秒，相对媒体起点）。 */
@@ -597,6 +606,11 @@ function parseVimeoSourceDescriptor(value: JsonValue): VimeoSourceDescriptor | n
     descriptor.hlsPlaylistUrl = hlsPlaylistUrl
   }
 
+  const videoSegmentTimeline = readSegmentTimeline(value.videoSegmentTimeline)
+  const audioSegmentTimeline = readSegmentTimeline(value.audioSegmentTimeline)
+  if (videoSegmentTimeline) descriptor.videoSegmentTimeline = videoSegmentTimeline
+  if (audioSegmentTimeline) descriptor.audioSegmentTimeline = audioSegmentTimeline
+
   const range = parseVimeoTimeRange({
     startSeconds: readFiniteNumber(value.startSeconds),
     endSeconds: readFiniteNumber(value.endSeconds)
@@ -612,6 +626,21 @@ function parseVimeoSourceDescriptor(value: JsonValue): VimeoSourceDescriptor | n
   }
 
   return descriptor
+}
+
+function readSegmentTimeline(value: JsonValue | undefined): VimeoSegmentWindow[] | null {
+  if (!Array.isArray(value)) return null
+  const timeline: VimeoSegmentWindow[] = []
+  for (const item of value) {
+    if (!isJsonObject(item)) return null
+    const startSeconds = readFiniteNumber(item.startSeconds)
+    const endSeconds = readFiniteNumber(item.endSeconds)
+    if (startSeconds === undefined || endSeconds === undefined || endSeconds <= startSeconds) {
+      return null
+    }
+    timeline.push({ startSeconds, endSeconds })
+  }
+  return timeline.length > 0 ? timeline : null
 }
 
 /** 解析 option kind。 */

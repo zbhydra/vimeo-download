@@ -70,6 +70,10 @@ export interface MediaResource {
   author?: string
   /** 文件大小 */
   size?: number
+  /** 媒体码率（bit/s），用于大文件自动分割的大小估算。 */
+  bitrate?: number
+  /** background 选择的 adaptive 输入模式。 */
+  streamingMode?: 'auto' | 'never'
   /** 缩略图URL */
   thumbnail?: string
   /** MIME 类型，优先来自站点解析出的元数据 */

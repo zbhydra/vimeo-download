@@ -117,7 +117,10 @@ function mockSettings(filenamePattern?: string): void {
   vi.spyOn(SettingsManager, 'getSettings').mockResolvedValue({
     language: 'en-US',
     downloadPath: DEFAULT_DOWNLOAD_PATH,
-    filenamePattern: filenamePattern ?? FILENAME_PATTERN_DEFAULT
+    filenamePattern: filenamePattern ?? FILENAME_PATTERN_DEFAULT,
+    splitMode: 'auto',
+    autoSplitThresholdGB: 1.5,
+    useBackgroundBlobDownload: false
   })
 }
 
