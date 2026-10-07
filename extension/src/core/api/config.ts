@@ -128,6 +128,8 @@ export const STORAGE_KEYS = {
   DEBUG_LOGGING: 'debug_logging',
   /** 本插件最后一次订单定位；只保存用户 ID 与订单号，状态以服务端为准。 */
   LATEST_ORDER_REFERENCE: 'latest_order_reference',
+  /** 定价页匿名用户确认后的待购商品；登录成功后只恢复这一项。 */
+  PENDING_PREMIUM_PURCHASE: 'pending_premium_purchase',
   /** 下载历史（任务终态回写），值为 DownloadHistoryEntry 数组 */
   DOWNLOAD_HISTORY: 'download_history'
 } as const

@@ -41,6 +41,9 @@ export const PAYMENT_UNSUPPORTED_METHOD_CODE = 21004
 /** 后端业务码：价格配置已变化，需要重新拉取套餐配置。 */
 export const PAYMENT_PRICE_UPDATED_CODE = 21005
 
+/** 后端业务码：当前用户已有有效订阅，不能重复购买。 */
+export const SUBSCRIPTION_ACTIVE_EXISTS_CODE = 26002
+
 /** 默认优先选中的支付方式，与官网下单保持一致。 */
 export const DEFAULT_ORDER_PAYMENT_METHODS = ['clink', 'paypal'] as const
 
@@ -189,6 +192,11 @@ export function isRecoverableOrderStatusError(error: Error): boolean {
 /** 当前错误是否价格已更新（需要重新拉取套餐配置）。 */
 export function isPaymentPriceUpdatedError(error: Error): boolean {
   return error instanceof ApiError && error.backendCode === PAYMENT_PRICE_UPDATED_CODE
+}
+
+/** 判断是否为已有有效订阅错误。 */
+export function isActiveSubscriptionExistsError(error: Error): boolean {
+  return error instanceof ApiError && error.backendCode === SUBSCRIPTION_ACTIVE_EXISTS_CODE
 }
 
 /** 当前错误是否支付网关失败或支付方式未实现。 */

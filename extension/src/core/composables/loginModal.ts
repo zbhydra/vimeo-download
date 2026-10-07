@@ -52,10 +52,16 @@ export function closeLoginModal(): void {
   }
 
   loginModalVisible.value = false
+  notifyLoginCancelled()
   recordLoginMark(
     MARK_TYPE.LOGIN_CANCELLED,
     JSON.stringify({ source: loginSource.value, stage: 'modal' })
   )
+}
+
+/** 通知购买流程清理待购意图；Google 授权取消时弹窗仍可保持打开。 */
+export function notifyLoginCancelled(): void {
+  window.dispatchEvent(new Event('vdl-login-cancelled'))
 }
 
 /** 当前登录入口，供需要跨上下文传递归因的登录方式读取。 */

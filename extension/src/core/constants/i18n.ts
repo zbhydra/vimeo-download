@@ -337,6 +337,13 @@ export const I18N_KEYS = {
     PAYMENT_METHOD: 'premium.paymentMethod',
     /** 发起支付按钮 */
     BUY: 'premium.buy',
+    SIGN_IN_TO_BUY: 'premium.signInToBuy',
+    SIGN_IN_TO_UPGRADE: 'premium.signInToUpgrade',
+    CONFIRM_TITLE: 'premium.confirm.title',
+    CONFIRM_MESSAGE: 'premium.confirm.message',
+    CONFIRM_AGREEMENT: 'premium.confirm.agreement',
+    CONFIRM_CONTINUE: 'premium.confirm.continue',
+    CONFIRM_CANCEL: 'premium.confirm.cancel',
     /** 订单创建中按钮文案 */
     CREATING: 'premium.creating',
     /** 等待支付标题 */
@@ -365,6 +372,9 @@ export const I18N_KEYS = {
     ERROR_GENERIC: 'premium.error.generic',
     /** 支付网关失败 */
     ERROR_GATEWAY: 'premium.error.gateway',
+    ERROR_INVALID_PAYMENT_DATA: 'premium.error.invalidPaymentData',
+    /** 当前用户已有有效订阅 */
+    ERROR_ACTIVE_SUBSCRIPTION: 'premium.error.activeSubscription',
     /** 订单不存在或已过期 */
     ERROR_ORDER_GONE: 'premium.error.orderGone',
     /** 支付已取消 */

@@ -16,10 +16,12 @@ export const premiumViewVisible = ref(false)
 
 /** 打开购买视图的业务入口，供登录门控与后续归因读取。 */
 const premiumSource = ref<PremiumSource>('upgrade_modal')
+const premiumAttributionSource = ref<string>('upgrade_modal')
 
 /** 打开购买视图。 */
-export function openPremiumView(source: PremiumSource): void {
+export function openPremiumView(source: PremiumSource, attributionSource: string = source): void {
   premiumSource.value = source
+  premiumAttributionSource.value = attributionSource
   premiumViewVisible.value = true
 }
 
@@ -31,4 +33,9 @@ export function closePremiumView(): void {
 /** 当前购买视图入口，供需要跨组件传递归因的调用方读取。 */
 export function getPremiumSource(): PremiumSource {
   return premiumSource.value
+}
+
+/** 当前入口 URL source，仅用于定价页打点归因。 */
+export function getPremiumAttributionSource(): string {
+  return premiumAttributionSource.value
 }

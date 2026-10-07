@@ -5,6 +5,7 @@ import { isAuthSessionFailure } from '@/core/api/auth/sessionFailure'
 import { STORAGE_KEYS } from '@/core/api/config'
 import {
   createOrder,
+  isActiveSubscriptionExistsError,
   isPaymentGatewayError,
   isPaymentPriceUpdatedError,
   isRecoverableOrderStatusError
@@ -43,7 +44,9 @@ export async function createCheckoutOrder(
             ? 'gateway'
             : error instanceof Error && isRecoverableOrderStatusError(error)
               ? 'orderGone'
-              : 'generic'
+              : error instanceof Error && isActiveSubscriptionExistsError(error)
+                ? 'activeSubscription'
+                : 'generic'
     return { status: 'failed', reason }
   }
 }

@@ -18,7 +18,10 @@ export type BackgroundCreateCheckoutOrderRequest = CreateOrderRequest
 /** 一次性 RPC 结果保留既有错误分类，不保存客户端订单状态。 */
 export type BackgroundCreateCheckoutOrderResponse =
   | { status: 'created'; order: CreateOrderResponse }
-  | { status: 'failed'; reason: 'auth' | 'priceUpdated' | 'gateway' | 'orderGone' | 'generic' }
+  | {
+      status: 'failed'
+      reason: 'auth' | 'priceUpdated' | 'gateway' | 'orderGone' | 'activeSubscription' | 'generic'
+    }
 
 /** 最后一次插件订单定位；不会向其他用户返回。 */
 export interface BackgroundOrderReference {

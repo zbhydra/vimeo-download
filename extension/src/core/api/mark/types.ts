@@ -28,6 +28,10 @@ export const MARK_TYPE = {
   LOGIN_FAILED: 'login_failed',
   /** 打开升级订阅弹窗 */
   UPGRADE_MODAL_OPEN: 'upgrade_modal_open',
+  /** 打开独立插件定价页 */
+  PRICING_VIEW: 'pricing_view',
+  /** 插件定价页支付成功 */
+  CHECKOUT_SUCCESS: 'checkout_success',
   /** Vimeo content script 初始化 */
   CONTENT_OPEN: 'content_open'
 } as const

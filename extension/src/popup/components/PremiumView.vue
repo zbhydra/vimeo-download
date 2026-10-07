@@ -10,7 +10,45 @@
     >
       <header class="premium-header">
         <h2 id="vdl-premium-title" class="premium-title">{{ t(I18N_KEYS.PREMIUM.TITLE) }}</h2>
+        <div v-if="props.page" class="premium-account">
+          <template v-if="authStore.isAuthenticated && authStore.user">
+            <button
+              type="button"
+              class="premium-account-button"
+              :aria-expanded="accountMenuOpen"
+              @click="accountMenuOpen = !accountMenuOpen"
+            >
+              <img
+                v-if="authStore.user.avatar_url"
+                class="premium-account-avatar"
+                :src="authStore.user.avatar_url"
+                alt=""
+              />
+              <span v-else class="premium-account-initial" aria-hidden="true">{{
+                accountInitial
+              }}</span>
+              <span class="premium-account-email">{{ authStore.user.email }}</span>
+            </button>
+            <div v-if="accountMenuOpen" class="premium-account-menu">
+              <span>{{ authStore.user.email }}</span>
+              <span v-if="accountStatus" class="premium-account-subscription">
+                {{ accountStatus.display_name }}
+                <template v-if="accountStatus.expires_at">
+                  · {{ formatExpiry(accountStatus.expires_at) }}</template
+                >
+              </span>
+              <button v-if="isAutoRenewing" type="button" @click="openSubscriptionManagement">
+                {{ t(I18N_KEYS.SUBSCRIPTION.MANAGE) }}
+              </button>
+              <button type="button" @click="handleLogout">{{ t(I18N_KEYS.AUTH.LOGOUT) }}</button>
+            </div>
+          </template>
+          <button v-else type="button" class="premium-account-login" @click="handleLogin">
+            {{ t(I18N_KEYS.AUTH.LOGIN) }}
+          </button>
+        </div>
         <button
+          v-if="!props.page"
           type="button"
           class="premium-close"
           :aria-label="t(I18N_KEYS.APP_ERROR.DISMISS)"
@@ -115,8 +153,19 @@
             :disabled="phase === 'creating'"
             @click="handleBuy"
           >
-            {{ t(phase === 'creating' ? I18N_KEYS.PREMIUM.CREATING : I18N_KEYS.PREMIUM.BUY) }}
+            {{
+              t(
+                phase === 'creating'
+                  ? I18N_KEYS.PREMIUM.CREATING
+                  : isActiveSubscription
+                    ? I18N_KEYS.PREMIUM.ERROR_ACTIVE_SUBSCRIPTION
+                    : buyLabelKey
+              )
+            }}
           </button>
+          <p v-if="isActiveSubscription" class="premium-error" role="status">
+            {{ t(I18N_KEYS.PREMIUM.ERROR_ACTIVE_SUBSCRIPTION) }}
+          </p>
           <p v-if="actionError" class="premium-error" role="alert">{{ actionError }}</p>
         </template>
 
@@ -155,6 +204,41 @@
         </div>
       </main>
     </dialog>
+    <dialog
+      ref="confirmationDialog"
+      class="premium-confirm-dialog"
+      aria-labelledby="premium-confirm-title"
+      @close="handleConfirmationClose"
+    >
+      <h3 id="premium-confirm-title">{{ t(I18N_KEYS.PREMIUM.CONFIRM_TITLE) }}</h3>
+      <p>{{ t(I18N_KEYS.PREMIUM.CONFIRM_MESSAGE) }}</p>
+      <label class="premium-confirm-agreement">
+        <input v-model="agreementAccepted" type="checkbox" checked />
+        <span>
+          {{ t(I18N_KEYS.PREMIUM.CONFIRM_AGREEMENT) }}
+          <button type="button" class="premium-confirm-link" @click="openTerms">
+            {{ t(I18N_KEYS.AUTH.MODAL_TERMS_LINK) }}
+          </button>
+          <span aria-hidden="true"> · </span>
+          <button type="button" class="premium-confirm-link" @click="openPrivacy">
+            {{ t(I18N_KEYS.AUTH.MODAL_PRIVACY_LINK) }}
+          </button>
+        </span>
+      </label>
+      <div class="premium-confirm-actions">
+        <button type="button" class="premium-secondary-button" @click="confirmationVisible = false">
+          {{ t(I18N_KEYS.PREMIUM.CONFIRM_CANCEL) }}
+        </button>
+        <button
+          type="button"
+          class="premium-primary-button"
+          :disabled="!agreementAccepted"
+          @click="confirmPurchase"
+        >
+          {{ t(I18N_KEYS.PREMIUM.CONFIRM_CONTINUE) }}
+        </button>
+      </div>
+    </dialog>
   </Teleport>
 </template>
 
@@ -168,13 +252,14 @@
  * background 创建订单并保存当前用户的订单引用，重开视图立即向服务端查询该订单。
  */
 
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Icon, IconName, IconSize } from '@/core/components/icons'
 import { I18N_KEYS } from '@/core/constants/i18n'
 import { COMMON_COLORS } from '@/core/constants/style'
 import { logger } from '@/core/utils/logger'
 import { isAuthSessionFailure } from '@/core/api/auth/sessionFailure'
+import { authApi } from '@/core/api/auth/api'
 import { subscriptionApi } from '@/core/api/subscription'
 import {
   buildCreateOrderRequest,
@@ -189,12 +274,17 @@ import {
 import type { SubscriptionCheckoutPlan, SubscriptionPaymentChannel } from '@/core/api/subscription'
 import { useAuthStore } from '@/core/stores/authStore'
 import { useQuotaStore } from '@/core/stores/quotaStore'
+import { storageManager } from '@/core/storage'
+import { STORAGE_KEYS, WEBSITE } from '@/core/api/config'
+import type { SubscriptionStatus } from '@/core/api/subscription'
+import { MARK_TYPE } from '@/core/api/mark/types'
 import { openExternalPage } from '@/core/utils/navigation'
 import { openLoginModal } from '@/core/composables/loginModal'
 import { useNativeDialog } from '@/core/composables/nativeDialog'
 import { BackgroundChannel } from '@/popup/rpc/background.rpc'
 import {
   closePremiumView,
+  getPremiumAttributionSource,
   getPremiumSource,
   premiumViewVisible
 } from '@/core/composables/premiumView'
@@ -221,7 +311,15 @@ type PremiumPhase =
   | 'failed'
 
 /** 支付失败原因，对应各自的用户文案。 */
-type FailedReason = 'orderGone' | 'cancelled' | 'fulfillment' | 'timeout' | 'generic' | 'gateway'
+type FailedReason =
+  | 'orderGone'
+  | 'cancelled'
+  | 'fulfillment'
+  | 'timeout'
+  | 'generic'
+  | 'gateway'
+  | 'invalidPaymentData'
+  | 'activeSubscription'
 
 /** 匿名购买在登录成功后恢复的精确商品渠道。 */
 interface PendingPurchase {
@@ -232,6 +330,8 @@ interface PendingPurchase {
 
 const { t } = useI18n()
 const dialog = useNativeDialog(premiumViewVisible)
+const confirmationVisible = ref(false)
+const confirmationDialog = useNativeDialog(confirmationVisible)
 
 const authStore = useAuthStore()
 const quotaStore = useQuotaStore()
@@ -268,9 +368,14 @@ const failedReason = ref<FailedReason>('generic')
 const orderNo = ref<string | null>(null)
 const supportMail = ref('')
 const pendingPurchase = ref<PendingPurchase | null>(null)
+const accountStatus = ref<SubscriptionStatus | null>(null)
+const accountMenuOpen = ref(false)
+const agreementAccepted = ref(true)
+let viewMarkSent = false
 /** 自动轮询开始时间，用于 10 分钟超时判断。 */
 const pollStartedAt = ref<number | null>(null)
 let pollTimer: ReturnType<typeof setInterval> | null = null
+const pendingPurchaseReady = restorePendingPurchase()
 
 const selectedPlan = computed(
   () => plans.value.find(plan => plan.product_id === selectedPlanId.value) ?? null
@@ -287,6 +392,28 @@ const selectedChannel = computed(
     ) ?? null
 )
 
+const isActiveSubscription = computed(() => {
+  const status = accountStatus.value
+  if (!status || status.period === 'free' || status.period === 'unavailable') return false
+  return status.expires_at === null || normalizeTimestampMs(status.expires_at) > Date.now()
+})
+
+const isAutoRenewing = computed(
+  () => isActiveSubscription.value && accountStatus.value?.auto_renew === true
+)
+
+const accountInitial = computed(() =>
+  (authStore.user?.full_name || authStore.user?.email || '?').trim().charAt(0).toUpperCase()
+)
+
+const buyLabelKey = computed(() =>
+  authStore.isAuthenticated
+    ? I18N_KEYS.PREMIUM.BUY
+    : getPremiumSource() === 'upgrade_modal'
+      ? I18N_KEYS.PREMIUM.SIGN_IN_TO_UPGRADE
+      : I18N_KEYS.PREMIUM.SIGN_IN_TO_BUY
+)
+
 /** 失败原因到用户文案的映射。 */
 const failedReasonKey = computed(() => {
   switch (failedReason.value) {
@@ -300,6 +427,10 @@ const failedReasonKey = computed(() => {
       return I18N_KEYS.PREMIUM.ERROR_TIMEOUT
     case 'gateway':
       return I18N_KEYS.PREMIUM.ERROR_GATEWAY
+    case 'invalidPaymentData':
+      return I18N_KEYS.PREMIUM.ERROR_INVALID_PAYMENT_DATA
+    case 'activeSubscription':
+      return I18N_KEYS.PREMIUM.ERROR_ACTIVE_SUBSCRIPTION
     default:
       return I18N_KEYS.PREMIUM.ERROR_GENERIC
   }
@@ -307,11 +438,19 @@ const failedReasonKey = computed(() => {
 
 watch(premiumViewVisible, visible => {
   if (visible) {
+    if (props.page && !viewMarkSent) {
+      viewMarkSent = true
+      void recordPricingMark(MARK_TYPE.PRICING_VIEW)
+    }
     enterView()
   } else {
     stopPolling()
   }
 })
+
+function handleLoginCancelled(): void {
+  clearPendingPurchase()
+}
 
 // 用户变化后重新读取该用户的订单引用，避免沿用上一位用户的交易投影。
 watch(
@@ -324,10 +463,18 @@ watch(
   }
 )
 
-onBeforeUnmount(stopPolling)
+onMounted(() => {
+  window.addEventListener('vdl-login-cancelled', handleLoginCancelled)
+})
+
+onBeforeUnmount(() => {
+  stopPolling()
+  window.removeEventListener('vdl-login-cancelled', handleLoginCancelled)
+})
 
 /** 打开视图：先恢复当前用户的订单定位，没有引用时加载套餐。 */
 async function enterView(): Promise<void> {
+  await pendingPurchaseReady
   stopPolling()
   plans.value = []
   selectedPlanId.value = null
@@ -339,12 +486,14 @@ async function enterView(): Promise<void> {
   pollStartedAt.value = null
 
   if (!authStore.isAuthenticated) {
+    accountStatus.value = null
     await loadPlans()
     return
   }
   phase.value = 'loading'
   const userId = authStore.user?.user_id
   try {
+    await loadAccountStatus()
     if (pendingPurchase.value) {
       await loadPlans()
       await continuePendingPurchase()
@@ -358,7 +507,7 @@ async function enterView(): Promise<void> {
       await loadPlans()
       return
     }
-    pendingPurchase.value = null
+    clearPendingPurchase()
     orderNo.value = reference.orderNo
     phase.value = 'pending'
     pollStartedAt.value = Date.now()
@@ -425,18 +574,54 @@ async function handleBuy(): Promise<void> {
     return
   }
 
+  if (isActiveSubscription.value) {
+    actionError.value = t(I18N_KEYS.PREMIUM.ERROR_ACTIVE_SUBSCRIPTION)
+    return
+  }
+
+  if (!agreementAccepted.value) {
+    confirmationVisible.value = true
+    return
+  }
+
+  await createPurchase(plan, channel)
+}
+
+/** 用户确认条款后才进入登录门控或创建订单。 */
+async function confirmPurchase(): Promise<void> {
+  if (!agreementAccepted.value) return
+  confirmationVisible.value = false
+  const plan = selectedPlan.value
+  const channel = selectedChannel.value
+  if (plan && channel) {
+    await createPurchase(plan, channel)
+  }
+}
+
+/** 原生 dialog 的 Escape/close 事件同步 Vue 状态，避免下次打开被旧 ref 卡住。 */
+function handleConfirmationClose(): void {
+  confirmationVisible.value = false
+}
+
+/** 登录门控通过后创建订单。 */
+async function createPurchase(
+  plan: SubscriptionCheckoutPlan,
+  channel: SubscriptionPaymentChannel
+): Promise<void> {
   if (!authStore.isAuthenticated) {
     pendingPurchase.value = {
       productId: plan.product_id,
       productPriceId: channel.product_price_id,
       paymentMethod: channel.payment_method
     }
+    await persistPendingPurchase(pendingPurchase.value)
     openLoginModal(getPremiumSource())
     return
   }
 
   phase.value = 'creating'
   actionError.value = ''
+  clearPendingPurchase()
   const userId = authStore.user?.user_id
   try {
     const result = await background.createCheckoutOrder(buildCreateOrderRequest(plan, channel))
@@ -445,7 +630,9 @@ async function handleBuy(): Promise<void> {
     }
     if (result.status === 'failed') {
       if (result.reason === 'auth') {
+        await clearAuthSession()
         phase.value = 'gate'
+        openLoginModal(getPremiumSource())
       } else if (result.reason === 'priceUpdated') {
         await loadPlans()
       } else {
@@ -455,7 +642,9 @@ async function handleBuy(): Promise<void> {
             ? I18N_KEYS.PREMIUM.ERROR_GATEWAY
             : result.reason === 'orderGone'
               ? I18N_KEYS.PREMIUM.ERROR_ORDER_GONE
-              : I18N_KEYS.PREMIUM.ERROR_GENERIC
+              : result.reason === 'activeSubscription'
+                ? I18N_KEYS.PREMIUM.ERROR_ACTIVE_SUBSCRIPTION
+                : I18N_KEYS.PREMIUM.ERROR_GENERIC
         )
       }
       return
@@ -467,8 +656,7 @@ async function handleBuy(): Promise<void> {
       logger.error(
         `[PremiumView] 支付数据中缺少可信收银台 URL: order_no=${response.order_no}, payment_method=${channel.payment_method}`
       )
-      phase.value = 'ready'
-      actionError.value = t(I18N_KEYS.PREMIUM.ERROR_GATEWAY)
+      finishFailed('invalidPaymentData')
       return
     }
 
@@ -505,7 +693,6 @@ async function continuePendingPurchase(): Promise<void> {
     return
   }
 
-  pendingPurchase.value = null
   await handleBuy()
 }
 
@@ -556,13 +743,17 @@ async function pollOnce(): Promise<void> {
     logger.error('[PremiumView] 查询订单状态失败:', error)
     if (error instanceof Error && isAuthSessionFailure(error)) {
       stopPolling()
+      await clearAuthSession()
       phase.value = 'gate'
+      openLoginModal(getPremiumSource())
       return
     }
     if (error instanceof Error && isRecoverableOrderStatusError(error)) {
       forgetOrderReference(queriedOrderNo)
       finishFailed('orderGone')
+      return
     }
+    finishFailed('generic')
   }
 }
 
@@ -595,6 +786,8 @@ function finishSuccess(): void {
   quotaStore.refreshQuota().catch(error => {
     logger.error('[PremiumView] 支付成功后刷新订阅状态失败:', error)
   })
+  void loadAccountStatus()
+  void recordPricingMark(MARK_TYPE.CHECKOUT_SUCCESS)
 }
 
 function finishFailed(reason: FailedReason): void {
@@ -615,12 +808,124 @@ function handleRetry(): void {
 }
 
 function handleClose(): void {
+  if (props.page) {
+    if (phase.value === 'success') {
+      void loadPlans()
+    }
+    return
+  }
   stopPolling()
   closePremiumView()
 }
 
 function handleLogin(): void {
   openLoginModal(getPremiumSource())
+}
+
+async function handleLogout(): Promise<void> {
+  accountMenuOpen.value = false
+  try {
+    await authStore.logout()
+    accountStatus.value = null
+  } catch (error) {
+    logger.error('[PremiumView] 退出登录失败:', error)
+  }
+}
+
+async function loadAccountStatus(): Promise<void> {
+  if (!authStore.isAuthenticated) {
+    accountStatus.value = null
+    return
+  }
+  try {
+    accountStatus.value = await subscriptionApi.getStatus()
+  } catch (error) {
+    logger.error('[PremiumView] 读取订阅状态失败:', error)
+    accountStatus.value = null
+  }
+}
+
+async function clearAuthSession(): Promise<void> {
+  authStore.clearAuth()
+  try {
+    await authApi.clearLocalAuth()
+  } catch (error) {
+    logger.error('[PremiumView] 清理失效登录态失败:', error)
+  }
+}
+
+async function openSubscriptionManagement(): Promise<void> {
+  try {
+    const result = await subscriptionApi.createManagement()
+    if (!result.url) {
+      actionError.value = t(I18N_KEYS.PREMIUM.ERROR_GENERIC)
+      return
+    }
+    await openExternalPage(result.url, 'subscription-management')
+  } catch (error) {
+    logger.error('[PremiumView] 打开订阅管理失败:', error)
+    actionError.value = t(I18N_KEYS.PREMIUM.ERROR_GENERIC)
+  }
+}
+
+async function restorePendingPurchase(): Promise<void> {
+  const stored = await storageManager.get<PendingPurchase>(STORAGE_KEYS.PENDING_PREMIUM_PURCHASE)
+  if (
+    stored &&
+    typeof stored.productId === 'string' &&
+    Number.isInteger(stored.productPriceId) &&
+    typeof stored.paymentMethod === 'string'
+  ) {
+    pendingPurchase.value = stored
+  }
+}
+
+async function persistPendingPurchase(purchase: PendingPurchase): Promise<void> {
+  try {
+    await storageManager.set(STORAGE_KEYS.PENDING_PREMIUM_PURCHASE, purchase)
+  } catch (error) {
+    logger.error('[PremiumView] 保存待购商品失败:', error)
+  }
+}
+
+function clearPendingPurchase(): void {
+  pendingPurchase.value = null
+  storageManager.remove(STORAGE_KEYS.PENDING_PREMIUM_PURCHASE).catch(error => {
+    logger.error('[PremiumView] 清理待购商品失败:', error)
+  })
+}
+
+async function recordPricingMark(
+  markType: (typeof MARK_TYPE)[keyof typeof MARK_TYPE]
+): Promise<void> {
+  try {
+    await background.recordMark({
+      mark_type: markType,
+      mark_msg: JSON.stringify({ source: getPremiumAttributionSource() })
+    })
+  } catch (error) {
+    logger.error('[PremiumView] 定价页打点失败:', error)
+  }
+}
+
+function openTerms(): void {
+  void openExternalPage(new URL(WEBSITE.TERMS_PATH, WEBSITE.BASE_URL).toString(), 'terms')
+}
+
+function openPrivacy(): void {
+  void openExternalPage(new URL(WEBSITE.PRIVACY_PATH, WEBSITE.BASE_URL).toString(), 'privacy')
+}
+
+function normalizeTimestampMs(value: number): number {
+  return value < 10_000_000_000 ? value * 1000 : value
+}
+
+function formatExpiry(value: number): string {
+  return new Intl.DateTimeFormat(document.documentElement.lang || 'en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  }).format(new Date(normalizeTimestampMs(value)))
 }
 
 /** 周期展示文案。 */
@@ -689,6 +994,142 @@ function formatPrice(amount: number, currency: string): string {
   font-size: 15px;
   font-weight: 600;
   color: var(--premium-gray-900);
+}
+
+.premium-account {
+  position: relative;
+  margin-left: auto;
+}
+
+.premium-account-button,
+.premium-account-login {
+  min-height: 30px;
+  padding: 4px 9px;
+  border: 1px solid var(--premium-gray-300);
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--premium-gray-800);
+  cursor: pointer;
+}
+
+.premium-account-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: min(320px, 42vw);
+}
+
+.premium-account-avatar,
+.premium-account-initial {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+
+.premium-account-avatar {
+  object-fit: cover;
+}
+
+.premium-account-initial {
+  display: grid;
+  place-items: center;
+  background: var(--premium-primary);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.premium-account-email {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.premium-account-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 2;
+  display: flex;
+  min-width: 190px;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--premium-gray-200);
+  border-radius: 6px;
+  background: #ffffff;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.14);
+  font-size: 12px;
+}
+
+.premium-account-menu button {
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--premium-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.premium-account-menu button:hover {
+  background: var(--premium-gray-50);
+}
+
+.premium-account-subscription {
+  color: var(--premium-gray-500);
+}
+
+.premium-confirm-dialog {
+  width: min(420px, calc(100vw - 32px));
+  padding: 20px;
+  border: 0;
+  border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.24);
+}
+
+.premium-confirm-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.premium-confirm-dialog h3 {
+  margin: 0 0 8px;
+  color: var(--premium-gray-900);
+  font-size: 17px;
+}
+
+.premium-confirm-dialog p {
+  margin: 0 0 14px;
+  color: var(--premium-gray-600);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.premium-confirm-agreement {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--premium-gray-800);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.premium-confirm-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--premium-primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.premium-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
 }
 
 .premium-close {

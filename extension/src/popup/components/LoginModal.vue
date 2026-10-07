@@ -153,6 +153,7 @@ import {
   failLoginModal,
   getLoginSource,
   loginModalVisible,
+  notifyLoginCancelled,
   setLoginModalHostMounted
 } from '@/core/composables/loginModal'
 
@@ -311,6 +312,7 @@ async function handleGoogleLogin(): Promise<void> {
     }
 
     if (result.status === 'cancelled') {
+      notifyLoginCancelled()
       return
     }
 

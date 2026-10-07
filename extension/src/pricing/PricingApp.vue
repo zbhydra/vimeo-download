@@ -19,7 +19,9 @@ onMounted(async () => {
   } catch (error) {
     logger.error('[PricingPage] 登录态初始化失败:', error)
   }
-  openPremiumView('upgrade_modal')
+  const query = new URLSearchParams(window.location.search)
+  const source = query.get('source')?.trim() || query.get('utm_source')?.trim() || 'upgrade_modal'
+  openPremiumView('upgrade_modal', source)
 })
 
 onUnmounted(() => {
