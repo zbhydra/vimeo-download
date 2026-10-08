@@ -19,7 +19,7 @@
       class="admin-sider"
       collapse-mode="width"
       :collapsed-width="64"
-      :width="270"
+      :width="220"
       :collapsed="siderCollapsed"
       :show-trigger="!isTablet"
       @collapse="collapsed = true"
