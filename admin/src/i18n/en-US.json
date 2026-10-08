@@ -1,6 +1,7 @@
 {
   "app": {
-    "title": "Vimeo Downloader Admin"
+    "title": "Vimeo Downloader Admin",
+    "name": "Vimeo Downloader"
   },
   "login": {
     "title": "Admin Login",

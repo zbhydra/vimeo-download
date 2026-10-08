@@ -30,6 +30,7 @@
         <span v-else class="sider-title-short">A</span>
       </div>
       <NMenu
+        :indent="16"
         :collapsed="siderCollapsed"
         :collapsed-width="64"
         :collapsed-icon-size="22"
@@ -40,12 +41,29 @@
     </NLayoutSider>
 
     <NDrawer v-model:show="mobileMenuOpen" placement="left" :width="270">
-      <NDrawerContent :title="t('app.title')" closable>
-        <NMenu
-          :options="menuOptions"
-          :value="currentRoute"
-          @update:value="handleMobileMenuClick"
-        />
+      <NDrawerContent
+        :title="t('app.name')"
+        closable
+        :body-content-style="{
+          display: 'flex',
+          flexDirection: 'column',
+          padding: '12px 16px 16px',
+        }"
+      >
+        <div class="drawer-menu">
+          <NMenu
+            :indent="16"
+            :options="menuOptions"
+            :value="currentRoute"
+            @update:value="handleMobileMenuClick"
+          />
+        </div>
+        <!-- 次级区靠底排列（参考方侧栏模式）：登出 -->
+        <div class="drawer-footer">
+          <NButton class="logout-button drawer-logout" @click="handleLogout">
+            {{ t("layout.logout") }}
+          </NButton>
+        </div>
       </NDrawerContent>
     </NDrawer>
 
@@ -268,6 +286,20 @@ function handleLogout() {
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
+}
+
+/* 抽屉：菜单占满剩余高度，次级区（登出）靠底 */
+.drawer-menu {
+  flex: 1;
+}
+
+.drawer-footer {
+  border-top: 1px solid var(--admin-divider);
+  padding-top: 12px;
+}
+
+.drawer-logout {
+  width: 100%;
 }
 
 /* 登出钮：白底描边（基线 §3 顶栏「右侧登出白底描边钮」，边框 #dedfdb 为 U2 移交规格）。

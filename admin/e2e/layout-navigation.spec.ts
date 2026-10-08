@@ -405,6 +405,30 @@ test.describe("登出流程", () => {
     );
     expect(token).toBeNull();
   });
+
+  test("移动端抽屉：底部登出 → 确认弹窗在抽屉之上可交互 → 登录页", async ({
+    page,
+  }) => {
+    await loginAsAdmin(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/");
+
+    // 汉堡唤起抽屉
+    await page.getByRole("button", { name: "打开菜单" }).click();
+    const drawer = page.locator(".n-drawer");
+    await expect(drawer).toBeVisible();
+
+    // 抽屉底部次级区登出（作用域限定在抽屉内，与顶栏登出区分）
+    const drawerLogout = drawer.getByRole("button", { name: "退出登录" });
+    await expect(drawerLogout).toBeVisible();
+    await drawerLogout.click();
+
+    // 确认弹窗必须可交互（即在抽屉层级之上），确认后跳登录页
+    const dialog = page.locator(".n-dialog");
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "确认" }).click();
+    await expect(page).toHaveURL(/\/login/, { timeout: 5000 });
+  });
 });
 
 test.describe("标题显示", () => {
