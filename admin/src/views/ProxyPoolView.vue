@@ -265,7 +265,7 @@ const enabledFilterOptions = computed<SelectOption[]>(() => [
 const PROXY_POOL_TABLE_SCROLL_X = 1280;
 
 const columns = computed<DataTableColumns<ProxyPoolEntrySummary>>(() => [
-  { title: "ID", key: "proxy_id", width: 80 },
+  { title: t("proxyPool.id"), key: "proxy_id", width: 80 },
   {
     title: t("proxyPool.name"),
     key: "name",
@@ -344,9 +344,10 @@ function proxyTypeLabel(value: ProxyPoolEntryType): string {
 }
 
 function endpointLabel(row: ProxyPoolEntrySummary): string {
-  if (row.proxy_type === PROXY_TYPE_DYNAMIC) return row.dynamic_url || "-";
-  if (!row.host) return "-";
-  return `${row.host}:${row.port ?? "-"}`;
+  const emptyEndpoint = t("proxyPool.emptyEndpoint");
+  if (row.proxy_type === PROXY_TYPE_DYNAMIC) return row.dynamic_url || emptyEndpoint;
+  if (!row.host) return emptyEndpoint;
+  return `${row.host}:${row.port ?? emptyEndpoint}`;
 }
 
 async function loadEntries() {

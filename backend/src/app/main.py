@@ -332,6 +332,7 @@ def _include_business_routes(app_instance: FastAPI) -> None:
         router as admin_order_analytics_router,
     )
     from app.api.admin.admin_orders import router as admin_orders_router
+    from app.api.admin.admin_proxy_pool import router as admin_proxy_pool_router
     from app.api.admin.admin_users import router as admin_users_router
     from app.api.admin.admin_service_nodes import router as admin_service_nodes_router
     from app.api.admin.admin_system_settings import (
@@ -401,6 +402,9 @@ def _include_business_routes(app_instance: FastAPI) -> None:
     )
     app_instance.include_router(
         admin_orders_router, prefix="/api/admin", tags=["admin"]
+    )
+    app_instance.include_router(
+        admin_proxy_pool_router, prefix="/api/admin", tags=["admin"]
     )
     app_instance.include_router(admin_users_router, prefix="/api/admin", tags=["admin"])
     app_instance.include_router(

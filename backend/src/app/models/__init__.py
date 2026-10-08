@@ -16,6 +16,7 @@ from .config_subscription_product_price_model import ConfigSubscriptionProductPr
 from .cron_task_cursor_model import CronTaskCursorModel
 from .system_data_model import SystemDataModel
 from .service_node_model import ServiceNodeModel
+from .proxy_pool_entry_model import ProxyPoolEntryModel
 from .user_checkin_campaign_model import UserCheckinCampaignModel
 from .user_checkin_record_model import UserCheckinRecordModel
 from .user_credit_account_model import UserCreditAccountModel
@@ -47,6 +48,7 @@ __all__ = [
     "CronTaskCursorModel",
     "SystemDataModel",
     "ServiceNodeModel",
+    "ProxyPoolEntryModel",
     "UserCheckinCampaignModel",
     "UserCheckinRecordModel",
     "UserCreditAccountModel",

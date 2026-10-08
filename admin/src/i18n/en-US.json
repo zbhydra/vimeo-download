@@ -28,8 +28,7 @@
     "proxyPool": "Proxy Pool",
     "groupOps": "Ops",
     "groupData": "Data",
-    "groupConfig": "Config",
-    "proxyPool": "Proxy Pool"
+    "groupConfig": "Config"
   },
   "dashboard": {
     "totalUsers": "Total Users",
@@ -231,6 +230,7 @@
     "title": "Proxy Pool",
     "add": "Add Proxy",
     "edit": "Edit Proxy",
+    "id": "ID",
     "name": "Name",
     "type": "Type",
     "typeDynamic": "Dynamic",
@@ -243,6 +243,7 @@
     "password": "Password",
     "countryCode": "Country Code",
     "endpoint": "Host or Dynamic URL",
+    "emptyEndpoint": "-",
     "enabled": "Enabled",
     "updatedAt": "Updated At",
     "operation": "Actions",

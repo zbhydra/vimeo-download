@@ -28,8 +28,7 @@
     "proxyPool": "代理池",
     "groupOps": "运营",
     "groupData": "数据",
-    "groupConfig": "配置",
-    "proxyPool": "代理池"
+    "groupConfig": "配置"
   },
   "dashboard": {
     "totalUsers": "总用户数",
@@ -231,6 +230,7 @@
     "title": "代理池",
     "add": "新增代理",
     "edit": "编辑代理",
+    "id": "ID",
     "name": "名称",
     "type": "类型",
     "typeDynamic": "动态代理",
@@ -243,6 +243,7 @@
     "password": "密码",
     "countryCode": "国家码",
     "endpoint": "主机或动态地址",
+    "emptyEndpoint": "-",
     "enabled": "启用",
     "updatedAt": "更新时间",
     "operation": "操作",
