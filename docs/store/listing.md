@@ -9,21 +9,7 @@
 
 ## Detailed description
 
-Download videos, audio tracks, and cover images from Vimeo pages you are authorized to save.
-
-Vimeo Downloader adds a focused download control directly to supported Vimeo pages. Choose the available video quality, save audio when an audio stream is available, or download the cover image separately.
-
-Features:
-
-- Download video in any quality offered by the source
-- Save available audio streams separately
-- Download the video cover image
-- Select a clip range when the source supports it
-- Queue downloads while continuing to browse
-- Handle large files through the browser download flow
-- View download status and history in the extension popup
-
-The extension only works with supported Vimeo pages and does not bypass access controls. Download content only when you have the right to save it.
+The complete English store copy is maintained in [locales/en.md](locales/en.md). Copy its **Detailed description** section into the Chrome Web Store listing.
 
 ## Permission justifications
 
