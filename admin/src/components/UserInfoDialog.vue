@@ -31,9 +31,9 @@
               {{ profile.user.email || "-" }}
             </NDescriptionsItem>
             <NDescriptionsItem :label="t('userInfo.accountStatus')">
-              <NTag :type="accountStatusTagType(profile.user.account_status)" size="small">
+              <StatusPill :tone="accountStatusTone(profile.user.account_status)">
                 {{ accountStatusLabel(profile.user.account_status) }}
-              </NTag>
+              </StatusPill>
             </NDescriptionsItem>
             <NDescriptionsItem :label="t('userInfo.loginCount')">
               {{ profile.user.login_count }}
@@ -74,16 +74,13 @@
               {{ profile.credits.balance }}
             </NDescriptionsItem>
             <NDescriptionsItem :label="t('userInfo.hasSubscription')">
-              <NTag
-                :type="profile.subscription.has_subscription ? 'success' : 'default'"
-                size="small"
-              >
+              <StatusPill :tone="profile.subscription.has_subscription ? 'success' : 'neutral'">
                 {{
                   profile.subscription.has_subscription
                     ? t("common.yes")
                     : t("common.no")
                 }}
-              </NTag>
+              </StatusPill>
             </NDescriptionsItem>
             <NDescriptionsItem :label="t('userInfo.subscriptionExpiresAt')">
               {{ formatAdminTimeMs(profile.subscription.expires_at) }}
@@ -158,7 +155,6 @@ import {
   NSpin,
   NTabPane,
   NTabs,
-  NTag,
   useMessage,
   type DataTableColumns,
   type PaginationProps,
@@ -174,11 +170,11 @@ import {
   type AdminUserProfileData,
 } from "@/api/users";
 import type { AdminOrder, CallbackStatus, OrderStatus } from "@/api/orders";
+import StatusPill, { type StatusTone } from "@/components/StatusPill.vue";
 import { formatAdminTimeMs } from "@/utils/time";
 import { useViewport } from "@/composables/useViewport";
 
 type TabKey = "downloads" | "credits" | "orders";
-type TagType = "default" | "success" | "warning" | "error" | "info";
 
 const { t } = useI18n();
 const message = useMessage();
@@ -320,8 +316,8 @@ const orderColumns = computed<DataTableColumns<AdminOrder>>(() => [
     width: 120,
     render: (row) =>
       h(
-        NTag,
-        { type: orderStatusTagType(row.order_status), size: "small" },
+        StatusPill,
+        { tone: orderStatusTone(row.order_status) },
         { default: () => orderStatusLabel(row.order_status) },
       ),
   },
@@ -331,8 +327,8 @@ const orderColumns = computed<DataTableColumns<AdminOrder>>(() => [
     width: 130,
     render: (row) =>
       h(
-        NTag,
-        { type: callbackStatusTagType(row.callback_status), size: "small" },
+        StatusPill,
+        { tone: callbackStatusTone(row.callback_status) },
         { default: () => callbackStatusLabel(row.callback_status) },
       ),
   },
@@ -364,10 +360,10 @@ const creditColumns = computed<DataTableColumns<AdminUserCreditRecord>>(() => [
     align: "right",
     render: (row) =>
       h(
-        NTag,
+        StatusPill,
         {
-          type: row.change_amount > 0 ? "success" : row.change_amount < 0 ? "error" : "default",
-          size: "small",
+          tone:
+            row.change_amount > 0 ? "success" : row.change_amount < 0 ? "danger" : "neutral",
         },
         { default: () => (row.change_amount > 0 ? `+${row.change_amount}` : row.change_amount) },
       ),
@@ -589,13 +585,13 @@ function accountStatusLabel(status: AdminUserAccountStatus): string {
   return labels[status];
 }
 
-function accountStatusTagType(status: AdminUserAccountStatus): TagType {
-  const types: Record<AdminUserAccountStatus, TagType> = {
+function accountStatusTone(status: AdminUserAccountStatus): StatusTone {
+  const tones: Record<AdminUserAccountStatus, StatusTone> = {
     normal: "success",
     locked: "warning",
-    deleted: "error",
+    deleted: "danger",
   };
-  return types[status];
+  return tones[status];
 }
 
 function creditReasonLabel(reason: string): string {
@@ -658,15 +654,15 @@ function orderStatusLabel(value: OrderStatus): string {
   return labels[value];
 }
 
-function orderStatusTagType(value: OrderStatus): TagType {
-  const types: Record<OrderStatus, TagType> = {
+function orderStatusTone(value: OrderStatus): StatusTone {
+  const tones: Record<OrderStatus, StatusTone> = {
     1: "warning",
     2: "success",
-    3: "default",
+    3: "neutral",
     4: "info",
-    5: "error",
+    5: "danger",
   };
-  return types[value];
+  return tones[value];
 }
 
 function callbackStatusLabel(value: CallbackStatus): string {
@@ -680,15 +676,15 @@ function callbackStatusLabel(value: CallbackStatus): string {
   return labels[value];
 }
 
-function callbackStatusTagType(value: CallbackStatus): TagType {
-  const types: Record<CallbackStatus, TagType> = {
-    1: "default",
+function callbackStatusTone(value: CallbackStatus): StatusTone {
+  const tones: Record<CallbackStatus, StatusTone> = {
+    1: "neutral",
     2: "warning",
     3: "success",
-    4: "error",
-    5: "error",
+    4: "danger",
+    5: "danger",
   };
-  return types[value];
+  return tones[value];
 }
 </script>
 

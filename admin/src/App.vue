@@ -3,7 +3,7 @@
   NConfigProvider → NMessageProvider → NDialogProvider → RouterView
 -->
 <template>
-  <NConfigProvider>
+  <NConfigProvider :theme-overrides="themeOverrides">
     <NMessageProvider>
       <NDialogProvider>
         <RouterView />
@@ -14,4 +14,5 @@
 
 <script setup lang="ts">
 import { NConfigProvider, NMessageProvider, NDialogProvider } from "naive-ui";
+import { themeOverrides } from "./theme";
 </script>

@@ -161,9 +161,10 @@ test.describe("登录页渲染", () => {
     await expect(page.locator(".captcha-img img")).toBeVisible();
     expect(captchaCallCount).toBe(1);
 
-    // 点击验证码图片触发刷新
+    // 点击验证码图片触发刷新（先挂响应等待再点击，避免 mock 响应先于监听完成）
+    const captchaRefreshed = page.waitForResponse("**/api/admin/auth/captcha");
     await page.locator(".captcha-img").click();
-    await page.waitForResponse("**/api/admin/auth/captcha");
+    await captchaRefreshed;
     expect(captchaCallCount).toBe(2);
   });
 });
@@ -328,13 +329,15 @@ test.describe("登录失败流程", () => {
     await page.locator('input[placeholder="用户名"]').fill("wrong");
     await page.locator('input[placeholder="密码"]').fill("wrong");
     await page.locator('input[placeholder="请输入验证码"]').fill("0000");
+    // 失败后组件会自动刷新验证码（先挂响应等待再点击，避免 mock 响应先于监听完成）
+    const captchaRefreshed = page.waitForResponse("**/api/admin/auth/captcha");
     await page.getByRole("button", { name: "登 录" }).click();
 
     // 错误提示 Toast
     await expect(page.getByText("账号或密码错误")).toBeVisible();
 
     // 验证码自动刷新（多等一次 captcha 请求）
-    await page.waitForResponse("**/api/admin/auth/captcha");
+    await captchaRefreshed;
 
     // 仍在登录页
     await expect(page).toHaveURL(/\/login/);

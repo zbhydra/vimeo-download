@@ -41,7 +41,6 @@ import {
   NCard,
   NDataTable,
   NEllipsis,
-  NTag,
   useMessage,
   type DataTableColumns,
   type PaginationProps,
@@ -52,9 +51,8 @@ import {
   type WebDownloadLogStatus,
 } from "@/api/mark-log";
 import UserInfoDialog from "@/components/UserInfoDialog.vue";
+import StatusPill, { type StatusTone } from "@/components/StatusPill.vue";
 import { formatAdminTimeMs } from "@/utils/time";
-
-type WebDownloadLogTagType = "default" | "success" | "warning" | "error";
 
 interface UserInfoDialogExpose {
   /** 打开用户信息弹窗。 */
@@ -62,8 +60,8 @@ interface UserInfoDialogExpose {
 }
 
 interface WebDownloadLogStatusMeta {
-  /** Naive UI 标签颜色类型。 */
-  tagType: WebDownloadLogTagType;
+  /** 状态语义色。 */
+  tone: StatusTone;
   /** i18n 文案 key。 */
   labelKey: string;
 }
@@ -83,11 +81,11 @@ const pagination = reactive<PaginationProps>({
 
 /** 下载状态展示映射。 */
 const statusMeta: Record<WebDownloadLogStatus, WebDownloadLogStatusMeta> = {
-  start: { tagType: "default", labelKey: "downloadLog.start" },
-  success: { tagType: "success", labelKey: "downloadLog.success" },
-  failed: { tagType: "error", labelKey: "downloadLog.failed" },
-  preflight_blocked: { tagType: "warning", labelKey: "downloadLog.preflightBlocked" },
-  preflight_fallback: { tagType: "default", labelKey: "downloadLog.preflightFallback" },
+  start: { tone: "neutral", labelKey: "downloadLog.start" },
+  success: { tone: "success", labelKey: "downloadLog.success" },
+  failed: { tone: "danger", labelKey: "downloadLog.failed" },
+  preflight_blocked: { tone: "warning", labelKey: "downloadLog.preflightBlocked" },
+  preflight_fallback: { tone: "neutral", labelKey: "downloadLog.preflightFallback" },
 };
 
 /** 表格列定义。 */
@@ -202,14 +200,14 @@ function handlePageChange(page: number) {
 function renderStatus(row: WebDownloadLog) {
   const meta = statusMeta[row.status];
   if (!meta) {
-    return h(
-      NTag,
-      { type: "default", size: "small" },
-      { default: () => row.status || "-" },
-    );
+    return h(StatusPill, { tone: "neutral" }, { default: () => row.status || "-" });
   }
 
-  return h(NTag, { type: meta.tagType, size: "small" }, { default: () => t(meta.labelKey) });
+  return h(
+    StatusPill,
+    { tone: meta.tone },
+    { default: () => t(meta.labelKey) },
+  );
 }
 
 /** 渲染通用用户信息弹窗入口。 */
@@ -223,6 +221,7 @@ function renderUserButton(userId: number | null) {
     {
       text: true,
       type: "primary",
+      class: "user-link",
       onClick: () => openUserInfo(userId),
     },
     { default: () => userId },

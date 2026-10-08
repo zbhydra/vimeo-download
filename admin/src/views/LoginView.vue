@@ -163,7 +163,7 @@ onMounted(() => {
   min-height: 100dvh;
   padding: 16px;
   box-sizing: border-box;
-  background: #f0f2f5;
+  background: var(--admin-canvas);
 }
 
 .login-card {

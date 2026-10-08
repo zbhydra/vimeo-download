@@ -21,6 +21,7 @@
         :data="rows"
         :loading="loading"
         :pagination="false"
+        :scroll-x="tableScrollX"
         :bordered="false"
         striped
       />
@@ -100,20 +101,33 @@ function formatNewUsersLabel(summary: DashboardSummary | undefined): string {
   });
 }
 
+/** 列宽定义（单一来源），表格横向滚动宽度按此合计（tech-视觉基线 §3：宽表必须传 scroll-x）。 */
+const DATE_COLUMN_WIDTH = 120;
+const REGISTERED_COLUMN_WIDTH = 90;
+const MARK_TYPE_COLUMN_WIDTH = 140;
+
+/** 表格横向滚动宽度 = 2 基础列 + 每个 mark_type 列的宽度合计。 */
+const tableScrollX = computed(
+  () =>
+    DATE_COLUMN_WIDTH +
+    REGISTERED_COLUMN_WIDTH +
+    markTypes.value.length * MARK_TYPE_COLUMN_WIDTH,
+);
+
 /** 动态列：日期 + 注册数 + 各 mark_type 的 event_count / device_count */
 const columns = computed<DataTableColumns<DashboardRow>>(() => {
   const base: DataTableColumns<DashboardRow> = [
     {
       title: t("dashboard.date"),
       key: "date_label",
-      width: 120,
+      width: DATE_COLUMN_WIDTH,
       // 移动端不固定首列，避免固定列挤占表格横向滚动区域
       fixed: isMobile.value ? undefined : "left",
     },
     {
       title: t("dashboard.registered"),
       key: "registered_count",
-      width: 90,
+      width: REGISTERED_COLUMN_WIDTH,
       align: "right",
     },
   ];
@@ -123,7 +137,7 @@ const columns = computed<DataTableColumns<DashboardRow>>(() => {
     base.push({
       title: mt,
       key: mt,
-      width: 140,
+      width: MARK_TYPE_COLUMN_WIDTH,
       align: "right",
       render: (row: DashboardRow) => {
         const cell = row.metrics[mt];

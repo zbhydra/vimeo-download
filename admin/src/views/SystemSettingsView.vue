@@ -100,11 +100,11 @@
               size="small"
             >
               <NDescriptionsItem :label="t('systemSettings.apiKeyStatus')">
-                <NTag :type="apiKeyMeta?.has_api_key ? 'success' : 'default'">
+                <StatusPill :tone="apiKeyMeta?.has_api_key ? 'success' : 'neutral'">
                   {{ apiKeyMeta?.has_api_key
                     ? t("systemSettings.generated")
                     : t("systemSettings.notGenerated") }}
-                </NTag>
+                </StatusPill>
               </NDescriptionsItem>
               <NDescriptionsItem :label="t('systemSettings.apiKeyPrefix')">
                 <code>{{ apiKeyMeta?.api_key_prefix || "-" }}</code>
@@ -217,7 +217,6 @@ import {
   NSpin,
   NTabPane,
   NTabs,
-  NTag,
   NText,
   useDialog,
   useMessage,
@@ -234,6 +233,7 @@ import {
   type RemoteConfig,
 } from "@/api/system-settings";
 import { formatAdminTimeMs } from "@/utils/time";
+import StatusPill from "@/components/StatusPill.vue";
 import { useViewport } from "@/composables/useViewport";
 
 const { t } = useI18n();

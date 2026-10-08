@@ -42,7 +42,6 @@ import {
   NDataTable,
   NEllipsis,
   NSpace,
-  NTag,
   NText,
   useMessage,
   type DataTableColumns,
@@ -55,6 +54,7 @@ import {
   type WebParseFailedLog,
 } from "@/api/mark-log";
 import UserInfoDialog from "@/components/UserInfoDialog.vue";
+import StatusPill from "@/components/StatusPill.vue";
 import { useViewport } from "@/composables/useViewport";
 import { formatAdminTimeMs } from "@/utils/time";
 
@@ -205,7 +205,7 @@ function renderRetryResult(row: WebParseFailedLogRow) {
     return h(NText, { depth: 3 }, { default: () => "-" });
   }
 
-  const tagType = result.ok ? "success" : "error";
+  const tagTone = result.ok ? "success" : "danger";
   const label = result.ok ? t("markLog.resultOk") : t("markLog.resultFailed");
   const detail = result.ok
     ? `${result.platform} / ${result.resource_count}`
@@ -216,7 +216,7 @@ function renderRetryResult(row: WebParseFailedLogRow) {
     { size: 6, vertical: true },
     {
       default: () => [
-        h(NTag, { type: tagType, size: "small" }, { default: () => label }),
+        h(StatusPill, { tone: tagTone }, { default: () => label }),
         h(NEllipsis, { tooltip: true, lineClamp: 2 }, { default: () => detail }),
       ],
     },
@@ -234,6 +234,7 @@ function renderUserButton(userId: number | null) {
     {
       text: true,
       type: "primary",
+      class: "user-link",
       onClick: () => openUserInfo(userId),
     },
     { default: () => userId },

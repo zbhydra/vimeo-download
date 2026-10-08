@@ -1,0 +1,45 @@
+/*
+  设计 Token（--admin-*），供手写样式消费。
+  数值来源：docs/feat/008.管理后台/tech-视觉基线.md §1.1 色彩（divider 为 §2 表色值）。
+  与 src/theme.ts 的字面量一一对应（两处同源，改色须同步）。
+*/
+:root {
+  /* 画布 / 容器 */
+  --admin-canvas: #f6f5f3; /* 页面画布、侧栏背景 */
+  --admin-card: #ffffff; /* 卡片、表格容器 */
+  --admin-modal: #fbfbfa; /* 弹窗背景 */
+
+  /* 文字 */
+  --admin-ink: #171a17; /* 主文字 */
+  --admin-text-secondary: #5c5e63; /* 表单 label、次要文字 */
+  --admin-muted: #787979; /* 次级文字、表头、分组标签 */
+  --admin-heading: #424242; /* 页面 h1 */
+
+  /* 线 / 边框（边框只出现在输入类控件） */
+  --admin-stroke: #e2e3e3; /* 罕用边框、计数底 */
+  --admin-divider: #eeeceb; /* 分隔线（common.dividerColor） */
+  --admin-input-border: #dfe0dc; /* 输入框边框 */
+  --admin-button-border: #dedfdb; /* 白底按钮（登出/取消类）描边 */
+
+  /* 品牌绿 */
+  --admin-accent: #7cd56e; /* 侧栏激活底、主按钮 */
+  --admin-accent-hover: #8fdc85;
+  --admin-accent-pressed: #6cc35f;
+  --admin-accent-ink: #173812; /* 绿底按钮文字 */
+
+  /* 语义色（字）与状态 pill 底 */
+  --admin-success: #239b44;
+  --admin-success-bg: #e8f6e3;
+  --admin-info: #427cff;
+  --admin-info-bg: #eaf0ff;
+  --admin-warning: #d89114;
+  --admin-warning-bg: #faf1dc;
+  --admin-danger: #ed4b38;
+  --admin-danger-bg: #fceae6;
+  --admin-neutral: #6e736d;
+  --admin-neutral-bg: #efefec;
+
+  /* 筛选/操作 pill 底（admin 暂无对应控件，预留） */
+  --admin-pill-default: #e6e5e3;
+  --admin-pill-default-hover: #e9e8e6;
+}

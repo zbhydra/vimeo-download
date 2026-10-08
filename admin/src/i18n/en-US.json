@@ -23,7 +23,10 @@
     "logout": "Logout",
     "logoutConfirm": "Are you sure you want to logout?",
     "menu": "Open menu",
-    "systemSettings": "System Settings"
+    "systemSettings": "System Settings",
+    "groupOps": "Ops",
+    "groupData": "Data",
+    "groupConfig": "Config"
   },
   "dashboard": {
     "totalUsers": "Total Users",

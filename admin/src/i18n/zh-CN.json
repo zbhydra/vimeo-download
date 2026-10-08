@@ -23,7 +23,10 @@
     "logout": "退出登录",
     "logoutConfirm": "确定要退出登录吗？",
     "menu": "打开菜单",
-    "systemSettings": "系统设置"
+    "systemSettings": "系统设置",
+    "groupOps": "运营",
+    "groupData": "数据",
+    "groupConfig": "配置"
   },
   "dashboard": {
     "totalUsers": "总用户数",

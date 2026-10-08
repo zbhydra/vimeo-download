@@ -1,5 +1,19 @@
 # 008 · 管理后台 · 变更记录
 
+## 2026-10-08 admin 视觉重构为 Elera 基线并完成三视口响应式适配
+
+**Why**：admin 沿用组件库默认视觉（蓝 accent、卡片 1px 描边、偏大字号密度），与按参考方（Elera / Patient Flow）实测沉淀的 `tech-视觉基线.md` 设计合同不符；且手机视口下布局壳横向溢出、宽表无横滚约束、订单详情抽屉固定 720px 溢出。按基线整体换肤并补齐手机/平板适配。
+
+**变更**：
+
+- Token 层：新增 `src/theme.ts`（themeOverrides，键位对照 naive-ui 2.44 源码核实）与 `src/styles/tokens.css`（`--admin-*` CSS 变量，与 theme.ts 同源）；`global.css` 收口卡片（无边框/20px 圆角/多层软阴影）、弹窗 22px 圆角、表格行密度、输入框边框与固定列表头白底豁免；唯一新增依赖 `@fontsource-variable/inter`（自托管 Inter，已获批）。
+- 布局骨架：`AdminLayout.vue` 侧栏改 270px 三分组导航（NMenu 主题化，保住 e2e `role="menu"`），顶栏左侧改当前路由 i18n 标题、右侧登出白底描边钮；`useViewport.ts` 新增平板档（768~1023 侧栏强制 64px 图标轨、隐藏触发钮）；移动端 NDrawer 抽屉沿用同源分组菜单。
+- 组件与视图：新增 `StatusPill.vue`（五语义 tone）替换全部视图 NTag 状态用法；表格统一 13px、表头 muted/500、单元格上下 padding 10px；按钮按语义配色（绿=主推进、白底描边=次要/取消、红=删除/停用）；表单 label 12px/500/`#5c5e63`。
+- 响应式：ServiceNodes/Dashboard 宽表补 `scroll-x`（列宽常量派生单源）；Orders 详情抽屉手机改全宽（修复固定 720px 溢出）；新增 `e2e/responsive.spec.ts`——真实后端登录（验证码走 Redis 读文本）+ 1280/820/390 三视口断言布局壳无溢出、平板折叠态、抽屉可达可关，该 spec 需本地后端 + Redis + `E2E_ADMIN_USERNAME`/`E2E_ADMIN_PASSWORD`，缺省响亮失败。
+- 文档：`tech-视觉基线.md` 为 admin 视觉唯一合同（含 U3 增补键位与固定表头豁免回填）；验收过程见 `plans/007` §6。
+
+**边界确认**：不换组件库、不改后端、无暗色主题；界面元素清单与用户操作逻辑不变（纯视觉与响应式），接口契约无变化；admin e2e 从 64 例增至 70 例全绿（其余 spec 仍走既有 mock 架构）。
+
 ## 2026-10-05 数据分析下载三标签页不再有网站新数据
 
 **Why**：网站网页下载全部匿名、不扣 Credits，不再写扣费下载记录。

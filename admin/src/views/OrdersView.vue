@@ -141,7 +141,8 @@
       />
     </NCard>
 
-    <NDrawer v-model:show="detailVisible" :width="720" placement="right">
+    <!-- 详情抽屉：移动端全宽防溢出（tech-视觉基线 §3：NDrawer 详情类移动端全宽） -->
+    <NDrawer v-model:show="detailVisible" :width="drawerWidth" placement="right">
       <NDrawerContent :title="t('orders.detailTitle')" closable>
         <NSpin :show="detailLoading">
           <NDescriptions v-if="detail" :column="1" bordered size="small">
@@ -167,7 +168,7 @@
               <NButton
                 text
                 type="primary"
-                class="order-user-link"
+                class="user-link"
                 @click="openUserInfo(detail.user_id)"
               >
                 {{ formatOrderUser(detail.user_id, detail.user_email) }}
@@ -180,14 +181,14 @@
               {{ formatAmount(detail.amount, detail.currency) }}
             </NDescriptionsItem>
             <NDescriptionsItem :label="t('orders.orderStatus')">
-              <NTag :type="orderStatusType(detail.order_status)" size="small">
+              <StatusPill :tone="orderStatusTone(detail.order_status)">
                 {{ orderStatusLabel(detail.order_status) }}
-              </NTag>
+              </StatusPill>
             </NDescriptionsItem>
             <NDescriptionsItem :label="t('orders.callbackStatus')">
-              <NTag :type="callbackStatusType(detail.callback_status)" size="small">
+              <StatusPill :tone="callbackStatusTone(detail.callback_status)">
                 {{ callbackStatusLabel(detail.callback_status) }}
-              </NTag>
+              </StatusPill>
             </NDescriptionsItem>
             <NDescriptionsItem :label="t('orders.paymentMethod')">
               {{ detail.payment_method || "-" }}
@@ -288,7 +289,6 @@ import {
   NSelect,
   NSpace,
   NSpin,
-  NTag,
   useMessage,
   type DataTableColumns,
   type PaginationProps,
@@ -310,10 +310,10 @@ import {
   type OrderStatus,
 } from "@/api/orders";
 import UserInfoDialog from "@/components/UserInfoDialog.vue";
+import StatusPill, { type StatusTone } from "@/components/StatusPill.vue";
 import { useViewport } from "@/composables/useViewport";
 import { ADMIN_DATETIME_FORMAT, formatAdminTimeMs } from "@/utils/time";
 
-type TagType = "default" | "success" | "warning" | "error" | "info";
 type DateRangeValue = [number, number] | null;
 type StringFilterKey =
   | "order_no"
@@ -361,6 +361,9 @@ const detailVisible = ref(false);
 const rows = ref<AdminOrder[]>([]);
 const detail = ref<AdminOrder | null>(null);
 const userInfoDialogRef = ref<UserInfoDialogExpose | null>(null);
+
+/** 详情抽屉宽度：手机全宽防溢出，桌面/平板固定 720。 */
+const drawerWidth = computed(() => (isMobile.value ? "100vw" : 720));
 
 const filters = reactive<OrderFilters>({
   orderNo: "",
@@ -441,8 +444,8 @@ const columns = computed<DataTableColumns<AdminOrder>>(() => [
     width: 120,
     render: (row) =>
       h(
-        NTag,
-        { type: orderStatusType(row.order_status), size: "small" },
+        StatusPill,
+        { tone: orderStatusTone(row.order_status) },
         { default: () => orderStatusLabel(row.order_status) },
       ),
   },
@@ -452,8 +455,8 @@ const columns = computed<DataTableColumns<AdminOrder>>(() => [
     width: 130,
     render: (row) =>
       h(
-        NTag,
-        { type: callbackStatusType(row.callback_status), size: "small" },
+        StatusPill,
+        { tone: callbackStatusTone(row.callback_status) },
         { default: () => callbackStatusLabel(row.callback_status) },
       ),
   },
@@ -644,7 +647,7 @@ function renderUserButton(userId: number, userEmail: string) {
     {
       text: true,
       type: "primary",
-      class: "order-user-link",
+      class: ["order-user-link", "user-link"],
       onClick: () => openUserInfo(userId),
     },
     {
@@ -686,16 +689,16 @@ function orderStatusLabel(value: OrderStatus): string {
   return labels[value];
 }
 
-/** 订单状态标签颜色。 */
-function orderStatusType(value: OrderStatus): TagType {
-  const types: Record<OrderStatus, TagType> = {
+/** 订单状态语义色。 */
+function orderStatusTone(value: OrderStatus): StatusTone {
+  const tones: Record<OrderStatus, StatusTone> = {
     1: "warning",
     2: "success",
-    3: "default",
+    3: "neutral",
     4: "info",
-    5: "error",
+    5: "danger",
   };
-  return types[value];
+  return tones[value];
 }
 
 /** 回调状态标签文案。 */
@@ -710,16 +713,16 @@ function callbackStatusLabel(value: CallbackStatus): string {
   return labels[value];
 }
 
-/** 回调状态标签颜色。 */
-function callbackStatusType(value: CallbackStatus): TagType {
-  const types: Record<CallbackStatus, TagType> = {
-    1: "default",
+/** 回调状态语义色。 */
+function callbackStatusTone(value: CallbackStatus): StatusTone {
+  const tones: Record<CallbackStatus, StatusTone> = {
+    1: "neutral",
     2: "warning",
     3: "success",
-    4: "error",
-    5: "error",
+    4: "danger",
+    5: "danger",
   };
-  return types[value];
+  return tones[value];
 }
 
 /** 格式化 6 位精度金额。 */
@@ -783,9 +786,7 @@ onMounted(() => {
 }
 
 .orders-filter :deep(.n-form-item-label) {
-  color: #4d4d4d;
-  font-size: 14px;
-  line-height: 20px;
+  /* 字号/字重/颜色走 global.css 基线收口（12px/500），此处只保留不换行的布局约束 */
   white-space: nowrap;
 }
 

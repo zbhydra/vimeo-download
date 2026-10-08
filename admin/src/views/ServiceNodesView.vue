@@ -11,9 +11,9 @@
     <NCard :title="t('serviceNodes.title')">
       <template #header-extra>
         <NSpace :size="8">
-          <NTag :type="healthyBusinessCount > 0 ? 'success' : 'warning'" size="small">
+          <StatusPill :tone="healthyBusinessCount > 0 ? 'success' : 'warning'">
             {{ t("serviceNodes.healthyBusinessCount", { count: healthyBusinessCount }) }}
-          </NTag>
+          </StatusPill>
           <NButton :loading="loading" @click="loadNodes">
             {{ t("common.refresh") }}
           </NButton>
@@ -38,6 +38,7 @@
         :loading="loading"
         :row-key="(row: ServiceNode) => row.node_id"
         :pagination="{ pageSize: 50 }"
+        :scroll-x="SERVICE_NODES_TABLE_SCROLL_X"
         :bordered="false"
         striped
       />
@@ -121,7 +122,6 @@ import {
   NSelect,
   NSpace,
   NSwitch,
-  NTag,
   NTooltip,
   useMessage,
   type DataTableColumns,
@@ -147,6 +147,7 @@ import {
   getNodeNetworkRate,
   type NodeNetworkRate,
 } from "@/api/node-monitor";
+import StatusPill, { type StatusTone } from "@/components/StatusPill.vue";
 import { formatAdminTimeSeconds } from "@/utils/time";
 import { useViewport } from "@/composables/useViewport";
 
@@ -172,6 +173,27 @@ const SERVICE_NODE_MAX_WEIGHT = 1000;
 /** 当前速率刷新间隔，与后端本机监控 5 秒采样窗口保持一致。 */
 const NETWORK_RATE_REFRESH_INTERVAL_MS = 5000;
 
+/** 列宽定义（单一来源），表格横向滚动宽度按此合计（tech-视觉基线 §3：宽表必须传 scroll-x）。 */
+const COLUMN_WIDTH = {
+  id: 70,
+  nodeType: 120,
+  name: 150,
+  region: 100,
+  publicBaseUrl: 230,
+  enabled: 90,
+  health: 150,
+  networkRate: 170,
+  version: 130,
+  updatedAt: 170,
+  operation: 220,
+} as const;
+
+/** 表格横向滚动宽度 = 各列 width/minWidth 合计（当前 1600）。 */
+const SERVICE_NODES_TABLE_SCROLL_X = Object.values(COLUMN_WIDTH).reduce(
+  (sum, width) => sum + width,
+  0,
+);
+
 const form = reactive<ServiceNodeWritePayload>({
   node_type: 2,
   name: "",
@@ -187,75 +209,72 @@ const nodeTypeOptions = computed<SelectOption[]>(() => [
   { label: t("serviceNodes.typeDownload"), value: 2 },
 ]);
 
-/** Naive UI NTag 支持的状态颜色集合。 */
-type TagType = "success" | "error" | "warning" | "default" | "info";
-
 const columns = computed<DataTableColumns<ServiceNode>>(() => [
-  { title: "ID", key: "node_id", width: 70 },
+  { title: "ID", key: "node_id", width: COLUMN_WIDTH.id },
   {
     title: t("serviceNodes.nodeType"),
     key: "node_type",
-    width: 120,
+    width: COLUMN_WIDTH.nodeType,
     render: (row) =>
       h(
-        NTag,
-        { size: "small", type: row.node_type === 1 ? "info" : "success" },
+        StatusPill,
+        { tone: row.node_type === 1 ? "info" : "success" },
         { default: () => nodeTypeLabel(row.node_type) },
       ),
   },
   {
     title: t("serviceNodes.name"),
     key: "name",
-    minWidth: 150,
+    minWidth: COLUMN_WIDTH.name,
     render: (row) => h(NEllipsis, { tooltip: true }, { default: () => row.name }),
   },
-  { title: t("serviceNodes.region"), key: "region", width: 100 },
+  { title: t("serviceNodes.region"), key: "region", width: COLUMN_WIDTH.region },
   {
     title: t("serviceNodes.publicBaseUrl"),
     key: "public_base_url",
-    minWidth: 230,
+    minWidth: COLUMN_WIDTH.publicBaseUrl,
     render: (row) =>
       h(NEllipsis, { tooltip: true }, { default: () => row.public_base_url }),
   },
   {
     title: t("serviceNodes.enabled"),
     key: "enabled",
-    width: 90,
+    width: COLUMN_WIDTH.enabled,
     render: (row) =>
       h(
-        NTag,
-        { size: "small", type: row.enabled ? "success" : "default" },
+        StatusPill,
+        { tone: row.enabled ? "success" : "neutral" },
         { default: () => (row.enabled ? t("common.yes") : t("common.no")) },
       ),
   },
   {
     title: t("serviceNodes.health"),
     key: "last_health_status",
-    width: 150,
+    width: COLUMN_WIDTH.health,
     render: renderHealth,
   },
   {
     title: t("serviceNodes.networkRate"),
     key: "network_rate",
-    width: 170,
+    width: COLUMN_WIDTH.networkRate,
     render: renderNetworkRate,
   },
   {
     title: t("serviceNodes.version"),
     key: "version",
-    width: 130,
+    width: COLUMN_WIDTH.version,
     render: (row) => row.version || "-",
   },
   {
     title: t("serviceNodes.updatedAt"),
     key: "updated_at",
-    width: 170,
+    width: COLUMN_WIDTH.updatedAt,
     render: (row) => formatUnix(row.updated_at),
   },
   {
     title: t("serviceNodes.operation"),
     key: "operation",
-    width: 220,
+    width: COLUMN_WIDTH.operation,
     // 移动端不固定操作列，避免固定列挤占表格横向滚动区域
     fixed: isMobile.value ? undefined : "right",
     render: renderActions,
@@ -266,10 +285,11 @@ function nodeTypeLabel(value: ServiceNodeType): string {
   return value === 1 ? t("serviceNodes.typeBusiness") : t("serviceNodes.typeDownload");
 }
 
-function healthTag(value: number): TagType {
+/** 健康状态语义色：1=健康，2=异常，其余未知。 */
+function healthTone(value: number): StatusTone {
   if (value === 1) return "success";
-  if (value === 2) return "error";
-  return "default";
+  if (value === 2) return "danger";
+  return "neutral";
 }
 
 function healthLabel(value: number): string {
@@ -284,8 +304,8 @@ function formatUnix(value: number | null): string {
 
 function renderHealth(row: ServiceNode) {
   const tag = h(
-    NTag,
-    { size: "small", type: healthTag(row.last_health_status) },
+    StatusPill,
+    { tone: healthTone(row.last_health_status) },
     { default: () => healthLabel(row.last_health_status) },
   );
   if (!row.last_error) {
@@ -335,7 +355,8 @@ function renderActions(row: ServiceNode) {
           {
             size: "small",
             tertiary: true,
-            type: row.enabled ? "warning" : "primary",
+            // 基线 §3 按钮语义：红（error）=删除/停用类
+            type: row.enabled ? "error" : "primary",
             onClick: () => handleToggleEnabled(row),
           },
           { default: () => (row.enabled ? t("serviceNodes.disable") : t("serviceNodes.enable")) },

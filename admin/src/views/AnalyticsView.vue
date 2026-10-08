@@ -418,7 +418,7 @@ function renderUserButton(userId: number) {
     {
       text: true,
       type: "primary",
-      class: "analytics-user-link",
+      class: ["analytics-user-link", "user-link"],
       onClick: () => openUserInfo(userId),
     },
     { default: () => userId },
