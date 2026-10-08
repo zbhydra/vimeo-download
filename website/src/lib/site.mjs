@@ -8,9 +8,9 @@
  *
  * 用 `.mjs` 而不是 `.ts`：Astro 配置文件只能直接 import 纯 ESM 模块。
  *
- * TODO(待替换): Chrome 商店地址、官方 X 账号仍是占位值，上线前必须替换。
+ * TODO(待替换): 官方 X 账号仍是占位值，上线前必须替换。
  * - `SITE_ORIGIN` / `SITE_HOST`：生产站点域名已统一为 vimeodownloader.app。
- * - `CHROME_WEB_STORE_URL`：Vimeo 插件通过商店审核后，替换成真实 listing 地址。
+ * - `CHROME_WEB_STORE_URL`：Vimeo 插件的正式 listing 地址。
  * - `OFFICIAL_X_HANDLE` / `OFFICIAL_X_URL`：官方 X 账号确定为 Vimeo 产品账号后替换。
  * 替换点仅此文件（部署侧 nginx 与 .env 见各自注释），改完即可全站生效。
  */
@@ -41,4 +41,4 @@ export const OFFICIAL_X_URL = 'https://x.com/VimeoDownloader'
 
 /** Chrome Web Store 插件详情页；`/reviews` 后缀即评价页。 */
 export const CHROME_WEB_STORE_URL =
-  'https://chromewebstore.google.com/detail/vimeo-video-downloader/PLACEHOLDER_EXTENSION_ID'
+  'https://chromewebstore.google.com/detail/vimeo-downloader-download/joalfalamongfmejacciadcpdeahblai'
