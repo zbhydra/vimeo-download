@@ -20,8 +20,10 @@
  *
  * 断言口径：
  * - 布局壳无横向溢出：documentElement / body 的 scrollWidth ≤ 视口宽 + 1px 舍入容差；
- * - 横滚发生在表格容器内：.n-data-table 子树内存在 scrollWidth > clientWidth 的
+ * - 平板/桌面横滚发生在表格容器内：.n-data-table 子树内存在 scrollWidth > clientWidth 的
  *   滚动容器（即只有表格内部出现横滚，壳不再溢出）；
+ * - 手机（390）表格记录卡片化（tech-视觉基线 §4.2）：不再断言表格内横滚，改为断言
+ *   .record-card 记录卡片可见且布局壳无横向溢出；
  * - 平板（820）：侧栏走 NLayoutSider 折叠态——宽 64px（collapsed-width）、
  *   存在 n-layout-sider--collapsed / n-menu--collapsed 折叠类（cssr cM('collapsed')）、
  *   无 n-layout-toggle-button 手动触发钮（show-trigger=!isTablet）；
@@ -370,7 +372,7 @@ test.describe("响应式收口（真实后端）", () => {
     await expect(drawer).toHaveCount(0);
   });
 
-  test("390 手机：抽屉导航可达，布局壳无溢出且表格容器内横滚，详情抽屉全宽可开关", async ({
+  test("390 手机：抽屉导航可达，记录卡片可见无横向溢出，详情抽屉全宽可开关", async ({
     page,
   }) => {
     await page.setViewportSize(VIEWPORTS.mobile);
@@ -392,16 +394,18 @@ test.describe("响应式收口（真实后端）", () => {
     await expect(page).toHaveURL("/orders");
     await expect(drawer).toHaveCount(0);
 
+    // 表格记录卡片化（tech-视觉基线 §4.2）：卡片可见，布局壳无横向溢出
+    await expect(page.locator(".record-card").first()).toBeVisible();
     await expectNoShellHorizontalOverflow(page);
 
     await page.goto("/service-nodes");
+    await expect(page.locator(".record-card").first()).toBeVisible();
     await expectNoShellHorizontalOverflow(page);
-    await expectTableScrollsInternally(page);
 
     await page.goto("/");
     await expectNoShellHorizontalOverflow(page);
 
-    // 详情抽屉：手机全宽（100vw）不溢出，可开可关
+    // 详情抽屉：手机全宽（100vw）不溢出，可开可关（操作按钮在卡片底部操作区）
     await page.goto("/orders");
     const viewButton = page.getByRole("button", { name: "查看" }).first();
     await expect(viewButton).toBeVisible();

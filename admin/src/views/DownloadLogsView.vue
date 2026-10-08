@@ -15,7 +15,24 @@
         </NButton>
       </template>
 
+      <!-- 手机（<768）：记录卡片化，不再横滚表格（tech-视觉基线 §4.2） -->
+      <template v-if="isMobile">
+        <RecordCardList
+          :columns="columns"
+          :data="rows"
+          :loading="loading"
+          :row-key="(row: WebDownloadLog) => row.log_id"
+        />
+        <NPagination
+          class="card-pagination"
+          :page="pagination.page"
+          :page-size="pagination.pageSize"
+          :item-count="pagination.itemCount"
+          @update:page="handleCardPageChange"
+        />
+      </template>
       <NDataTable
+        v-else
         :columns="columns"
         :data="rows"
         :loading="loading"
@@ -41,6 +58,7 @@ import {
   NCard,
   NDataTable,
   NEllipsis,
+  NPagination,
   useMessage,
   type DataTableColumns,
   type PaginationProps,
@@ -51,7 +69,9 @@ import {
   type WebDownloadLogStatus,
 } from "@/api/mark-log";
 import UserInfoDialog from "@/components/UserInfoDialog.vue";
+import RecordCardList from "@/components/RecordCardList.vue";
 import StatusPill, { type StatusTone } from "@/components/StatusPill.vue";
+import { useViewport } from "@/composables/useViewport";
 import { formatAdminTimeMs } from "@/utils/time";
 
 interface UserInfoDialogExpose {
@@ -68,6 +88,7 @@ interface WebDownloadLogStatusMeta {
 
 const { t } = useI18n();
 const message = useMessage();
+const { isMobile } = useViewport();
 
 const loading = ref(false);
 const rows = ref<WebDownloadLog[]>([]);
@@ -196,6 +217,12 @@ function handlePageChange(page: number) {
   void loadLogs();
 }
 
+/** 手机卡片分页：翻页后滚回列表顶部（卡片形态无表格内滚动容器）。 */
+function handleCardPageChange(page: number) {
+  handlePageChange(page);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
 /** 渲染下载状态标签。 */
 function renderStatus(row: WebDownloadLog) {
   const meta = statusMeta[row.status];
@@ -263,3 +290,12 @@ onMounted(() => {
   void loadLogs();
 });
 </script>
+
+<style scoped>
+/* 手机卡片分页条 */
+.card-pagination {
+  margin-top: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+</style>

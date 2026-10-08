@@ -118,6 +118,7 @@
 | 按钮 | 语义约定：绿=主推进（查询/保存/新增），白底描边=次要/取消，红（error）=删除/停用类。不封装组件，直接 NButton |
 | 卡片 | NCard：白底、无边框、20px 圆角、软阴影 |
 | 表格 | NDataTable：13px、表头 muted/500、行内状态用 StatusPill；单元格上下 padding 10px（§2 global.css 收口）；宽表必须传 `scroll-x` |
+| RecordCardList | 手机（<768）记录卡片列表：每条记录一张白卡（`--admin-card` 底、20px 圆角、§1.4 软阴影、内边距 12~16px）；字段纵向 label（12px/500/`--admin-text-secondary`，即表单 label 规格）+ value（13px/`--admin-ink`，左对齐），行间 `--admin-divider` 分隔；操作列（actionKeys）不进标签-值列表，render 输出统一渲染到卡底操作区（左对齐、间距 8px、divider 分隔）；列定义直接复用各视图 `DataTableColumns`（单一来源），render 单元格（StatusPill/链接/按钮/NEllipsis）原样复用；空数据用 NEmpty（`common.noData`） |
 | 弹窗/抽屉 | NModal（preset card/dialog）22px 圆角、宽 `min(上限, 100vw-32px)`；NDrawer 详情类移动端全宽；浮层圆角卡片感 + 关闭钮 |
 | 表单 | label 12px/500/`#5c5e63`；输入高 40px 默认；placeholder 用示例值约定（`e.g.` 风格沿用现有文案） |
 
@@ -127,26 +128,29 @@
 
 | 档 | 范围 | 形态 |
 | --- | --- | --- |
-| 手机 | `< 768`（`MOBILE_BREAKPOINT`，沿用） | NDrawer 导航抽屉、KPI 单列流、筛选单列、表格横滚、详情浮层全宽 |
+| 手机 | `< 768`（`MOBILE_BREAKPOINT`，沿用） | NDrawer 导航抽屉、KPI 单列流、筛选单列、表格记录卡片化（RecordCardList，不再横滚表格）、详情浮层全宽 |
 | 平板 | `768 ~ 1023`（新增 `TABLET_BREAKPOINT = 1024`） | **桌面骨架 + 侧栏自动收窄为 64px 图标轨**（NMenu 内置折叠态，无平板专属导航）；内容区流式，表格横滚 |
 | 桌面 | `≥ 1024` | 侧栏 220px 可手动折叠 |
 
-规则：布局形态切换（侧栏折叠、抽屉、label-placement、浮层形态）只从 `useViewport` 取值，禁止视图自建 matchMedia；纯内容网格（如筛选 grid 降列）可用局部 media query，断点值不强制对齐。CSS 媒体查询与常量保持一致（767px / 1023px）。
+规则：布局形态切换（侧栏折叠、抽屉、label-placement、表格卡片化、浮层形态）只从 `useViewport` 取值，禁止视图自建 matchMedia；纯内容网格（如筛选 grid 降列）可用局部 media query，断点值不强制对齐。CSS 媒体查询与常量保持一致（767px / 1023px）。
 
 ### 4.2 各视图响应式规则
+
+**表格记录卡片化（手机档统一规则，`isMobile` 分支）**：Dashboard / Orders / ServiceNodes / DownloadLogs / MarkLogDiagnostics / Analytics 的 5 个 tab 表 / UserInfoDialog 的 3 个 tab 表，手机（<768）一律渲染 `RecordCardList` 记录卡片（§3），不再横滚 NDataTable；带 remote 分页的视图在卡片列表下方用 NPagination 接同一分页状态（翻页滚回列表顶部），Analytics/Dashboard 无分页照常全量卡片；操作列经 `actionKeys` 渲染到卡底操作区。平板/桌面（≥768）保持 NDataTable + `scroll-x` 横滚不变（含 fixed 列）。
 
 | 视图 | 规则 |
 | --- | --- |
 | AdminLayout | 平板 `collapsed = true` 且隐藏折叠触发钮；手机沿用 NDrawer(270px) |
-| Dashboard | 统计卡 `repeat(auto-fit, minmax(220px,1fr))`（已有）；动态列表格补 `scroll-x`（按列宽合计） |
-| Orders | 详情 NDrawer 宽度 `isMobile ? '100vw' : 720`（修复固定 720 在手机溢出）；筛选 grid 已有 960/560 降列，保留 |
-| ServiceNodes | 11 列表格补 `scroll-x`（列宽合计 ≈1600）；编辑弹窗 `calc(100vw-32px)` 上限已有，保留 |
-| DownloadLogs / MarkLogDiagnostics | `scroll-x` 已有（1810/1400）；状态列换 StatusPill 后不换行 |
-| Analytics | 摘要 grid 已有 960/560 降列；宽表 3/5 已传 scroll-x（资源 900 / 每日充值 960 / 商品统计 1120），下载排名（4 列）与用户地理（2 列）列少无溢出未传；保留 |
+| 全部表格视图（见上） | 手机：RecordCardList 记录卡片（不再横滚表格）；平板/桌面：NDataTable + scroll-x 横滚 |
+| Dashboard | 手机卡片无分页（桌面表格也 `pagination=false`）；统计卡 `repeat(auto-fit, minmax(220px,1fr))`（已有）；桌面动态列表格补 `scroll-x`（按列宽合计） |
+| Orders | 手机卡片 + NPagination（含每页数量切换）；详情 NDrawer 宽度 `isMobile ? '100vw' : 720`（修复固定 720 在手机溢出）；筛选 grid 已有 960/560 降列，保留 |
+| ServiceNodes | 手机卡片客户端分页（pageSize 50，与桌面表格同口径）；编辑弹窗 `calc(100vw-32px)` 上限已有，保留 |
+| DownloadLogs / MarkLogDiagnostics | 手机卡片 + NPagination（remote 同源）；桌面 `scroll-x` 已有（1810/1400）；状态列换 StatusPill 后不换行 |
+| Analytics | 手机 5 个 tab 表全部卡片化（无分页）；摘要 grid 已有 960/560 降列；宽表 3/5 已传 scroll-x（资源 900 / 每日充值 960 / 商品统计 1120），下载排名（4 列）与用户地理（2 列）列少无溢出未传；保留 |
 | SystemSettings | tab `isMobile ? 'line' : 'segment'` 已有；页面 max-width 960 保留 |
-| UserInfoDialog | `min(960px, 100vw-32px)` 已有；描述列数按 isMobile 降列已有 |
+| UserInfoDialog | `min(960px, 100vw-32px)` 已有；描述列数按 isMobile 降列已有；手机 3 个 tab 表卡片化 + NPagination（remote 同源，翻页滚回弹窗内容顶部） |
 | Login | 卡片 `min(400px,100%)` 已有，无需额外适配 |
 
 ### 4.3 验收视口
 
-桌面 1280×800、平板 820×1180（iPad Air 级）、手机 390×844。三视口下：布局壳无横向溢出（横滚只允许出现在表格容器内）、导航可达、浮层完整可关。
+桌面 1280×800、平板 820×1180（iPad Air 级）、手机 390×844。三视口下：布局壳无横向溢出（平板/桌面横滚只允许出现在表格容器内，手机表格卡片化后无横滚）、导航可达、浮层完整可关。

@@ -126,7 +126,28 @@
         </div>
       </NForm>
 
+      <!-- 手机（<768）：记录卡片化，操作列渲染到卡底（tech-视觉基线 §4.2） -->
+      <template v-if="isMobile">
+        <RecordCardList
+          :columns="columns"
+          :data="rows"
+          :loading="loading"
+          :action-keys="['operation']"
+          :row-key="(row: AdminOrder) => row.order_no"
+        />
+        <NPagination
+          class="card-pagination"
+          :page="pagination.page"
+          :page-size="pagination.pageSize"
+          :item-count="pagination.itemCount"
+          :page-sizes="pagination.pageSizes"
+          :show-size-picker="pagination.showSizePicker"
+          @update:page="handleCardPageChange"
+          @update:page-size="handleCardPageSizeChange"
+        />
+      </template>
       <NDataTable
+        v-else
         :columns="columns"
         :data="rows"
         :loading="loading"
@@ -286,6 +307,7 @@ import {
   NIcon,
   NInput,
   NInputNumber,
+  NPagination,
   NSelect,
   NSpace,
   NSpin,
@@ -310,6 +332,7 @@ import {
   type OrderStatus,
 } from "@/api/orders";
 import UserInfoDialog from "@/components/UserInfoDialog.vue";
+import RecordCardList from "@/components/RecordCardList.vue";
 import StatusPill, { type StatusTone } from "@/components/StatusPill.vue";
 import { useViewport } from "@/composables/useViewport";
 import { ADMIN_DATETIME_FORMAT, formatAdminTimeMs } from "@/utils/time";
@@ -556,6 +579,18 @@ function handlePageSizeChange(pageSize: number) {
   pagination.pageSize = pageSize;
   pagination.page = 1;
   void loadOrders();
+}
+
+/** 手机卡片分页：翻页后滚回列表顶部。 */
+function handleCardPageChange(page: number) {
+  handlePageChange(page);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+/** 手机卡片切换每页数量。 */
+function handleCardPageSizeChange(pageSize: number) {
+  handlePageSizeChange(pageSize);
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 /** 打开详情抽屉。 */
@@ -860,5 +895,12 @@ onMounted(() => {
   .span-2 {
     grid-column: span 1;
   }
+}
+
+/* 手机卡片分页条 */
+.card-pagination {
+  margin-top: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 </style>

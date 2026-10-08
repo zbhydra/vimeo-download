@@ -1,5 +1,18 @@
 # 008 · 管理后台 · 变更记录
 
+## 2026-10-08 手机端表格记录卡片化（RecordCardList）
+
+**Why**：用户反馈手机端把桌面表格横向滚动塞进屏幕是桌面端设计思路，明确否定；手机上每条记录应渲染为一张纵向「标签-值」卡片，字段全保留、操作按钮放卡底。
+
+**变更**：
+
+- 新增 `RecordCardList.vue`（`generic="T"`）：手机（<768，仅 `useViewport().isMobile` 触发）把 NDataTable 宽表横滚替换为纵向记录卡片——白卡 `--admin-card`/20px 圆角/§1.4 软阴影，label 12px/500 + value 13px，行间 `--admin-divider` 分隔；列定义直接复用视图现有 `DataTableColumns`（单一来源），render 单元格（StatusPill/用户链接/NEllipsis/复制按钮）原样复用，无 render 的字段字符串化兜底（空值显示 muted `-`）；`actionKeys` 列不进标签-值列表、统一渲染到卡底操作区（左对齐、间距 8px）；空数据 NEmpty。
+- 七处接入（isMobile 分支，桌面/平板 NDataTable + scroll-x 完全不动）：DownloadLogs、MarkLogDiagnostics（操作列）、Orders（操作列 + 每页数量切换）、ServiceNodes（操作列，客户端分页 pageSize 50 与桌面同口径）、Dashboard（动态列无分页）、Analytics 5 个 tab 表、UserInfoDialog 3 个 tab 表。带 remote 分页的视图卡片列表下方用 NPagination 接同一分页状态，翻页滚回列表顶部（弹窗内滚回弹窗内容顶部）。
+- e2e 口径：`responsive.spec.ts` 手机 390 断言由「表格容器内横滚」改为「`.record-card` 可见 + 布局壳无横向溢出」；平板 820 / 桌面 1280 表格内横滚断言不变；其余 mock spec 均桌面视口不受影响。
+- 文档：`tech-视觉基线.md` §3 组件规格表新增 RecordCardList 行，§4.1/§4.2/§4.3 手机档统一改为「记录卡片（RecordCardList），不再横滚表格」。
+
+**边界确认**：不改桌面/平板表格行为、不新增依赖、不改 theme.ts/tokens.css 既有键值（组件只消费现有 `--admin-*` 变量）、不改后端；界面元素与接口契约无变化（纯展示形态切换）。
+
 ## 2026-10-08 admin 视觉重构为 Elera 基线并完成三视口响应式适配
 
 **Why**：admin 沿用组件库默认视觉（蓝 accent、卡片 1px 描边、偏大字号密度），与按参考方（Elera / Patient Flow）实测沉淀的 `tech-视觉基线.md` 设计合同不符；且手机视口下布局壳横向溢出、宽表无横滚约束、订单详情抽屉固定 720px 溢出。按基线整体换肤并补齐手机/平板适配。

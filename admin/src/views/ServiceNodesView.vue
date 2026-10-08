@@ -32,7 +32,27 @@
         {{ t("serviceNodes.noBusinessFallback") }}
       </NAlert>
 
+      <!-- 手机（<768）：记录卡片化，操作列渲染到卡底（tech-视觉基线 §4.2）；
+           与桌面表格同口径做客户端分页（pageSize 50） -->
+      <template v-if="isMobile">
+        <RecordCardList
+          :columns="columns"
+          :data="cardRows"
+          :loading="loading"
+          :action-keys="['operation']"
+          :row-key="(row: ServiceNode) => row.node_id"
+        />
+        <NPagination
+          class="card-pagination"
+          :page="cardPage"
+          :page-size="CARD_PAGE_SIZE"
+          :item-count="nodes.length"
+          :page-slot="5"
+          @update:page="handleCardPageChange"
+        />
+      </template>
       <NDataTable
+        v-else
         :columns="columns"
         :data="nodes"
         :loading="loading"
@@ -119,6 +139,7 @@ import {
   NInput,
   NInputNumber,
   NModal,
+  NPagination,
   NSelect,
   NSpace,
   NSwitch,
@@ -148,6 +169,7 @@ import {
   type NodeNetworkRate,
 } from "@/api/node-monitor";
 import StatusPill, { type StatusTone } from "@/components/StatusPill.vue";
+import RecordCardList from "@/components/RecordCardList.vue";
 import { formatAdminTimeSeconds } from "@/utils/time";
 import { useViewport } from "@/composables/useViewport";
 
@@ -193,6 +215,25 @@ const SERVICE_NODES_TABLE_SCROLL_X = Object.values(COLUMN_WIDTH).reduce(
   (sum, width) => sum + width,
   0,
 );
+
+/** 手机卡片列表的客户端分页大小，与桌面表格 `pageSize: 50` 同口径。 */
+const CARD_PAGE_SIZE = 50;
+
+/** 手机卡片当前页码（客户端分页，数据随 nodes 一起刷新）。 */
+const cardPage = ref(1);
+
+/** 手机卡片当前页数据：按页切片，页码越界时收敛到最后一页。 */
+const cardRows = computed<ServiceNode[]>(() => {
+  const pageCount = Math.max(1, Math.ceil(nodes.value.length / CARD_PAGE_SIZE));
+  const page = Math.min(cardPage.value, pageCount);
+  return nodes.value.slice((page - 1) * CARD_PAGE_SIZE, page * CARD_PAGE_SIZE);
+});
+
+/** 手机卡片翻页：滚回列表顶部。 */
+function handleCardPageChange(page: number) {
+  cardPage.value = page;
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
 
 const form = reactive<ServiceNodeWritePayload>({
   node_type: 2,
@@ -382,6 +423,11 @@ async function loadNodes() {
     const data = await getServiceNodes();
     nodes.value = data.nodes;
     healthyBusinessCount.value = data.healthy_business_count;
+    // 卡片客户端分页：列表收缩后页码收敛到有效范围
+    cardPage.value = Math.min(
+      cardPage.value,
+      Math.max(1, Math.ceil(data.nodes.length / CARD_PAGE_SIZE)),
+    );
     void loadNodeNetworkRates(data.nodes, ++networkRateLoadGeneration);
   } catch (error) {
     console.error("ServiceNodesView.loadNodes() 加载失败:", error);
@@ -583,6 +629,13 @@ onBeforeUnmount(() => {
 
 .node-alert {
   margin-bottom: 16px;
+}
+
+/* 手机卡片分页条 */
+.card-pagination {
+  margin-top: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
 .form-grid {

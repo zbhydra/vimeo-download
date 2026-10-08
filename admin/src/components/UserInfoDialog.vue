@@ -90,7 +90,27 @@
 
         <NTabs v-model:value="activeTab" type="line" animated @update:value="handleTabChange">
           <NTabPane name="downloads" :tab="t('userInfo.tabDownloads')">
+            <!-- 手机（<768）：记录卡片化（tech-视觉基线 §4.2） -->
+            <template v-if="isMobile">
+              <RecordCardList
+                :columns="downloadColumns"
+                :data="downloadRows"
+                :loading="downloadsLoading"
+                :row-key="(row: AdminUserDownloadRecord) => row.id"
+              />
+              <NPagination
+                class="user-info-pagination"
+                :page="downloadsPagination.page"
+                :page-size="downloadsPagination.pageSize"
+                :item-count="downloadsPagination.itemCount"
+                :page-sizes="downloadsPagination.pageSizes"
+                :show-size-picker="downloadsPagination.showSizePicker"
+                @update:page="handleDownloadsCardPageChange"
+                @update:page-size="handleDownloadsPageSizeChange"
+              />
+            </template>
             <NDataTable
+              v-else
               :columns="downloadColumns"
               :data="downloadRows"
               :loading="downloadsLoading"
@@ -106,7 +126,26 @@
           </NTabPane>
 
           <NTabPane name="credits" :tab="t('userInfo.tabCredits')">
+            <template v-if="isMobile">
+              <RecordCardList
+                :columns="creditColumns"
+                :data="creditRows"
+                :loading="creditsLoading"
+                :row-key="(row: AdminUserCreditRecord) => row.id"
+              />
+              <NPagination
+                class="user-info-pagination"
+                :page="creditsPagination.page"
+                :page-size="creditsPagination.pageSize"
+                :item-count="creditsPagination.itemCount"
+                :page-sizes="creditsPagination.pageSizes"
+                :show-size-picker="creditsPagination.showSizePicker"
+                @update:page="handleCreditsCardPageChange"
+                @update:page-size="handleCreditsPageSizeChange"
+              />
+            </template>
             <NDataTable
+              v-else
               :columns="creditColumns"
               :data="creditRows"
               :loading="creditsLoading"
@@ -122,7 +161,26 @@
           </NTabPane>
 
           <NTabPane name="orders" :tab="t('userInfo.tabOrders')">
+            <template v-if="isMobile">
+              <RecordCardList
+                :columns="orderColumns"
+                :data="orderRows"
+                :loading="ordersLoading"
+                :row-key="(row: AdminOrder) => row.order_no"
+              />
+              <NPagination
+                class="user-info-pagination"
+                :page="ordersPagination.page"
+                :page-size="ordersPagination.pageSize"
+                :item-count="ordersPagination.itemCount"
+                :page-sizes="ordersPagination.pageSizes"
+                :show-size-picker="ordersPagination.showSizePicker"
+                @update:page="handleOrdersCardPageChange"
+                @update:page-size="handleOrdersPageSizeChange"
+              />
+            </template>
             <NDataTable
+              v-else
               :columns="orderColumns"
               :data="orderRows"
               :loading="ordersLoading"
@@ -152,6 +210,7 @@ import {
   NDescriptionsItem,
   NEllipsis,
   NModal,
+  NPagination,
   NSpin,
   NTabPane,
   NTabs,
@@ -170,6 +229,7 @@ import {
   type AdminUserProfileData,
 } from "@/api/users";
 import type { AdminOrder, CallbackStatus, OrderStatus } from "@/api/orders";
+import RecordCardList from "@/components/RecordCardList.vue";
 import StatusPill, { type StatusTone } from "@/components/StatusPill.vue";
 import { formatAdminTimeMs } from "@/utils/time";
 import { useViewport } from "@/composables/useViewport";
@@ -523,6 +583,21 @@ function handleDownloadsPageSizeChange(pageSize: number) {
   void loadDownloads();
 }
 
+/** 手机卡片分页：翻页后把弹窗滚动容器滚回列表顶部。
+    弹窗内容高于视口时滚动发生在 naive modal 外层的 NScrollbar 容器上，
+    从弹窗根元素向上找最近的滚动容器。 */
+function scrollDialogContentToTop() {
+  const scrollContainer = document
+    .querySelector(".user-info-dialog")
+    ?.closest(".n-scrollbar-container");
+  scrollContainer?.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function handleDownloadsCardPageChange(page: number) {
+  handleDownloadsPageChange(page);
+  scrollDialogContentToTop();
+}
+
 function handleOrdersPageChange(page: number) {
   ordersPagination.page = page;
   void loadOrders();
@@ -539,10 +614,20 @@ function handleCreditsPageSizeChange(pageSize: number) {
   void loadCredits();
 }
 
+function handleCreditsCardPageChange(page: number) {
+  handleCreditsPageChange(page);
+  scrollDialogContentToTop();
+}
+
 function handleOrdersPageSizeChange(pageSize: number) {
   ordersPagination.pageSize = pageSize;
   ordersPagination.page = 1;
   void loadOrders();
+}
+
+function handleOrdersCardPageChange(page: number) {
+  handleOrdersPageChange(page);
+  scrollDialogContentToTop();
 }
 
 function resetDownloads() {
@@ -714,5 +799,12 @@ function callbackStatusTone(value: CallbackStatus): StatusTone {
 .user-info-muted {
   color: #667085;
   font-size: 12px;
+}
+
+/* 手机卡片分页条 */
+.user-info-pagination {
+  margin-top: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 </style>

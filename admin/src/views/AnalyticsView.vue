@@ -35,7 +35,15 @@
               </NSpace>
             </div>
           </template>
+          <!-- 手机（<768）：记录卡片化，不再横滚表格（tech-视觉基线 §4.2） -->
+          <RecordCardList
+            v-if="isMobile"
+            :columns="resourceColumns"
+            :data="resourceRows"
+            :loading="resourceLoading"
+          />
           <NDataTable
+            v-else
             :columns="resourceColumns"
             :data="resourceRows"
             :loading="resourceLoading"
@@ -63,7 +71,14 @@
               </NSpace>
             </div>
           </template>
+          <RecordCardList
+            v-if="isMobile"
+            :columns="topUsersColumns"
+            :data="topUsersRows"
+            :loading="topUsersLoading"
+          />
           <NDataTable
+            v-else
             :columns="topUsersColumns"
             :data="topUsersRows"
             :loading="topUsersLoading"
@@ -72,7 +87,7 @@
             striped
           />
           <NEmpty
-            v-if="!topUsersLoading && topUsersRows.length === 0"
+            v-if="!isMobile && !topUsersLoading && topUsersRows.length === 0"
             class="pane-empty"
             :description="t('analytics.empty')"
           />
@@ -119,7 +134,14 @@
               </NSpace>
             </div>
           </template>
+          <RecordCardList
+            v-if="isMobile"
+            :columns="geoColumns"
+            :data="geoRows"
+            :loading="geoLoading"
+          />
           <NDataTable
+            v-else
             :columns="geoColumns"
             :data="geoRows"
             :loading="geoLoading"
@@ -128,7 +150,7 @@
             striped
           />
           <NEmpty
-            v-if="!geoLoading && geoRows.length === 0"
+            v-if="!isMobile && !geoLoading && geoRows.length === 0"
             class="pane-empty"
             :description="t('analytics.empty')"
           />
@@ -155,7 +177,14 @@
               </NSpace>
             </div>
           </template>
+          <RecordCardList
+            v-if="isMobile"
+            :columns="dailyRechargeColumns"
+            :data="dailyRechargeRows"
+            :loading="dailyRechargeLoading"
+          />
           <NDataTable
+            v-else
             :columns="dailyRechargeColumns"
             :data="dailyRechargeRows"
             :loading="dailyRechargeLoading"
@@ -165,7 +194,7 @@
             striped
           />
           <NEmpty
-            v-if="!dailyRechargeLoading && dailyRechargeRows.length === 0"
+            v-if="!isMobile && !dailyRechargeLoading && dailyRechargeRows.length === 0"
             class="pane-empty"
             :description="t('analytics.empty')"
           />
@@ -192,7 +221,14 @@
               </NSpace>
             </div>
           </template>
+          <RecordCardList
+            v-if="isMobile"
+            :columns="productStatsColumns"
+            :data="productStatsRows"
+            :loading="productStatsLoading"
+          />
           <NDataTable
+            v-else
             :columns="productStatsColumns"
             :data="productStatsRows"
             :loading="productStatsLoading"
@@ -202,7 +238,7 @@
             striped
           />
           <NEmpty
-            v-if="!productStatsLoading && productStatsRows.length === 0"
+            v-if="!isMobile && !productStatsLoading && productStatsRows.length === 0"
             class="pane-empty"
             :description="t('analytics.empty')"
           />
@@ -229,6 +265,7 @@ import {
   type DataTableColumns,
 } from "naive-ui";
 import TimeRangePicker from "@/components/TimeRangePicker.vue";
+import RecordCardList from "@/components/RecordCardList.vue";
 import {
   getDailyRecharge,
   getDownloadSummary,
@@ -246,6 +283,7 @@ import {
 } from "@/api/analytics";
 import UserInfoDialog from "@/components/UserInfoDialog.vue";
 import { formatAdminDateWithWeekday } from "@/utils/time";
+import { useViewport } from "@/composables/useViewport";
 
 interface UserInfoDialogExpose {
   /** 打开用户信息弹窗。 */
@@ -254,6 +292,7 @@ interface UserInfoDialogExpose {
 
 const { t, locale } = useI18n();
 const message = useMessage();
+const { isMobile } = useViewport();
 const userInfoDialogRef = ref<UserInfoDialogExpose | null>(null);
 
 /** 毫秒时间戳二元组或空。 */

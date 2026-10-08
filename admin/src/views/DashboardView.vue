@@ -14,9 +14,11 @@
       </NCard>
     </div>
 
-    <!-- 数据表格 -->
+    <!-- 数据表格：手机记录卡片化，不再横滚表格（tech-视觉基线 §4.2） -->
     <NCard :title="t('layout.dashboard')" style="margin-top: 16px">
+      <RecordCardList v-if="isMobile" :columns="columns" :data="rows" :loading="loading" />
       <NDataTable
+        v-else
         :columns="columns"
         :data="rows"
         :loading="loading"
@@ -39,6 +41,7 @@ import {
   type DashboardRow,
   type DashboardSummary,
 } from "@/api/dashboard";
+import RecordCardList from "@/components/RecordCardList.vue";
 import { useViewport } from "@/composables/useViewport";
 
 const { t } = useI18n();

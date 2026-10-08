@@ -15,7 +15,25 @@
         </NButton>
       </template>
 
+      <!-- 手机（<768）：记录卡片化，操作列渲染到卡底（tech-视觉基线 §4.2） -->
+      <template v-if="isMobile">
+        <RecordCardList
+          :columns="columns"
+          :data="rows"
+          :loading="loading"
+          :action-keys="['operation']"
+          :row-key="(row: WebParseFailedLogRow) => row.log_id"
+        />
+        <NPagination
+          class="card-pagination"
+          :page="pagination.page"
+          :page-size="pagination.pageSize"
+          :item-count="pagination.itemCount"
+          @update:page="handleCardPageChange"
+        />
+      </template>
       <NDataTable
+        v-else
         :columns="columns"
         :data="rows"
         :loading="loading"
@@ -41,6 +59,7 @@ import {
   NCard,
   NDataTable,
   NEllipsis,
+  NPagination,
   NSpace,
   NText,
   useMessage,
@@ -54,6 +73,7 @@ import {
   type WebParseFailedLog,
 } from "@/api/mark-log";
 import UserInfoDialog from "@/components/UserInfoDialog.vue";
+import RecordCardList from "@/components/RecordCardList.vue";
 import StatusPill from "@/components/StatusPill.vue";
 import { useViewport } from "@/composables/useViewport";
 import { formatAdminTimeMs } from "@/utils/time";
@@ -179,6 +199,12 @@ function handlePageChange(page: number) {
   void loadLogs();
 }
 
+/** 手机卡片分页：翻页后滚回列表顶部。 */
+function handleCardPageChange(page: number) {
+  handlePageChange(page);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
 /** 对单条日志重新解析。 */
 async function handleRetryParse(row: WebParseFailedLogRow) {
   row.parsing = true;
@@ -255,3 +281,12 @@ onMounted(() => {
   void loadLogs();
 });
 </script>
+
+<style scoped>
+/* 手机卡片分页条 */
+.card-pagination {
+  margin-top: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+</style>
