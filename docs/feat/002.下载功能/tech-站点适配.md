@@ -88,7 +88,7 @@
 | --- | --- |
 | 平台识别 | `vimeo.com`、`www.vimeo.com`、`player.vimeo.com` |
 | 规范链接 | 由链接中的数字 video id 归一化到 `https://vimeo.com/{id}` |
-| 解析执行 | website/backend 走**匿名 Playwright**:用 `browser_runtime.ensure_browser()` 开新 context 打开规范链接，在页面上下文内捕获播放器 config 与其 DASH 清单；**不使用 yt-dlp** |
+| 解析执行 | website/backend 走**匿名 Playwright**:用 `browser_runtime.ensure_browser()` 开新 context 打开 Vimeo 播放器页，在页面上下文内捕获播放器 config 与其 DASH 清单；规范链接仍用于响应身份；**不使用 yt-dlp** |
 | 资源形态 | 单视频；progressive MP4 或 DASH 双轨(`direct` / `client_mux`) |
 | 元数据缓存 | 解析结果缓存 30 分钟(`ex=1800`) |
 | 解析限流 | 平台共性 3 次/10 秒 per user/device |

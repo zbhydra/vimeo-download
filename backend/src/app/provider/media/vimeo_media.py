@@ -130,6 +130,19 @@ def _download_rate_limit_identifier(claims: MediaDownloadTokenClaims) -> str:
     return claims.device_id or claims.issued_ip
 
 
+def _player_page_url(canonical: str, video_id: int) -> str:
+    """打开 Vimeo 播放器页，避开主站可能返回的 Cloudflare challenge 页面。"""
+    return urlunsplit(
+        (
+            "https",
+            "player.vimeo.com",
+            f"/video/{video_id}",
+            urlsplit(canonical).query,
+            "",
+        )
+    )
+
+
 class VimeoMedia(BaseMedia):
     """公开 Vimeo 页面匿名解析与 direct/client_mux 材料生成。"""
 
@@ -324,6 +337,7 @@ class VimeoMedia(BaseMedia):
         self, canonical: str, original: str, source_id: str | None
     ) -> tuple[MediaParseResponse, JsonDownloadResult]:
         video_id = int(re.findall(r"(?:^|/)(\d+)(?=/|$)", urlsplit(canonical).path)[-1])
+        player_url = _player_page_url(canonical, video_id)
         browser = await ensure_browser(
             error_code=CommonCode.VIMEO_PARSE_FAILED, log_prefix="vimeo"
         )
@@ -452,10 +466,18 @@ class VimeoMedia(BaseMedia):
             )
             page.on("response", capture)
             navigation = await page.goto(
-                canonical, wait_until="domcontentloaded", timeout=45000
+                player_url, wait_until="domcontentloaded", timeout=45000
             )
             page_status = navigation.status if navigation is not None else None
             page_title = await page.title()
+            if await page.locator("#challenge-stage").count():
+                raise AppCommonException(
+                    CommonCode.MEDIA_PARSE_NODE_UNAVAILABLE,
+                    ext_msg=(
+                        "vimeo_page: Cloudflare challenge blocked player config, "
+                        f"video_id={video_id}, status={page_status}"
+                    ),
+                )
             inline = await page.evaluate("window.playerConfig ?? null")
             if inline is not None and not config_ready.done():
                 config = _Config.model_validate(inline)

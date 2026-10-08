@@ -57,6 +57,10 @@ def test_vimeo_links_normalize_to_canonical():
         provider._compute_canonical_link("https://www.vimeo.com/1194296700")
         == "https://vimeo.com/1194296700"
     )
+    assert (
+        svc._player_page_url("https://vimeo.com/1194296700?h=abc", 1194296700)
+        == "https://player.vimeo.com/video/1194296700?h=abc"
+    )
 
 
 def test_vimeo_unsupported_host_raises_parse_failed():
