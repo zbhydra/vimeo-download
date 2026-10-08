@@ -122,6 +122,7 @@ import {
   MenuOutlined,
   SettingOutlined,
   ProfileOutlined,
+  ApiOutlined,
 } from "@vicons/antd";
 import { useAuthStore } from "@/stores/auth";
 import { useViewport } from "@/composables/useViewport";
@@ -161,6 +162,7 @@ const MENU_ITEMS = {
   MarkLogDiagnostics: { path: "/mark-logs", titleKey: "layout.markLogDiagnostics", icon: FileSearchOutlined },
   Analytics: { path: "/analytics", titleKey: "layout.analytics", icon: BarChartOutlined },
   SystemSettings: { path: "/system-settings", titleKey: "layout.systemSettings", icon: SettingOutlined },
+  ProxyPool: { path: "/proxy-pool", titleKey: "layout.proxyPool", icon: ApiOutlined },
 };
 
 /** 侧栏三分组：组 key、组标签 i18n key 与组内菜单顺序（条目统一取 MENU_ITEMS）。 */
@@ -171,7 +173,7 @@ const MENU_GROUPS: Array<{
 }> = [
   { key: "group-ops", labelKey: "layout.groupOps", items: ["Dashboard", "ServiceNodes", "Orders"] },
   { key: "group-data", labelKey: "layout.groupData", items: ["DownloadLogs", "MarkLogDiagnostics", "Analytics"] },
-  { key: "group-config", labelKey: "layout.groupConfig", items: ["SystemSettings"] },
+  { key: "group-config", labelKey: "layout.groupConfig", items: ["SystemSettings", "ProxyPool"] },
 ];
 
 function isMenuItemKey(key: string): key is keyof typeof MENU_ITEMS {

@@ -10,6 +10,7 @@
  *   /orders      → AdminLayout > OrdersView（需鉴权）
  *   /analytics   → AdminLayout > AnalyticsView（需鉴权）
  *   /system-settings → AdminLayout > SystemSettingsView（需鉴权）
+ *   /proxy-pool → AdminLayout > ProxyPoolView（需鉴权）
  *
  * 守卫：未登录时重定向到 /login
  */
@@ -62,6 +63,11 @@ const routes: RouteRecordRaw[] = [
         path: "system-settings",
         name: "SystemSettings",
         component: () => import("@/views/SystemSettingsView.vue"),
+      },
+      {
+        path: "proxy-pool",
+        name: "ProxyPool",
+        component: () => import("@/views/ProxyPoolView.vue"),
       },
     ],
   },
