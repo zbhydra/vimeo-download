@@ -27,6 +27,13 @@ export default defineConfig({
   preview: {
     port: 7920,
     strictPort: true,
+    // preview 不继承 server.proxy；本地预览生产构建（未注入 VITE_API_BASE_URL）时相对路径 /api 同样需要转发
+    proxy: {
+      "/api": {
+        target: "http://localhost:7900",
+        changeOrigin: true,
+      },
+    },
   },
   build: {
     outDir: "dist",
