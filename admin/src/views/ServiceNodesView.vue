@@ -69,46 +69,49 @@
       preset="dialog"
       :show-icon="false"
       :title="editingNode ? t('serviceNodes.editNode') : t('serviceNodes.addNode')"
-      :style="{ maxWidth: '760px', width: 'calc(100vw - 32px)' }"
+      :style="{ maxWidth: '640px', width: 'calc(100vw - 32px)' }"
     >
-      <NForm label-placement="top">
-        <div class="form-grid">
-          <NFormItem :label="t('serviceNodes.nodeType')">
-            <NSelect v-model:value="form.node_type" :options="nodeTypeOptions" />
-          </NFormItem>
-          <NFormItem :label="t('serviceNodes.name')">
-            <NInput v-model:value="form.name" data-testid="service-node-name-input" />
-          </NFormItem>
-          <NFormItem :label="t('serviceNodes.region')">
-            <NInput v-model:value="form.region" data-testid="service-node-region-input" />
-          </NFormItem>
-          <NFormItem :label="t('serviceNodes.weight')">
-            <NInputNumber
-              v-model:value="form.weight"
-              :min="SERVICE_NODE_MIN_WEIGHT"
-              :max="SERVICE_NODE_MAX_WEIGHT"
-              :step="10"
-              :precision="0"
-              data-testid="service-node-weight-input"
-              style="width: 100%"
-            />
-          </NFormItem>
-          <NFormItem :label="t('serviceNodes.publicBaseUrl')" class="span-2">
-            <NInput
-              v-model:value="form.public_base_url"
-              data-testid="service-node-public-url-input"
-            />
-          </NFormItem>
-          <NFormItem :label="t('serviceNodes.internalBaseUrl')" class="span-2">
-            <NInput
-              v-model:value="form.internal_base_url"
-              data-testid="service-node-internal-url-input"
-            />
-          </NFormItem>
-          <NFormItem :label="t('serviceNodes.enabled')">
-            <NSwitch v-model:value="form.enabled" />
-          </NFormItem>
-        </div>
+      <NForm
+        label-placement="left"
+        :label-width="112"
+        :show-feedback="false"
+        class="service-node-edit-form"
+      >
+        <NFormItem :label="t('serviceNodes.nodeType')">
+          <NSelect v-model:value="form.node_type" :options="nodeTypeOptions" />
+        </NFormItem>
+        <NFormItem :label="t('serviceNodes.name')">
+          <NInput v-model:value="form.name" data-testid="service-node-name-input" />
+        </NFormItem>
+        <NFormItem :label="t('serviceNodes.region')">
+          <NInput v-model:value="form.region" data-testid="service-node-region-input" />
+        </NFormItem>
+        <NFormItem :label="t('serviceNodes.weight')">
+          <NInputNumber
+            v-model:value="form.weight"
+            :min="SERVICE_NODE_MIN_WEIGHT"
+            :max="SERVICE_NODE_MAX_WEIGHT"
+            :step="10"
+            :precision="0"
+            data-testid="service-node-weight-input"
+            style="width: 100%"
+          />
+        </NFormItem>
+        <NFormItem :label="t('serviceNodes.publicBaseUrl')">
+          <NInput
+            v-model:value="form.public_base_url"
+            data-testid="service-node-public-url-input"
+          />
+        </NFormItem>
+        <NFormItem :label="t('serviceNodes.internalBaseUrl')">
+          <NInput
+            v-model:value="form.internal_base_url"
+            data-testid="service-node-internal-url-input"
+          />
+        </NFormItem>
+        <NFormItem :label="t('serviceNodes.enabled')">
+          <NSwitch v-model:value="form.enabled" />
+        </NFormItem>
       </NForm>
 
       <template #action>
@@ -638,14 +641,12 @@ onBeforeUnmount(() => {
   flex-wrap: wrap;
 }
 
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 16px;
+.service-node-edit-form :deep(.n-form-item) {
+  margin-bottom: 16px;
 }
 
-.span-2 {
-  grid-column: span 2;
+.service-node-edit-form :deep(.n-form-item:last-child) {
+  margin-bottom: 0;
 }
 
 .service-node-network-rate {
@@ -656,15 +657,5 @@ onBeforeUnmount(() => {
   font-size: 12px;
   line-height: 18px;
   white-space: nowrap;
-}
-
-@media (max-width: 760px) {
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .span-2 {
-    grid-column: span 1;
-  }
 }
 </style>

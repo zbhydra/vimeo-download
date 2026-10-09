@@ -9,122 +9,124 @@
 <template>
   <div class="orders-view">
     <NCard class="orders-panel">
-      <NForm
-        :label-placement="isMobile ? 'top' : 'left'"
-        :label-width="isMobile ? undefined : 124"
-        :show-feedback="false"
-        class="orders-filter"
-      >
-        <div class="orders-filter-grid">
-          <NFormItem :label="t('orders.orderNo')">
-            <NInput
-              v-model:value="filters.orderNo"
-              clearable
-              :placeholder="t('orders.orderNoPlaceholder')"
-              @keydown.enter="handleSearch"
-            />
-          </NFormItem>
-          <NFormItem :label="t('orders.userId')">
-            <NInputNumber
-              v-model:value="filters.userId"
-              clearable
-              :min="1"
-              :precision="0"
-              :placeholder="t('orders.userIdPlaceholder')"
-              style="width: 100%"
-              @keydown.enter="handleSearch"
-            />
-          </NFormItem>
-          <NFormItem :label="t('orders.userEmail')">
-            <NInput
-              v-model:value="filters.userEmail"
-              clearable
-              :placeholder="t('orders.userEmailPlaceholder')"
-              @keydown.enter="handleSearch"
-            />
-          </NFormItem>
-          <NFormItem :label="t('orders.channelOrderNo')">
-            <NInput
-              v-model:value="filters.channelOrderNo"
-              clearable
-              :placeholder="t('orders.channelOrderNoPlaceholder')"
-              @keydown.enter="handleSearch"
-            />
-          </NFormItem>
-          <NFormItem :label="t('orders.transactionId')">
-            <NInput
-              v-model:value="filters.transactionId"
-              clearable
-              :placeholder="t('orders.transactionIdPlaceholder')"
-              @keydown.enter="handleSearch"
-            />
-          </NFormItem>
-          <NFormItem :label="t('orders.orderStatus')">
-            <NSelect
-              v-model:value="filters.orderStatus"
-              clearable
-              :options="orderStatusOptions"
-              data-testid="order-status-select"
-            />
-          </NFormItem>
-          <NFormItem :label="t('orders.callbackStatus')">
-            <NSelect
-              v-model:value="filters.callbackStatus"
-              clearable
-              :options="callbackStatusOptions"
-              data-testid="callback-status-select"
-            />
-          </NFormItem>
-          <NFormItem :label="t('orders.productId')">
-            <NInput
-              v-model:value="filters.productId"
-              clearable
-              :placeholder="t('orders.productIdPlaceholder')"
-              @keydown.enter="handleSearch"
-            />
-          </NFormItem>
-          <NFormItem :label="t('orders.paymentMethod')">
-            <NInput
-              v-model:value="filters.paymentMethod"
-              clearable
-              :placeholder="t('orders.paymentMethodPlaceholder')"
-              @keydown.enter="handleSearch"
-            />
-          </NFormItem>
-          <NFormItem :label="t('orders.createdRange')" class="span-2">
-            <NDatePicker
-              v-model:value="filters.createdRange"
-              type="datetimerange"
-              clearable
-              :format="ADMIN_DATETIME_FORMAT"
-              style="width: 100%"
-            />
-          </NFormItem>
-        </div>
-        <div class="orders-filter-actions">
-          <NSpace :size="8">
-            <NButton type="primary" :loading="loading" @click="handleSearch">
-              <template #icon>
-                <NIcon>
-                  <SearchOutlined />
-                </NIcon>
-              </template>
-              {{ t("orders.search") }}
-            </NButton>
-            <NButton @click="handleReset">
-              {{ t("orders.reset") }}
-            </NButton>
-            <NButton :loading="loading" @click="loadOrders">
-              <template #icon>
-                <NIcon>
-                  <ReloadOutlined />
-                </NIcon>
-              </template>
-              {{ t("common.refresh") }}
-            </NButton>
-          </NSpace>
-        </div>
-      </NForm>
+      <FilterPanel>
+        <NForm
+          label-placement="left"
+          :label-width="124"
+          :show-feedback="false"
+          class="orders-filter"
+        >
+          <div class="orders-filter-grid">
+            <NFormItem :label="t('orders.orderNo')">
+              <NInput
+                v-model:value="filters.orderNo"
+                clearable
+                :placeholder="t('orders.orderNoPlaceholder')"
+                @keydown.enter="handleSearch"
+              />
+            </NFormItem>
+            <NFormItem :label="t('orders.userId')">
+              <NInputNumber
+                v-model:value="filters.userId"
+                clearable
+                :min="1"
+                :precision="0"
+                :placeholder="t('orders.userIdPlaceholder')"
+                style="width: 100%"
+                @keydown.enter="handleSearch"
+              />
+            </NFormItem>
+            <NFormItem :label="t('orders.userEmail')">
+              <NInput
+                v-model:value="filters.userEmail"
+                clearable
+                :placeholder="t('orders.userEmailPlaceholder')"
+                @keydown.enter="handleSearch"
+              />
+            </NFormItem>
+            <NFormItem :label="t('orders.channelOrderNo')">
+              <NInput
+                v-model:value="filters.channelOrderNo"
+                clearable
+                :placeholder="t('orders.channelOrderNoPlaceholder')"
+                @keydown.enter="handleSearch"
+              />
+            </NFormItem>
+            <NFormItem :label="t('orders.transactionId')">
+              <NInput
+                v-model:value="filters.transactionId"
+                clearable
+                :placeholder="t('orders.transactionIdPlaceholder')"
+                @keydown.enter="handleSearch"
+              />
+            </NFormItem>
+            <NFormItem :label="t('orders.orderStatus')">
+              <NSelect
+                v-model:value="filters.orderStatus"
+                clearable
+                :options="orderStatusOptions"
+                data-testid="order-status-select"
+              />
+            </NFormItem>
+            <NFormItem :label="t('orders.callbackStatus')">
+              <NSelect
+                v-model:value="filters.callbackStatus"
+                clearable
+                :options="callbackStatusOptions"
+                data-testid="callback-status-select"
+              />
+            </NFormItem>
+            <NFormItem :label="t('orders.productId')">
+              <NInput
+                v-model:value="filters.productId"
+                clearable
+                :placeholder="t('orders.productIdPlaceholder')"
+                @keydown.enter="handleSearch"
+              />
+            </NFormItem>
+            <NFormItem :label="t('orders.paymentMethod')">
+              <NInput
+                v-model:value="filters.paymentMethod"
+                clearable
+                :placeholder="t('orders.paymentMethodPlaceholder')"
+                @keydown.enter="handleSearch"
+              />
+            </NFormItem>
+            <NFormItem :label="t('orders.createdRange')" class="span-2">
+              <NDatePicker
+                v-model:value="filters.createdRange"
+                type="datetimerange"
+                clearable
+                :format="ADMIN_DATETIME_FORMAT"
+                style="width: 100%"
+              />
+            </NFormItem>
+          </div>
+          <div class="orders-filter-actions">
+            <NSpace :size="8">
+              <NButton type="primary" :loading="loading" @click="handleSearch">
+                <template #icon>
+                  <NIcon>
+                    <SearchOutlined />
+                  </NIcon>
+                </template>
+                {{ t("orders.search") }}
+              </NButton>
+              <NButton @click="handleReset">
+                {{ t("orders.reset") }}
+              </NButton>
+              <NButton :loading="loading" @click="loadOrders">
+                <template #icon>
+                  <NIcon>
+                    <ReloadOutlined />
+                  </NIcon>
+                </template>
+                {{ t("common.refresh") }}
+              </NButton>
+            </NSpace>
+          </div>
+        </NForm>
+      </FilterPanel>
 
       <!-- 手机（<768）：记录卡片化，操作列渲染到卡底（tech-视觉基线 §4.2） -->
       <template v-if="isMobile">
@@ -332,6 +334,7 @@ import {
   type OrderStatus,
 } from "@/api/orders";
 import UserInfoDialog from "@/components/UserInfoDialog.vue";
+import FilterPanel from "@/components/FilterPanel.vue";
 import RecordCardList from "@/components/RecordCardList.vue";
 import StatusPill, { type StatusTone } from "@/components/StatusPill.vue";
 import { useViewport } from "@/composables/useViewport";

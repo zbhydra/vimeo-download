@@ -264,6 +264,7 @@
   "common": {
     "confirm": "Confirm",
     "cancel": "Cancel",
+    "filter": "Filter",
     "refresh": "Refresh",
     "success": "Success",
     "error": "Error",

@@ -264,6 +264,7 @@
   "common": {
     "confirm": "确认",
     "cancel": "取消",
+    "filter": "筛选",
     "refresh": "刷新",
     "success": "操作成功",
     "error": "操作失败",

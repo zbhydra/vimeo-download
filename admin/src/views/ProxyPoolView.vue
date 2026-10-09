@@ -19,23 +19,30 @@
         </NSpace>
       </template>
 
-      <NForm label-placement="top" class="proxy-pool-filter-form">
-        <div class="filter-grid">
-          <NFormItem :label="t('proxyPool.name')">
-            <NInput v-model:value="filters.name" clearable />
-          </NFormItem>
-          <NFormItem :label="t('proxyPool.type')">
-            <NSelect v-model:value="filters.proxyType" :options="proxyTypeFilterOptions" clearable />
-          </NFormItem>
-          <NFormItem :label="t('proxyPool.protocol')">
-            <NInput v-model:value="filters.protocol" clearable />
-          </NFormItem>
-          <NFormItem :label="t('proxyPool.countryCode')">
-            <NInput v-model:value="filters.countryCode" clearable />
-          </NFormItem>
-          <NFormItem :label="t('proxyPool.enabled')">
-            <NSelect v-model:value="filters.enabled" :options="enabledFilterOptions" clearable />
-          </NFormItem>
+      <FilterPanel>
+        <NForm
+          label-placement="left"
+          :label-width="72"
+          :show-feedback="false"
+          class="proxy-pool-filter-form"
+        >
+          <div class="filter-grid">
+            <NFormItem :label="t('proxyPool.name')">
+              <NInput v-model:value="filters.name" clearable />
+            </NFormItem>
+            <NFormItem :label="t('proxyPool.type')">
+              <NSelect v-model:value="filters.proxyType" :options="proxyTypeFilterOptions" clearable />
+            </NFormItem>
+            <NFormItem :label="t('proxyPool.protocol')">
+              <NInput v-model:value="filters.protocol" clearable />
+            </NFormItem>
+            <NFormItem :label="t('proxyPool.countryCode')">
+              <NInput v-model:value="filters.countryCode" clearable />
+            </NFormItem>
+            <NFormItem :label="t('proxyPool.enabled')">
+              <NSelect v-model:value="filters.enabled" :options="enabledFilterOptions" clearable />
+            </NFormItem>
+          </div>
           <div class="filter-actions">
             <NButton type="primary" @click="handleSearch">
               <template #icon>
@@ -45,8 +52,8 @@
             </NButton>
             <NButton @click="handleReset">{{ t("proxyPool.reset") }}</NButton>
           </div>
-        </div>
-      </NForm>
+        </NForm>
+      </FilterPanel>
 
       <template v-if="isMobile">
         <RecordCardList
@@ -88,54 +95,58 @@
       preset="dialog"
       :show-icon="false"
       :title="editingProxyId === null ? t('proxyPool.add') : t('proxyPool.edit')"
-      :style="{ maxWidth: '760px', width: 'calc(100vw - 32px)' }"
+      :style="{ maxWidth: '640px', width: 'calc(100vw - 32px)' }"
     >
       <NSpin :show="detailLoading">
-        <NForm label-placement="top" :disabled="saving || detailLoading">
-          <div class="form-grid">
-            <NFormItem :label="t('proxyPool.name')">
-              <NInput v-model:value="form.name" />
-            </NFormItem>
-            <NFormItem :label="t('proxyPool.type')">
-              <NSelect v-model:value="form.proxy_type" :options="proxyTypeOptions" />
-            </NFormItem>
-            <NFormItem :label="t('proxyPool.protocol')">
-              <NInput v-model:value="form.protocol" />
-            </NFormItem>
-            <NFormItem :label="t('proxyPool.countryCode')">
-              <NInput v-model:value="form.country_code" maxlength="2" />
-            </NFormItem>
-            <NFormItem :label="t('proxyPool.enabled')">
-              <NSwitch v-model:value="form.enabled" />
-            </NFormItem>
+        <NForm
+          label-placement="left"
+          :label-width="88"
+          :show-feedback="false"
+          :disabled="saving || detailLoading"
+          class="proxy-pool-edit-form"
+        >
+          <NFormItem :label="t('proxyPool.name')">
+            <NInput v-model:value="form.name" />
+          </NFormItem>
+          <NFormItem :label="t('proxyPool.type')">
+            <NSelect v-model:value="form.proxy_type" :options="proxyTypeOptions" />
+          </NFormItem>
+          <NFormItem :label="t('proxyPool.protocol')">
+            <NInput v-model:value="form.protocol" />
+          </NFormItem>
+          <NFormItem :label="t('proxyPool.countryCode')">
+            <NInput v-model:value="form.country_code" maxlength="2" />
+          </NFormItem>
+          <NFormItem :label="t('proxyPool.enabled')">
+            <NSwitch v-model:value="form.enabled" />
+          </NFormItem>
 
-            <NFormItem v-if="form.proxy_type === PROXY_TYPE_DYNAMIC" :label="t('proxyPool.dynamicUrl')" class="span-2">
-              <NInput v-model:value="form.dynamic_url" />
-            </NFormItem>
+          <NFormItem v-if="form.proxy_type === PROXY_TYPE_DYNAMIC" :label="t('proxyPool.dynamicUrl')">
+            <NInput v-model:value="form.dynamic_url" />
+          </NFormItem>
 
-            <template v-else>
-              <NFormItem :label="t('proxyPool.host')">
-                <NInput v-model:value="form.host" />
-              </NFormItem>
-              <NFormItem :label="t('proxyPool.port')">
-                <NInputNumber v-model:value="form.port" :min="1" :max="65535" style="width: 100%" />
-              </NFormItem>
-              <NFormItem :label="t('proxyPool.username')">
-                <NInput v-model:value="form.username" />
-              </NFormItem>
-              <NFormItem :label="t('proxyPool.password')">
-                <NInput v-model:value="form.password" type="password" show-password-on="click" />
-              </NFormItem>
-              <NFormItem v-if="editingProxyId === null" :label="t('proxyPool.staticBatch')" class="span-2">
-                <NInput
-                  v-model:value="staticBatchText"
-                  type="textarea"
-                  :rows="4"
-                  :placeholder="t('proxyPool.staticBatchPlaceholder')"
-                />
-              </NFormItem>
-            </template>
-          </div>
+          <template v-else>
+            <NFormItem :label="t('proxyPool.host')">
+              <NInput v-model:value="form.host" />
+            </NFormItem>
+            <NFormItem :label="t('proxyPool.port')">
+              <NInputNumber v-model:value="form.port" :min="1" :max="65535" style="width: 100%" />
+            </NFormItem>
+            <NFormItem :label="t('proxyPool.username')">
+              <NInput v-model:value="form.username" />
+            </NFormItem>
+            <NFormItem :label="t('proxyPool.password')">
+              <NInput v-model:value="form.password" type="password" show-password-on="click" />
+            </NFormItem>
+            <NFormItem v-if="editingProxyId === null" :label="t('proxyPool.staticBatch')">
+              <NInput
+                v-model:value="staticBatchText"
+                type="textarea"
+                :rows="4"
+                :placeholder="t('proxyPool.staticBatchPlaceholder')"
+              />
+            </NFormItem>
+          </template>
         </NForm>
       </NSpin>
 
@@ -196,6 +207,7 @@ import {
   type ProxyPoolListParams,
 } from "@/api/proxy-pool";
 import RecordCardList from "@/components/RecordCardList.vue";
+import FilterPanel from "@/components/FilterPanel.vue";
 import StatusPill from "@/components/StatusPill.vue";
 import { useViewport } from "@/composables/useViewport";
 import { formatAdminTimeMs } from "@/utils/time";
@@ -571,43 +583,27 @@ onMounted(() => {
   margin-bottom: 20px;
 }
 
-.filter-grid,
-.form-grid {
+.filter-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 12px 16px;
+}
+
+.filter-grid :deep(.n-form-item-blank) {
+  min-width: 0;
 }
 
 .filter-actions {
   display: flex;
-  align-items: flex-end;
   gap: 8px;
-  padding-bottom: 4px;
+  margin-top: 16px;
 }
 
-.form-grid .span-2 {
-  grid-column: span 2;
+.proxy-pool-edit-form :deep(.n-form-item) {
+  margin-bottom: 16px;
 }
 
-@media (max-width: 1023px) {
-  .filter-grid,
-  .form-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 767px) {
-  .filter-grid,
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .form-grid .span-2 {
-    grid-column: span 1;
-  }
-
-  .filter-actions {
-    padding-bottom: 0;
-  }
+.proxy-pool-edit-form :deep(.n-form-item:last-child) {
+  margin-bottom: 0;
 }
 </style>
