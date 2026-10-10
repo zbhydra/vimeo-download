@@ -60,11 +60,11 @@ export const viVN: SiteContent = {
           extensionEntryLine: 'Tải trực tiếp trên Vimeo bằng tiện ích',
           largeFileExtensionInlineChromeTitle: 'Tiện ích Chrome',
           largeFileExtensionInlineChromeDescription:
-            'Tiện ích dành riêng cho Chrome, giữ các lượt tải Vimeo lớn chạy ngoài tab.',
+            'Tiện ích dành riêng cho Chrome: tải mọi video Vimeo, tải riêng phần âm thanh và tận hưởng tốc độ tải nhanh. Các tệp lớn tiếp tục được tải ngoài tab.',
           largeFileExtensionInlineChromeCta: 'Cài tiện ích',
           largeFileExtensionInlineEdgeTitle: 'Tiện ích Edge',
           largeFileExtensionInlineEdgeDescription:
-            'Tiện ích dành riêng cho Microsoft Edge, xử lý tệp Vimeo lớn theo cùng cách.',
+            'Tiện ích dành riêng cho Microsoft Edge: tải mọi video Vimeo, tải riêng phần âm thanh và tận hưởng tốc độ tải nhanh. Các tệp lớn tiếp tục được tải ngoài tab.',
           largeFileExtensionInlineEdgeCta: 'Cài tiện ích'
         },
                 errors: {

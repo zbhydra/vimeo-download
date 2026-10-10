@@ -60,11 +60,11 @@ export const enUS: SiteContent = {
           extensionEntryLine: 'Download right on Vimeo with the extension',
           largeFileExtensionInlineChromeTitle: 'Chrome Extension',
           largeFileExtensionInlineChromeDescription:
-            'Dedicated extension for Chrome to keep large Vimeo downloads running outside the tab.',
+            'Dedicated extension for Chrome: download any Vimeo video, save audio separately, and enjoy fast downloads. Large downloads keep running outside the tab.',
           largeFileExtensionInlineChromeCta: 'Install Extension',
           largeFileExtensionInlineEdgeTitle: 'Edge Extension',
           largeFileExtensionInlineEdgeDescription:
-            'Dedicated extension for Microsoft Edge, with the same large-download handling for Vimeo videos.',
+            'Dedicated extension for Microsoft Edge: download any Vimeo video, save audio separately, and enjoy fast downloads. Large downloads keep running outside the tab.',
           largeFileExtensionInlineEdgeCta: 'Install Extension'
         },
         errors: {

@@ -60,11 +60,11 @@ export const thTH: SiteContent = {
           extensionEntryLine: 'ดาวน์โหลดได้โดยตรงบน Vimeo ด้วยส่วนขยาย',
           largeFileExtensionInlineChromeTitle: 'ส่วนขยาย Chrome',
           largeFileExtensionInlineChromeDescription:
-            'ส่วนขยายสำหรับ Chrome โดยเฉพาะ ช่วยให้ดาวน์โหลด Vimeo ขนาดใหญ่ทำงานต่อนอกแท็บได้',
+            'ส่วนขยายสำหรับ Chrome โดยเฉพาะ: ดาวน์โหลดวิดีโอ Vimeo ได้ทุกวิดีโอ บันทึกเสียงแยกได้ และดาวน์โหลดได้รวดเร็ว ไฟล์ขนาดใหญ่ยังดาวน์โหลดต่อได้นอกแท็บ',
           largeFileExtensionInlineChromeCta: 'ติดตั้งส่วนขยาย',
           largeFileExtensionInlineEdgeTitle: 'ส่วนขยาย Edge',
           largeFileExtensionInlineEdgeDescription:
-            'ส่วนขยายสำหรับ Microsoft Edge จัดการไฟล์ Vimeo ขนาดใหญ่ในลักษณะเดียวกัน',
+            'ส่วนขยายสำหรับ Microsoft Edge: ดาวน์โหลดวิดีโอ Vimeo ได้ทุกวิดีโอ บันทึกเสียงแยกได้ และดาวน์โหลดได้รวดเร็ว ไฟล์ขนาดใหญ่ยังดาวน์โหลดต่อได้นอกแท็บ',
           largeFileExtensionInlineEdgeCta: 'ติดตั้งส่วนขยาย'
         },
                 errors: {

@@ -60,11 +60,11 @@ export const ruRU: SiteContent = {
           extensionEntryLine: 'Скачивайте прямо на Vimeo с помощью расширения',
           largeFileExtensionInlineChromeTitle: 'Расширение для Chrome',
           largeFileExtensionInlineChromeDescription:
-            'Расширение для Chrome, которое продолжает большие скачивания Vimeo вне вкладки.',
+            'Расширение для Chrome: скачивайте любые видео Vimeo, сохраняйте аудио отдельно и получайте высокую скорость загрузки. Большие загрузки продолжаются вне вкладки.',
           largeFileExtensionInlineChromeCta: 'Установить расширение',
           largeFileExtensionInlineEdgeTitle: 'Расширение для Edge',
           largeFileExtensionInlineEdgeDescription:
-            'Расширение для Microsoft Edge с такой же обработкой больших скачиваний Vimeo.',
+            'Расширение для Microsoft Edge: скачивайте любые видео Vimeo, сохраняйте аудио отдельно и получайте высокую скорость загрузки. Большие загрузки продолжаются вне вкладки.',
           largeFileExtensionInlineEdgeCta: 'Установить расширение'
         },
                 errors: {

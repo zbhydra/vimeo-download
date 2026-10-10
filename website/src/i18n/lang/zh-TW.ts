@@ -58,11 +58,11 @@ export const zhTW: SiteContent = {
           extensionEntryLine: '用擴充功能直接在 Vimeo 頁面下載',
           largeFileExtensionInlineChromeTitle: 'Chrome 擴充功能',
           largeFileExtensionInlineChromeDescription:
-            'Chrome 專用擴充功能，讓大檔案 Vimeo 下載在分頁之外繼續運作。',
+            'Chrome 專用擴充功能：支援下載所有 Vimeo 影片，可單獨下載音訊，下載速度快。大檔案下載可在分頁之外繼續運作。',
           largeFileExtensionInlineChromeCta: '安裝擴充功能',
           largeFileExtensionInlineEdgeTitle: 'Edge 擴充功能',
           largeFileExtensionInlineEdgeDescription:
-            'Microsoft Edge 專用擴充功能，對 Vimeo 大檔案下載提供同樣的處理。',
+            'Microsoft Edge 專用擴充功能：支援下載所有 Vimeo 影片，可單獨下載音訊，下載速度快。大檔案下載可在分頁之外繼續運作。',
           largeFileExtensionInlineEdgeCta: '安裝擴充功能'
         },
                 errors: {

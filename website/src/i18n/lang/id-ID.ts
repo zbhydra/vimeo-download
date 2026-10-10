@@ -60,11 +60,11 @@ export const idID: SiteContent = {
           extensionEntryLine: 'Unduh langsung di Vimeo dengan ekstensi',
           largeFileExtensionInlineChromeTitle: 'Ekstensi Chrome',
           largeFileExtensionInlineChromeDescription:
-            'Ekstensi khusus Chrome yang menjaga unduhan Vimeo besar tetap berjalan di luar tab.',
+            'Ekstensi khusus Chrome: unduh video Vimeo apa pun, simpan audio secara terpisah, dan nikmati unduhan cepat. Unduhan besar tetap berjalan di luar tab.',
           largeFileExtensionInlineChromeCta: 'Instal ekstensi',
           largeFileExtensionInlineEdgeTitle: 'Ekstensi Edge',
           largeFileExtensionInlineEdgeDescription:
-            'Ekstensi khusus Microsoft Edge dengan penanganan unduhan Vimeo besar yang sama.',
+            'Ekstensi khusus Microsoft Edge: unduh video Vimeo apa pun, simpan audio secara terpisah, dan nikmati unduhan cepat. Unduhan besar tetap berjalan di luar tab.',
           largeFileExtensionInlineEdgeCta: 'Instal ekstensi'
         },
                 errors: {

@@ -60,11 +60,11 @@ export const esES: SiteContent = {
           extensionEntryLine: 'Descarga directamente en Vimeo con la extensión',
           largeFileExtensionInlineChromeTitle: 'Extensión para Chrome',
           largeFileExtensionInlineChromeDescription:
-            'Extensión específica para Chrome que mantiene las descargas grandes de Vimeo fuera de la pestaña.',
+            'Extensión específica para Chrome: descarga cualquier vídeo de Vimeo, guarda el audio por separado y disfruta de descargas rápidas. Las descargas grandes continúan fuera de la pestaña.',
           largeFileExtensionInlineChromeCta: 'Instalar extensión',
           largeFileExtensionInlineEdgeTitle: 'Extensión para Edge',
           largeFileExtensionInlineEdgeDescription:
-            'Extensión específica para Microsoft Edge, con el mismo tratamiento de descargas grandes de Vimeo.',
+            'Extensión específica para Microsoft Edge: descarga cualquier vídeo de Vimeo, guarda el audio por separado y disfruta de descargas rápidas. Las descargas grandes continúan fuera de la pestaña.',
           largeFileExtensionInlineEdgeCta: 'Instalar extensión'
         },
                 errors: {

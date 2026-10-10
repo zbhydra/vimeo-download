@@ -4257,7 +4257,7 @@ test('workspace download source blocks unsafe file types before starting any dow
   assert.match(source, /siteConfirmAction/)
   assert.match(source, /window\.confirm\(message\)/)
   assert.match(source, /setHidden\(elements\.largeFileExtensionGuide,\s*false\)/)
-  assert.match(source, /scrollElementBelowTopNavigation\(elements\.largeFileExtensionGuide\)/)
+  assert.match(source, /scrollElementBelowTopNavigation\(scrollTarget\)/)
   assert.match(source, /window\.scrollTo\(\{\s*top:\s*scrollTop,\s*behavior:\s*'smooth'\s*\}\)/)
   assert.match(source, /getTopNavigationOffset\(\)/)
 })

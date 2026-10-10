@@ -205,7 +205,10 @@ function scrollElementBelowTopNavigation(element: HTMLElement): void {
 
 export function revealExtensionGuide(elements: WorkspaceElements): void {
   setHidden(elements.largeFileExtensionGuide, false)
-  scrollElementBelowTopNavigation(elements.largeFileExtensionGuide)
+  const scrollTarget = elements.parseError.hidden
+    ? elements.largeFileExtensionGuide
+    : elements.parseError
+  scrollElementBelowTopNavigation(scrollTarget)
 }
 
 function unsafeFileTypeUseExtensionMessage(state: WorkspaceDownloadState): string {

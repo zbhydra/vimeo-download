@@ -59,11 +59,11 @@ export const jaJP: SiteContent = {
           extensionEntryLine: '拡張機能で Vimeo 上から直接ダウンロード',
           largeFileExtensionInlineChromeTitle: 'Chrome 拡張機能',
           largeFileExtensionInlineChromeDescription:
-            'Chrome 専用の拡張機能で、大きな Vimeo ダウンロードをタブの外で続行できます。',
+            'Chrome 専用の拡張機能で、Vimeo のすべての動画をダウンロードし、音声を個別に保存できます。高速ダウンロードにも対応し、大容量のダウンロードをタブの外で続行できます。',
           largeFileExtensionInlineChromeCta: '拡張機能をインストール',
           largeFileExtensionInlineEdgeTitle: 'Edge 拡張機能',
           largeFileExtensionInlineEdgeDescription:
-            'Microsoft Edge 専用の拡張機能で、Vimeo の大容量ダウンロードを同じように扱えます。',
+            'Microsoft Edge 専用の拡張機能で、Vimeo のすべての動画をダウンロードし、音声を個別に保存できます。高速ダウンロードにも対応し、大容量のダウンロードをタブの外で続行できます。',
           largeFileExtensionInlineEdgeCta: '拡張機能をインストール'
         },
                 errors: {

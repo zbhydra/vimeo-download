@@ -58,11 +58,11 @@ export const zhCN: SiteContent = {
           extensionEntryLine: '用插件直接在 Vimeo 页面下载',
           largeFileExtensionInlineChromeTitle: 'Chrome 插件',
           largeFileExtensionInlineChromeDescription:
-            'Chrome 专用插件，让大文件 Vimeo 下载在标签页之外继续运行。',
+            'Chrome 专用插件：支持下载所有 Vimeo 视频，可单独下载音频，下载速度快。大文件下载可在标签页之外继续运行。',
           largeFileExtensionInlineChromeCta: '下载插件',
           largeFileExtensionInlineEdgeTitle: 'Edge 插件',
           largeFileExtensionInlineEdgeDescription:
-            'Microsoft Edge 专用插件，对 Vimeo 大文件下载提供同样的处理。',
+            'Microsoft Edge 专用插件：支持下载所有 Vimeo 视频，可单独下载音频，下载速度快。大文件下载可在标签页之外继续运行。',
           largeFileExtensionInlineEdgeCta: '下载插件'
         },
                 errors: {

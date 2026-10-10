@@ -173,11 +173,6 @@ function buildDownloadButtonLabel(label: string): HTMLElement {
   return text
 }
 
-/** 每次重新渲染结果都收起插件引导卡；失败或只能用插件时由流程重新展开。 */
-function renderLargeFileExtensionGuide(elements: WorkspaceElements): void {
-  setHidden(elements.largeFileExtensionGuide, true)
-}
-
 function updateDownloadAllVisibility(elements: WorkspaceElements, state: WorkspaceRenderState): void {
   const actionPlans = state.resources.map(resource =>
     buildDownloadActionPlan(resource, state.resources)
@@ -197,10 +192,10 @@ function updateDownloadAllVisibility(elements: WorkspaceElements, state: Workspa
 /** 渲染解析资源卡片。 */
 export function renderResults(elements: WorkspaceElements, state: WorkspaceRenderState): void {
   elements.resultsContainer.innerHTML = ''
+  setHidden(elements.largeFileExtensionGuide, state.resources.length > 0)
 
   if (state.resources.length === 0) {
     updateDownloadAllVisibility(elements, state)
-    renderLargeFileExtensionGuide(elements)
     return
   }
 
@@ -254,5 +249,4 @@ export function renderResults(elements: WorkspaceElements, state: WorkspaceRende
   }
 
   updateDownloadAllVisibility(elements, state)
-  renderLargeFileExtensionGuide(elements)
 }

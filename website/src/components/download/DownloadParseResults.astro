@@ -2,7 +2,7 @@
 /**
  * 首屏解析面板：H1 + 副标题 → 玻璃输入框 → 结果卡 → 插件引导卡 → slot → 一行插件入口。
  *
- * 引导卡默认隐藏，脚本在解析或下载失败、状态 3、不安全文件类型或存储不足时取消 hidden；
+ * 引导卡默认展开，解析成功后收起；失败或需要插件下载时由脚本重新展开。
  * 一行入口排在引导卡之后，用 CSS 兄弟选择器在引导卡出现时隐藏，不需要脚本状态。
  * slot 位于引导卡与一行入口之间，由页面放信任点。
  */
@@ -112,7 +112,6 @@ const largeFileExtensionInline = {
   <section
     class="download-large-file-extension-inline"
     data-download-large-file-extension-inline
-    hidden
   >
     <article class="download-large-file-extension-card">
       <div class="download-large-file-extension-head">

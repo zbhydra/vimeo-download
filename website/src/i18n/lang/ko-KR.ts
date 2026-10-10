@@ -59,11 +59,11 @@ export const koKR: SiteContent = {
           extensionEntryLine: '확장 프로그램으로 Vimeo에서 바로 다운로드',
           largeFileExtensionInlineChromeTitle: 'Chrome 확장 프로그램',
           largeFileExtensionInlineChromeDescription:
-            'Chrome 전용 확장 프로그램으로, 큰 Vimeo 다운로드를 탭 밖에서 계속 진행합니다.',
+            'Chrome 전용 확장 프로그램으로 모든 Vimeo 동영상을 다운로드하고 오디오를 따로 저장할 수 있습니다. 빠른 다운로드를 지원하며, 큰 다운로드도 탭 밖에서 계속 진행합니다.',
           largeFileExtensionInlineChromeCta: '확장 프로그램 설치',
           largeFileExtensionInlineEdgeTitle: 'Edge 확장 프로그램',
           largeFileExtensionInlineEdgeDescription:
-            'Microsoft Edge 전용 확장 프로그램으로, Vimeo 대용량 다운로드를 동일하게 처리합니다.',
+            'Microsoft Edge 전용 확장 프로그램으로 모든 Vimeo 동영상을 다운로드하고 오디오를 따로 저장할 수 있습니다. 빠른 다운로드를 지원하며, 큰 다운로드도 탭 밖에서 계속 진행합니다.',
           largeFileExtensionInlineEdgeCta: '확장 프로그램 설치'
         },
                 errors: {
