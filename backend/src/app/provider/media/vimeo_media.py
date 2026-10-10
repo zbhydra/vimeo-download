@@ -4,30 +4,25 @@ from __future__ import annotations
 
 import asyncio
 import base64
-import hashlib
 import re
 from typing import Literal
-from urllib.parse import parse_qs, urlencode, urljoin, urlsplit, urlunsplit
+from urllib.parse import parse_qs, unquote, urlencode, urljoin, urlsplit, urlunsplit
 
 from playwright.async_api import Response
 from pydantic import AliasPath, BaseModel, Field
 
-from app.contracts.media_download import MediaDownloadTokenClaims
 from app.contracts.media_platform import PLATFORM_VIMEO
-from app.core.redis import redis_client
 from app.exceptions.common_exception import AppCommonException
 from app.i18n.common_code import CommonCode
 from app.provider.browser_runtime import ensure_browser
 from app.provider.media.base_media import (
     BaseMedia,
     JsonDownloadResult,
-    MediaDownloadRequest,
     MediaParseRequest,
     MediaParseResult,
     ProviderPolicy,
     build_client_mux_json_result,
     build_direct_json_result,
-    parse_user_or_device_key,
 )
 from app.schemas.media_schema import (
     MediaCapabilities,
@@ -43,8 +38,6 @@ from app.schemas.media_schema import (
 from app.utils.filename import sanitize_filename
 from app.utils.logger import logger
 from app.utils.network import assert_public_host
-from app.utils.redis_fixed_limiter import RedisFixedLimiter
-from app.utils.redis_key import build_redis_key
 
 
 class _Progressive(BaseModel):
@@ -125,11 +118,6 @@ _ANONYMOUS_IDENTITY = """(() => {
 })();"""
 
 
-def _download_rate_limit_identifier(claims: MediaDownloadTokenClaims) -> str:
-    """按已签名 token 的匿名设备身份限流，兼容旧 token 的签发 IP。"""
-    return claims.device_id or claims.issued_ip
-
-
 def _player_page_url(canonical: str, video_id: int) -> str:
     """打开 Vimeo 播放器页，避开主站可能返回的 Cloudflare challenge 页面。"""
     return urlunsplit(
@@ -148,8 +136,6 @@ class VimeoMedia(BaseMedia):
 
     platform = PLATFORM_VIMEO
     policy = ProviderPolicy(active_limited=False)
-    _rate_limiter = RedisFixedLimiter(key_prefix="vimeo_parse")
-    _direct_intent_limiter = RedisFixedLimiter(key_prefix="vimeo_direct_intent")
 
     def _error(self, operation: str, detail: str) -> AppCommonException:
         return AppCommonException(
@@ -174,63 +160,12 @@ class VimeoMedia(BaseMedia):
             ("https", "vimeo.com", path, urlencode(params, doseq=True), "")
         )
 
-    def _cache_key(self, canonical: str) -> str:
-        digest = hashlib.sha256(canonical.encode()).hexdigest()
-        return build_redis_key(f"media:vimeo:browser:parse:{digest}")
-
     async def _parse(self, request: MediaParseRequest) -> MediaParseResult:
-        return MediaParseResult(
-            response=await self.parse_link(
-                request.url, parse_user_or_device_key(request)
-            )
+        canonical = self._compute_canonical_link(request.url)
+        response, result = await self._extract_vimeo(
+            canonical, request.url, proxy_url=request.proxy_url
         )
-
-    async def parse_link(
-        self, link: str, user_or_device_key: str
-    ) -> MediaParseResponse:
-        """限流后读取公开元数据缓存；缓存不可用时允许重新解析。"""
-        if not await self._rate_limiter.is_allowed(
-            user_or_device_key, limit=3, window=10
-        ):
-            raise AppCommonException(
-                CommonCode.RATE_LIMIT_EXCEEDED_MEDIA,
-                ext_msg=f"vimeo_parse: 超过解析频率，key={user_or_device_key}",
-            )
-        canonical = self._compute_canonical_link(link)
-        try:
-            redis = await redis_client.get_client()
-            cached = await redis.get(self._cache_key(canonical))
-            if cached:
-                response = MediaParseResponse.model_validate_json(cached)
-                return response.model_copy(update={"original_link": link})
-        except Exception:
-            logger.error("vimeo_parse: 元数据缓存读取失败，继续匿名解析", exc_info=True)
-        response, _ = await self._extract_vimeo(canonical, link)
-        try:
-            redis = await redis_client.get_client()
-            await redis.set(
-                self._cache_key(canonical), response.model_dump_json(), ex=1800
-            )
-        except Exception:
-            logger.error("vimeo_parse: 元数据缓存写入失败，返回解析结果", exc_info=True)
-        return response
-
-    async def _download(self, request: MediaDownloadRequest) -> JsonDownloadResult:
-        # 授权快照只固定资源身份；每次执行都重新捕获临时签名，不能偷偷切换轨道。
-        if not await self._direct_intent_limiter.is_allowed(
-            _download_rate_limit_identifier(request.claims),
-            limit=6,
-            window=60,
-        ):
-            raise AppCommonException(
-                CommonCode.RATE_LIMIT_EXCEEDED_MEDIA,
-                ext_msg="vimeo_download: 超过下载材料刷新频率",
-            )
-        canonical = self._compute_canonical_link(request.claims.link)
-        _, result = await self._extract_vimeo(
-            canonical, request.claims.link, request.claims.sid
-        )
-        return result
+        return MediaParseResult(response=response, material=result.payload)
 
     def _url_host(self, url: str, *, media: bool = False) -> str:
         parsed = urlsplit(url)
@@ -327,14 +262,19 @@ class VimeoMedia(BaseMedia):
         )
 
     async def _extract_vimeo(
-        self, canonical: str, original: str, source_id: str | None = None
+        self,
+        canonical: str,
+        original: str,
+        source_id: str | None = None,
+        *,
+        proxy_url: str,
     ) -> tuple[MediaParseResponse, JsonDownloadResult]:
         # 同一次材料准备共用截止时间，避免导航、配置与清单各自重新计时。
         async with asyncio.timeout(60):
-            return await self._capture_vimeo(canonical, original, source_id)
+            return await self._capture_vimeo(canonical, original, source_id, proxy_url)
 
     async def _capture_vimeo(
-        self, canonical: str, original: str, source_id: str | None
+        self, canonical: str, original: str, source_id: str | None, proxy_url: str
     ) -> tuple[MediaParseResponse, JsonDownloadResult]:
         video_id = int(re.findall(r"(?:^|/)(\d+)(?=/|$)", urlsplit(canonical).path)[-1])
         player_url = _player_page_url(canonical, video_id)
@@ -348,8 +288,25 @@ class VimeoMedia(BaseMedia):
             )
         finally:
             await identity.context.close()
+        parsed_proxy = urlsplit(proxy_url)
+        proxy_server = urlunsplit(
+            (
+                parsed_proxy.scheme,
+                f"{parsed_proxy.hostname}:{parsed_proxy.port}",
+                "",
+                "",
+                "",
+            )
+        )
         context = await browser.new_context(
-            user_agent=user_agent, locale="en-US", service_workers="block"
+            user_agent=user_agent,
+            locale="en-US",
+            service_workers="block",
+            proxy={
+                "server": proxy_server,
+                "username": unquote(parsed_proxy.username or ""),
+                "password": unquote(parsed_proxy.password or ""),
+            },
         )
         tasks: set[asyncio.Task[None]] = set()
         closing = False

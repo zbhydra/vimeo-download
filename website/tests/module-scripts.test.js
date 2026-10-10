@@ -3733,10 +3733,8 @@ test('shared media api keeps node unavailable as business error without syntheti
           code: 10000,
           msg: 'success',
           data: {
-            nodes: [
-              { node_id: 1, url: 'https://node-a.example.com/api/client/media/parse-v2' },
-              { node_id: 2, url: 'https://node-b.example.com/api/client/media/parse-v2' }
-            ]
+            node: { node_id: 1, url: 'https://node-a.example.com/api/client/media/parse-v2' },
+            token: 'proxy-execution-token'
           }
         }),
         { status: 200, headers: { 'content-type': 'application/json' } }
@@ -3810,9 +3808,8 @@ test('shared media api reports node network failure to SLS only', async () => {
           code: 10000,
           msg: 'success',
           data: {
-            nodes: [
-              { node_id: 1, url: 'https://node-a.example.com/api/client/media/parse-v2?token=secret' }
-            ]
+            node: { node_id: 1, url: 'https://node-a.example.com/api/client/media/parse-v2' },
+            token: 'proxy-execution-token'
           }
         }),
         { status: 200, headers: { 'content-type': 'application/json' } }

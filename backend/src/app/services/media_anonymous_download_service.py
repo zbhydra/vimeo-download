@@ -1,4 +1,4 @@
-"""匿名下载授权：验签结果 → 大小门禁 → 设备短锁 → 免费次数判定 → 签发 → 计次及资源排重。"""
+"""匿名下载授权：材料验签结果 → 大小门禁 → 设备短锁 → 免费次数判定 → 计次及资源排重。"""
 
 from pydantic import BaseModel, Field, model_validator
 from typing import Literal
@@ -6,20 +6,21 @@ from typing import Literal
 from app.api.user_dependencies import UserContext
 from app.constants.counter import DeviceCounterId
 from app.core.redis import redis_client
+from app.exceptions.common_exception import AppCommonException
+from app.i18n.common_code import CommonCode
 from app.services.config_public_service import config_public_service
 from app.services.counter_device_service import counter_device_service
 from app.services.media_pre_authorization_service import (
     DownloadPreValidatedRequest,
-    media_pre_authorization_service,
 )
 from app.services.media_service import media_service
 from app.schemas.media_schema import (
     MediaAnonymousDownloadPreV2Response,
     MediaAnonymousDownloadLoginResponse,
-    MediaPreNodeResponse,
 )
 from app.utils.redis_key import build_redis_key
 from app.utils.redis_lock import RedisLock
+from app.utils.logger import logger
 
 
 class AnonymousDownloadPolicy(BaseModel):
@@ -47,7 +48,7 @@ _device_lock = RedisLock()
 
 
 class MediaAnonymousDownloadService:
-    """匿名策略与计次的业务 owner，等待只由前端执行，免费次数用尽后要求登录。"""
+    """匿名策略与计次的业务 owner，等待只由前端执行，返回已验签材料。"""
 
     async def authorize(
         self,
@@ -56,7 +57,7 @@ class MediaAnonymousDownloadService:
         user_context: UserContext,
         device_id: str,
     ) -> MediaAnonymousDownloadPreV2Response | MediaAnonymousDownloadLoginResponse:
-        """为已验签资源签发匿名授权，重复资源刷新 token 而不续排重 TTL。"""
+        """为已验签材料返回匿名放行状态，重复资源不续排重 TTL。"""
         policy = AnonymousDownloadPolicy.model_validate(
             await config_public_service.get_lists()
         )
@@ -69,50 +70,46 @@ class MediaAnonymousDownloadService:
             download_mode=payload.download_mode,
         )
         dedup_key = self.build_dedup_key(device_id, resource_key)
-        # Redis 为硬依赖；失败直接上抛。MySQL 成功后写排重失败，重试可能再计一次。
-        async with _device_lock.lock_context(
-            f"media:anonymous_download:{device_id}",
-            ttl=5,
-            timeout=0,
-        ):
-            redis = await redis_client.get_client()
-            duplicate = await redis.exists(dedup_key)
-            if not duplicate:
-                used = await counter_device_service.get(
-                    device_id,
-                    DeviceCounterId.ANONYMOUS_DOWNLOAD,
-                )
-                # 超过匿名免费总次数要求登录：不签发、不计次、不写排重。
-                if used + 1 > policy.dl_anonymous_total_count:
-                    return MediaAnonymousDownloadLoginResponse()
-            result = (
-                await media_pre_authorization_service.create_download_authorization(
-                    payload=payload,
-                    user_context=user_context,
-                    credits_cost=0,
-                    issued_ip=user_context.ip,
-                    device_id=device_id,
-                )
+        # Redis 与 MySQL 是独立存储；任一步失败都闭锁，不返回材料。
+        try:
+            async with _device_lock.lock_context(
+                f"media:anonymous_download:{device_id}",
+                ttl=5,
+                timeout=0,
+            ):
+                redis = await redis_client.get_client()
+                duplicate = await redis.exists(dedup_key)
+                if not duplicate:
+                    used = await counter_device_service.get(
+                        device_id,
+                        DeviceCounterId.ANONYMOUS_DOWNLOAD,
+                    )
+                    # 超过匿名免费总次数要求登录：不签发、不计次、不写排重。
+                    if used + 1 > policy.dl_anonymous_total_count:
+                        return MediaAnonymousDownloadLoginResponse()
+                status: Literal[1, 2] = 1
+                if not duplicate:
+                    count = await counter_device_service.add(
+                        device_id,
+                        DeviceCounterId.ANONYMOUS_DOWNLOAD,
+                        1,
+                    )
+                    await redis.set(
+                        dedup_key, "1", ex=policy.dl_anonymous_dedup_seconds
+                    )
+                    if count > policy.dl_anonymous_immediate_count:
+                        status = 2
+        except Exception as exc:
+            logger.error(
+                "anonymous_download_authorize_infrastructure_failed", exc_info=True
             )
-            status: Literal[1, 2] = 1
-            if not duplicate:
-                count = await counter_device_service.add(
-                    device_id,
-                    DeviceCounterId.ANONYMOUS_DOWNLOAD,
-                    1,
-                )
-                await redis.set(dedup_key, "1", ex=policy.dl_anonymous_dedup_seconds)
-                if count > policy.dl_anonymous_immediate_count:
-                    status = 2
+            raise AppCommonException(
+                CommonCode.MEDIA_DOWNLOAD_PRE_UNAVAILABLE,
+                ext_msg=f"anonymous_download.authorize: infrastructure unavailable, error={type(exc).__name__}: {exc}",
+            ) from exc
         return MediaAnonymousDownloadPreV2Response(
             status=status,
-            token=result.token,
-            expires_at=result.expires_at,
-            download_mode=result.download_mode,
-            nodes=[
-                MediaPreNodeResponse(node_id=node.node_id, url=node.url)
-                for node in result.nodes
-            ],
+            material=payload.material,
             wait_seconds=policy.dl_anonymous_wait_seconds if status == 2 else None,
         )
 

@@ -1,31 +1,24 @@
 """媒体 V2 Pre 控制面授权服务。
 
-`parse-pre-v2` 只返回可尝试的节点地址，不识别平台、不扣额度、不签 token。
-`download-pre-v2` 在业务服务器完成 resource token 验签、用户短锁、节点选择、token 签发。
-API 层在同一个用户短锁内调用 user_credit_service 完成 Credits 扣减。
+`parse-pre-v2` 选择一个解析节点和启用代理，签发加密执行 token；
+`download-pre-v2` 验签完整材料后在用户短锁内完成 Credits 扣减。
 """
 
 from __future__ import annotations
 from collections.abc import AsyncIterator, Mapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, cast
 from urllib.parse import urlparse
 
 from app.api.user_dependencies import UserContext
 from app.contracts.media_download import MediaDownloadMode
 from app.exceptions.common_exception import AppCommonException
 from app.i18n.common_code import CommonCode
-from app.services.config_public_service import config_public_service
-from app.services.media_download_token_service import (
-    media_download_token_service,
-    media_download_token_ttl_seconds,
-)
-from app.services.media_resource_token_service import media_resource_token_service
-from app.services.service_node_service import (
-    ServiceNodeEndpoint,
-    service_node_service,
-)
+from app.services.media_execution_token_service import media_execution_token_service
+from app.services.proxy_pool_service import proxy_pool_service
+from app.schemas.media_schema import DownloadMaterial
+from app.services.service_node_service import service_node_service
 from app.utils.media_download_allowlist import is_web_download_media_allowed
 from app.utils.logger import logger
 from app.utils.media_extra import MediaExtra
@@ -73,27 +66,8 @@ class ParsePreResult:
         nodes: 有序 parse-v2 节点列表。
     """
 
-    nodes: list[MediaPreNode]
-
-
-@dataclass(frozen=True, slots=True)
-class DownloadPreResult:
-    """
-    download-pre-v2 结果。
-
-    Attributes:
-        token: 已签发 media_download JWT。
-        expires_at: token 过期 Unix 秒。
-        credits_cost: 本次下载授权实际扣除 Credits。
-        download_mode: 下载执行模式。
-        nodes: 有序 download-v2 节点列表。
-    """
-
+    node: MediaPreNode
     token: str
-    expires_at: int
-    credits_cost: int
-    download_mode: MediaDownloadMode
-    nodes: list[MediaPreNode]
 
 
 @dataclass(frozen=True, slots=True)
@@ -122,6 +96,7 @@ class DownloadPreValidatedRequest:
     size: int | None
     preferred_node_id: int | None
     extra: MediaExtra
+    material: DownloadMaterial
 
 
 class MediaPreAuthorizationService:
@@ -148,8 +123,15 @@ class MediaPreAuthorizationService:
                 CommonCode.MEDIA_SERVICE_NODE_UNAVAILABLE,
                 ext_msg="media_pre.parse_pre_v2: no healthy service nodes",
             )
+        node = nodes[0]
+        proxy_url = await proxy_pool_service.select_parse_proxy()
         return ParsePreResult(
-            nodes=self._format_nodes(nodes, "/api/client/media/parse-v2")
+            node=MediaPreNode(
+                node_id=node.node_id, url=node.api_url("/api/client/media/parse-v2")
+            ),
+            token=media_execution_token_service.issue_proxy_token(
+                link=str(link).strip(), proxy_url=proxy_url, node_id=node.node_id
+            ),
         )
 
     @asynccontextmanager
@@ -175,54 +157,6 @@ class MediaPreAuthorizationService:
             yield
         finally:
             await _download_pre_user_lock.release(lock_key, lock_token)
-
-    async def create_download_authorization(
-        self,
-        *,
-        payload: DownloadPreValidatedRequest,
-        user_context: UserContext,
-        credits_cost: int,
-        issued_ip: str | None,
-        device_id: str | None = None,
-    ) -> DownloadPreResult:
-        """
-        创建下载授权。
-
-        调用方应先持有 download-pre-v2 用户短锁，并在同一锁内完成后续 Credits 扣减。
-        """
-        nodes = await self._select_download_nodes(payload.preferred_node_id)
-        media_download_token_ttl_seconds(payload.size)
-        active_download_limit = await config_public_service.get(
-            "dl_active_download_limit"
-        )
-        if type(active_download_limit) is not int or active_download_limit <= 0:
-            raise AppCommonException(
-                CommonCode.MEDIA_DOWNLOAD_PRE_UNAVAILABLE,
-                ext_msg=(
-                    "download_pre_v2: dl_active_download_limit 必须配置为正整数，"
-                    f"value={active_download_limit!r}"
-                ),
-            )
-        token, claims = media_download_token_service.issue_token(
-            platform=payload.platform,
-            download_mode=payload.download_mode,
-            link=payload.link,
-            sid=payload.source_id,
-            size=payload.size,
-            user_id=None if device_id is not None else user_context.user_id,
-            credits_cost=credits_cost,
-            issued_ip=issued_ip,
-            extra=payload.extra,
-            device_id=device_id,
-            active_download_limit=active_download_limit,
-        )
-        return DownloadPreResult(
-            token=token,
-            expires_at=claims.exp,
-            credits_cost=claims.credits_cost,
-            download_mode=payload.download_mode,
-            nodes=self._format_nodes(nodes, "/api/client/media/download-v2"),
-        )
 
     async def _acquire_user_lock(self, lock_key: str, user_scope: str) -> str | None:
         """获取用户级短锁；抢不到说明用户请求过于频繁。"""
@@ -289,11 +223,11 @@ class MediaPreAuthorizationService:
         )
         resource_token = self._validate_non_empty_string(
             data.get("resource_token"),
-            max_length=8192,
+            max_length=1024 * 1024,
             code=CommonCode.MEDIA_DOWNLOAD_PRE_INVALID_REQUEST,
             field_name="resource_token",
         )
-        claims = media_resource_token_service.decode_for_download_pre(resource_token)
+        claims = media_execution_token_service.decode_resource_token(resource_token)
         if not is_web_download_media_allowed(claims.filename, claims.mime_type):
             raise AppCommonException(
                 CommonCode.MEDIA_DOWNLOAD_FILE_TYPE_NOT_ALLOWED,
@@ -308,25 +242,14 @@ class MediaPreAuthorizationService:
             link=claims.canonical_link,
             source_id=claims.source_id,
             platform=claims.platform,
-            download_mode=claims.download_mode,
+            download_mode=cast(MediaDownloadMode, claims.download_mode),
             filename=claims.filename,
             mime_type=claims.mime_type,
             size=claims.size,
             preferred_node_id=preferred_node_id,
-            extra=claims.extra,
+            extra={},
+            material=claims.material,
         )
-
-    async def _select_download_nodes(
-        self, preferred_node_id: int | None
-    ) -> list[ServiceNodeEndpoint]:
-        """选择并校验 download-v2 节点列表。"""
-        nodes = await service_node_service.select_download_nodes(preferred_node_id)
-        if not nodes:
-            raise AppCommonException(
-                CommonCode.MEDIA_SERVICE_NODE_UNAVAILABLE,
-                ext_msg="media_pre.download_pre_v2: no healthy service nodes",
-            )
-        return nodes
 
     def _validate_http_link(
         self,
@@ -425,16 +348,6 @@ class MediaPreAuthorizationService:
     def _build_download_pre_user_lock_key(self, user_scope: str) -> str:
         """构建用户级 download-pre-v2 短锁业务 key。"""
         return f"media:download_pre_lock:{{{user_scope}}}"
-
-    def _format_nodes(
-        self,
-        nodes: list[ServiceNodeEndpoint],
-        path: Literal["/api/client/media/parse-v2", "/api/client/media/download-v2"],
-    ) -> list[MediaPreNode]:
-        """把节点实体转换为 Pre API 响应节点。"""
-        return [
-            MediaPreNode(node_id=node.node_id, url=node.api_url(path)) for node in nodes
-        ]
 
 
 media_pre_authorization_service = MediaPreAuthorizationService()

@@ -139,7 +139,7 @@ class DownloadTokenSettings(BaseSettings):
     )
     resource_token_secret: str | None = Field(
         default=None,
-        description="resource token HS256 私密签名 secret，business/download 共用",
+        description="resource/proxy execution token 加密认证 secret，business/download 共用",
     )
 
 

@@ -25,9 +25,10 @@ from app.models.user_credit_log_model import UserCreditLogModel
 from app.models.user_download_record_model import UserDownloadRecordModel
 from app.models.user_model import UserModel
 from app.services.device_service import device_service
-from app.services.media_resource_token_service import MediaResourceTokenService
+from app.services.media_execution_token_service import media_execution_token_service
 from app.services.user_service import UserService
 from app.services.user_token_service import user_token_service
+from app.schemas.media_schema import MediaDirectDownloadIntentResponse
 from app.utils.jwt import JwtData, JwtUnit
 
 
@@ -112,7 +113,16 @@ async def _create_real_access_token(user_id: int, email: str) -> str:
 def _non_allowlisted_resource_token() -> str:
     """签发风险后缀优先拒绝的 resource token。"""
 
-    return MediaResourceTokenService().issue_token(
+    material = MediaDirectDownloadIntentResponse(
+        source_id="source-exe-1",
+        platform="vimeo",
+        download_mode="direct",
+        download_url="https://cdn.vimeocdn.com/video.mp4?sig=real",
+        filename="setup.exe",
+        mime_type="video/mp4",
+        size=49 * 1024 * 1024,
+    )
+    return media_execution_token_service.issue_resource_token(
         platform="vimeo",
         canonical_link="https://vimeo.com/example/allowlist-real",
         source_id="source-exe-1",
@@ -120,6 +130,7 @@ def _non_allowlisted_resource_token() -> str:
         filename="setup.exe",
         mime_type="video/mp4",
         size=49 * 1024 * 1024,
+        material=material,
     )
 
 

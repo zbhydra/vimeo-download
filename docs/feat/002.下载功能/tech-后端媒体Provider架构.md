@@ -19,7 +19,7 @@
 - 用户并发、Range 头透传与错误映射由统一编排层处理；是否启用并发由 Provider policy 决定，Range 是否支持和上游响应处理由 Provider 决定。
 - 具体平台只实现本平台如何解析、如何生成本次下载材料。
 
-旧 `MediaNodeExecutionService` 曾同时承担 parse-v2、download-v2、各平台 proxy、direct、client_mux、Range/header、错误映射、4GiB 保护、限速与平台动态导入。多平台时期这种结构会持续膨胀；本架构把“平台差异”与“下载通用治理”分开，并删除旧执行 service，避免保留双轨入口。单平台化后 registry 只剩 Vimeo 一个 Provider，架构本身不变。
+旧 `MediaNodeExecutionService` 曾同时承担解析、服务端下载执行、各平台 proxy、direct、client_mux、Range/header、错误映射、4GiB 保护、限速与平台动态导入。该执行 service 已删除；当前 registry 只剩 Vimeo Provider，浏览器直接消费预授权 material。
 
 ## 2. 非目标
 
@@ -51,8 +51,7 @@ backend/src/app/services/
   media_provider_service.py
   media_active_download_service.py
   media_anonymous_download_service.py
-  media_download_token_service.py
-  media_resource_token_service.py
+  media_execution_token_service.py
   media_pre_authorization_service.py
   media_service.py
 ```
@@ -62,7 +61,7 @@ backend/src/app/services/
 | 文件 | 职责 |
 | --- | --- |
 | `contracts/media_platform.py` | 平台常量与 URL 平台识别 |
-| `contracts/media_download.py` | download token claims 与 download mode 类型 |
+| `contracts/media_download.py` | download mode 类型 |
 | `constants/media_download.py` | 4GiB 等全局下载阈值 |
 | `provider/media/base_media.py` | Provider 契约、请求对象、结果对象、错误类型、下载治理策略、Range 错误类型 |
 | `provider/media/{platform}_media.py` | 单个平台的 `_parse()` / `_download()` 实现和模块级单例；当前只有 `vimeo_media.py` |
@@ -70,7 +69,7 @@ backend/src/app/services/
 | `services/media_provider_service.py` | V2 parse/download 编排、Provider 查找、extra 透传、活跃下载治理、统一 release、错误映射 |
 | `services/media_active_download_service.py` | 进程内用户活跃下载计数，上限由已验签 token 携带 |
 | `services/media_anonymous_download_service.py` | 匿名设备下载的设备终生计数与资源排重 |
-| `services/media_download_token_service.py` / `media_resource_token_service.py` | token 签发与验签 |
+| `services/media_execution_token_service.py` | proxy execution token 与 resource material token 的 Fernet 签发和验签 |
 | `services/media_pre_authorization_service.py` | download-pre-v2 授权前置校验与短锁 |
 | `services/media_service.py` | pre-v2 扣费、去重与计费规则 |
 
@@ -93,13 +92,7 @@ class BaseMedia:
     async def parse(self, request: MediaParseRequest) -> MediaParseResult:
         ...
 
-    async def download(self, request: MediaDownloadRequest) -> JsonDownloadResult:
-        ...
-
     async def _parse(self, request: MediaParseRequest) -> MediaParseResult:
-        ...
-
-    async def _download(self, request: MediaDownloadRequest) -> JsonDownloadResult:
         ...
 ```
 
@@ -107,13 +100,13 @@ class BaseMedia:
 
 - `platform` / `policy` 是子类必须声明的类属性。
 - `parse()` / `download()` 是统一入口，可做公共校验、日志上下文和错误归一。
-- 具体平台只实现 `_parse()` / `_download()`。
+- 具体平台只实现 `_parse()` 并生成浏览器 material。
 - Provider 不返回 FastAPI response。
 - Provider 不处理用户并发计数。
 - Provider 不知道 active guard 或 BackgroundTask 的实现。
 - Provider 不记录完整 token；需要日志关联时用 claims 里的 `jti`，API 层可记录 token hash。
-- Provider 单例必须无状态；本次下载材料在 `_download()` 内自包含，不跨请求持有。
-- 有状态基础设施不下沉进 Provider 单例：浏览器 runtime 放在 `app/provider/browser_runtime.py`，由 Provider 在 `_parse()` 内按需调用 `ensure_browser()`；`_download()` 打开的上游资源在本次调用内自行关闭，不单独保留 runtime 门面。
+- Provider 单例必须无状态；本次解析材料在 `_parse()` 内生成，不跨请求持有。
+- 有状态基础设施不下沉进 Provider 单例：浏览器 runtime 放在 `app/provider/browser_runtime.py`，由 Provider 在 `_parse()` 内按需调用 `ensure_browser()`。
 
 ### 4.2 ProviderPolicy
 
@@ -176,8 +169,8 @@ class MediaParseRequest:
 
 ```python
 @dataclass(frozen=True)
-class MediaDownloadRequest:
-    claims: MediaDownloadTokenClaims
+class MediaParseRequest:
+    proxy_url: str
     range_header: str | None
     client_ip: str
     extra: Extra
@@ -249,15 +242,15 @@ MediaParseResult(
 
 - API 不公开 `extra`，公开响应不得出现 `resources[].extra`。
 - 创建 resource token 时，把每个 `resource.extra` 签入该 resource 的 token。
-- `download-pre-v2` 只验签并把 `extra` 原样写入 download token。
-- `download-v2` 只把 `extra` 原样传给同平台 Provider。
+- `download-pre-v2` 只验签并直接返回 resource material。
+- `parse-v2` 只把 Provider 解析结果封装为 resource material token。
 - 除对应 Provider 外，任何公共层都不能读取 extra 做业务分支。
 - 日志不能输出完整 extra。
 - 字段名固定叫 `extra`；是否加密是 token 编码策略，不通过更换字段名表达。
 - extra 只能放短小 JSON 定位材料，例如 format id、文件指纹、缓存 key；签名 JWT 只保证未被篡改，不提供保密。需要放敏感内容时，改用加密 token 或服务端缓存 key，不能把直链、cookie、secret 写进明文 JWT。
 - extra 类型固定为 `Extra = dict[str, JsonValue]`；`JsonValue = str | int | float | bool | None | list[JsonValue] | dict[str, JsonValue]`。
 - 签发 resource token 前必须校验 extra 可 JSON 序列化、compact JSON 后不超过 2048 bytes、最大嵌套深度不超过 4；不满足时不签发 token，返回 `MEDIA_PARSE_NODE_UNAVAILABLE` + `data.reason = "invalid_extra"`。
-- extra 内的缓存 key 必须是随机不可猜测值，缓存记录必须绑定 `platform`、`canonical_link`、`source_id`、过期时间；含用户敏感材料时还必须绑定 `uid`。不能绑定“当前 token jti”:resource token 与 media download token 的 `jti` 不同,download-v2 看不到 resource token jti。
+- resource material 已由 Fernet token 认证；不使用 Redis 材料缓存，也不把签名 CDN URL 放进额外缓存 key。
 - 当前 Provider 重构不允许把“下载必需”的节点本地缓存 key 写入 extra。extra 必须能被所有候选下载节点解释：缓存 key 默认指向共享缓存且 TTL 覆盖 token TTL。节点本地材料只能作为可失效 hint,缺失时 Provider 必须降级到普通解析/账号池路径；如果某平台必须依赖节点本地缓存,需单独设计 node-bound 候选过滤,且过滤必须发生在 `download-pre-v2` 扣费前。
 
 公开 parse 字段摘要：
@@ -291,7 +284,7 @@ DownloadJsonPayload = MediaDirectDownloadIntentResponse | MediaClientMuxDownload
 - 新增 mode 时先新增明确 schema，再允许 Provider 返回对应 payload。
 - 不允许 Provider 随意返回裸 `dict`。
 - `media_provider_service` 必须校验 `claims.download_mode` 与 JSON payload schema 匹配：`direct` 对应 `MediaDirectDownloadIntentResponse`,`client_mux` 对应 `MediaClientMuxDownloadIntentResponse`;不匹配时按节点不可用处理。
-- `download-v2` 返回 JSON 时不再有服务端文件响应头：`Content-Disposition`、`Content-Length`、`Content-Range`、`Accept-Ranges`、上游 `ETag` 透传等白名单逻辑随 `proxy` 一起删除。
+- 浏览器 material 消费不产生服务端文件响应头，服务端不透传 `Content-Disposition`、`Content-Length`、`Content-Range` 或上游 `ETag`。
 - JSON result schema 使用公开 API 字段 `mime_type`。
 
 ## 7. 错误模型
@@ -324,12 +317,11 @@ class MediaProviderError(Exception):
 - 平台库、httpx、yt-dlp、TG client 的原始异常不直接穿透到 API。
 - 未知异常由 `media_provider_service` 记录结构化日志后映射为节点不可用。
 - Range 错误需要携带 `Content-Range` 时，Provider 把值放入 `MediaProviderError.data.content_range`，由 service/API 错误路径透传。
-- `UNSUPPORTED_DOWNLOAD_MODE` 不应由正常 Provider download 流程产生；resource token 和 media download token decoder 必须在进入 Provider 前拒绝非法 mode。
-- `UPSTREAM_FAILED` 只用于可换节点的上游临时失败,映射 `MEDIA_DOWNLOAD_NODE_UNAVAILABLE`。上游明确无权限、资源失效或文件不存在必须抛 `RESOURCE_UNREACHABLE` 或 `RESOURCE_NOT_FOUND`,不得用 `UPSTREAM_FAILED`。
+- 非法 `download_mode` 在 resource material 验签阶段拒绝。上游明确无权限、资源失效或文件不存在映射为稳定 parse 资源错误。
 
 映射口径：
 
-| Provider code | parse-v2 | download-v2 |
+| Provider code | parse-v2 |
 | --- | --- | --- |
 | `INVALID_LINK` | `MEDIA_PARSE_INVALID_LINK` | 不适用 |
 | `UNSUPPORTED_PLATFORM` | `MEDIA_PARSE_UNSUPPORTED_PLATFORM` | 进入 Provider 前拒绝非法 token |
@@ -360,7 +352,7 @@ limit = 已验签下载 token 携带的上限
 - Vimeo Provider 声明 `active_limited=False`：它只返回 direct / client_mux 的 JSON result，不占用后端持续输出流。
 - 计数只在当前进程内生效；进程重启自动清空。
 - 超过上限直接返回 `RATE_LIMIT_EXCEEDED_MEDIA`，`data.reason = "active_download_limit_exceeded"`，不排队等待。
-- 超限不是节点不可用，不返回 `MEDIA_DOWNLOAD_NODE_UNAVAILABLE`，避免前端切换节点。
+- 超限不是节点切换信号，直接返回稳定材料/文件大小错误。
 
 `acquire()` 返回本次下载 guard：
 
@@ -401,7 +393,7 @@ active acquire 成功
 -> 抛出统一错误
 ```
 
-如果 Provider 在返回前已经打开了部分平台资源又抛错，Provider 必须在自身异常路径关闭这些部分资源；`download-v2` 没有对外文件流，公共层不再替 Provider 兜底释放。
+如果 Provider 在返回前已经打开了部分平台资源又抛错，Provider 必须在自身异常路径关闭这些部分资源；浏览器 material 消费不由 Provider 持有文件流。
 
 如果 Provider 返回成功后，service 因真实 size 超过 4GiB 或其他公共校验失败而中止，`finally` 同样会释放 active guard。
 
@@ -424,7 +416,7 @@ media_provider_service.parse_v2(url, user_id, device_id, client_ip)
   -> API/service 把每个 resource.extra 签入对应 resource token
 ```
 
-### 10.2 download-v2
+### 10.2 材料消费
 
 ```text
 media_provider_service.download_v2(claims, range_header, client_ip)
@@ -436,11 +428,11 @@ media_provider_service.download_v2(claims, range_header, client_ip)
   -> try:
        如果 policy.active_limited:
          active_guard = active_download_service.acquire(uid, limit)
-       provider.download(MediaDownloadRequest(extra=claims.extra))
+       provider.parse(MediaParseRequest(proxy_url=claims.proxy_url))
        校验 claims.download_mode 与 JSON payload schema:
          direct 必须是 MediaDirectDownloadIntentResponse
          client_mux 必须是 MediaClientMuxDownloadIntentResponse
-         不匹配时返回 MEDIA_DOWNLOAD_NODE_UNAVAILABLE
+         不匹配时返回 MEDIA_RESOURCE_MATERIAL_INVALID
        用 payload.size 做 4GiB 公共校验
        返回 JsonDownloadResult
      finally:
@@ -475,6 +467,6 @@ docs/feat/002.下载功能/tech-站点适配.md
 验收口径：
 
 - 新增第 N 个平台时，不需要理解其它平台资源的释放细节。
-- 新增平台且复用已有 `download_mode` 时，不需要改 `download-v2` API。
-- 新增平台且复用已有 `download_mode` 时，主要实现 `_parse()` / `_download()`、注册 Provider、补平台识别/token/schema/测试/站点文档。
+- 新增平台且复用已有 `download_mode` 时，只需实现 Provider material 合同和对应的预授权校验。
+- 新增平台且复用已有 `download_mode` 时，主要实现 `_parse()`、注册 Provider、补平台识别/token/schema/测试/站点文档。
 - 新增 `download_mode` 时，必须先补 schema、前端 runner、方法注册和接口文档，不能塞进既有 Provider 主流程。

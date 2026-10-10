@@ -58,9 +58,9 @@ extension 常规开发命令执行 watch 构建，不监听 HTTP 端口；显式
  │        ├─ 调度: 按 权重/健康 加权随机抽 service_nodes →
  │        │
  │        ▼  (业务服务器转发执行请求到选中节点)
- │      service node 执行面 (同一份代码; download-v2 两种角色都挂, 本项目只部署 business 角色节点)
+ │      service node 执行面 (同一份代码; 只挂 parse-v2 解析执行, 本项目只部署 business 角色节点)
  │        ├─ download 角色不连业务数据库, 只连本地运行态
- │        ├─ /download-pre-v2 /download-v2 执行接口 (由 business 转发)
+ │        ├─ /download-pre-v2 材料授权接口 (business 直接返回已签名材料)
  │        └─ 上游: Vimeo（匿名浏览器运行时捕获播放器 config）
  │
  └─ 桌面浏览器 ─→ extension (Chrome MV3, 跑在 vimeo.com / player.vimeo.com)
@@ -72,7 +72,7 @@ extension 常规开发命令执行 watch 构建，不监听 HTTP 端口；显式
 ```
 
 要点：
-- **同一份代码支持 `business` / `download` 两个角色**（`app.role`）；本项目只部署 `business` 服务器，不部署 `download` 执行节点——该角色代码保留，`download-v2` 由 business 承载。
+- **同一份代码支持 `business` / `download` 两个角色**（`app.role`）；本项目只部署 `business` 服务器。parse-pre 在 business 选择单个解析节点与代理，parse-v2 只执行一次并返回加密材料 token。
 - **website / extension / admin 走同一套后端 HTTP 契约**，客户端前缀 `/api/client/*`、后台前缀 `/api/admin/*`。接口只用 GET 和 POST（见 `@../../../AGENTS.md` §3）。
 - **SLS 日志双写在 website 前端**，不在 backend Python 侧（后端用标准 logging：控制台 + 文件）。见 `@tech-website.md` 与 `@tech-可观测与SLS.md`。
 - **业务时区**：后端业务时区统一 `America/New_York`，不是 UTC（`backend/src/app/utils/time.py`）。

@@ -143,7 +143,7 @@ def test_business_supervisor_and_nginx_paths_are_env_rendered():
     assert "proxy_read_timeout 3600s;" in nginx_conf
     assert "proxy_send_timeout 3600s;" in nginx_conf
     assert "large_client_header_buffers 4 16k;" in nginx_conf
-    assert "location ~ ^/api/client/media/download-v2/?$ {" in nginx_conf
+    assert "location ~ ^/api/client/media/download-v2/?$ {" not in nginx_conf
     assert '"$request_method $uri $server_protocol"' in nginx_conf
     assert "$request_uri" not in nginx_conf
     assert "$http_referer" not in nginx_conf

@@ -78,7 +78,6 @@ def test_download_role_only_mounts_node_and_media_v2_routes(monkeypatch):
     assert "/internal/service-node/health" in paths
     assert "/internal/service-node/dashboard-snapshot" in paths
     assert "/api/client/media/parse-v2" in paths
-    assert "/api/client/media/download-v2" in paths
     assert "/api/client/media/parse-pre-v2" not in paths
     assert "/api/client/media/download-pre-v2" not in paths
     assert "/api/system/health" not in paths
@@ -115,7 +114,6 @@ def test_business_role_keeps_current_business_routes(monkeypatch):
     assert "/api/client/media/client-mux-intent" not in paths
     assert "/api/admin/auth/login" in paths
     assert "/api/client/media/parse-v2" in paths
-    assert "/api/client/media/download-v2" in paths
     assert "/api/client/media/parse-pre-v2" in paths
     assert "/api/client/media/download-pre-v2" in paths
     assert "/api/admin/node-monitor/network-rate" in paths
@@ -413,7 +411,6 @@ print(json.dumps({
     assert "/internal/service-node/health" in data["paths"]
     assert "/api/admin/node-monitor/network-rate" in data["paths"]
     assert "/api/client/media/parse-v2" in data["paths"]
-    assert "/api/client/media/download-v2" in data["paths"]
     assert "/api/client/media/parse-pre-v2" not in data["paths"]
     assert "/api/client/media/download-pre-v2" not in data["paths"]
     assert "/api/system/health" not in data["paths"]

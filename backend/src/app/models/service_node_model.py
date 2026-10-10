@@ -47,7 +47,7 @@ class ServiceNodeModel(BaseDBModel):
     public_base_url: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
-        comment="客户端访问节点 parse-v2/download-v2 的基础地址",
+        comment="客户端访问节点 parse-v2 的基础地址",
     )
     internal_base_url: Mapped[str] = mapped_column(
         String(255),

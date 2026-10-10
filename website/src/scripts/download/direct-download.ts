@@ -4,13 +4,10 @@
  * 流程：
  * 1. 新下载先申请 direct intent，拿到当前 CDN 直链。
  * 2. 下载开始时选择 OPFS / IndexedDB / Memory，并把 direct URL 写入方法状态。
- * 3. 可校验 Range 的 OPFS 下载自动续传；不可校验的平台只保留 Restart 记录。
+ * 3. 下载失败交给工作区，用户手动重试；本地恢复记录只负责继续或清理。
  */
 
-import {
-  createMediaDownloadV2Session,
-  MediaDownloadV2ReauthorizationRequiredError
-} from './media-download-v2'
+import { createMediaMaterialSession } from './media-material-session'
 import {
   DirectDownloadHttpError,
   DirectUrlExpiredError,
@@ -128,7 +125,7 @@ async function prepareIntent(
   resource: MediaPost,
   context: DownloadMethodContext
 ): Promise<{ intent: DirectDownloadIntent; nodeId?: number }> {
-  const session = await createMediaDownloadV2Session(resource, context)
+  const session = await createMediaMaterialSession(resource, context)
   const intent = await session.prepareDirectIntent()
   return {
     intent,
@@ -303,56 +300,6 @@ async function runDirectDownloadToOpfsWithAutoResume(
   }
 }
 
-async function runDirectDownloadToMemory(
-  resource: MediaPost,
-  context: DownloadMethodContext,
-  options: DownloadMethodOptions
-): Promise<DownloadMethodResult> {
-  const initialPrepared = await prepareIntent(resource, context)
-  let activeIntent = initialPrepared.intent
-  let usedNodeId = initialPrepared.nodeId
-  if (usedNodeId !== undefined) {
-    options.onUsedNode?.(usedNodeId)
-  }
-  let retryCount = 0
-
-  while (true) {
-    try {
-      const response = await fetchDirectDownloadResponse(
-        activeIntent.downloadUrl,
-        '[direct-download] runDirectDownloadToMemory'
-      )
-      const completion = await createObjectUrlCompletionFromResponse(
-        response,
-        activeIntent.filename || resource.filename,
-        options.onProgress,
-        '[direct-download] runDirectDownloadToMemory'
-      )
-      return {
-        completion,
-        retryCount,
-        usedNodeId
-      }
-    } catch (error) {
-      if (
-        retryCount > 0 ||
-        !(error instanceof DirectUrlExpiredError || error instanceof DirectDownloadHttpError)
-      ) {
-        throw error
-      }
-
-      console.error(error)
-      const refreshed = await prepareIntent(resource, context)
-      activeIntent = refreshed.intent
-      usedNodeId = refreshed.nodeId
-      if (usedNodeId !== undefined) {
-        options.onUsedNode?.(usedNodeId)
-      }
-      retryCount = 1
-    }
-  }
-}
-
 async function runDirectIntentToMemory(
   resource: MediaPost,
   intent: DirectDownloadIntent,
@@ -420,7 +367,7 @@ async function runDirectResumeDownload(
     record.recoveryMode === 'restartable'
   ) {
     await clearDownloadResumeRecord(record)
-    return runDirectDownloadFromStartWithReauthorization(resource, context, options)
+    return runDirectDownloadFromStart(resource, context, options)
   }
 
   if (
@@ -443,7 +390,10 @@ async function runDirectResumeDownload(
       record.methodState.downloadUrl,
       record.downloadedBytes,
       record.filename,
-      totalBytesForRecord(record)
+      totalBytesForRecord(record),
+      undefined,
+      undefined,
+      false
     )
   } catch (error) {
     if (error instanceof AutoRangeResumeExhaustedError) {
@@ -471,30 +421,9 @@ async function runDirectDownloadFromStart(
     rangeResumable: true
   })
   if (record.storageType !== 'opfs') {
-    try {
-      const result = await runDirectIntentToMemory(
-        resource,
-        initialIntent,
-        options
-      )
-      await clearDownloadResumeRecord(record)
-      return {
-        ...result,
-        usedNodeId: initialPrepared.nodeId
-      }
-    } catch (error) {
-      if (
-        !(error instanceof DirectUrlExpiredError) &&
-        !(error instanceof DirectDownloadHttpError)
-      ) {
-        throw error
-      }
-
-      console.error(error)
-      const result = await runDirectDownloadToMemory(resource, context, options)
-      await clearDownloadResumeRecord(record)
-      return result
-    }
+    const result = await runDirectIntentToMemory(resource, initialIntent, options)
+    await clearDownloadResumeRecord(record)
+    return { ...result, usedNodeId: initialPrepared.nodeId }
   }
 
   return runDirectDownloadToOpfsWithAutoResume(
@@ -506,30 +435,9 @@ async function runDirectDownloadFromStart(
     initialIntent.filename || resource.filename,
     totalBytesForIntent(initialIntent, resource),
     initialPrepared.nodeId,
-    () => prepareIntent(resource, context),
-    true
+    undefined,
+    false
   )
-}
-
-async function runDirectDownloadFromStartWithReauthorization(
-  resource: MediaPost,
-  context: DownloadMethodContext,
-  options: DownloadMethodOptions
-): Promise<DownloadMethodResult> {
-  try {
-    return await runDirectDownloadFromStart(resource, context, options)
-  } catch (error) {
-    if (!(error instanceof MediaDownloadV2ReauthorizationRequiredError)) {
-      throw error
-    }
-
-    console.error(error)
-    const result = await runDirectDownloadFromStart(resource, context, options)
-    return {
-      ...result,
-      retryCount: result.retryCount + 1
-    }
-  }
 }
 
 /** 执行授权直链下载。 */
@@ -540,7 +448,7 @@ export async function runDirectDownload(
   options: DownloadMethodOptions
 ): Promise<DownloadMethodResult> {
   if (!resumeRecord) {
-    return runDirectDownloadFromStartWithReauthorization(resource, context, options)
+    return runDirectDownloadFromStart(resource, context, options)
   }
 
   return runDirectResumeDownload(

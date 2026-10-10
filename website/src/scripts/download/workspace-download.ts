@@ -437,9 +437,9 @@ interface RuntimeDownloadMarkError extends Error {
 interface RuntimeDownloadResult {
   /** 下载完成后的保存动作。 */
   completion: DownloadCompletion
-  /** 方法内部自动重试次数。 */
+  /** 保留的历史统计字段；当前材料链路固定为 0。 */
   retryCount: number
-  /** 本次下载实际命中的 download-v2 节点 ID。 */
+  /** 兼容旧埋点结构；当前材料链路不命中下载节点。 */
   usedNodeId?: number
 }
 
@@ -448,7 +448,7 @@ interface RuntimeDownloadMarkContext {
   resource: MediaPost
   /** start mark 是否已经上报。 */
   startRecorded: boolean
-  /** 实际命中的 download-v2 节点 ID。 */
+  /** 实际命中的解析节点 ID；材料下载不再切换节点。 */
   usedNodeId?: number
   /** 最近一次进度快照。 */
   lastProgress?: DownloadProgressSnapshot

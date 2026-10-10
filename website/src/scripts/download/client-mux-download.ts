@@ -1,18 +1,14 @@
 /**
  * client_mux 下载方法。
  *
- * 通过 download-anonymous-pre-v2 + download-v2 获取 tracks。
+ * 通过 download-anonymous-pre-v2 获取完整 tracks 材料。
  */
 
 import {
-  ClientMuxDownloadError,
   downloadClientMuxResource,
   type ClientMuxProgressSnapshot
 } from './client-mux'
-import {
-  createMediaDownloadV2Session,
-  MediaDownloadV2ReauthorizationRequiredError
-} from './media-download-v2'
+import { createMediaMaterialSession } from './media-material-session'
 import type { DownloadMethodResult } from './download-completion'
 import type { DownloadResumeRecord } from './download-resume-store'
 import type {
@@ -29,47 +25,20 @@ async function runClientMuxDownloadFromStart(
   const onProgress = (progress: ClientMuxProgressSnapshot): void => {
     options.onProgress?.(progress)
   }
-  const session = await createMediaDownloadV2Session(resource, context)
-  let intent = await session.prepareClientMuxIntent()
-  let usedNodeId = session.getLastUsedNodeId() ?? undefined
-  if (usedNodeId !== undefined) {
-    options.onUsedNode?.(usedNodeId)
-  }
-  let retryCount = 0
-
-  while (true) {
-    try {
-      const { blob, filename, cleanup } = await downloadClientMuxResource(intent, onProgress)
-      return {
-        completion: {
-          kind: 'object_url',
-          objectUrl: URL.createObjectURL(blob),
-          filename,
-          revokeAfterMs: 60_000,
-          bytesWritten: blob.size,
-          objectUrlSource: blob instanceof File ? 'file' : 'blob',
-          cleanup
-        },
-        retryCount,
-        usedNodeId
-      }
-    } catch (error) {
-      if (
-        retryCount > 0 ||
-        !(error instanceof ClientMuxDownloadError) ||
-        error.reason !== 'track_fetch_failed'
-      ) {
-        throw error
-      }
-
-      console.error(error)
-      intent = await session.prepareClientMuxIntent()
-      usedNodeId = session.getLastUsedNodeId() ?? undefined
-      if (usedNodeId !== undefined) {
-        options.onUsedNode?.(usedNodeId)
-      }
-      retryCount = 1
-    }
+  const session = await createMediaMaterialSession(resource, context)
+  const intent = await session.prepareClientMuxIntent()
+  const { blob, filename, cleanup } = await downloadClientMuxResource(intent, onProgress)
+  return {
+    completion: {
+      kind: 'object_url',
+      objectUrl: URL.createObjectURL(blob),
+      filename,
+      revokeAfterMs: 60_000,
+      bytesWritten: blob.size,
+      objectUrlSource: blob instanceof File ? 'file' : 'blob',
+      cleanup
+    },
+    retryCount: 0
   }
 }
 
@@ -86,18 +55,5 @@ export async function runClientMuxDownload(
     )
   }
 
-  try {
-    return await runClientMuxDownloadFromStart(resource, context, options)
-  } catch (error) {
-    if (!(error instanceof MediaDownloadV2ReauthorizationRequiredError)) {
-      throw error
-    }
-
-    console.error(error)
-    const result = await runClientMuxDownloadFromStart(resource, context, options)
-    return {
-      ...result,
-      retryCount: result.retryCount + 1
-    }
-  }
+  return runClientMuxDownloadFromStart(resource, context, options)
 }

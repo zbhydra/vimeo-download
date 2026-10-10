@@ -90,12 +90,7 @@ class CommonCode(IntEnum):
     MEDIA_PARSE_REQUIRES_CLIENT = 24032  # 需要浏览器插件或客户端参与解析
     MEDIA_PARSE_RESOURCE_NOT_FOUND = 24033  # 平台资源不存在或不可访问
     MEDIA_PARSE_NODE_UNAVAILABLE = 24034  # parse-v2 节点临时不可用，可换节点
-    MEDIA_DOWNLOAD_TOKEN_INVALID = 24035  # download-v2 token 无效或验签失败
-    MEDIA_DOWNLOAD_TOKEN_EXPIRED = 24036  # download-v2 token 已过期，需重新授权
-    MEDIA_DOWNLOAD_RESOURCE_UNREACHABLE = 24037  # 节点无法重新解析或下载资源
     MEDIA_DOWNLOAD_FILE_TOO_LARGE = 24038  # 资源超过 4GiB 下载上限
-    MEDIA_DOWNLOAD_NODE_UNAVAILABLE = 24039  # download-v2 节点临时不可用，可换节点
-    MEDIA_RANGE_NOT_SATISFIABLE = 24040  # 请求的 Range 无法满足
     MEDIA_PARSE_PRE_INVALID_LINK = 24041  # parse-pre-v2 输入链接非法
     MEDIA_SERVICE_NODE_UNAVAILABLE = 24042  # 没有健康服务节点可返回
     MEDIA_SERVICE_NODE_SELECT_FAILED = 24043  # 业务服务器选择节点失败
@@ -105,6 +100,11 @@ class CommonCode(IntEnum):
     )
     MEDIA_DOWNLOAD_PRE_UNAVAILABLE = 24048  # download-pre-v2 Redis 锁基础设施暂不可用
     MEDIA_DOWNLOAD_FILE_TYPE_NOT_ALLOWED = 24049  # website 下载文件类型不在媒体白名单
+    MEDIA_PARSE_PROXY_UNAVAILABLE = 24050  # parse-pre-v2 没有可用代理
+    MEDIA_PARSE_EXECUTION_TOKEN_INVALID = 24051  # parse-v2 代理执行 token 无效
+    MEDIA_PARSE_EXECUTION_TOKEN_EXPIRED = 24052  # parse-v2 代理执行 token 过期
+    MEDIA_RESOURCE_MATERIAL_INVALID = 24053  # resource token 材料无效
+    MEDIA_RESOURCE_MATERIAL_EXPIRED = 24054  # resource token 材料过期
 
     # ========== Credits / 签到业务 (25000-25999) ==========
     CREDIT_UNAVAILABLE = 25001  # Credits 底座不可用，无法返回真实余额或发奖

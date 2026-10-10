@@ -48,23 +48,19 @@ async function waitForDownload(deadline: number): Promise<void> {
   })
 }
 
-/** 新授权与刷新统一走匿名接口；状态 3 以 DownloadExtensionRequired 中止。 */
+/** 新授权走匿名接口；状态 3 以 DownloadExtensionRequired 中止。 */
 export async function authorizeWorkspaceDownload(
   resource: MediaPost, context: DownloadMethodContext
 ): Promise<MediaDownloadAuthorization> {
   const key = `download:anonymous-wait:${encodeURIComponent(context.deviceId)}:${encodeURIComponent(resource.sourceId)}`
-  for (let attempt = 0; attempt <= 1; attempt += 1) {
-    const result = await createAnonymousDownloadAuthorization(resource, context)
-    if (result.status === 3) throw new DownloadExtensionRequired()
-    const stored = Number(localStorage.getItem(key))
-    let deadline = Number.isFinite(stored) ? stored : 0
-    if (result.status === 2) {
-      deadline = Math.max(deadline, Date.now() + result.waitSeconds * 1000)
-      // 写入失败必须中止，避免刷新后绕过等待。
-      localStorage.setItem(key, String(deadline))
-    }
-    await waitForDownload(deadline)
-    if (result.authorization.expiresAt * 1000 > Date.now()) return result.authorization
+  const result = await createAnonymousDownloadAuthorization(resource, context)
+  if (result.status === 3) throw new DownloadExtensionRequired()
+  const stored = Number(localStorage.getItem(key))
+  let deadline = Number.isFinite(stored) ? stored : 0
+  if (result.status === 2) {
+    deadline = Math.max(deadline, Date.now() + result.waitSeconds * 1000)
+    localStorage.setItem(key, String(deadline))
   }
-  throw new Error(`[anonymous-download] 等待后重新授权仍过期，sourceId=${resource.sourceId}`)
+  await waitForDownload(deadline)
+  return result.authorization
 }

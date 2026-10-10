@@ -25,7 +25,7 @@ from app.utils.service_node_url import (
 
 # 节点类型：业务节点保留完整 API 和数据库能力。
 SERVICE_NODE_TYPE_BUSINESS = 1
-# 节点类型：下载节点只承载 parse-v2/download-v2 数据面。
+# 节点类型：下载节点承载 parse-v2 数据面。
 SERVICE_NODE_TYPE_DOWNLOAD = 2
 # 旧调度状态字段保留给历史数据和 API 响应；新逻辑只看 enabled。
 SERVICE_NODE_STATUS_ACTIVE = 1
@@ -35,8 +35,8 @@ SERVICE_NODE_HEALTH_UNKNOWN = 0
 SERVICE_NODE_HEALTH_HEALTHY = 1
 # 健康状态：unhealthy 表示最近一次健康检查失败或响应非法。
 SERVICE_NODE_HEALTH_UNHEALTHY = 2
-# Pre 接口最多返回 3 个可尝试节点，由 weight 统一控制候选池。
-_MAX_SELECTED_NODE_COUNT = 3
+# parse-pre-v2 只发放一个执行节点；失败由用户手动重新解析。
+_MAX_SELECTED_NODE_COUNT = 1
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,7 +75,7 @@ class ServiceNodeService:
         选择 parse-pre-v2 返回的节点。
 
         Returns:
-            最多 3 个健康可用节点。
+            一个健康可用节点；调用方不做故障转移。
         """
         return await self._select_nodes(preferred_node_id=None)
 
@@ -89,7 +89,7 @@ class ServiceNodeService:
             preferred_node_id: 解析成功节点的亲和提示，只对可用候选节点生效。
 
         Returns:
-            最多 3 个健康可用节点。
+            当前保留的内部选择方法返回单节点候选。
         """
         return await self._select_nodes(preferred_node_id=preferred_node_id)
 
@@ -173,14 +173,14 @@ class ServiceNodeService:
         preferred_node_id: int | None,
     ) -> list[ServiceNodeModel]:
         """
-        选择最多 3 个服务节点。
+            选择当前配置允许的单个服务节点。
 
         Args:
             nodes: 已过滤健康可用的统一候选池。
             preferred_node_id: 可用候选节点首位亲和提示。
 
         Returns:
-            不重复的节点列表。
+            不重复的节点列表，当前最多一个。
         """
         selected: list[ServiceNodeModel] = []
         remaining = list(nodes)

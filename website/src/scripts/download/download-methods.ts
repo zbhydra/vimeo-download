@@ -47,7 +47,7 @@ export interface DownloadMethodContext {
 export interface DownloadMethodOptions {
   /** 下载进度回调。 */
   onProgress?(progress: DownloadProgressSnapshot): void
-  /** 本次下载实际命中的 download-v2 节点。 */
+  /** 兼容旧埋点结构；当前材料链路不命中下载节点。 */
   onUsedNode?(nodeId: number): void
 }
 

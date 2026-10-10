@@ -20,8 +20,8 @@
 
 - `website/src/components/pages/HomePage.astro` → `website/src/components/download/DownloadWorkspace.astro`（装配 `DownloadParseResults.astro` 与 `DownloadAnonymousModal.astro`）→ `website/src/scripts/download/workspace.ts`。
 - `workspace.ts` 的按钮事件 → `handleDownloadClick` / `handleDownloadAllClick` → `runSingleResourcePlan` → `downloadPlannedResource` → 现有下载方法。单项与批量入口均校验设备身份一致性。
-- `direct-download.ts` 的 `prepareIntent`、`client-mux-download.ts` 的 runner → `createMediaDownloadV2Session` → `media-download-v2.ts` 的 `authorizeDownloadV2` → `anonymous-download.ts` 的 `authorizeWorkspaceDownload` → 匿名授权 API。新授权及 session 内重新授权共用该入口。
-- `workspace.ts` 的恢复按钮 → `handlePendingResumeContinue` → `resumeDownloadResource`。其中 direct 字节续传使用恢复记录里已保存的直链；其恢复失败行为见 [下载方法与续传](tech-下载方法与续传.md)，不因匿名接入改成自动重新授权。
+- `direct-download.ts` 的 `prepareIntent`、`client-mux-download.ts` 的 runner → `createMediaMaterialSession` → `media-material-session.ts` 的 `authorizeWorkspaceDownload` → 匿名授权 API。每次用户动作只请求一次授权。
+- `workspace.ts` 的恢复按钮 → `handlePendingResumeContinue` → `resumeDownloadResource`。其中 direct 字节续传使用恢复记录里已保存的直链；恢复失败由用户手动重新下载。
 - 后端 `media_pre_v2_client.py` 的 `create_media_download_anonymous_pre_v2` 复用设备信任校验，并交给 `MediaAnonymousDownloadService.authorize`。设备信任由页脚品牌图标请求写入，该图标是匿名授权的前置依赖（见 [邮箱登录设备校验](../007.用户系统/tech-邮箱登录设备校验.md)）。
 
 ## 3. 接入职责
@@ -30,9 +30,9 @@
 
 `media-api.ts` 负责匿名请求及边界字段校验。授权结果为下载凭证结构，不含余额；匿名三态在 API 边界用可区分类型表达，不把状态 3 伪装成无效授权。
 
-`media-download-v2.ts` 的共同授权入口直接调用 `anonymous-download.ts`；网络 API 文件不操作弹窗 DOM。不新增可注入授权器、策略注册表或第二套 session / 下载 runner。
+`media-material-session.ts` 的共同授权入口直接调用 `anonymous-download.ts`；网络 API 文件不操作弹窗 DOM。不新增可注入授权器、策略注册表或第二套 session / 下载 runner。
 
-协调模块负责保存与读取等待截止时间，并驱动等待窗口。初次请求、等待结束及重新授权时使用设备身份；执行上下文中的 `ownerSub` 固定为 `device:{device_id}`。
+协调模块负责保存与读取等待截止时间，并驱动等待窗口。请求使用设备身份；执行上下文中的 `ownerSub` 固定为 `device:{device_id}`。
 
 授权放行后立即汇入既有下载方法。
 
@@ -55,11 +55,11 @@
 - 再次操作沿用已有单项或批量入口，不新增剩余队列持久化、自动续跑或已完成项跳过机制。
 - 现状限制：后端对单个 Vimeo 链接固定只返回 1 个资源，工作区又只解析第一条链接，批量分支实际不可达，只有前端停止逻辑保留，没有自动化验证。
 
-恢复路径按既有方法语义分流：有效 direct 字节续传使用已保存直链；需要重新授权的 Restart、direct 材料刷新及 session 授权刷新经过共同授权入口。等待完成前不创建可直接恢复下载的记录。登录态遗留的续传记录不做兼容，用户重新下载即可。
+恢复路径按既有方法语义分流：有效 direct 字节续传使用已保存直链；材料失效时清理记录，用户重新解析或下载。等待完成前不创建可直接恢复下载的记录。登录态遗留的续传记录不做兼容，用户重新下载即可。
 
 ## 4. 源码范围
 
-- `website/src/scripts/download/anonymous-download.ts`：绑定当前工作区、保存等待截止时间、驱动等待窗口、状态 3 中止；由 `media-download-v2.ts` 的共同授权入口调用。
+- `website/src/scripts/download/anonymous-download.ts`：绑定当前工作区、保存等待截止时间、驱动等待窗口、状态 3 中止；由 `media-material-session.ts` 的共同授权入口调用。
 - `media-api.ts`：匿名三态边界。
 - `workspace-download.ts`：身份一致性、单项／批量／恢复中止、插件引导展示与焦点返回；`workspace-elements.ts` 查询等待元素与插件引导卡，并在下载锁定时保留弹窗交互。
 - `website/src/components/download/DownloadAnonymousModal.astro`：等待窗口，自带样式，不依赖其他弹窗的全局类；由 `DownloadWorkspace.astro` 装配。

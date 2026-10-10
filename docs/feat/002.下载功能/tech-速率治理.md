@@ -33,7 +33,7 @@
 ### 1.2 计数口径
 
 - 上限值来自数据库配置 key `dl_active_download_limit`,下载授权入口（匿名与账号两个入口共用）读取；缺失或非正整数量直接返回 `MEDIA_DOWNLOAD_PRE_UNAVAILABLE`，不做静默兜底。
-- 上限写入并签名进 `media_download` token 的 `active_download_limit`，`download-v2` 只读 token，不查 DB、不查订阅、不查档位。
+- 预授权阶段读取并校验真实额度与设备策略；浏览器只消费已验签的 material，不查 DB、不查订阅、不执行服务端下载。
 - 只用进程内 dict(`media_active_download_service`)，不使用 Redis；进程重启后计数自然清空。
 - 身份键:账号授权为 `user:{id}`，匿名设备为 `device:{id}`；网站只产生设备身份。
 - 超过上限直接返回 `RATE_LIMIT_EXCEEDED_MEDIA`，`data.reason = "active_download_limit_exceeded"`，不排队等待，前端不切节点。

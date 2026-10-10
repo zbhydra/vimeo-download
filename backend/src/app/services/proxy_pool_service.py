@@ -8,6 +8,9 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass
+from urllib.parse import quote, urlsplit
+
+import httpx
 
 from sqlalchemy import delete, func, select, update
 
@@ -15,6 +18,7 @@ from app.core.database import get_async_session
 from app.exceptions.common_exception import AppCommonException
 from app.i18n.common_code import CommonCode
 from app.models.proxy_pool_entry_model import ProxyPoolEntryModel
+from app.utils.logger import logger
 from app.utils.time import timestamp_now
 
 PROXY_TYPE_DYNAMIC = 1
@@ -161,6 +165,106 @@ class ProxyPoolService:
                     ),
                 )
             await session.commit()
+
+    async def select_parse_proxy(self) -> str:
+        """选择一条启用代理；动态代理地址只请求一次。"""
+        try:
+            async with get_async_session() as session:
+                result = await session.execute(
+                    select(ProxyPoolEntryModel)
+                    .where(ProxyPoolEntryModel.enabled.is_(True))
+                    .order_by(ProxyPoolEntryModel.proxy_id)
+                    .limit(1)
+                )
+                entry = result.scalar_one_or_none()
+        except Exception as exc:
+            logger.error(
+                "proxy_pool.select_parse_proxy: database read failed",
+                exc_info=True,
+            )
+            raise AppCommonException(
+                CommonCode.MEDIA_PARSE_PROXY_UNAVAILABLE,
+                ext_msg=f"proxy_pool.select_parse_proxy: database read failed, error={type(exc).__name__}: {exc}",
+            ) from exc
+        if entry is None:
+            raise AppCommonException(
+                CommonCode.MEDIA_PARSE_PROXY_UNAVAILABLE,
+                ext_msg="proxy_pool.select_parse_proxy: no enabled proxy entry",
+            )
+        if int(entry.proxy_type) == PROXY_TYPE_DYNAMIC:
+            if not entry.dynamic_url:
+                raise AppCommonException(
+                    CommonCode.MEDIA_PARSE_PROXY_UNAVAILABLE,
+                    ext_msg=f"proxy_pool.select_parse_proxy: dynamic_url is empty, proxy_id={entry.proxy_id}",
+                )
+            try:
+                async with httpx.AsyncClient(timeout=5.0) as client:
+                    response = await client.get(str(entry.dynamic_url))
+                    response.raise_for_status()
+                    proxy_url = response.text
+            except Exception as exc:
+                raise AppCommonException(
+                    CommonCode.MEDIA_PARSE_PROXY_UNAVAILABLE,
+                    ext_msg=(
+                        "proxy_pool.select_parse_proxy: dynamic proxy request failed, "
+                        f"proxy_id={entry.proxy_id}, error={type(exc).__name__}: {exc}"
+                    ),
+                ) from exc
+        else:
+            protocol = str(entry.protocol).strip()
+            host = str(entry.host or "").strip()
+            port = entry.port
+            if not protocol or not host or port is None:
+                raise AppCommonException(
+                    CommonCode.MEDIA_PARSE_PROXY_UNAVAILABLE,
+                    ext_msg=f"proxy_pool.select_parse_proxy: static proxy incomplete, proxy_id={entry.proxy_id}",
+                )
+            auth = ""
+            if entry.username:
+                auth = quote(str(entry.username), safe="")
+                if entry.password is not None:
+                    auth += f":{quote(str(entry.password), safe='')}"
+                auth += "@"
+            proxy_url = f"{protocol}://{auth}{host}:{int(port)}"
+        proxy_url = self._validate_proxy_url(proxy_url, int(entry.proxy_id))
+        return proxy_url
+
+    @staticmethod
+    def _validate_proxy_url(value: str, proxy_id: int) -> str:
+        """严格校验动态代理返回的单条标准 URL，避免后续静默丢字段。"""
+        if not isinstance(value, str) or not value or value != value.strip():
+            raise AppCommonException(
+                CommonCode.MEDIA_PARSE_PROXY_UNAVAILABLE,
+                ext_msg=f"proxy_pool.select_parse_proxy: proxy text must be one trimmed URL, proxy_id={proxy_id}",
+            )
+        if any(char.isspace() for char in value):
+            raise AppCommonException(
+                CommonCode.MEDIA_PARSE_PROXY_UNAVAILABLE,
+                ext_msg=f"proxy_pool.select_parse_proxy: proxy URL contains whitespace, proxy_id={proxy_id}",
+            )
+        parsed = urlsplit(value)
+        try:
+            port = parsed.port
+        except ValueError as exc:
+            raise AppCommonException(
+                CommonCode.MEDIA_PARSE_PROXY_UNAVAILABLE,
+                ext_msg=f"proxy_pool.select_parse_proxy: proxy URL port is invalid, proxy_id={proxy_id}",
+            ) from exc
+        if (
+            parsed.scheme not in {"http", "https", "socks5", "socks5h"}
+            or not parsed.hostname
+            or port is None
+            or parsed.path
+            or parsed.query
+            or parsed.fragment
+            or parsed.username == ""
+            or parsed.password == ""
+        ):
+            raise AppCommonException(
+                CommonCode.MEDIA_PARSE_PROXY_UNAVAILABLE,
+                ext_msg=f"proxy_pool.select_parse_proxy: invalid proxy URL shape, proxy_id={proxy_id}",
+            )
+        return value
 
     @staticmethod
     def serialize_entry(

@@ -4,7 +4,7 @@ Media 统一 API Schema 定义
 本模块定义 /api/client/media/* 端点使用的请求/响应 Schema。
 """
 
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, TypeAlias
 
 from pydantic import BaseModel, Field
 
@@ -12,13 +12,13 @@ from app.contracts.media_download import MediaDownloadMode
 
 
 class MediaParseV2Request(BaseModel):
-    """V2 下载节点解析请求体。"""
+    """parse-v2 解析请求体。"""
 
-    link: str = Field(
+    token: str = Field(
         ...,
         min_length=1,
-        max_length=2048,
-        description="待解析的媒体链接",
+        max_length=8192,
+        description="parse-pre-v2 签发的加密代理执行 token",
     )
     model_config = {"extra": "ignore"}
 
@@ -150,41 +150,16 @@ class MediaClientMuxDownloadIntentResponse(BaseModel):
     audio_track: MediaClientMuxTrackResponse = Field(..., description="音频轨道")
 
 
-# media_download JWT 同时用于 POST body 和浏览器 GET query，两个入口必须共用同一长度合同。
-MEDIA_DOWNLOAD_TOKEN_MIN_LENGTH = 1
-MEDIA_DOWNLOAD_TOKEN_MAX_LENGTH = 8192
-
-
-class MediaDownloadV2Request(BaseModel):
-    """V2 下载节点 token 执行请求体。"""
-
-    model_config = {"extra": "ignore"}
-
-    token: str = Field(
-        ...,
-        min_length=MEDIA_DOWNLOAD_TOKEN_MIN_LENGTH,
-        max_length=MEDIA_DOWNLOAD_TOKEN_MAX_LENGTH,
-        description="media_download JWT；POST 入口从 body 读取",
-    )
-    link: str | None = Field(
-        default=None,
-        min_length=1,
-        max_length=2048,
-        description="禁止与 token 混用的旧下载链接字段",
-    )
-    source_id: str | None = Field(
-        default=None,
-        min_length=1,
-        max_length=256,
-        description="禁止与 token 混用的旧资源 ID 字段",
-    )
+DownloadMaterial: TypeAlias = (
+    MediaDirectDownloadIntentResponse | MediaClientMuxDownloadIntentResponse
+)
 
 
 class MediaPreNodeResponse(BaseModel):
-    """V2 Pre 控制面返回的单个节点入口。"""
+    """parse-pre-v2 返回的单个解析节点入口。"""
 
     node_id: int = Field(..., description="service_nodes 自增节点 ID")
-    url: str = Field(..., description="节点 parse-v2 或 download-v2 完整 URL")
+    url: str = Field(..., description="节点 parse-v2 完整 URL")
 
 
 class MediaParsePreV2Request(BaseModel):
@@ -201,10 +176,8 @@ class MediaParsePreV2Request(BaseModel):
 class MediaParsePreV2Response(BaseModel):
     """parse-pre-v2 响应体。"""
 
-    nodes: list[MediaPreNodeResponse] = Field(
-        ...,
-        description="最多 3 个有序 parse-v2 节点",
-    )
+    node: MediaPreNodeResponse
+    token: str = Field(..., min_length=1, max_length=8192)
 
 
 class MediaDownloadPreV2Request(BaseModel):
@@ -215,7 +188,7 @@ class MediaDownloadPreV2Request(BaseModel):
     resource_token: str = Field(
         ...,
         min_length=1,
-        max_length=8192,
+        max_length=1024 * 1024,
         description="parse-v2 返回的 resource token",
     )
     preferred_node_id: Any = Field(
@@ -227,27 +200,15 @@ class MediaDownloadPreV2Request(BaseModel):
 class MediaDownloadPreV2Response(BaseModel):
     """download-pre-v2 响应体。"""
 
-    token: str = Field(..., description="media_download JWT")
-    expires_at: int = Field(..., description="download token 过期 Unix 秒")
     credits_balance: int = Field(..., description="本次授权扣费后的用户 Credits 余额")
-    download_mode: MediaDownloadMode = Field(
-        ...,
-        description="下载执行模式",
-    )
-    nodes: list[MediaPreNodeResponse] = Field(
-        ...,
-        description="最多 3 个有序 download-v2 节点",
-    )
+    material: DownloadMaterial = Field(..., description="已签名的完整下载材料")
 
 
 class MediaAnonymousDownloadPreV2Response(BaseModel):
     """匿名放行或等待的下载授权，等待时长单位为秒。"""
 
     status: Literal[1, 2]
-    token: str
-    expires_at: int
-    download_mode: MediaDownloadMode
-    nodes: list[MediaPreNodeResponse]
+    material: DownloadMaterial
     wait_seconds: int | None = None
 
 

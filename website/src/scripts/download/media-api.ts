@@ -2,9 +2,9 @@
  * 通用媒体 API 模块。
  *
  * 解析链路为：
- * parse-pre-v2 -> 按节点顺序 parse-v2 -> 记录成功节点 preferredNodeId。
+ * parse-pre-v2 -> 单个解析节点 parse-v2。
  * 下载链路为：
- * download-anonymous-pre-v2 -> 按节点顺序 download-v2。
+ * download-anonymous-pre-v2 -> 直接消费加密 resource token 材料。
  */
 
 import {
@@ -27,26 +27,17 @@ import type {
   MediaPost
 } from './types'
 
-/** parse-pre-v2 业务接口超时时间；只查节点列表，不应长时间阻塞解析按钮。 */
+/** parse-pre-v2 业务接口超时时间。 */
 const MEDIA_PARSE_PRE_V2_TIMEOUT_MS = 10000
 
-/** 节点解析及 JSON 下载材料预算，覆盖浏览器采集总预算并留出响应传输余量。 */
+/** 节点解析预算，覆盖浏览器采集总预算并留出响应传输余量。 */
 const MEDIA_NODE_PREPARATION_TIMEOUT_MS = 70000
 
-/** download-anonymous-pre-v2 业务接口超时时间；该接口会签 token。 */
+/** download-anonymous-pre-v2 业务接口超时时间；该接口返回完整材料。 */
 const MEDIA_DOWNLOAD_PRE_V2_TIMEOUT_MS = 10000
-
-/** download-v2 节点 POST 超时缺省值；调用方未给有效超时时回退到该值。 */
-const MEDIA_DOWNLOAD_V2_CONNECT_TIMEOUT_MS = 10000
 
 /** 后端统一成功码，非 10000 都按业务错误处理。 */
 const API_SUCCESS_CODE = 10000
-
-/** V2 解析节点临时不可用；parse-v2 收到后可以继续换节点。 */
-const CODE_MEDIA_PARSE_NODE_UNAVAILABLE = 24034
-
-/** Pre 控制面没有可用服务节点；前端停止本轮 V2 流程。 */
-const CODE_MEDIA_SERVICE_NODE_UNAVAILABLE = 24042
 
 /** 后端返回的资源能力声明。 */
 interface BackendCapabilities {
@@ -113,25 +104,6 @@ interface BackendMediaSource {
 }
 
 /** 后端直连下载授权响应。 */
-interface BackendDirectDownloadIntentResponse {
-  /** 资源 ID。 */
-  source_id: string
-  /** 平台字段，前端统一规范化为 vimeo。 */
-  platform?: string
-  /** 下载模式。 */
-  download_mode: 'direct'
-  /** 当前可用的 CDN 直链。 */
-  download_url: string
-  /** 后端建议文件名。 */
-  filename: string
-  /** MIME 类型。 */
-  mime_type?: string | null
-  /** 文件大小。 */
-  size?: number | null
-  /** 直链过期时间戳。 */
-  expires_at?: number | null
-}
-
 /** 后端 client_mux 轨道授权响应。 */
 type BackendClientMuxTrackResponse = {
   /** 轨道类型。 */
@@ -150,27 +122,6 @@ type BackendClientMuxTrackResponse = {
 )
 
 /** 后端 client_mux 下载授权响应。 */
-interface BackendClientMuxDownloadIntentResponse {
-  /** 资源 ID。 */
-  source_id: string
-  /** 平台字段，前端统一规范化为 vimeo。 */
-  platform?: string
-  /** 下载模式。 */
-  download_mode: 'client_mux'
-  /** 合成后文件名。 */
-  filename: string
-  /** 合成后 MIME 类型。 */
-  mime_type: string
-  /** 合计文件大小。 */
-  size?: number | null
-  /** 直链过期时间戳。 */
-  expires_at?: number | null
-  /** 视频轨道。 */
-  video_track: BackendClientMuxTrackResponse
-  /** 音频轨道。 */
-  audio_track: BackendClientMuxTrackResponse
-}
-
 /** 后端返回的消息数据。 */
 interface BackendMediaMessage {
   /** 消息包含的资源列表。 */
@@ -209,30 +160,16 @@ interface BackendApiEnvelope<T> {
   message?: string
 }
 
-/** V2 Pre 返回的节点入口。 */
-export interface MediaV2Node {
-  /** 业务数据库 service_nodes 主键。 */
-  node_id: number
-  /** 节点完整 API URL。 */
-  url: string
-}
-
 /** parse-pre-v2 响应。 */
 interface BackendMediaParsePreV2Response {
-  /** 有序 parse-v2 节点列表。 */
-  nodes: MediaV2Node[]
+  node: { node_id: number; url: string }
+  token: string
 }
 
 /** 匿名授权响应。 */
 export interface MediaDownloadAuthorization {
-  /** media_download JWT。 */
-  token: string
-  /** token 过期 Unix 秒。 */
-  expiresAt: number
-  /** 本授权的下载模式。 */
-  downloadMode: MediaPost['downloadMode']
-  /** 有序 download-v2 节点列表。 */
-  nodes: MediaV2Node[]
+  /** 已验签的完整下载材料。 */
+  material: DirectDownloadIntent | ClientMuxDownloadIntent
 }
 
 function getAcceptLanguage(): string {
@@ -261,7 +198,7 @@ function normalizeApiErrorData<T>(value: T | JsonObject | undefined): JsonObject
 }
 
 function normalizeTimeoutMs(value: number): number {
-  return Number.isFinite(value) && value > 0 ? Math.floor(value) : MEDIA_DOWNLOAD_V2_CONNECT_TIMEOUT_MS
+  return Number.isFinite(value) && value > 0 ? Math.floor(value) : MEDIA_NODE_PREPARATION_TIMEOUT_MS
 }
 
 async function fetchMediaV2Node(
@@ -353,38 +290,6 @@ async function parseMediaV2Envelope<T>(
   }
 
   return body as T
-}
-
-function isGatewayStatus(status: number): boolean {
-  return status === 502 || status === 503 || status === 504
-}
-
-function isTemporaryParseNodeError(error: Error): boolean {
-  if (!(error instanceof HomepageApiError)) {
-    return false
-  }
-
-  const code = typeof error.code === 'string' ? Number(error.code) : error.code
-  return (
-    error.status === 0 ||
-    isGatewayStatus(error.status) ||
-    code === CODE_MEDIA_PARSE_NODE_UNAVAILABLE
-  )
-}
-
-function nodeListOrThrow(nodes: MediaV2Node[], context: string): MediaV2Node[] {
-  if (nodes.length > 0) {
-    return nodes
-  }
-
-  throw new HomepageApiError(
-    `${context}: node list is empty`,
-    200,
-    CODE_MEDIA_SERVICE_NODE_UNAVAILABLE,
-    {
-      failure_reason: `${context}: empty_node_list`
-    }
-  )
 }
 
 async function postMediaV2NodeJson<T>(
@@ -529,38 +434,17 @@ async function parseMediaLinkV2(
     { link },
     { timeoutMs: MEDIA_PARSE_PRE_V2_TIMEOUT_MS }
   )
-  const nodes = nodeListOrThrow(preResponse.nodes, '[media-api] parseMediaLinkV2 parse-pre-v2')
-  let lastError: Error | null = null
-
-  for (const node of nodes) {
-    try {
-      const response = await postMediaV2NodeJson<BackendMediaParseResponse>(
-        node.url,
-        context,
-        { link },
-        MEDIA_NODE_PREPARATION_TIMEOUT_MS,
-        `[media-api] parseMediaLinkV2 parse-v2 node_id=${node.node_id}`
-      )
-      return normalizeMediaParseResponse(response, link, node.node_id)
-    } catch (error) {
-      if (!(error instanceof Error)) {
-        throw error
-      }
-
-      if (!isTemporaryParseNodeError(error)) {
-        throw error
-      }
-
-      console.error(error)
-      lastError = error
-    }
+  if (!preResponse.node || typeof preResponse.node.url !== 'string' || !preResponse.token) {
+    throw new Error('[media-api] parseMediaLinkV2: invalid parse-pre-v2 response')
   }
-
-  throw lastError ?? new HomepageApiError(
-    '[media-api] parseMediaLinkV2: all parse-v2 nodes failed before returning a business result',
-    0,
-    CODE_MEDIA_PARSE_NODE_UNAVAILABLE
+  const response = await postMediaV2NodeJson<BackendMediaParseResponse>(
+    preResponse.node.url,
+    context,
+    { token: preResponse.token },
+    MEDIA_NODE_PREPARATION_TIMEOUT_MS,
+    `[media-api] parseMediaLinkV2 parse-v2 node_id=${preResponse.node.node_id}`
   )
+  return normalizeMediaParseResponse(response, link, preResponse.node.node_id)
 }
 
 /**
@@ -583,7 +467,7 @@ export type AnonymousDownloadAuthorization =
   | { status: 2; authorization: MediaDownloadAuthorization; waitSeconds: number }
   | { status: 3 }
 
-/** 请求匿名授权并校验三态及凭证边界；等待由工作区协调。 */
+/** 请求匿名授权并校验三态及完整材料；等待由工作区协调。 */
 export async function createAnonymousDownloadAuthorization(
   resource: MediaPost,
   context: RequestContext
@@ -596,21 +480,11 @@ export async function createAnonymousDownloadAuthorization(
   const location = `[media-api] 匿名授权响应无效，sourceId=${resource.sourceId}`
   if (response.status === 3) return { status: 3 }
   if ((response.status !== 1 && response.status !== 2) ||
-      typeof response.token !== 'string' || !response.token ||
-      typeof response.expires_at !== 'number' || !Number.isSafeInteger(response.expires_at) ||
-      response.expires_at <= 0 || typeof response.download_mode !== 'string' ||
-      !Array.isArray(response.nodes) || response.nodes.length === 0) {
+      !response.material || typeof response.material !== 'object' || Array.isArray(response.material)) {
     throw new Error(location)
   }
-  const nodes = response.nodes.map(node => {
-    if (!node || typeof node !== 'object' || Array.isArray(node) ||
-        typeof node.node_id !== 'number' || !Number.isSafeInteger(node.node_id) || node.node_id <= 0 ||
-        typeof node.url !== 'string' || !node.url) throw new Error(location)
-    return { node_id: node.node_id, url: node.url }
-  })
   const authorization: MediaDownloadAuthorization = {
-    token: response.token, expiresAt: response.expires_at,
-    downloadMode: assertDownloadMode(response.download_mode, location), nodes
+    material: normalizeDownloadMaterial(response.material as JsonObject, location)
   }
   if (response.status === 1) return { status: 1, authorization }
   if (typeof response.wait_seconds !== 'number' || !Number.isSafeInteger(response.wait_seconds) ||
@@ -618,60 +492,40 @@ export async function createAnonymousDownloadAuthorization(
   return { status: 2, authorization, waitSeconds: response.wait_seconds }
 }
 
-/**
- * 调用 download-v2 并读取 direct JSON。
- */
-export async function requestMediaDownloadV2DirectIntent(
-  nodeUrl: string,
-  token: string,
-  context: RequestContext
-): Promise<DirectDownloadIntent> {
-  const response = await postMediaV2NodeJson<BackendDirectDownloadIntentResponse>(
-    nodeUrl,
-    context,
-    { token },
-    MEDIA_NODE_PREPARATION_TIMEOUT_MS,
-    '[media-api] requestMediaDownloadV2DirectIntent download-v2'
-  )
-
-  return {
-    sourceId: response.source_id,
-    platform: normalizePlatform(response.platform),
-    downloadMode: response.download_mode,
-    downloadUrl: response.download_url,
-    filename: response.filename,
-    mimeType: response.mime_type || undefined,
-    size: typeof response.size === 'number' ? response.size : null,
-    expiresAt: typeof response.expires_at === 'number' ? response.expires_at : null
+function normalizeDownloadMaterial(
+  material: JsonObject,
+  location: string
+): DirectDownloadIntent | ClientMuxDownloadIntent {
+  if (material.download_mode === 'direct' &&
+      typeof material.source_id === 'string' &&
+      typeof material.download_url === 'string' &&
+      typeof material.filename === 'string') {
+    return {
+      sourceId: material.source_id,
+      platform: normalizePlatform(typeof material.platform === 'string' ? material.platform : undefined),
+      downloadMode: 'direct',
+      downloadUrl: material.download_url,
+      filename: material.filename,
+      mimeType: typeof material.mime_type === 'string' ? material.mime_type : undefined,
+      size: typeof material.size === 'number' ? material.size : null,
+      expiresAt: typeof material.expires_at === 'number' ? material.expires_at : null
+    }
   }
-}
-
-/**
- * 调用 download-v2 并读取 client_mux tracks JSON。
- */
-export async function requestMediaDownloadV2ClientMuxIntent(
-  nodeUrl: string,
-  token: string,
-  context: RequestContext
-): Promise<ClientMuxDownloadIntent> {
-  const response = await postMediaV2NodeJson<BackendClientMuxDownloadIntentResponse>(
-    nodeUrl,
-    context,
-    { token },
-    MEDIA_NODE_PREPARATION_TIMEOUT_MS,
-    '[media-api] requestMediaDownloadV2ClientMuxIntent download-v2'
-  )
-
+  if (material.download_mode !== 'client_mux' ||
+      typeof material.source_id !== 'string' || typeof material.filename !== 'string' ||
+      typeof material.mime_type !== 'string' || !material.video_track || !material.audio_track) {
+    throw new Error(location)
+  }
   return {
-    sourceId: response.source_id,
-    platform: normalizePlatform(response.platform),
-    downloadMode: response.download_mode,
-    filename: response.filename,
-    mimeType: response.mime_type,
-    size: typeof response.size === 'number' ? response.size : null,
-    expiresAt: typeof response.expires_at === 'number' ? response.expires_at : null,
-    videoTrack: normalizeClientMuxTrack(response.video_track, 'video'),
-    audioTrack: normalizeClientMuxTrack(response.audio_track, 'audio')
+    sourceId: material.source_id,
+    platform: normalizePlatform(typeof material.platform === 'string' ? material.platform : undefined),
+    downloadMode: 'client_mux',
+    filename: material.filename,
+    mimeType: material.mime_type,
+    size: typeof material.size === 'number' ? material.size : null,
+    expiresAt: typeof material.expires_at === 'number' ? material.expires_at : null,
+    videoTrack: normalizeClientMuxTrack(material.video_track as BackendClientMuxTrackResponse, 'video'),
+    audioTrack: normalizeClientMuxTrack(material.audio_track as BackendClientMuxTrackResponse, 'audio')
   }
 }
 
@@ -680,7 +534,7 @@ function normalizeClientMuxTrack(
   kind: 'video' | 'audio'
 ): ClientMuxTrackIntent {
   if (track.kind !== kind || (track.delivery !== 'file' && track.delivery !== 'segments')) {
-    throw new Error(`[media-api] download-v2: 无效合并轨道，kind=${kind}`)
+    throw new Error(`[media-api] resource material: invalid track, kind=${kind}`)
   }
   const base = {
     kind,
@@ -691,7 +545,7 @@ function normalizeClientMuxTrack(
     return { ...base, delivery: 'file', url: track.url }
   }
   if (!track.init_segment || !Array.isArray(track.segments) || track.segments.length === 0) {
-    throw new Error(`[media-api] download-v2: 分片轨道缺少初始化数据或媒体分片，kind=${kind}`)
+    throw new Error(`[media-api] resource material: segments missing, kind=${kind}`)
   }
   return {
     ...base,

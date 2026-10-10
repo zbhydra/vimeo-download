@@ -1,6 +1,6 @@
 # 002 · 扩展端 Vimeo 纯前端下载
 
-> 本文只覆盖 Chrome 插件在 `vimeo.com` / `player.vimeo.com` 页面内的本地下载能力。它不走 website/backend 的匿名解析链路,不调用 `parse-v2` / `download-v2`,不把 Vimeo config、Cookie、媒体 URL 发给我们的服务器。
+> 本文只覆盖 Chrome 插件在 `vimeo.com` / `player.vimeo.com` 页面内的本地下载能力。它不走 website/backend 的匿名解析链路，不把 Vimeo config、Cookie、媒体 URL 发给我们的服务器。
 >
 > 关联:
 > - 下载域平台矩阵:`@tech-站点适配.md`

@@ -175,29 +175,31 @@ uv run python src/app/init/sql_executor.py --sql "<SQL>"
 ### 4.2 服务接口
 
 ```text
-backend/src/app/services/media_resource_token_service.py
+backend/src/app/services/media_execution_token_service.py
 ```
 
-用现有 PyJWT HS256 签发和验签,不新增依赖。
+使用 `media_execution_token_service` 的 Fernet 加密认证，不使用 JWT 或客户端可读签名。
 
 ```python
 @dataclass(frozen=True, slots=True)
-class MediaResourceTokenClaims:
-    typ: str            # 固定 media_resource
-    v: int
+class ResourceMaterialClaims:
     platform: str
     canonical_link: str
     source_id: str
     download_mode: str
     filename: str | None
+    mime_type: str | None
     size: int | None
+    material: DownloadMaterial
     iat: int
     exp: int
 
-class MediaResourceTokenService:
-    def issue_token(self, *, platform, canonical_link, source_id, download_mode,
-                    filename: str | None, size: int | None) -> str
-    def decode_for_download_pre(self, token: str) -> MediaResourceTokenClaims
+class MediaExecutionTokenService:
+    def issue_resource_token(self, *, platform, canonical_link, source_id,
+                             download_mode, filename: str | None,
+                             mime_type: str | None, size: int | None,
+                             material: DownloadMaterial) -> str
+    def decode_resource_token(self, token: str) -> ResourceMaterialClaims
 ```
 
 ### 4.3 语义与约束
@@ -205,11 +207,11 @@ class MediaResourceTokenService:
 - TTL 24 小时;前端 workspace snapshot 保留时间不超过 24 小时,避免恢复出已过期的解析结果 token。
 - `parse-v2` 构造每个资源响应时签发 `resource_token`;签发失败整个 parse-v2 返回错误,不返回缺 token 的资源。
 - `MediaSourceResponse` 新增 `resource_token: str`。
-- `MediaDownloadPreV2Request` 必须携带 `resource_token / client_request_id / preferred_node_id`;download-pre-v2 验签 resource token,**只使用** claims 中的 `platform / canonical_link / source_id / download_mode / filename / size` 扣 Credits 和签下载 token,不再从请求体直接读取这些字段。
+- `MediaDownloadPreV2Request` 必须携带 `resource_token / preferred_node_id`;download-pre-v2 验签 resource token,**只使用** claims 中的 `platform / canonical_link / source_id / download_mode / filename / size` 扣 Credits 并返回 material,不再从请求体直接读取这些字段。
 - `size=null` 时按未知大小扣 2 Credits。
 - resource token 过期或验签失败时返回请求非法错误。
 - 禁止接受 `payload + md5(payload)` 这类无 secret 签名方案。
-- resource token 不能传给 `/download-v2`;`/download-v2` 继续只接受 `media_download` token。
+- resource token 只能交给材料预授权入口；服务端下载执行节点已移除。
 - download-pre-v2 返回扣费后的 `credits_balance`。
 
 ## 5. 6 小时免扣窗口与扣费流程(`charge_download`)
@@ -242,7 +244,7 @@ UPDATE user_credit_accounts
 
 旧的"同一用户同一资源 60 秒 marker"(原 download-pre-v2 的 `media:download_pre_charged:*` key)删除,改用下载记录表的 6 小时窗口。`charge_download()` 内部的 `credit:download:lock:*` 资源锁也删除,避免重复加锁放大 Redis 故障影响。
 
-下载执行入口 `/download-v2` 不扣 Credits。
+浏览器消费已预授权的 material，不在消费阶段扣 Credits。
 
 ## 6. 用户信息与余额查询
 
@@ -325,7 +327,7 @@ CREDIT_INVALID_REQUEST = 10202
 - `parse-v2` 返回的每个可下载资源都有 `resource_token`;`RESOURCE_TOKEN_SECRET` 缺失或生产默认值时启动失败或签发/验签返回配置错误。
 - download-pre-v2 只使用 resource token claims 中的 `size` 计费;篡改 token payload 中的 `size` 验签失败。
 - resource token `size=null` 时按未知大小扣 2 Credits;只提交 `payload + md5(payload)` 不能通过。
-- `/download-v2` 不接受 resource token,只接受 `media_download` token。
+- material 只能由预授权入口在验签和扣费后返回，浏览器不提交旧下载 token。
 - 6 小时内同一用户同一下载产物重复下载不扣积分;direct 与 client_mux 不同下载模式不互相免扣。
 - download-pre-v2 用户短锁覆盖 token 签发和扣费;双击并发不会重复调用 `charge_download()`。
 - 缺积分账户或余额不足时条件 UPDATE 影响 0 行,下载失败且不写扣费流水;下载执行入口不重复扣积分。

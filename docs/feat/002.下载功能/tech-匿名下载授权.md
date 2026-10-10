@@ -25,7 +25,7 @@
 
 前端使用接口返回的状态及等待时长，不另存策略默认值。并发上限由公共授权入口读取配置，写入签名字段 `active_download_limit`；节点直接使用该额度，不读取业务数据库。账号和匿名共用这一上限语义。等待时长与排重有效期独立于下载 token 的既有有效期。
 
-下载 token 缺少 `active_download_limit` 时沿用旧节点的固定上限 3，允许业务与下载节点分批部署，旧 token 无需重新授权；字段存在但不是正整数时仍拒绝。
+授权材料缺少 `active_download_limit` 时按当前配置读取；字段存在但不是正整数时仍拒绝。
 
 ## 3. 匿名 API
 
@@ -34,7 +34,7 @@
 正常业务结果统一 HTTP 200、`code=10000`，由 `data.status` 判定：
 
 - `1`：放行。返回 `token`、`expires_at`、`download_mode`、`nodes`，字段类型及节点格式沿用 `MediaDownloadPreV2Response`；匿名不返回 `credits_balance`。
-- `2`：等待。返回同样的下载授权字段，额外返回整数 `wait_seconds`。前端等待后使用该授权进入原 `download-v2`，后端不计时、不验证等待是否结束。
+- `2`：等待。返回同样的 material 和整数 `wait_seconds`。前端等待后直接消费当前 material。
 - `3`：需改用插件。不返回下载授权，不增加次数，不写排重；网页工作区提示改用插件并展示引导卡。触发条件为超过匿名免费总次数、文件大小未知或达到大小上限。
 
 设备信任失败、resource token 无效及基础设施故障走既有错误合同，不伪装为以上正常业务状态。文件大小从已验签资源读取。
@@ -43,7 +43,7 @@
 
 新增设备终生计数表 `counter_device_lifetime`：`id` 为自增 BigInteger 主键；`device_id` 长度与现有设备合同对齐；`counter_id` 为 Integer；`value` 为 BigInteger、默认零；创建及更新时间为毫秒 BigInteger。`device_id + counter_id` 建唯一约束，读写只提供计数基础能力，不提供任意重置。
 
-计次口径为签发匿名下载授权，不依赖浏览器保存完成回调。设备短锁内先读取当前次数：超过免费总次数直接返回状态 3，不签发、不计次；未超限才完成节点选择及 token 签发、MySQL 原子累加、Redis 写入排重。签发失败不计次；MySQL 成功但 Redis 写入失败时返回错误，允许重试额外计次，不提供跨存储补偿。
+计次口径为签发匿名下载授权，不依赖浏览器保存完成回调。设备短锁内先读取当前次数：超过免费总次数直接返回状态 3，不签发、不计次；未超限才按排重检查、MySQL 原子累加、Redis 写排重的现有顺序执行。任一步基础设施失败统一返回 `MEDIA_DOWNLOAD_PRE_UNAVAILABLE`，不返回材料；跨存储少计或多计由用户手动重试处理，不新增一致性协议。
 
 Redis 记录设备与资源组合，并在首次成功授权写入配置指定的 TTL。有效期间再次授权、重下或续传不增加永久次数，不延长有效期，也不重新触发等待；过期后重新按新下载计次并参与次数判定。
 
@@ -61,28 +61,28 @@ website 的组件、批量及恢复差异见 [Website 匿名下载接入](tech-W
 
 窗口样式自带，取值来自站点设计 token（见 `spec-website.md` §4）。开始下一次下载时收起上一次的主屏幕提示，不修改提醒偏好。
 
-前端由 `website/src/scripts/download/anonymous-download.ts` 统一处理授权、等待与重新授权。等待截止时间使用 localStorage，键为既有设备 ID 与解析结果 `sourceId` 的组合，不使用 token 字符串作为资源身份；记录独立于解析快照与续传文件，清理两者不会清除等待。写入失败中止本次下载，避免刷新后丢失等待约束。
+前端由 `website/src/scripts/download/anonymous-download.ts` 统一处理授权与等待。等待截止时间使用 localStorage，键为既有设备 ID 与解析结果 `sourceId` 的组合，不使用 token 字符串作为资源身份；记录独立于解析快照与续传文件，清理两者不会清除等待。写入失败中止本次下载，避免刷新后丢失等待约束。
 
-状态 2 的截止时间取现存截止时间与本次返回时长对应截止时间的较大值；状态 1 仍读取现存截止时间。所有匿名重新授权遵循同一入口。
+状态 2 的截止时间取现存截止时间与本次返回时长对应截止时间的较大值；状态 1 仍读取现存截止时间。失败后由用户手动再次点击。
 
 状态 3 提示改用插件并展示引导卡，本次点击视为用户中止：不启动文件请求、不显示下载失败，按钮回到可重试状态；不打开登录入口。
 
 前端等待与免费次数不是防攻击边界：接受用户篡改时间、清除存储或重置设备绕过。标签之间不做授权互斥或协调，不建立后端队列；正常刷新和重复点击继续遵守已经保存的截止时间。
 
-关闭排队窗口取消当前点击，不清除截止时间，也不在后台自动下载；再次点击继续剩余等待。窗口保持打开时，等待结束使用已经返回的授权下载。token 过期时重新授权，并继续遵守已有截止时间；不以 token 有效期替代等待时长或资源排重 TTL。
+关闭排队窗口取消当前点击，不清除截止时间，也不在后台自动下载；再次点击继续剩余等待。窗口保持打开时，等待结束使用已经返回的 material；不以 material 有效期替代等待时长或资源排重 TTL。
 
 ## 6. 改动边界与验收
 
 - 后端新增设备计数模型与服务、匿名授权业务服务；修改 `models/__init__.py`、`media_pre_v2_client.py`、`media_schema.py`、`media_pre_authorization_service.py`。
-- token 身份合同修改 `contracts/media_download.py`、`media_download_token_service.py`；节点分组修改 `media_provider_service.py`，按实际调用需要调整现有并发服务。
+- material 身份合同修改 `media_execution_token_service.py`；节点解析修改 `media_provider_service.py`，按实际调用需要调整现有设备服务。
 - 配置默认数据落入 `init/sql/config_init.sql`；设备 Counter 的原子数据结构例外同步 `spec-mysql.md`。
 - 前端涉及 `website/src/scripts/download/` 下的 `media-api.ts`、`anonymous-download.ts`、`workspace-download.ts`，`website/src/components/download/` 及 i18n。
 - 验收覆盖直接放行与等待边界、状态 3、授权字段、大小边界、永久计次、排重及过期、前端等待、匿名同设备并发，以及账号分组保持独立。
 
 ## 7. 源码依据
 
-- `backend/src/app/api/client/media_v2_client.py`：GET/POST 下载入口共用 token 验签及 Provider 执行。
-- `backend/src/app/services/media_download_token_service.py`：已有可空 `user_id` 与 `issued_ip` 签发参数。
+- `backend/src/app/api/client/media_v2_client.py`：parse-v2 入口验证 execution token 后执行 Provider。
+- `backend/src/app/services/media_execution_token_service.py`：负责 proxy execution token 与 resource material token 的 Fernet 签发和验签。
 - `backend/src/app/services/media_provider_service.py`：`_active_user_key` 是节点身份分组入口。
 - `backend/src/app/services/counter_service.py`：用户 Counter 的 MySQL 原子累加模式。
 - `backend/src/app/services/config_public_service.py`：公共配置读取及缓存。

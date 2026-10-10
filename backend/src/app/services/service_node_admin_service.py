@@ -43,7 +43,7 @@ class ServiceNodeWriteData:
     name: str
     #: Admin 展示和人工筛选用地区标识。
     region: str
-    #: 浏览器访问 parse-v2/download-v2 使用的公网 base URL。
+    #: 浏览器访问 parse-v2 使用的公网 base URL。
     public_base_url: str
     #: 业务服务器健康检查访问节点使用的内网 base URL。
     internal_base_url: str

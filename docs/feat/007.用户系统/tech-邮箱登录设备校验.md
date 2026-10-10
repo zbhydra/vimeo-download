@@ -189,7 +189,7 @@ website 主域在静态 `.svg` 规则之前对该图片路径做精确路径反�
 ## 9. 边界
 
 - **显式声明 `X-Client-Product: extension` 的请求直接豁免**：插件设备使用自己生成的 UUID，跨站请求既带不上 `client_uuid` Cookie 也不会加载品牌 Logo，开关一旦打开插件请求会 100% 被拒。豁免只认显式声明的请求头，缺失头与无法识别的值照旧走完整校验。
-- 不保护 Google 登录、OAuth authorize/callback/exchange、下单、支付、mark-log、`parse-v2`、`download-v2`。
+- 不保护 Google 登录、OAuth authorize/callback/exchange、下单、支付、mark-log 和解析执行节点。
 - 不引入新依赖。
 - 不新增依赖注入。
 - 不把 `client_uuid` 当用户登录态;它只证明当前 `device_id` 最近加载过 website 页面。

@@ -85,15 +85,15 @@ test('真实网站下载与 OPFS 生命周期', async ({ page, context }, testIn
     if (url.pathname.startsWith('/api/client/media/')) {
       const event: { path: string; status: number; code?: number } = { path: url.pathname, status: response.status() };
       apiEvents.push(event);
-      pendingResponses.push(response.json().then((body: { code?: number; data?: { download_mode?: string; video_track?: MaterialTrack; audio_track?: MaterialTrack } }) => {
+      pendingResponses.push(response.json().then((body: { code?: number; data?: { material?: { download_mode?: string; video_track?: MaterialTrack; audio_track?: MaterialTrack } } }) => {
         event.code = body.code;
         console.log(JSON.stringify({ phase: 'api', ...event }));
         writeFileSync(testInfo.outputPath('api-evidence.json'), JSON.stringify({ targetUrl, apiEvents }, null, 2));
-        if (url.pathname.endsWith('/download-v2') && body.data?.download_mode) {
-          const data = body.data;
-          const material = { mode: data.download_mode!, videoDelivery: data.video_track?.delivery, audioDelivery: data.audio_track?.delivery,
-            videoSegments: data.video_track?.segments?.length, audioSegments: data.audio_track?.segments?.length,
-            hasInit: Boolean(data.video_track?.init_segment && data.audio_track?.init_segment) };
+        if (url.pathname.endsWith('/download-anonymous-pre-v2') && body.data?.material?.download_mode) {
+          const materialData = body.data.material;
+          const material = { mode: materialData.download_mode!, videoDelivery: materialData.video_track?.delivery, audioDelivery: materialData.audio_track?.delivery,
+            videoSegments: materialData.video_track?.segments?.length, audioSegments: materialData.audio_track?.segments?.length,
+            hasInit: Boolean(materialData.video_track?.init_segment && materialData.audio_track?.init_segment) };
           materials.push(material);
           console.log(JSON.stringify({ phase: 'materials', ...material }));
         }
@@ -240,7 +240,7 @@ test('真实网站下载与 OPFS 生命周期', async ({ page, context }, testIn
   console.log(JSON.stringify({ phase: 'complete', ...evidence }));
   expect(apiEvents.some(event => event.path.endsWith('/download-anonymous-pre-v2') && event.code === 10000)).toBe(true);
   expect(apiEvents.some(event => event.path.endsWith('/download-pre-v2') && !event.path.endsWith('/download-anonymous-pre-v2'))).toBe(false);
-  expect(apiEvents.some(event => event.path.endsWith('/download-v2') && event.code === 10000)).toBe(true);
+  expect(apiEvents.some(event => event.path.endsWith('/download-v2'))).toBe(false);
   if (!failCdn && targetUrl.includes('vimeo.com')) expect(cdnResponses).toBeGreaterThan(0);
   if (targetUrl.includes('vimeo.com')) expect(materials[0]).toMatchObject({ mode: 'client_mux', videoDelivery: 'segments', audioDelivery: 'segments', hasInit: true });
   expect(pageErrors).toEqual([]);

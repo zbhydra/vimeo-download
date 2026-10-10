@@ -1,7 +1,6 @@
 """媒体 Provider 契约层。
 
-Provider 只描述单个平台如何解析和生成下载材料；用户活跃下载、
-Range 错误映射和 FastAPI Response 生成由 service/API 统一处理。
+Provider 只描述单个平台如何解析和生成下载材料；统一错误映射由 service/API 处理。
 """
 
 from __future__ import annotations
@@ -10,7 +9,6 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import ClassVar, Literal, Protocol, TypeAlias
 
-from app.contracts.media_download import MediaDownloadTokenClaims
 from app.exceptions.common_exception import AppCommonException
 from app.i18n.common_code import CommonCode
 from app.schemas.media_schema import (
@@ -20,7 +18,7 @@ from app.schemas.media_schema import (
     MediaParseResponse,
 )
 from app.utils.logger import logger
-from app.utils.media_extra import JsonValue, MediaExtra
+from app.utils.media_extra import JsonValue
 
 DownloadJsonPayload: TypeAlias = (
     MediaDirectDownloadIntentResponse | MediaClientMuxDownloadIntentResponse
@@ -89,16 +87,7 @@ class MediaParseRequest:
     user_id: int | None
     device_id: str | None
     client_ip: str
-
-
-@dataclass(frozen=True, slots=True)
-class MediaDownloadRequest:
-    """Provider download 请求上下文。"""
-
-    claims: MediaDownloadTokenClaims
-    range_header: str | None
-    client_ip: str
-    extra: MediaExtra
+    proxy_url: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -106,6 +95,7 @@ class MediaParseResult:
     """Provider parse 结果，response.resources.extra 为内部字段。"""
 
     response: MediaParseResponse
+    material: DownloadJsonPayload
 
 
 @dataclass(frozen=True, slots=True)
@@ -125,9 +115,6 @@ class MediaProviderErrorCode(StrEnum):
     RESOURCE_NOT_FOUND = "resource_not_found"
     RESOURCE_UNREACHABLE = "resource_unreachable"
     NODE_UNAVAILABLE = "node_unavailable"
-    RANGE_NOT_SATISFIABLE = "range_not_satisfiable"
-    FILE_TOO_LARGE = "file_too_large"
-    UPSTREAM_FAILED = "upstream_failed"
 
 
 class MediaProviderError(Exception):
@@ -174,36 +161,8 @@ class BaseMedia:
                 ),
             ) from exc
 
-    async def download(self, request: MediaDownloadRequest) -> JsonDownloadResult:
-        """执行平台下载，并把旧 AppCommonException 收敛为 Provider 错误。"""
-        try:
-            return await self._download(request)
-        except MediaProviderError:
-            raise
-        except AppCommonException as exc:
-            raise _map_legacy_download_error(exc) from exc
-        except Exception as exc:
-            logger.error(
-                "media_provider_download_unexpected: "
-                f"platform={self.platform}, jti={request.claims.jti}, "
-                f"error={type(exc).__name__}: {exc}",
-                exc_info=True,
-            )
-            raise MediaProviderError(
-                MediaProviderErrorCode.NODE_UNAVAILABLE,
-                (
-                    "media_provider_download: unexpected failure, "
-                    f"platform={self.platform}, jti={request.claims.jti}, "
-                    f"error={type(exc).__name__}: {exc}"
-                ),
-            ) from exc
-
     async def _parse(self, request: MediaParseRequest) -> MediaParseResult:
         """子类实现平台 parse。"""
-        raise NotImplementedError
-
-    async def _download(self, request: MediaDownloadRequest) -> JsonDownloadResult:
-        """子类实现平台 download。"""
         raise NotImplementedError
 
 
@@ -311,49 +270,5 @@ def _map_legacy_parse_error(exc: AppCommonException) -> MediaProviderError:
     return MediaProviderError(
         MediaProviderErrorCode.NODE_UNAVAILABLE,
         exc.ext_msg or f"unmapped parse error: {exc.code.name}",
-        data=exc.data,
-    )
-
-
-def _map_legacy_download_error(exc: AppCommonException) -> MediaProviderError:
-    """把存量平台 download 错误映射到 Provider 错误。"""
-    if exc.code == CommonCode.MEDIA_RANGE_NOT_SATISFIABLE:
-        return MediaProviderError(
-            MediaProviderErrorCode.RANGE_NOT_SATISFIABLE,
-            exc.ext_msg or "range not satisfiable",
-            data=exc.data,
-        )
-    if exc.code == CommonCode.MEDIA_DOWNLOAD_FILE_TOO_LARGE:
-        return MediaProviderError(
-            MediaProviderErrorCode.FILE_TOO_LARGE,
-            exc.ext_msg or "media file too large",
-            data=exc.data,
-        )
-    if exc.code in {
-        CommonCode.NOT_FOUND,
-        CommonCode.SOURCE_FORBIDDEN,
-        CommonCode.INVALID_REQUEST,
-        CommonCode.VIMEO_PARSE_FAILED,
-    }:
-        return MediaProviderError(
-            MediaProviderErrorCode.RESOURCE_UNREACHABLE,
-            exc.ext_msg or "media resource unreachable",
-            data=exc.data,
-        )
-    if exc.code in {
-        CommonCode.PERMISSION_DENIED,
-        CommonCode.RATE_LIMIT_EXCEEDED,
-        CommonCode.RATE_LIMIT_EXCEEDED_MEDIA,
-        CommonCode.INTERNAL_SERVER_ERROR,
-        CommonCode.MEDIA_DOWNLOAD_NODE_UNAVAILABLE,
-    }:
-        return MediaProviderError(
-            MediaProviderErrorCode.NODE_UNAVAILABLE,
-            exc.ext_msg or "media download node unavailable",
-            data=exc.data,
-        )
-    return MediaProviderError(
-        MediaProviderErrorCode.NODE_UNAVAILABLE,
-        exc.ext_msg or f"unmapped download error: {exc.code.name}",
         data=exc.data,
     )

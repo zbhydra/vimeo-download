@@ -31,10 +31,10 @@
 各模式语义:
 
 - `proxy` 已下线：服务端不再代理媒体字节，前端不再注册该模式，`download_mode = "proxy"` 会被 parse 阶段拒绝（见 §3 注册规则）。
-- `direct`:授权直链单资源下载。浏览器直连平台 CDN,后端无法限速;download-v2 direct JSON 返回失败或 URL 过期可在方法内部刷新一次。
+- `direct`:预授权 material 中的直链单资源下载。浏览器直连平台 CDN，URL 失效时结束当前动作。
 - `client_mux`:多轨直连下载后浏览器合成 MP4。浏览器直连 tracks，后端无法限速。首阶段 `canResume=false`；当前 Vimeo 仅 DASH 交付的样本走这条路径。
 
-`quotaTiming` 用于标识各方法的配额阶段；账号授权接口（网站不再调用）的 Credits 扣减发生在 `download-pre-v2`，网站匿名授权不扣费。`download-v2` 之后的 active limit、资源不可达、用户取消保存或 CDN/tracks 失败首期不自动退费。同一用户同一资源 6 小时内重复授权不重复扣费。
+`quotaTiming` 用于标识各方法的配额阶段；Credits 扣减或匿名计次发生在预授权，材料消费不再次扣费。同一用户同一资源 6 小时内重复授权不重复扣费。
 
 ## 3. DownloadMethodDefinition 注册表
 
@@ -86,7 +86,7 @@ runner 统一接收资源、可选恢复记录、运行上下文和回调选项�
 
 - 新下载:`downloadPlannedResource(actionPlan, ...)`,执行预检后最终 action plan 的方法,方法内部按需申请下载授权。
 - OPFS Continue:`resumeDownloadResource(resourceFromResumeRecord(record), record, ...)`,方法内部直接使用记录里的授权材料（`direct` 的已授权直链）续传,**不重新**申请授权;记录材料缺失或已失效时清理记录,不展示 Continue 卡片。
-- Restart:`resumeDownloadResource(resourceFromResumeRecord(record), record, ...)`,方法内部清理当前记录后作为新的传输动作从 0 下载,重新走「授权 → `download-v2`」；同一设备同一资源在排重有效期内不重复计次。
+- Restart:`resumeDownloadResource(resourceFromResumeRecord(record), record, ...)`,方法内部清理当前记录后作为新的传输动作从 0 下载，重新走预授权 material；同一设备同一资源在排重有效期内不重复计次。
 - dispatcher 不写 mode 分支,恢复语义挂在具体下载方法上。
 - workspace 不再生成下载用 `clientRequestId`(该字段已从账号授权契约删除,见 §9)。
 
@@ -119,7 +119,7 @@ runner 统一接收资源、可选恢复记录、运行上下文和回调选项�
 
 `DownloadActionPlan` 同时服务 UI、新下载校验和最终方法选择。Continue 只传恢复记录,不重新校验 capability。
 
-Website 新授权和 session 重新授权统一经过 `media-download-v2.ts` → `anonymous-download.ts`；匿名授权不返回余额。等待和用户中止暂停／停止当前串行队列，具体规则见 [Website 匿名下载接入](tech-Website匿名下载接入.md)。OPFS Continue 复用记录里已保存的直链材料，不因身份变化或匿名接入重新授权；需要新授权的 Restart 和材料刷新回到共同入口。
+Website 新授权统一经过 `media-material-session.ts` → `anonymous-download.ts`；匿名授权不返回余额。等待和用户中止暂停／停止当前串行队列，具体规则见 [Website 匿名下载接入](tech-Website匿名下载接入.md)。OPFS Continue 复用记录里已保存的直链材料；Restart 由用户重新点击进入共同入口。
 
 ## 6. DownloadCompletion
 
@@ -149,10 +149,10 @@ runner 返回值由 `completion` 和 `retryCount` 组成。
 
 职责:
 
-1. 每次用户触发下载都重新授权,正常扣额度。
+1. 每次用户触发下载消费一次预授权 material，计费或计次由预授权阶段完成。
 2. 授权拿到 direct URL 后,按存储能力选择 OPFS / IndexedDB;都不可用时普通 Memory 下载。
 3. OPFS 时写单文件 checkpoint,并把当前 direct URL 写入方法字段。
-4. 新下载过程中 direct URL 过期,可重新走「授权 → `download-v2`」获取一次 direct JSON。
+4. 新下载过程中 direct URL 过期，清理记录并提示用户重新解析。
 5. `video.twimg.com` direct 响应没有对浏览器 `fetch` 暴露 `Content-Range`;X direct 只用 OPFS 保存本次流,跨刷新只允许 Restart,不做非 0 Range Continue。
 6. 完成后创建 object URL,清理 checkpoint。
 
@@ -162,7 +162,7 @@ runner 返回值由 `completion` 和 `retryCount` 组成。
 
 1. 调用 `prepareClientMuxDownload()`。
 2. 调用 `downloadClientMuxResource()` 下载双轨并合成。
-3. track fetch 失败时重新走「授权 → `download-v2`」刷新一次 client_mux JSON。
+3. track fetch 失败结束当前动作，用户手动重新解析或下载。
 4. 把 Blob 转为 object URL completion。
 
 `client-mux.ts` 只保留双轨下载和 mux 成 Blob,不负责下载授权。本阶段 `sessionPolicy='none'`、`canResume=false`;以后要做恢复时在方法内部实现 `method_managed`(video/audio 各自记录 temp 文件、offset、done)。
@@ -197,7 +197,7 @@ runner 返回值由 `completion` 和 `retryCount` 组成。
 
 - 不保存 `clientRequestId`。
 - 不用 request id 命名 OPFS 临时文件。
-- direct 的 `downloadUrl` 写入方法字段;OPFS Continue 只用它尝试一次 Range,不刷新、不重新授权。restartable Restart 不复用当前 `downloadUrl`,按新下载重新授权。
+- direct 的 `downloadUrl` 写入方法字段;OPFS Continue 只用它尝试一次 Range,不刷新、不重新授权。restartable Restart 不复用当前 `downloadUrl`,由用户再次点击重新解析和授权。
 - 当前只需要一个全局 pending record;新下载开始前清理当前 record。
 - 存储能力探测结果写入 `storageType/recoveryMode`;具体选择与恢复加载规则见 `@tech-下载存储治理.md`。
 
@@ -219,28 +219,15 @@ runner 返回值由 `completion` 和 `retryCount` 组成。
 6. 每 1MiB 或 1 秒保存一次 checkpoint。
 7. 完成后从 OPFS `File` 创建 object URL,避免为了保存把大文件完整读入 JS 内存。
 
-### 8.4 direct 自动 Range 续传与 Continue 收口
+### 8.4 direct Range 续传与 Continue 收口
 
 ```text
-while (true) {
-  fetch(当前 direct URL, 非 0 起点带 Range: record.downloadedBytes)
-  if (链接过期/403/401 且 本次下载尚未刷新过) {
-    重新走一次授权 -> download-v2
-    回写新 URL、filename、总大小到恢复记录
-    从同一 offset 继续
-  }
-  if (写入了数据) 连续无进展重试计数清零，并更新记录 offset
-  if (断流或响应提前结束) {
-    连续无进展重试计数 +1
-    if (连续无进展重试达到 3 次) throw AutoRangeResumeExhaustedError
-    从已写入 offset 继续
-  }
-}
+fetch(材料中的 direct URL，非 0 起点带 Range: record.downloadedBytes)
+校验 206、Content-Range 和实际写入长度
+失败则清理记录并结束当前动作，用户手动重新解析或下载
 ```
 
-- 自动 Range 重试预算固定为 3 次连续无进展重试；一旦有字节写入，预算重置。
-- 链接刷新在新下载路径最多一次；刷新后仍失败按普通错误处理。
-- `AutoRangeResumeExhaustedError` 保留恢复记录,提示用户继续。
+- 不自动 Range 重试，不刷新 URL，不重新授权。
 - 其他错误清理恢复记录,回到普通 Download。
 - OPFS Continue 复用记录里的 direct URL 与 offset，不重新授权；URL 失效则清理记录，提示用户重新 Download。
 
@@ -248,13 +235,12 @@ while (true) {
 
 | 错误 | 新下载 | OPFS Continue |
 | --- | --- | --- |
-| 网络断流 / stream interrupted | 自动 Range 重连 | 自动 Range 重连 |
-| 连续无进展重试达到 3 次 | 保留记录,提示 Continue | 保留记录,提示 Continue |
+| 网络断流 / stream interrupted | 清理记录并报错 | 清理记录并报错 |
+| 连续无进展 | 清理记录并报错 | 清理记录并报错 |
 | Range 响应不是 206 或 Content-Range 不匹配 | 清记录,报错 | 清记录,报错 |
-| direct URL 过期 / 403 / 401 | direct 内部可刷新一次 | 清记录,提示重新 Download |
-| download-v2 token invalid / expired | 方法内部最多重新授权一次 | 已知过期时不展示 Continue;执行时发现无效则清记录,提示重新 Download |
+| direct URL 过期 / 403 / 401 | 清理记录,提示重新解析 | 清记录,提示重新 Download |
 
-`MediaDownloadV2ReauthorizationRequiredError` 只由具体下载方法处理,workspace 不再 catch 这个错误。
+材料失效由工作区映射为重新解析或下载插件，下载方法不自动重新授权。
 
 ## 9. 下载入口统一与 client_request_id 删除
 
@@ -278,14 +264,14 @@ while (true) {
 - 授权入口的身份短锁。
 - resource token 验签。
 - 账号授权的 Credits 扣减顺序。
-- download token 签发。
+- material token 签发。
 
 前端改动:
 
 | 文件 | 改动 |
 | --- | --- |
 | `media-api.ts` | `createMediaDownloadPreV2Authorization()` 删除 `clientRequestId` 参数和 `client_request_id` 请求字段 |
-| `media-download-v2.ts` | `createMediaDownloadV2Session()` 删除 `clientRequestId` 参数;删除 download-pre invalid request id 分支;保留 token invalid/expired 错误类型给方法层判断 |
+| `media-material-session.ts` | `createMediaMaterialSession()` 只校验预授权 material 与下载模式 |
 | `download-methods.ts` | `DownloadMethodOptions` 删除 `clientRequestId` |
 | `download-dispatcher.ts` | 分别提供新下载 `downloadPlannedResource(plan, context, options)` 与恢复任务 `resumeDownloadResource(resource, record, context, options)` 入口 |
 | `download-resume-store.ts` | 如需要,提供 `resourceFromResumeRecord(record)`,避免 workspace/direct 重复构造 resource |
@@ -309,7 +295,7 @@ website/src/scripts/download/
   direct-download.ts
   client-mux-download.ts
   media-api.ts
-  media-download-v2.ts
+  media-material-session.ts
   workspace-download.ts
   workspace-render.ts
   types.ts
@@ -319,7 +305,7 @@ website/src/scripts/download/
 
 ## 11. API 边界
 
-本阶段不新增路径;`download-v2` 同路径增加 GET method,与 POST 复用 token 执行流程。
+本阶段不新增服务端下载执行路径；浏览器只消费预授权 material。
 
 | 方法 | endpoint |
 | --- | --- |
@@ -327,7 +313,7 @@ website/src/scripts/download/
 | parse | `POST /api/client/media/parse-v2` |
 | download pre（账号，网站不再调用） | `POST /api/client/media/download-pre-v2`(请求体:`resource_token`、`preferred_node_id`;**不再含** `client_request_id`) |
 | download pre（匿名，网站使用） | `POST /api/client/media/download-anonymous-pre-v2`(请求体同上) |
-| download execute | `direct` / `client_mux` 始终使用 `POST /api/client/media/download-v2`(请求体:`token`) 获取执行材料；节点保留同路径 GET 能力，但 `proxy` 下线后网站端不再使用。 |
+| material consume | `direct` / `client_mux` 使用预授权返回的完整 material，直接请求 Vimeo CDN。 |
 
 未知 `download_mode`:
 

@@ -238,7 +238,7 @@ def test_extract_download_log_detail_reads_node_id_from_error_text():
                 "url": "https://vimeo.com/demo/654",
                 "error": {
                     "message": (
-                        "download-v2 token rejected, " "sourceId=video-1, node_id=42"
+                        "resource material rejected, " "sourceId=video-1, node_id=42"
                     ),
                 },
             }
@@ -248,7 +248,7 @@ def test_extract_download_log_detail_reads_node_id_from_error_text():
 
     assert detail.node_id == "42"
     assert detail.error_message == (
-        "原因: download-v2 token rejected, sourceId=video-1, node_id=42"
+        "原因: resource material rejected, sourceId=video-1, node_id=42"
     )
 
 

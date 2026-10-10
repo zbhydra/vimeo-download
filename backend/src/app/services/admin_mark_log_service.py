@@ -19,6 +19,7 @@ from app.exceptions.common_exception import AppCommonException
 from app.models.mark_log_model import MarkLogModel
 from app.provider.media.base_media import MediaParseRequest
 from app.services.media_provider_service import media_provider_service
+from app.services.proxy_pool_service import proxy_pool_service
 from app.utils.logger import logger
 
 _ADMIN_PARSE_DEVICE_ID = "admin-log-diagnostics"
@@ -270,12 +271,14 @@ class AdminMarkLogService:
         try:
             platform = detect_platform(url)
             provider = media_provider_service.get_provider(platform)
+            proxy_url = await proxy_pool_service.select_parse_proxy()
             parse_result = await provider.parse(
                 MediaParseRequest(
                     url=url,
                     user_id=None,
                     device_id=_ADMIN_PARSE_DEVICE_ID,
                     client_ip=_ADMIN_PARSE_DEVICE_ID,
+                    proxy_url=proxy_url,
                 )
             )
             response = parse_result.response

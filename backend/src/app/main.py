@@ -284,7 +284,7 @@ def _load_optional_media_v2_router() -> APIRouter | None:
 
 
 def _include_media_v2_routes(app_instance: FastAPI) -> None:
-    """挂载 media parse-v2 / download-v2 节点执行路由。"""
+    """挂载 media parse-v2 节点执行路由。"""
     router = _load_optional_media_v2_router()
     if router is None:
         return

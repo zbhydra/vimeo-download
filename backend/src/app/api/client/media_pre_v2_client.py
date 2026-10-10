@@ -1,8 +1,8 @@
 """媒体 V2 Pre 控制面 API。
 
 本 router 只允许 business role 挂载：
-1. `POST /api/client/media/parse-pre-v2` 返回可尝试 parse-v2 节点。
-2. `POST /api/client/media/download-pre-v2` 完成短锁、扣额度和 token 签发。
+1. `POST /api/client/media/parse-pre-v2` 返回单个 parse-v2 节点和代理执行 token。
+2. `POST /api/client/media/download-pre-v2` 验证材料、扣额度并直接返回材料。
 
 download role 禁止挂载本 router，因为它会导入业务数据库和 Redis 配额路径。
 """
@@ -34,6 +34,7 @@ from app.services.media_anonymous_download_service import (
     media_anonymous_download_service,
 )
 from app.services.media_service import media_service
+from app.utils.logger import logger
 from app.utils.response import ResponseUtils
 from app.utils.redis_fixed_limiter import RedisFixedLimiter
 
@@ -52,20 +53,28 @@ async def parse_media_pre_v2(
     current_user: UserContext = Depends(get_current_user_optional),
 ):
     """
-    返回匿名可用的 parse-v2 节点列表。
+    返回单个 parse-v2 节点和加密代理执行 token。
 
     Args:
-        payload: 只包含 link 的请求体。
+        payload: 包含 link 的请求体。
         current_user: 请求上下文，提供统一解析后的 IP。
 
     Returns:
         成功 envelope，data 为 MediaParsePreV2Response。
     """
-    if not await _parse_pre_v2_ip_limiter.is_allowed(
-        current_user.ip or "unknown",
-        limit=_PARSE_PRE_V2_IP_LIMIT,
-        window=_PARSE_PRE_V2_IP_WINDOW_SECONDS,
-    ):
+    try:
+        allowed = await _parse_pre_v2_ip_limiter.is_allowed(
+            current_user.ip or "unknown",
+            limit=_PARSE_PRE_V2_IP_LIMIT,
+            window=_PARSE_PRE_V2_IP_WINDOW_SECONDS,
+        )
+    except Exception as exc:
+        logger.error("parse_pre_v2_ip_limiter_failed", exc_info=True)
+        raise AppCommonException(
+            CommonCode.MEDIA_SERVICE_NODE_UNAVAILABLE,
+            ext_msg=f"parse_pre_v2: IP limiter unavailable, error={type(exc).__name__}: {exc}",
+        ) from exc
+    if not allowed:
         return ResponseUtils.error(
             CommonCode.MEDIA_SERVICE_NODE_UNAVAILABLE,
             data={"reason": "parse_pre_v2_ip_rate_limited"},
@@ -73,10 +82,8 @@ async def parse_media_pre_v2(
 
     result = await media_pre_authorization_service.parse_pre_v2(link=payload.link)
     response = MediaParsePreV2Response(
-        nodes=[
-            MediaPreNodeResponse(node_id=node.node_id, url=node.url)
-            for node in result.nodes
-        ]
+        node=MediaPreNodeResponse(node_id=result.node.node_id, url=result.node.url),
+        token=result.token,
     )
     return ResponseUtils.ok(response.model_dump())
 
@@ -107,7 +114,7 @@ async def create_media_download_pre_v2(
     current_user: UserContext = Depends(get_current_user),
 ):
     """
-    创建 V2 下载授权。
+    验证完整材料并创建登录下载扣费记录。
 
     Args:
         payload: parse-v2 resource token 和节点亲和提示。
@@ -122,28 +129,6 @@ async def create_media_download_pre_v2(
         validated_payload = (
             media_pre_authorization_service.validate_download_pre_payload(payload)
         )
-        resource_key = media_service.build_download_resource_key(
-            platform=validated_payload.platform,
-            canonical_link=validated_payload.link,
-            source_id=validated_payload.source_id,
-            download_mode=validated_payload.download_mode,
-        )
-        has_recent_paid_download = await media_service.has_recent_paid_download(
-            user_id=current_user.user_id,
-            resource_key=resource_key,
-        )
-        credits_cost = (
-            0
-            if has_recent_paid_download
-            else media_service.calculate_download_credits(validated_payload.size)
-        )
-        result = await media_pre_authorization_service.create_download_authorization(
-            payload=validated_payload,
-            user_context=current_user,
-            credits_cost=credits_cost,
-            issued_ip=current_user.ip,
-        )
-
         charge_result = await media_service.charge_download(
             user_id=current_user.user_id,
             platform=validated_payload.platform,
@@ -170,13 +155,7 @@ async def create_media_download_pre_v2(
             )
 
     response = MediaDownloadPreV2Response(
-        token=result.token,
-        expires_at=result.expires_at,
         credits_balance=charge_result.balance,
-        download_mode=result.download_mode,
-        nodes=[
-            MediaPreNodeResponse(node_id=node.node_id, url=node.url)
-            for node in result.nodes
-        ],
+        material=validated_payload.material,
     )
     return ResponseUtils.ok(response.model_dump())

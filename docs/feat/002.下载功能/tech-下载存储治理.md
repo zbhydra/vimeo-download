@@ -11,7 +11,7 @@ website 端下载产出的临时文件、轻量恢复记录、object URL 的存�
 | --- | --- |
 | 本文负责 | 下载前容量预检、存储类型选择、真实写入探测、运行时 Memory 降级、恢复记录清理、存储相关埋点 |
 | `@tech-下载方法与续传.md` 负责 | `DownloadResumeRecord` 公共/方法字段结构、Range 协议、dispatcher 续传收口 |
-| 不变 | 后端解析、download-v2 direct JSON 合同、插件端链路、资源列表/下载按钮/播放器布局 |
+| 不变 | 后端解析、预授权 material 合同、插件端链路、资源列表/下载按钮/播放器布局 |
 
 ## 2. 三类决策
 
@@ -65,18 +65,14 @@ OPFS 真实 write/read/delete 成功但资源不可校验续传         -> stora
 
 本阶段不引入浏览器原生 File System Access API,也不引入 Redis 或跨机房全局并发记录。
 
-## 4. 运行时降级与 Memory 重试
+## 4. 运行时失败
 
 下载过程中本地断点写入失败(OPFS write 抛错、IndexedDB 事务失败)时:
 
 1. 清理当前恢复记录与临时文件。
-2. 切换 `storageType=memory`、`recoveryMode=current_page`,从 0 字节自动重试**一次**。
-3. Memory 下载成功 → 用户获得文件。
-4. Memory 下载失败 → 按真实下载失败展示错误(`web_download_failed`)。
+2. 按真实下载失败展示错误(`web_download_failed`)。
 
-direct 模式降级时保留同一授权与当前 `downloadUrl`,不重新请求 download-v2 direct JSON。
-
-自动 Memory 重试只适用于下载过程中本地写入失败。刷新后加载恢复记录失败时按 §5 清理记录并回到普通下载,不自动重新下载。
+失败后不重新授权、不刷新 material、不自动重新下载；用户手动再次点击。
 
 ## 5. 刷新后恢复记录加载
 
@@ -140,7 +136,7 @@ direct 模式降级时保留同一授权与当前 `downloadUrl`,不重新请求 
 4. IndexedDB transaction 失败时,当前下载自动切 Memory 并成功。
 5. 恢复记录的 `storageType/recoveryMode` 与 UI 行为一致。
 6. 恢复失效只清恢复记录,解析结果与播放恢复保持稳定。
-7. direct 下载 URL 过期刷新逻辑保持原行为(`@tech-下载方法与续传.md` §8.5)。
+7. direct 下载 URL 过期时清理记录并要求用户手动重新解析。
 8. `web_download_failed` 只代表真实传输失败或最终文件生成失败,不把 checkpoint 失败计入。
 9. `direct` / `client_mux` 容量预检失败时提示用户浏览器存储不足并引导插件下载,不申请下载授权（`proxy` 自动 GET fallback 已随 `proxy` 下线删除）。
 10. 存储预检 blocked 埋点只保留事件专用字段,不记录无消费方的浏览器指纹字段或重复错误内容,且入库后仍可解析为完整 JSON。
