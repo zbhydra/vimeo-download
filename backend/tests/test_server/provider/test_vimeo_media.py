@@ -122,3 +122,38 @@ def test_vimeo_dash_selects_avc_aac_and_rejects_missing_original_pair():
     with pytest.raises(AppCommonException) as error:
         provider._dash_tracks(config, manifest, "vimeo:123:client_mux:gone:aac")
     assert error.value.code == CommonCode.VIMEO_PARSE_FAILED
+
+
+def test_vimeo_thumbnail_falls_back_to_video_thumbnail_url_when_thumbs_missing():
+    config = svc._Config.model_validate(
+        {
+            "video": {
+                "id": 123,
+                "title": "视频",
+                "duration": 12.35,
+                "thumbs": None,
+                "thumbnail_url": "https://i.vimeocdn.com/video/fallback_640",
+            },
+            "request": {"files": {}},
+        }
+    )
+
+    assert provider._thumbnail_url(config) == (
+        "https://i.vimeocdn.com/video/fallback_640"
+    )
+
+
+def test_vimeo_thumbnail_ignores_non_cdn_thumbnail_url():
+    config = svc._Config.model_validate(
+        {
+            "video": {
+                "id": 123,
+                "title": "视频",
+                "duration": 12.35,
+                "thumbnail_url": "https://example.com/fallback.jpg",
+            },
+            "request": {"files": {}},
+        }
+    )
+
+    assert provider._thumbnail_url(config) == ""

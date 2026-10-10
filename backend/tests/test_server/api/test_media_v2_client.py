@@ -27,6 +27,7 @@ def _parse_response() -> MediaParseResponse:
             content_id="vimeo:123",
             title="demo",
             owner=MediaPostOwner(id="owner", title="owner"),
+            extra={"thumbnail_url": "https://i.vimeocdn.com/video/demo_640"},
         ),
         resources=[
             MediaSourceResponse(
@@ -82,6 +83,10 @@ async def test_parse_v2_accepts_only_proxy_execution_token(
     assert body["code"] == 10000
     assert body["data"]["resources"][0]["resource_token"] == "resource-token"
     assert "extra" not in body["data"]["resources"][0]
+    assert (
+        body["data"]["post"]["extra"]["thumbnail_url"]
+        == "https://i.vimeocdn.com/video/demo_640"
+    )
     assert captured == {
         "link": "https://vimeo.com/123",
         "proxy_url": "http://user:pass@proxy.example:8080",

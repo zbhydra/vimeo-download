@@ -3713,6 +3713,84 @@ test('workspace storage preflight blocks download all and guides to the extensio
   }
 })
 
+test('shared media api falls back to post thumbnail metadata for resources', async () => {
+  const { module, cleanup } = await importSharedMediaApiModule()
+  const previousFetch = globalThis.fetch
+  const previousDocument = globalThis.document
+  const previousNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator')
+  const thumbnailUrl = 'https://i.vimeocdn.com/video/fallback_640'
+
+  globalThis.document = { documentElement: { lang: 'en-US' } }
+  Object.defineProperty(globalThis, 'navigator', {
+    configurable: true,
+    value: { language: 'en-US' }
+  })
+  globalThis.fetch = async url => {
+    const pathname = new URL(String(url)).pathname
+    if (pathname.endsWith('/api/client/media/parse-pre-v2')) {
+      return new Response(
+        JSON.stringify({
+          code: 10000,
+          data: {
+            node: { node_id: 1, url: 'https://node-a.example.com/api/client/media/parse-v2' },
+            token: 'proxy-execution-token'
+          }
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      )
+    }
+
+    return new Response(
+      JSON.stringify({
+        code: 10000,
+        data: {
+          status: 'ok',
+          platform: 'vimeo',
+          original_link: 'https://vimeo.com/123',
+          canonical_link: 'https://vimeo.com/123',
+          post: { extra: { thumbnail_url: thumbnailUrl } },
+          resources: [
+            {
+              source_id: 'vimeo:123:direct:1',
+              resource_token: 'resource-token',
+              filename: 'demo.mp4',
+              type: 'video',
+              mime_type: 'video/mp4',
+              size: 123,
+              content_id: 'vimeo:123',
+              capabilities: { download: true, play: false },
+              download_mode: 'direct'
+            }
+          ]
+        }
+      }),
+      { status: 200, headers: { 'content-type': 'application/json' } }
+    )
+  }
+
+  try {
+    const result = await module.parseMediaLink('https://vimeo.com/123', GOOGLE_TEST_REQUEST_CONTEXT)
+    assert.equal(result.resources[0].thumbnailUrl, thumbnailUrl)
+  } finally {
+    if (previousFetch === undefined) {
+      delete globalThis.fetch
+    } else {
+      globalThis.fetch = previousFetch
+    }
+    if (previousDocument === undefined) {
+      delete globalThis.document
+    } else {
+      globalThis.document = previousDocument
+    }
+    if (previousNavigator) {
+      Object.defineProperty(globalThis, 'navigator', previousNavigator)
+    } else {
+      delete globalThis.navigator
+    }
+    await cleanup()
+  }
+})
+
 test('shared media api keeps node unavailable as business error without synthetic 503', async () => {
   const { module, cleanup } = await importSharedMediaApiModule()
   const previousFetch = globalThis.fetch

@@ -78,8 +78,11 @@ class _Config(BaseModel):
     owner_name: str = Field(
         default="unknown", validation_alias=AliasPath("video", "owner", "name")
     )
-    thumbs: dict[str, str] = Field(
+    thumbs: dict[str, str] | None = Field(
         default_factory=dict, validation_alias=AliasPath("video", "thumbs")
+    )
+    thumbnail_url: str | None = Field(
+        default=None, validation_alias=AliasPath("video", "thumbnail_url")
     )
     files: _Files = Field(validation_alias=AliasPath("request", "files"))
 
@@ -260,6 +263,21 @@ class VimeoMedia(BaseMedia):
         return max(videos, key=lambda track: (track.height or 0, track.bitrate)), max(
             audios, key=lambda track: track.bitrate
         )
+
+    def _thumbnail_url(self, config: _Config) -> str:
+        """从 Vimeo 配置中选择一个公开 CDN 封面 URL。"""
+        candidates = list((config.thumbs or {}).values())
+        if config.thumbnail_url is not None:
+            candidates.append(config.thumbnail_url)
+        for candidate in candidates:
+            thumbnail = candidate.strip()
+            parsed = urlsplit(thumbnail)
+            host = parsed.hostname or ""
+            if parsed.scheme == "https" and (
+                host == "vimeocdn.com" or host.endswith(".vimeocdn.com")
+            ):
+                return thumbnail
+        return ""
 
     async def _extract_vimeo(
         self,
@@ -481,7 +499,7 @@ class VimeoMedia(BaseMedia):
                     video.duration if video.duration is not None else config.duration,
                 )
             metadata = result.payload
-            thumbnail = next(iter(config.thumbs.values()), "")
+            thumbnail = self._thumbnail_url(config)
             content_id = f"vimeo:{config.id}"
             resource = MediaSourceResponse(
                 source_id=metadata.source_id,

@@ -130,6 +130,12 @@ interface BackendMediaMessage {
   message_id?: number | string
 }
 
+/** 后端返回的帖子级公共元数据。 */
+interface BackendMediaPost {
+  /** 平台扩展字段，封面地址从这里回退。 */
+  extra?: BackendMediaExtra
+}
+
 /** 后端解析响应。 */
 interface BackendMediaParseResponse {
   /** 解析状态。 */
@@ -142,6 +148,8 @@ interface BackendMediaParseResponse {
   original_link?: string
   /** 识别到的平台。 */
   platform?: string
+  /** 帖子级公共元数据。 */
+  post?: BackendMediaPost
   /** 解析出的消息列表。 */
   messages?: BackendMediaMessage[]
   /** 统一 API 返回的资源列表。 */
@@ -358,7 +366,8 @@ function normalizeSource(
   canonicalLink: string,
   fallbackPlatform: MediaPlatform,
   fallbackMessageId?: number | string,
-  preferredNodeId?: number
+  preferredNodeId?: number,
+  fallbackThumbnailUrl?: string
 ): MediaPost {
   const resourceToken = source.resource_token?.trim()
   if (!resourceToken) {
@@ -392,7 +401,7 @@ function normalizeSource(
       typeof preferredNodeId === 'number' && Number.isInteger(preferredNodeId) && preferredNodeId > 0
         ? preferredNodeId
         : undefined,
-    thumbnailUrl: source.extra?.thumbnail_url || undefined,
+    thumbnailUrl: source.extra?.thumbnail_url || fallbackThumbnailUrl || undefined,
     capabilities
   }
 }
@@ -405,14 +414,31 @@ function normalizeMediaParseResponse(
   const canonicalLink = response.canonical_link || response.original_link || link
   const originalLink = response.original_link || link
   const platform = normalizePlatform(response.platform)
+  const thumbnailUrl = response.post?.extra?.thumbnail_url
 
   const flatResources = response.resources || []
   const resources: MediaPost[] =
     flatResources.length > 0
-      ? flatResources.map(source => normalizeSource(source, canonicalLink, platform, undefined, preferredNodeId))
+      ? flatResources.map(source =>
+          normalizeSource(
+            source,
+            canonicalLink,
+            platform,
+            undefined,
+            preferredNodeId,
+            thumbnailUrl
+          )
+        )
       : (response.messages || []).flatMap(message =>
           (message.sources || []).map(source =>
-            normalizeSource(source, canonicalLink, platform, message.message_id, preferredNodeId)
+            normalizeSource(
+              source,
+              canonicalLink,
+              platform,
+              message.message_id,
+              preferredNodeId,
+              thumbnailUrl
+            )
           )
         )
 
