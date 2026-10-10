@@ -403,7 +403,7 @@ update_code() {
     local staging_dir previous_dir path
     staging_dir="$(mktemp -d "$(dirname "$ROOT_DIR")/.vimeo-backend-release.XXXXXX")"
     trap 'rm -rf "$staging_dir"' RETURN
-    git --git-dir="$REPO_DIR" archive "$BRANCH:backend" \
+    git_with_project_key --git-dir="$REPO_DIR" archive "$BRANCH:backend" \
         | tar -xf - -C "$staging_dir"
 
     for path in .git .venv config.yaml log data private public/uploads .backups .current_version; do
