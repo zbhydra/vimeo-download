@@ -223,3 +223,89 @@ async def test_health_check_includes_disabled_and_legacy_status_nodes(
         values["last_health_status"] == SERVICE_NODE_HEALTH_HEALTHY
         for _node_id, values in updates
     )
+
+
+@pytest.mark.asyncio
+async def test_health_check_skips_http_request_to_local_node(monkeypatch) -> None:
+    """自动健康检查对当前业务节点直接写健康状态，不发起自请求。"""
+    local_node = ServiceNodeModel(
+        node_id=401,
+        node_type=1,
+        name="pytest-health-local",
+        region="test",
+        public_base_url="http://local.example.com",
+        internal_base_url="http://local.internal",
+        enabled=True,
+        status=1,
+        weight=100,
+        last_health_status=SERVICE_NODE_HEALTH_UNHEALTHY,
+        created_at=1,
+        updated_at=1,
+    )
+    remote_node = ServiceNodeModel(
+        node_id=402,
+        node_type=SERVICE_NODE_TYPE_DOWNLOAD,
+        name="pytest-health-remote",
+        region="test",
+        public_base_url="https://remote.example.com",
+        internal_base_url="http://remote.internal",
+        enabled=True,
+        status=1,
+        weight=100,
+        last_health_status=SERVICE_NODE_HEALTH_UNHEALTHY,
+        created_at=1,
+        updated_at=1,
+    )
+    requests: list[str] = []
+    updates: list[tuple[int, dict]] = []
+
+    async def fake_list_nodes_for_health_check():
+        return [local_node, remote_node]
+
+    async def fake_update_node_health(*, node_id: int, values: dict) -> None:
+        updates.append((node_id, values))
+
+    monkeypatch.setattr(
+        health_module.service_node_service,
+        "list_nodes_for_health_check",
+        fake_list_nodes_for_health_check,
+    )
+    monkeypatch.setattr(
+        service_node_health_service,
+        "_update_node_health",
+        fake_update_node_health,
+    )
+    monkeypatch.setattr(
+        health_module.settings.app,
+        "public_api_base_url",
+        "http://local.example.com",
+    )
+
+    class FakeAsyncClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, traceback):
+            return None
+
+        async def get(self, url):
+            requests.append(url)
+            return SimpleNamespace(
+                status_code=200,
+                json=lambda: {
+                    "status": "ok",
+                    "role": "download",
+                    "version": "v-remote",
+                },
+            )
+
+    monkeypatch.setattr(health_module.httpx, "AsyncClient", FakeAsyncClient)
+
+    await service_node_health_service.check_all_once()
+
+    assert requests == ["http://remote.internal/internal/service-node/health"]
+    assert [node_id for node_id, _values in updates] == [401, 402]
+    assert updates[0][1]["last_health_status"] == SERVICE_NODE_HEALTH_HEALTHY

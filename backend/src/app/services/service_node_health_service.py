@@ -1,8 +1,8 @@
 """业务服务器服务节点健康检查调度。
 
 business role 在 FastAPI lifespan 中启动后台 task，定期检查 `service_nodes`
-每条记录的 `/internal/service-node/health`，并只写回当前被检查记录。download
-role 不导入本模块，不启动调度。
+每条记录的 `/internal/service-node/health`，并只写回当前被检查记录；当前进程
+对应的节点直接写健康状态，不通过 HTTP 自检。download role 不导入本模块，不启动调度。
 """
 
 from __future__ import annotations
@@ -24,7 +24,10 @@ from app.services.service_node_service import (
     service_node_service,
 )
 from app.utils.logger import logger
-from app.utils.service_node_url import build_service_node_api_url
+from app.utils.service_node_url import (
+    build_service_node_api_url,
+    normalize_service_node_base_url,
+)
 
 # 下载节点本地只暴露给业务服务器健康检查的轻量探活路径。
 _HEALTH_PATH = "/internal/service-node/health"
@@ -85,6 +88,17 @@ class ServiceNodeHealthService:
         async with httpx.AsyncClient(timeout=_HEALTH_TIMEOUT_SECONDS) as client:
             for node in nodes:
                 try:
+                    if self._is_local_node(node):
+                        await self._mark_healthy(
+                            node_id=node.node_id,
+                            checked_at=int(time.time()),
+                            payload={
+                                "status": "ok",
+                                "role": settings.app.role,
+                                "version": settings.app.version,
+                            },
+                        )
+                        continue
                     await self.check_one(client=client, node=node)
                 except Exception as exc:
                     logger.error(
@@ -92,6 +106,24 @@ class ServiceNodeHealthService:
                         f"node_id={node.node_id}, error={type(exc).__name__}: {exc}",
                         exc_info=True,
                     )
+
+    @staticmethod
+    def _is_local_node(node: ServiceNodeModel) -> bool:
+        """判断节点地址是否指向当前业务进程，避免业务服务器经公网自检。"""
+        try:
+            local_base_url = normalize_service_node_base_url(
+                settings.app.public_api_base_url
+            )
+        except ValueError:
+            return False
+
+        for base_url in (node.internal_base_url, node.public_base_url):
+            try:
+                if normalize_service_node_base_url(str(base_url)) == local_base_url:
+                    return True
+            except ValueError:
+                continue
+        return False
 
     async def check_one(
         self,
