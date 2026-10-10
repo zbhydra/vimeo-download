@@ -8,7 +8,7 @@ import re
 from typing import Literal
 from urllib.parse import parse_qs, unquote, urlencode, urljoin, urlsplit, urlunsplit
 
-from playwright.async_api import Response
+from playwright.async_api import Response, Route
 from pydantic import AliasPath, BaseModel, Field
 
 from app.contracts.media_platform import PLATFORM_VIMEO
@@ -360,67 +360,43 @@ class VimeoMedia(BaseMedia):
         try:
             await context.add_init_script(_ANONYMOUS_IDENTITY)
             page = await context.new_page()
-            cdp = await context.new_cdp_session(page)
-            frame_tree = await cdp.send("Page.getFrameTree")
-            main_frame_id = str(frame_tree["frameTree"]["frame"]["id"])
 
-            async def paused(event: dict) -> None:
-                request_id = str(event["requestId"])
-                url = str(event["request"]["url"])
+            async def route_request(route: Route) -> None:
+                request = route.request
+                url = request.url
                 path = urlsplit(url).path.lower()
                 try:
                     if (
-                        event["resourceType"] == "Document"
-                        and event.get("frameId") != main_frame_id
+                        request.resource_type == "document"
+                        and request.frame != page.main_frame
                     ):
                         blocked_frames.add(urlsplit(url).hostname or "")
                     # 仅使用顶层原生播放器；不附加独立子frame，避免留下未受校验的网络出口。
                     if (
-                        event["resourceType"] == "Media"
+                        request.resource_type == "media"
                         or path.endswith(
                             (".mp4", ".m4s", ".m4a", ".ts", ".webm", ".aac", ".m3u8")
                         )
-                        or str(
-                            event["request"]
-                            .get("headers", {})
-                            .get("Sec-Fetch-Dest", "")
-                        ).lower()
+                        or request.headers.get("sec-fetch-dest", "").lower()
                         in {"worker", "sharedworker"}
                         or (
-                            event["resourceType"] == "Document"
-                            and event.get("frameId") != main_frame_id
+                            request.resource_type == "document"
+                            and request.frame != page.main_frame
                         )
                     ):
-                        await cdp.send(
-                            "Fetch.failRequest",
-                            {"requestId": request_id, "errorReason": "BlockedByClient"},
-                        )
+                        await route.abort(error_code="blockedbyclient")
                         return
                     await self._validate_url(url)
-                    await cdp.send("Fetch.continueRequest", {"requestId": request_id})
+                    await route.continue_()
                 except AppCommonException:
                     logger.error(
                         "vimeo_request: 拒绝非公网请求，video_id=%s",
                         video_id,
                         exc_info=True,
                     )
-                    await cdp.send(
-                        "Fetch.failRequest",
-                        {"requestId": request_id, "errorReason": "BlockedByClient"},
-                    )
+                    await route.abort(error_code="blockedbyclient")
 
-            def intercept(event: dict) -> None:
-                if closing:
-                    return
-                task = asyncio.create_task(paused(event))
-                tasks.add(task)
-                task.add_done_callback(finished)
-
-            cdp.on("Fetch.requestPaused", intercept)
-            await cdp.send(
-                "Fetch.enable",
-                {"patterns": [{"urlPattern": "*", "requestStage": "Request"}]},
-            )
+            await page.route("**/*", route_request)
             page.on("response", capture)
             navigation = await page.goto(
                 player_url, wait_until="domcontentloaded", timeout=45000
