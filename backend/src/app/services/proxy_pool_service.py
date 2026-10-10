@@ -167,13 +167,13 @@ class ProxyPoolService:
             await session.commit()
 
     async def select_parse_proxy(self) -> str:
-        """选择一条启用代理；动态代理地址只请求一次。"""
+        """随机选择一条启用代理；动态代理地址只请求一次。"""
         try:
             async with get_async_session() as session:
                 result = await session.execute(
                     select(ProxyPoolEntryModel)
                     .where(ProxyPoolEntryModel.enabled.is_(True))
-                    .order_by(ProxyPoolEntryModel.proxy_id)
+                    .order_by(func.rand())
                     .limit(1)
                 )
                 entry = result.scalar_one_or_none()
