@@ -378,10 +378,12 @@ function render(
     elements.orderSupportPrefix.textContent = copy.supportMailPrefix
     elements.orderSupportMail.textContent = state.supportMail
     elements.orderSupportMail.href = `mailto:${state.supportMail}`
+    elements.orderSupportMail.title = state.supportMail
   } else {
     elements.orderSupportPrefix.textContent = ''
     elements.orderSupportMail.textContent = ''
     elements.orderSupportMail.removeAttribute('href')
+    elements.orderSupportMail.removeAttribute('title')
   }
   setOrderCheckoutHidden(elements.orderSpinner, state.status !== 'pending_payment')
   setOrderCheckoutHidden(elements.successPanel, state.status !== 'success')

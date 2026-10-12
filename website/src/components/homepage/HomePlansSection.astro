@@ -20,6 +20,7 @@ const { copy, pricingPath } = Astro.props as {
       <a
         class="btn-secondary"
         href={pricingPath}
+        title={copy.free.cta}
         data-ga-event="internal_workflow_click"
         data-ga-source="homepage_plans_free"
         data-ga-target="pricing"
@@ -34,6 +35,7 @@ const { copy, pricingPath } = Astro.props as {
       <a
         class="btn-primary"
         href={pricingPath}
+        title={copy.unlimited.cta}
         data-ga-event="internal_workflow_click"
         data-ga-source="homepage_plans_unlimited"
         data-ga-target="pricing"

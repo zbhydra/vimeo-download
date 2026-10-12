@@ -84,7 +84,7 @@ const renderInlineHtml = (value: string) =>
     .map(node => {
       const text = escapeHtml(node.text)
       if (node.href !== undefined) {
-        return `<a href="${escapeHtml(node.href)}">${text}</a>`
+        return `<a href="${escapeHtml(node.href)}" title="${text}">${text}</a>`
       }
 
       return node.bold ? `<strong>${text}</strong>` : text
@@ -148,7 +148,7 @@ const structuredDataItems = page.updatedAtIso
     <div class="container legal-layout">
       <nav class="legal-toc" aria-label={page.navLabel}>
         {page.sections.map(section => (
-          <a href={`#${toSectionId(section.title)}`}>{section.title}</a>
+          <a href={`#${toSectionId(section.title)}`} title={section.title}>{section.title}</a>
         ))}
       </nav>
 

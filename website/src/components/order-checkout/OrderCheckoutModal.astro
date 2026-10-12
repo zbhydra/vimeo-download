@@ -103,11 +103,11 @@ const checkoutCopy: OrderCheckoutCopy = {
         <span>
           {checkoutCopy.agreementText}
           {' '}
-          <a href="/terms" target="_blank" rel="noopener" data-order-checkout-terms>
+          <a href="/terms" target="_blank" rel="noopener" title={auth.termsLink} data-order-checkout-terms>
             {auth.termsLink}
           </a>
           <span aria-hidden="true"> · </span>
-          <a href="/privacy" target="_blank" rel="noopener" data-order-checkout-privacy>
+          <a href="/privacy" target="_blank" rel="noopener" title={auth.privacyLink} data-order-checkout-privacy>
             {auth.privacyLink}
           </a>
         </span>

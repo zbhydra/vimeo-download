@@ -88,7 +88,7 @@ const [installMessageBeforeLink, installMessageAfterLink = ''] = copy.installCon
         {copy.installConfirmTitle}
       </h2>
       <p id="pricing-subscription-confirm-description-confirm" class="pricing-subscription-confirm-description">
-        {installMessageBeforeLink}<a href={extensionInstallUrl} target="_blank" rel="noopener noreferrer">{copy.installConfirmLinkLabel}</a>{installMessageAfterLink}
+        {installMessageBeforeLink}<a href={extensionInstallUrl} target="_blank" rel="noopener noreferrer" title={copy.installConfirmLinkLabel}>{copy.installConfirmLinkLabel}</a>{installMessageAfterLink}
       </p>
       <div class="pricing-review-reward-offer" data-pricing-review-reward-offer>
         <p>{copy.reviewReward.offerMessage}</p>

@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'astro/config'
 import languageSitemap from './src/sitemap/languageSitemap.mjs'
 import rehypeTableCellLabels from './src/lib/rehypeTableCellLabels.mjs'
+import rehypeLinkTitles from './src/lib/rehypeLinkTitles.mjs'
 import { SITE_ORIGIN } from './src/lib/site.mjs'
 
 // Production and development both serve from the root path.
@@ -29,7 +30,8 @@ export default defineConfig({
     // 文章逐字引用界面文案（如 "Checking browser storage..."），不能被改成弯引号或省略号；
     // smartypants 还会把表格单元格开头的引号判成右引号。全站文案本来就用直引号。
     smartypants: false,
-    rehypePlugins: [rehypeTableCellLabels]
+    // rehypeLinkTitles 给正文链接补 title（取链接文字），与模板组件手写的 title 共同保证全站链接都有 title。
+    rehypePlugins: [rehypeTableCellLabels, rehypeLinkTitles]
   },
   build: {
     format: 'directory',

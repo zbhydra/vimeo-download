@@ -48,7 +48,7 @@ const collectionSchema = {
       <ul class="guides-list">
         {guides.map(guide => (
           <li class="guide-card">
-            <h2><a href={getGuidesPath(locale, guide.slug)}>{guide.entry.data.title}</a></h2>
+            <h2><a href={getGuidesPath(locale, guide.slug)} title={guide.entry.data.title}>{guide.entry.data.title}</a></h2>
             <p>{guide.entry.data.description}</p>
           </li>
         ))}

@@ -961,7 +961,7 @@ const structuredDataItems = [
   <body>
     {!standalone && <header class="header">
       <nav class="nav">
-        <a href={currentLocalePath} class="logo">
+        <a href={currentLocalePath} class="logo" title={t.layout.nav.brand}>
           <img src="/favicon.png" width="40" height="40" alt="" />
           <span>{t.layout.nav.brand}</span>
         </a>
@@ -972,6 +972,7 @@ const structuredDataItems = [
             href={currentLocalePath}
             class={isHomeActive ? 'active' : ''}
             aria-current={isHomeActive ? 'page' : undefined}
+            title={t.layout.nav.home}
           >
             {t.layout.nav.home}
           </a>
@@ -984,6 +985,7 @@ const structuredDataItems = [
             rel="noopener"
             class="btn-primary nav-install-link"
             aria-label={t.common.installCta}
+            title={t.common.installCta}
             data-ga-event="outbound_chrome_store_click"
             data-ga-source="nav"
           >
@@ -1044,6 +1046,7 @@ const structuredDataItems = [
             href={currentLocalePath}
             class={isHomeActive ? 'active' : ''}
             aria-current={isHomeActive ? 'page' : undefined}
+            title={t.layout.nav.home}
           >
             {t.layout.nav.home}
           </a>
@@ -1052,6 +1055,7 @@ const structuredDataItems = [
             target="_blank"
             rel="noopener"
             class="btn-primary mobile-nav-install"
+            title={t.common.installCta}
             data-ga-event="outbound_chrome_store_click"
             data-ga-source="mobile_nav"
           >
@@ -1070,7 +1074,7 @@ const structuredDataItems = [
       <div class="footer-content">
         <div class="footer-main">
           <div class="footer-brand">
-            <a href={currentLocalePath} class="footer-brand-link">
+            <a href={currentLocalePath} class="footer-brand-link" title={t.layout.nav.brand}>
               <span class="footer-brand-icon" data-footer-brand-icon></span>
               <span>{t.layout.nav.brand}</span>
             </a>
@@ -1083,6 +1087,7 @@ const structuredDataItems = [
               <p class="footer-link-title">{companyContent.footerGroupLabel}</p>
               <a
                 href={aboutPath}
+                title={companyContent.about.navLabel}
                 data-ga-event="internal_workflow_click"
                 data-ga-source="footer"
                 data-ga-target="about"
@@ -1091,6 +1096,7 @@ const structuredDataItems = [
               </a>
               <a
                 href={contactPath}
+                title={companyContent.contact.navLabel}
                 data-ga-event="internal_workflow_click"
                 data-ga-source="footer"
                 data-ga-target="contact"
@@ -1103,6 +1109,7 @@ const structuredDataItems = [
               {guidesPath && (
                 <a
                   href={guidesPath}
+                  title={guidesContent.sectionLabel}
                   data-ga-event="internal_workflow_click"
                   data-ga-source="footer"
                   data-ga-target="guides"
@@ -1112,6 +1119,7 @@ const structuredDataItems = [
               )}
               <a
                 href={termsPath}
+                title={companyContent.termsLabel}
                 data-ga-event="internal_workflow_click"
                 data-ga-source="footer"
                 data-ga-target="terms"
@@ -1120,6 +1128,7 @@ const structuredDataItems = [
               </a>
               <a
                 href={privacyPath}
+                title={companyContent.privacyLabel}
                 data-ga-event="internal_workflow_click"
                 data-ga-source="footer"
                 data-ga-target="privacy"

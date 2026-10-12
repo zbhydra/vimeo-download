@@ -309,7 +309,7 @@ const { copy, extensionInstallUrl, supportEmail, showHero = false } = Astro.prop
       }
       {supportEmail && (
         <p class="pricing-support-email">
-          {copy.subscription.supportMailPrefix}<a href={`mailto:${supportEmail}`}>{supportEmail}</a>
+          {copy.subscription.supportMailPrefix}<a href={`mailto:${supportEmail}`} title={supportEmail}>{supportEmail}</a>
         </p>
       )}
     </section>

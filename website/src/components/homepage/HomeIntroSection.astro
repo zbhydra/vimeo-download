@@ -29,6 +29,7 @@ const { copy, installUrl, pricingPath, brand, callouts } = Astro.props as {
           href={installUrl}
           target="_blank"
           rel="noopener"
+          title={copy.primaryCta}
           data-ga-event="outbound_chrome_store_click"
           data-ga-source="homepage_intro"
         >
@@ -41,6 +42,7 @@ const { copy, installUrl, pricingPath, brand, callouts } = Astro.props as {
         <a
           class="btn-secondary"
           href={pricingPath}
+          title={copy.secondaryCta}
           data-ga-event="internal_workflow_click"
           data-ga-source="homepage_intro"
           data-ga-target="pricing"

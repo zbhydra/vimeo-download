@@ -137,6 +137,7 @@ function renderConfirmMessage(element: HTMLElement, options: SiteConfirmOptions)
 
   link.href = options.messageLink.href
   link.textContent = options.messageLink.label
+  link.title = options.messageLink.label
   link.target = '_blank'
   link.rel = 'noopener noreferrer'
   element.append(document.createTextNode(beforeLink), link)

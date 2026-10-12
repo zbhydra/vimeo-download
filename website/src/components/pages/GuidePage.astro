@@ -78,8 +78,8 @@ const breadcrumbSchema = {
     >
       <nav slot="breadcrumb" class="guide-breadcrumb" aria-label={guidesContent.breadcrumbLabel}>
         <ol>
-          <li><a href={homePath}>{t.layout.nav.home}</a></li>
-          <li><a href={guidesPath}>{guidesContent.sectionLabel}</a></li>
+          <li><a href={homePath} title={t.layout.nav.home}>{t.layout.nav.home}</a></li>
+          <li><a href={guidesPath} title={guidesContent.sectionLabel}>{guidesContent.sectionLabel}</a></li>
         </ol>
       </nav>
     </SiteBandHeader>

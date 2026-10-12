@@ -78,13 +78,14 @@ const companyPageSchema = {
       <p class="site-band-intro">{companyContent.operatorStatement}</p>
       <Fragment slot="actions">
         <div class="company-actions" role="group" aria-label={page.eyebrow}>
-          <a class="btn-primary company-primary-link" href={primaryHref}>{primaryLabel}</a>
+          <a class="btn-primary company-primary-link" href={primaryHref} title={primaryLabel}>{primaryLabel}</a>
           {pageKind === 'about' && (
             <a
               class="btn-secondary company-secondary-link"
               href={CHROME_WEB_STORE_URL}
               target="_blank"
               rel="noopener"
+              title={companyContent.about.chromeStoreLabel}
             >
               {companyContent.about.chromeStoreLabel}
             </a>
@@ -96,6 +97,7 @@ const companyPageSchema = {
                 href={OFFICIAL_X_URL}
                 target="_blank"
                 rel="me noopener noreferrer"
+                title={companyContent.officialXLabel}
                 data-ga-event="official_x_click"
                 data-ga-source="contact"
                 data-ga-target="official_x"
@@ -130,12 +132,12 @@ const companyPageSchema = {
     <nav class="company-related" aria-label={companyContent.footerGroupLabel}>
       <div class="container company-related-links">
         {pageKind === 'about' ? (
-          <a href={contactPath}>{companyContent.about.contactLabel}</a>
+          <a href={contactPath} title={companyContent.about.contactLabel}>{companyContent.about.contactLabel}</a>
         ) : (
-          <a href={aboutPath}>{companyContent.contact.aboutLabel}</a>
+          <a href={aboutPath} title={companyContent.contact.aboutLabel}>{companyContent.contact.aboutLabel}</a>
         )}
-        <a href={privacyPath}>{companyContent.privacyLabel}</a>
-        <a href={termsPath}>{companyContent.termsLabel}</a>
+        <a href={privacyPath} title={companyContent.privacyLabel}>{companyContent.privacyLabel}</a>
+        <a href={termsPath} title={companyContent.termsLabel}>{companyContent.termsLabel}</a>
       </div>
     </nav>
   </article>

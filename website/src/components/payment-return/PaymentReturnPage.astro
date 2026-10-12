@@ -81,7 +81,7 @@ const initial = status === 'success' ? success.waiting : cancel
         </div>
         <h1 data-payment-return-title>{initial.title}</h1>
         <p data-payment-return-description>{initial.description}</p>
-        <a class="btn-primary payment-return-pricing" href="/ext-pricing/">{paymentReturnContent.backToPricing}</a>
+        <a class="btn-primary payment-return-pricing" href="/ext-pricing/" title={paymentReturnContent.backToPricing}>{paymentReturnContent.backToPricing}</a>
       </div>
     </div>
   </section>

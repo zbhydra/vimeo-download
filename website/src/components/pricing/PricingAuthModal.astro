@@ -126,9 +126,9 @@ const authCopy = {
       <p class="pricing-auth-terms">
         {copy.auth.termsNotice}
         {' '}
-        <a href="/terms">{copy.auth.termsLink}</a>
+        <a href="/terms" title={copy.auth.termsLink}>{copy.auth.termsLink}</a>
         <span aria-hidden="true"> · </span>
-        <a href="/privacy">{copy.auth.privacyLink}</a>
+        <a href="/privacy" title={copy.auth.privacyLink}>{copy.auth.privacyLink}</a>
       </p>
       <p class="pricing-auth-inline-error" data-pricing-auth-error role="alert" hidden></p>
     </div>
