@@ -179,7 +179,7 @@
   "videoPanel.clip.title": "トリミング",
   "videoPanel.clip.start": "開始（秒）",
   "videoPanel.clip.end": "終了（秒）",
-  "videoPanel.clip.hint": "DASH/HLS の画質のみトリミングできます。字幕とサムネイルは常に全体をダウンロードします。",
+  "videoPanel.clip.hint": "この画質はトリミングできます。開始・終了を空欄にすると全体をダウンロードします。字幕とサムネイルは常に全体をダウンロードします。",
   "videoPanel.clip.unsupported": "この画質はトリミングできません。DASH/HLS の画質を選んでください。",
   "videoPanel.audioSwitch.label": "音声トラック",
   "videoPanel.audioSwitch.withAudio": "音声あり",

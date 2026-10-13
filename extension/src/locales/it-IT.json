@@ -179,7 +179,7 @@
   "videoPanel.clip.title": "Ritaglia",
   "videoPanel.clip.start": "Inizio (s)",
   "videoPanel.clip.end": "Fine (s)",
-  "videoPanel.clip.hint": "Solo le qualità DASH/HLS possono essere ritagliate. Sottotitoli e copertina vengono sempre scaricati per intero.",
+  "videoPanel.clip.hint": "Questa qualità può essere ritagliata. Lascia inizio e fine vuoti per scaricare l'intero video. Sottotitoli e copertina vengono sempre scaricati per intero.",
   "videoPanel.clip.unsupported": "Questa qualità non può essere ritagliata. Scegli una qualità DASH/HLS.",
   "videoPanel.audioSwitch.label": "Traccia audio",
   "videoPanel.audioSwitch.withAudio": "Con audio",

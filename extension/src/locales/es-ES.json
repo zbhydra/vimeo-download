@@ -179,7 +179,7 @@
   "videoPanel.clip.title": "Recortar",
   "videoPanel.clip.start": "Inicio (s)",
   "videoPanel.clip.end": "Fin (s)",
-  "videoPanel.clip.hint": "Solo las calidades DASH/HLS se pueden recortar. Los subtítulos y la portada siempre se descargan completos.",
+  "videoPanel.clip.hint": "Esta calidad se puede recortar. Deja inicio y fin vacíos para descargar el vídeo completo. Los subtítulos y la portada siempre se descargan completos.",
   "videoPanel.clip.unsupported": "Esta calidad no se puede recortar. Elige una calidad DASH/HLS.",
   "videoPanel.audioSwitch.label": "Pista de audio",
   "videoPanel.audioSwitch.withAudio": "Con audio",

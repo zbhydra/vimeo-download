@@ -179,7 +179,7 @@
   "videoPanel.clip.title": "Potong",
   "videoPanel.clip.start": "Mulai (dtk)",
   "videoPanel.clip.end": "Selesai (dtk)",
-  "videoPanel.clip.hint": "Hanya kualitas DASH/HLS yang dapat dipotong. Subtitle dan sampul selalu diunduh penuh.",
+  "videoPanel.clip.hint": "Kualitas ini dapat dipangkas. Kosongkan awal dan akhir untuk mengunduh seluruh video. Subtitle dan sampul selalu diunduh utuh.",
   "videoPanel.clip.unsupported": "Kualitas ini tidak dapat dipotong. Pilih kualitas DASH/HLS.",
   "videoPanel.audioSwitch.label": "Trek audio",
   "videoPanel.audioSwitch.withAudio": "Dengan audio",

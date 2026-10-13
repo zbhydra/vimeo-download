@@ -179,7 +179,7 @@
   "videoPanel.clip.title": "Cắt đoạn",
   "videoPanel.clip.start": "Bắt đầu (giây)",
   "videoPanel.clip.end": "Kết thúc (giây)",
-  "videoPanel.clip.hint": "Chỉ các chất lượng DASH/HLS mới cắt được. Phụ đề và ảnh bìa luôn tải toàn bộ tệp.",
+  "videoPanel.clip.hint": "Chất lượng này có thể cắt. Để trống điểm đầu và điểm cuối để tải toàn bộ video. Phụ đề và ảnh bìa luôn được tải đầy đủ.",
   "videoPanel.clip.unsupported": "Chất lượng này không thể cắt. Hãy chọn chất lượng DASH/HLS.",
   "videoPanel.audioSwitch.label": "Track âm thanh",
   "videoPanel.audioSwitch.withAudio": "Có âm thanh",

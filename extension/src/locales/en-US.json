@@ -179,7 +179,7 @@
   "videoPanel.clip.title": "Trim",
   "videoPanel.clip.start": "Start (s)",
   "videoPanel.clip.end": "End (s)",
-  "videoPanel.clip.hint": "Only DASH/HLS qualities can be trimmed. Subtitles and the cover always download the full file.",
+  "videoPanel.clip.hint": "This quality can be trimmed. Leave start and end empty to download the full video. Subtitles and the cover always download the full file.",
   "videoPanel.clip.unsupported": "This quality cannot be trimmed. Choose a DASH/HLS quality.",
   "videoPanel.audioSwitch.label": "Audio track",
   "videoPanel.audioSwitch.withAudio": "With audio",

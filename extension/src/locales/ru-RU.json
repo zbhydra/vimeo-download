@@ -179,7 +179,7 @@
   "videoPanel.clip.title": "Обрезка",
   "videoPanel.clip.start": "Начало (с)",
   "videoPanel.clip.end": "Конец (с)",
-  "videoPanel.clip.hint": "Обрезать можно только качества DASH/HLS. Субтитры и обложка всегда скачиваются целиком.",
+  "videoPanel.clip.hint": "Это качество можно обрезать. Оставьте начало и конец пустыми, чтобы скачать видео целиком. Субтитры и обложка всегда скачиваются полностью.",
   "videoPanel.clip.unsupported": "Это качество нельзя обрезать. Выберите качество DASH/HLS.",
   "videoPanel.audioSwitch.label": "Аудиодорожка",
   "videoPanel.audioSwitch.withAudio": "С аудио",

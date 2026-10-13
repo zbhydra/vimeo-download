@@ -179,7 +179,7 @@
   "videoPanel.clip.title": "時間裁剪",
   "videoPanel.clip.start": "起點（秒）",
   "videoPanel.clip.end": "終點（秒）",
-  "videoPanel.clip.hint": "僅 DASH/HLS 檔位支援裁剪；字幕與封面一律下載完整檔案。",
+  "videoPanel.clip.hint": "目前檔位支援裁剪；起點和終點留空則下載整片。字幕與封面一律下載完整檔案。",
   "videoPanel.clip.unsupported": "目前檔位不支援裁剪，請選擇 DASH/HLS 檔位。",
   "videoPanel.audioSwitch.label": "音軌",
   "videoPanel.audioSwitch.withAudio": "有音軌",

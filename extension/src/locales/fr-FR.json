@@ -179,7 +179,7 @@
   "videoPanel.clip.title": "Découper",
   "videoPanel.clip.start": "Début (s)",
   "videoPanel.clip.end": "Fin (s)",
-  "videoPanel.clip.hint": "Seules les qualités DASH/HLS peuvent être découpées. Les sous-titres et la couverture sont toujours téléchargés en entier.",
+  "videoPanel.clip.hint": "Cette qualité peut être découpée. Laissez début et fin vides pour télécharger toute la vidéo. Les sous-titres et la couverture sont toujours téléchargés en entier.",
   "videoPanel.clip.unsupported": "Cette qualité ne peut pas être découpée. Choisissez une qualité DASH/HLS.",
   "videoPanel.audioSwitch.label": "Piste audio",
   "videoPanel.audioSwitch.withAudio": "Avec audio",

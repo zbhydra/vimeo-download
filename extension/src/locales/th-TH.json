@@ -179,7 +179,7 @@
   "videoPanel.clip.title": "ตัดช่วง",
   "videoPanel.clip.start": "เริ่ม (วินาที)",
   "videoPanel.clip.end": "สิ้นสุด (วินาที)",
-  "videoPanel.clip.hint": "ตัดได้เฉพาะคุณภาพ DASH/HLS เท่านั้น คำบรรยายและภาพหน้าปกจะดาวน์โหลดไฟล์เต็มเสมอ",
+  "videoPanel.clip.hint": "คุณภาพนี้ตัดได้ หากเว้นจุดเริ่มและจุดสิ้นสุดว่างไว้จะดาวน์โหลดทั้งวิดีโอ คำบรรยายและภาพหน้าปกจะดาวน์โหลดไฟล์เต็มเสมอ",
   "videoPanel.clip.unsupported": "คุณภาพนี้ตัดไม่ได้ กรุณาเลือกคุณภาพ DASH/HLS",
   "videoPanel.audioSwitch.label": "แทร็กเสียง",
   "videoPanel.audioSwitch.withAudio": "มีเสียง",

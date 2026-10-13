@@ -536,12 +536,15 @@ describe('VideoPanel', () => {
     expect(directRow.get('option').text()).toBe('1080p MP4')
     expect(directRow.find('.audio-switch').exists()).toBe(false)
 
-    // 直链不支持裁剪：填好区间后从直链行下载，资源身份不带 `:clip:` 后缀（恒为整片）。
+    // 直链恒为整片：未填区间时可下载，资源身份不带 `:clip:` 后缀。
+    await directRow.get('.row-download').trigger('click')
+    expect(lastDownloadedResource(wrapper).id).toBe(`vimeo:${VIDEO_ID}:video:progressive:1080p:30`)
+
+    // 填好区间后直链不支持裁剪，下载按钮灰化而不是静默下载整片。
     const inputs = wrapper.findAll<HTMLInputElement>('.clip-input')
     await inputs[0].setValue('12.5')
     await inputs[1].setValue('30')
-    await directRow.get('.row-download').trigger('click')
-    expect(lastDownloadedResource(wrapper).id).toBe(`vimeo:${VIDEO_ID}:video:progressive:1080p:30`)
+    expect(directRow.get('.row-download').attributes('disabled')).toBeDefined()
   })
 
   it('当前视频没有 progressive 档位时不渲染直接下载行，其余行保留禁用态', async () => {
@@ -623,7 +626,7 @@ describe('VideoPanel', () => {
     expect(handles[0].attributes('aria-valuenow')).toBe('30')
   })
 
-  it('区间只作用于可裁剪档位，字幕与封面仍下载整片', async () => {
+  it('填了区间后，不可裁剪的字幕行下载按钮灰化，清空区间恢复', async () => {
     wrapper = await mountPanel([
       ...defaultResources(),
       vimeoResource({
@@ -638,8 +641,12 @@ describe('VideoPanel', () => {
     const inputs = wrapper.findAll<HTMLInputElement>('.clip-input')
     await inputs[0].setValue('1')
     await inputs[1].setValue('2')
-    await wrapper.get('.option-row[data-row="subtitle"] .row-download').trigger('click')
+    const subtitleDownload = wrapper.get('.option-row[data-row="subtitle"] .row-download')
+    expect(subtitleDownload.attributes('disabled')).toBeDefined()
 
+    await inputs[0].setValue('')
+    await inputs[1].setValue('')
+    await subtitleDownload.trigger('click')
     expect(lastDownloadedResource(wrapper).id).toBe(`vimeo:${VIDEO_ID}:subtitle:subtitle:en`)
   })
 

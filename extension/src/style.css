@@ -5,10 +5,10 @@
    *
    * 宽度不足时被裁掉的部分不会出现滚动条，只能靠宽度本身解决：header 控件压到最少后
    * 常见 locale 单行放下，订阅文案过长的 locale 才折到第二行（flex-wrap，见 AppHeader.vue）；
-   * footer 句子长于一行时换行（overflow-wrap）。448px = 初版 672px 应用户要求缩小三分之一
+   * footer 句子长于一行时换行（overflow-wrap）。560px：初版 672px 缩到 448px 后，应用户要求（2026-10-13）再放宽；448px 曾为缩小三分之一
    * （2026-09-26）。
    */
-  --popup-width: 448px;
+  --popup-width: 560px;
   --popup-min-height: 300px;
   /* Chrome/Edge 对 popup 的硬上限是 800×600，高度不可超过 600，超出部分被浏览器裁掉。 */
   --popup-max-height: 600px;

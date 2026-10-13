@@ -152,7 +152,7 @@
           <button
             type="button"
             class="row-download"
-            :disabled="!selectedIds[row.kind] || (clipInvalid && rowSupportsClip(row))"
+            :disabled="rowDownloadDisabled(row)"
             :title="downloadTitle(row)"
             :aria-label="downloadTitle(row)"
             @click="handleDownload(row)"
@@ -548,6 +548,17 @@ function rowSupportsClip(row: VideoPanelRow): boolean {
   return resource !== undefined && supportsVimeoTimeRange(resource)
 }
 
+/**
+ * 行内下载按钮是否禁用：没有可下载档位；或已填裁剪区间——可裁行区间非法时拦截，
+ * 不可裁行（直链/字幕/封面）会无视区间下载整片，灰化避免与用户预期不符。
+ */
+function rowDownloadDisabled(row: VideoPanelRow): boolean {
+  if (!selectedIds.value[row.kind]) return true
+  const hasClip = clipSelection.value.range !== null || clipInvalid.value
+  if (!hasClip) return false
+  return rowSupportsClip(row) ? clipInvalid.value : true
+}
+
 /** 取某行当前选中的档位。 */
 function selectedOptionOf(kind: VideoPanelRowKind): VideoPanelOption | undefined {
   return rows.value
@@ -559,6 +570,9 @@ function selectedOptionOf(kind: VideoPanelRowKind): VideoPanelOption | undefined
 function downloadTitle(row: VideoPanelRow): string {
   const option = selectedOptionOf(row.kind)
   const label = option ? optionDisplayLabel(option) : t(I18N_KEYS.VIDEO_PANEL.UNAVAILABLE)
+  if (!rowSupportsClip(row) && rowDownloadDisabled(row) && option) {
+    return t(I18N_KEYS.VIDEO_PANEL.CLIP_UNSUPPORTED)
+  }
   return `${t(I18N_KEYS.RESOURCE_ITEM.DOWNLOAD)} ${label}`
 }
 </script>

@@ -179,7 +179,7 @@
   "videoPanel.clip.title": "Zuschneiden",
   "videoPanel.clip.start": "Start (s)",
   "videoPanel.clip.end": "Ende (s)",
-  "videoPanel.clip.hint": "Nur DASH/HLS-Qualitäten können zugeschnitten werden. Untertitel und Titelbild werden immer vollständig geladen.",
+  "videoPanel.clip.hint": "Diese Qualität kann zugeschnitten werden. Start und Ende leer lassen, um das ganze Video zu laden. Untertitel und Titelbild werden immer vollständig geladen.",
   "videoPanel.clip.unsupported": "Diese Qualität kann nicht zugeschnitten werden. Wähle eine DASH/HLS-Qualität.",
   "videoPanel.audioSwitch.label": "Audiospur",
   "videoPanel.audioSwitch.withAudio": "Mit Audio",
