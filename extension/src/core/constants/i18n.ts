@@ -172,6 +172,7 @@ export const I18N_KEYS = {
     SPLIT_MODE_THRESHOLD: 'settings.splitMode.threshold',
     SPLIT_MODE_THRESHOLD_UNIT: 'settings.splitMode.thresholdUnit',
     /** 备用 Blob 下载开关 */
+    TROUBLESHOOT_LABEL: 'settings.troubleshoot.label',
     BACKGROUND_BLOB_LABEL: 'settings.backgroundBlob.label',
     BACKGROUND_BLOB_DESCRIPTION: 'settings.backgroundBlob.description'
   },

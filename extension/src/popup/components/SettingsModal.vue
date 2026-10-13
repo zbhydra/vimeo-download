@@ -164,17 +164,20 @@
           </label>
         </div>
 
-        <label class="settings-toggle">
-          <input
-            type="checkbox"
-            :checked="useBackgroundBlobDownload"
-            @change="handleBackgroundBlobDownloadChange"
-          />
-          <span>
-            <strong>{{ t(I18N_KEYS.SETTINGS.BACKGROUND_BLOB_LABEL) }}</strong>
-            <small>{{ t(I18N_KEYS.SETTINGS.BACKGROUND_BLOB_DESCRIPTION) }}</small>
-          </span>
-        </label>
+        <div class="settings-field">
+          <span class="settings-field-label">{{ t(I18N_KEYS.SETTINGS.TROUBLESHOOT_LABEL) }}</span>
+          <label class="settings-toggle">
+            <input
+              type="checkbox"
+              :checked="useBackgroundBlobDownload"
+              @change="handleBackgroundBlobDownloadChange"
+            />
+            <span>
+              <strong>{{ t(I18N_KEYS.SETTINGS.BACKGROUND_BLOB_LABEL) }}</strong>
+              <small>{{ t(I18N_KEYS.SETTINGS.BACKGROUND_BLOB_DESCRIPTION) }}</small>
+            </span>
+          </label>
+        </div>
 
         <!-- 下载历史：唯一入口，进入全屏历史视图并收起本弹层 -->
         <button type="button" class="settings-history-row" @click="handleOpenHistory">
