@@ -184,13 +184,18 @@ const structuredDataItems = [
 <html lang={locale}>
   <head>
     <meta charset="UTF-8" />
-    <!-- Google tag (gtag.js) -->
-    <script is:inline async src="https://www.googletagmanager.com/gtag/js?id=G-B5RGH4W50V"></script>
+    {/* Google tag (gtag.js)：先建 dataLayer 队列，load 后再拉取 gtag.js，避免 175 KiB 脚本与首屏争抢带宽和主线程 */}
     <script is:inline define:vars={{ GA_ID: 'G-B5RGH4W50V' }}>
       window.dataLayer = window.dataLayer || [];
       window.gtag = function gtag(){window.dataLayer.push(arguments);}
       window.gtag('js', new Date());
       window.gtag('config', GA_ID);
+      window.addEventListener('load', function () {
+        var gtagScript = document.createElement('script');
+        gtagScript.async = true;
+        gtagScript.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_ID;
+        document.head.appendChild(gtagScript);
+      }, { once: true });
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#070B18" />
@@ -1150,11 +1155,26 @@ const structuredDataItems = [
     <script>
       import { installFrontendErrorCapture } from '../scripts/runtime/frontend-error-capture'
       import { initializeFooterBrandIcon } from '../scripts/runtime/device'
-      import { initializeWebsiteFirstOpenedMark } from '../scripts/runtime/first-opened-mark'
       import '../scripts/globalClickEvents'
 
       void initializeFooterBrandIcon()
-      initializeWebsiteFirstOpenedMark()
+
+      // 首次访问上报依赖 api/auth/mark/sls 整条模块链，推迟到 load 后加载，不占首屏关键路径。
+      window.addEventListener(
+        'load',
+        () => {
+          void import('../scripts/runtime/first-opened-mark')
+            .then(({ initializeWebsiteFirstOpenedMark }) => {
+              initializeWebsiteFirstOpenedMark()
+            })
+            .catch(error => {
+              console.error(
+                new Error('[layout] Failed to load the first-opened mark reporter.', { cause: error })
+              )
+            })
+        },
+        { once: true }
+      )
 
       installFrontendErrorCapture(capturedError => {
         void import('../scripts/runtime/sls-mark')

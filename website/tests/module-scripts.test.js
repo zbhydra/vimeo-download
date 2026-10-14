@@ -213,9 +213,11 @@ test('homepage keeps fonts and route CSS off the critical path while preserving 
 
   assert.equal(html.includes('fonts.googleapis.com'), false)
   assert.equal(html.includes('fonts.gstatic.com'), false)
+  assert.equal(/<script\b[^>]*src="https:\/\/www\.googletagmanager\.com/i.test(html), false)
+  assert.match(html, /window\.gtag\('config', GA_ID\)/)
   assert.match(
     html,
-    /<script\b(?=[^>]*\basync\b)(?=[^>]*src="https:\/\/www\.googletagmanager\.com\/gtag\/js\?id=G-B5RGH4W50V")[^>]*>/i
+    /window\.addEventListener\('load'[\s\S]*?'https:\/\/www\.googletagmanager\.com\/gtag\/js\?id=' \+ GA_ID/
   )
   assert.equal(/<link\b[^>]+rel="stylesheet"/i.test(html), false)
   assert.equal(html.includes('data-defer-download-runtime="true"'), true)
