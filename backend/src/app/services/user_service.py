@@ -1,8 +1,9 @@
 """User 数据库操作类（Service）"""
 
 from collections.abc import Sequence
+from typing import TypeVar
 
-from sqlalchemy import select
+from sqlalchemy import Select, func, select
 from sqlalchemy.exc import IntegrityError
 
 from app.constants.client_product import ClientProductEnum
@@ -21,6 +22,7 @@ from app.utils.time import timestamp_now
 
 REGISTRATION_BONUS_CREDITS = 10
 REGISTRATION_BONUS_REASON = "registration_bonus"
+_UserQueryRow = TypeVar("_UserQueryRow", bound=tuple)
 
 
 def normalize_user_email(email: str) -> str:
@@ -273,29 +275,69 @@ class UserService(BaseService[UserModel]):
         *,
         user_ids: Sequence[int] | None = None,
         email_like: str | None = None,
+        email_prefix: str | None = None,
         offset: int = 0,
         limit: int = 100,
     ) -> list[UserModel]:
-        """按用户 ID 或当前邮箱包含搜索用户。"""
+        """按用户 ID、当前邮箱包含或字面前缀查询用户。"""
         if offset < 0:
             raise ValueError(f"user_lists invalid offset: offset={offset}")
         if limit <= 0:
             raise ValueError(f"user_lists invalid limit: limit={limit}")
 
-        stmt = select(UserModel)
-        if user_ids is not None:
-            stmt = stmt.where(UserModel.user_id.in_(user_ids))
-        if email_like:
-            normalized_email_like = normalize_user_email(email_like)
-            stmt = stmt.where(
-                UserModel.email.contains(normalized_email_like, autoescape=True)
-            )
+        stmt = self._apply_user_filters(
+            select(UserModel),
+            user_ids=user_ids,
+            email_like=email_like,
+            email_prefix=email_prefix,
+        )
 
         async with get_async_session() as db:
             result = await db.execute(
                 stmt.order_by(UserModel.user_id.desc()).offset(offset).limit(limit)
             )
             return list(result.scalars().all())
+
+    async def count_users(
+        self,
+        *,
+        user_ids: Sequence[int] | None = None,
+        email_like: str | None = None,
+        email_prefix: str | None = None,
+    ) -> int:
+        """按用户列表的同一组条件统计总数。"""
+        stmt = self._apply_user_filters(
+            select(func.count()).select_from(UserModel),
+            user_ids=user_ids,
+            email_like=email_like,
+            email_prefix=email_prefix,
+        )
+        async with get_async_session() as db:
+            return int((await db.execute(stmt)).scalar_one())
+
+    def _apply_user_filters(
+        self,
+        stmt: Select[_UserQueryRow],
+        *,
+        user_ids: Sequence[int] | None,
+        email_like: str | None,
+        email_prefix: str | None,
+    ) -> Select[_UserQueryRow]:
+        if user_ids is not None:
+            stmt = stmt.where(UserModel.user_id.in_(user_ids))
+        if email_like:
+            stmt = stmt.where(
+                UserModel.email.contains(
+                    normalize_user_email(email_like), autoescape=True
+                )
+            )
+        if email_prefix:
+            stmt = stmt.where(
+                UserModel.email.startswith(
+                    normalize_user_email(email_prefix), autoescape=True
+                )
+            )
+        return stmt
 
     async def user_info(self, user_id: int) -> UserModel | None:
         """按用户 ID 读取单个用户，不存在返回 ``None``。"""

@@ -1,13 +1,18 @@
-"""管理后台用户信息弹窗响应 Schema。
+"""管理后台用户列表、订阅设置与信息弹窗 Schema。
 
-这些 schema 只服务 admin 只读排查界面，不包含密码、token、验证码等敏感字段。
+仅服务 admin 用户管理，不包含密码、token、验证码等敏感字段。
 """
 
 from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from app.exceptions.common_exception import AppCommonException
+from app.i18n.common_code import CommonCode
+from app.models.subscription_model import UserSubscriptionModel
+from app.utils.time import timestamp_now
 
 AdminUserAccountStatus = Literal["normal", "locked", "deleted"]
 
@@ -48,6 +53,78 @@ class AdminUserSubscriptionInfo(BaseModel):
 
     has_subscription: bool = Field(..., description="是否有有效订阅")
     expires_at: int | None = Field(None, description="订阅原始过期时间（毫秒时间戳）")
+    product_id: str | None = None
+    period: str | None = None
+
+    @classmethod
+    def from_subscription(
+        cls, subscription: UserSubscriptionModel | None
+    ) -> AdminUserSubscriptionInfo:
+        """统一列表、profile 和写入响应的有效性与原始订阅摘要。"""
+        expires_at = subscription.expires_at if subscription else None
+        return cls(
+            has_subscription=expires_at is not None and expires_at > timestamp_now(),
+            expires_at=expires_at,
+            product_id=subscription.product_id if subscription else None,
+            period=subscription.period if subscription else None,
+        )
+
+
+class AdminUserListRow(BaseModel):
+    """用户管理列表行，仅返回列表所需信息。"""
+
+    user_id: int
+    email: str | None
+    account_status: AdminUserAccountStatus
+    created_at: int
+    last_login_at: int | None
+    subscription: AdminUserSubscriptionInfo
+
+
+class AdminUsersPageData(BaseModel):
+    """用户列表分页响应。"""
+
+    rows: list[AdminUserListRow]
+    total: int
+    page: int
+    page_size: int
+
+
+class AdminSubscriptionProduct(BaseModel):
+    """可供管理员授予的启用付费商品。"""
+
+    product_id: str
+    name: str
+    period: str
+
+
+class AdminSubscriptionSettingsData(BaseModel):
+    """订阅表单默认值与可选商品；保留原始毫秒精度。"""
+
+    product_id: str | None
+    period: str
+    expires_at: int
+    is_auto_renew: bool
+    products: list[AdminSubscriptionProduct]
+
+
+class AdminSubscriptionWriteRequest(BaseModel):
+    """人工订阅设置输入，终生时间由订阅域计算。"""
+
+    product_id: str = Field(min_length=1, max_length=64)
+    expires_at: int | None = Field(..., strict=True)
+
+    @field_validator("expires_at")
+    @classmethod
+    def validate_expires_at(cls, value: int | None) -> int | None:
+        """普通时间必须晚于本次服务端时间。"""
+        if value is not None and value <= timestamp_now():
+            raise AppCommonException(
+                CommonCode.INVALID_REQUEST,
+                ext_msg=f"admin_subscription: expires_at must be in future: expires_at={value}",
+                data={"field": "expires_at"},
+            )
+        return value
 
 
 class AdminUserProfileData(BaseModel):

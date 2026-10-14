@@ -204,7 +204,8 @@ async def _seed_parse_download_state(user_id: int) -> None:
 
     await subscription_service.update_user_subscription(
         user_id,
-        timestamp_now() + SUBSCRIPTION_EXPIRES_MS_AHEAD,
+        product_id="unlimited",
+        expires_at=timestamp_now() + SUBSCRIPTION_EXPIRES_MS_AHEAD,
     )
     await _reset_media_credit_data(user_id)
     await _ensure_credits(user_id)

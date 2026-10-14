@@ -27,12 +27,13 @@ from app.schemas.admin_user_schema import (
     AdminUserOrdersPageData,
     AdminUserProfileData,
     AdminUserSubscriptionInfo,
+    AdminUserListRow,
+    AdminUsersPageData,
 )
 from app.services.order_service import order_service
 from app.services.subscription_service import subscription_service
 from app.services.user_credit_service import user_credit_service
 from app.services.user_service import user_service
-from app.utils.time import timestamp_now
 
 
 class AdminUserProfileService:
@@ -43,17 +44,55 @@ class AdminUserProfileService:
         user = await self._get_user(user_id, action="admin_user_profile")
         balance = await user_credit_service.get_balance(user_id)
         subscription = await subscription_service.get_by_id(user_id)
-        expires_at = subscription.expires_at if subscription else None
 
         return AdminUserProfileData(
             user=self._build_user_info(user),
             credits=AdminUserCreditsInfo(balance=balance),
-            subscription=AdminUserSubscriptionInfo(
-                has_subscription=(
-                    expires_at is not None and expires_at > timestamp_now()
-                ),
-                expires_at=expires_at,
-            ),
+            subscription=AdminUserSubscriptionInfo.from_subscription(subscription),
+        )
+
+    async def get_users(
+        self,
+        *,
+        user_id: int | None,
+        email_prefix: str | None,
+        page: int,
+        page_size: int,
+    ) -> AdminUsersPageData:
+        """分页聚合用户与当前页订阅，不加载详情的其他业务数据。"""
+        user_ids = [user_id] if user_id is not None else None
+        users = await user_service.user_lists(
+            user_ids=user_ids,
+            email_prefix=email_prefix,
+            offset=(page - 1) * page_size,
+            limit=page_size,
+        )
+        total = await user_service.count_users(
+            user_ids=user_ids, email_prefix=email_prefix
+        )
+        subscriptions = {
+            item.user_id: item
+            for item in await subscription_service.subscription_lists(
+                user_ids=[user.user_id for user in users]
+            )
+        }
+        return AdminUsersPageData(
+            rows=[
+                AdminUserListRow(
+                    user_id=user.user_id,
+                    email=user.email,
+                    account_status=self._account_status(user),
+                    created_at=user.created_at,
+                    last_login_at=user.last_login_at,
+                    subscription=AdminUserSubscriptionInfo.from_subscription(
+                        subscriptions.get(user.user_id)
+                    ),
+                )
+                for user in users
+            ],
+            total=total,
+            page=page,
+            page_size=page_size,
         )
 
     async def get_downloads(

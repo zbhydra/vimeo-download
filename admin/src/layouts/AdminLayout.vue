@@ -123,6 +123,7 @@ import {
   SettingOutlined,
   ProfileOutlined,
   ApiOutlined,
+  TeamOutlined,
 } from "@vicons/antd";
 import { useAuthStore } from "@/stores/auth";
 import { useViewport } from "@/composables/useViewport";
@@ -158,6 +159,7 @@ const MENU_ITEMS = {
   Dashboard: { path: "/", titleKey: "layout.dashboard", icon: DashboardOutlined },
   ServiceNodes: { path: "/service-nodes", titleKey: "layout.serviceNodes", icon: HddOutlined },
   Orders: { path: "/orders", titleKey: "layout.orders", icon: ProfileOutlined },
+  Users: { path: "/users", titleKey: "layout.users", icon: TeamOutlined },
   DownloadLogs: { path: "/download-logs", titleKey: "layout.downloadLogs", icon: FileSearchOutlined },
   MarkLogDiagnostics: { path: "/mark-logs", titleKey: "layout.markLogDiagnostics", icon: FileSearchOutlined },
   Analytics: { path: "/analytics", titleKey: "layout.analytics", icon: BarChartOutlined },
@@ -171,7 +173,11 @@ const MENU_GROUPS: Array<{
   labelKey: string;
   items: Array<keyof typeof MENU_ITEMS>;
 }> = [
-  { key: "group-ops", labelKey: "layout.groupOps", items: ["Dashboard", "ServiceNodes", "Orders"] },
+  {
+    key: "group-ops",
+    labelKey: "layout.groupOps",
+    items: ["Dashboard", "ServiceNodes", "Orders", "Users"],
+  },
   { key: "group-data", labelKey: "layout.groupData", items: ["DownloadLogs", "MarkLogDiagnostics", "Analytics"] },
   { key: "group-config", labelKey: "layout.groupConfig", items: ["SystemSettings", "ProxyPool"] },
 ];

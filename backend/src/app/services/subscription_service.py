@@ -1,10 +1,12 @@
 """订阅管理服务"""
 
 import json
+from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import timedelta
 from typing import cast
 
-from sqlalchemy import case
+from sqlalchemy import case, select, update
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
@@ -45,6 +47,17 @@ _PERIOD_MONTHS = {
     # 终生按 200 年自然月一次性履约，复用统一过期判断。
     SubscriptionPeriodEnum.LIFETIME: 2400,
 }
+
+
+@dataclass
+class UserSubscriptionSettings:
+    """人工设置的默认值与启用商品，时间规则由订阅域持有。"""
+
+    product_id: str | None
+    period: str
+    expires_at: int
+    is_auto_renew: bool
+    products: list[SubscriptionProductConfig]
 
 
 class SubscriptionService(BaseService[UserSubscriptionModel]):
@@ -196,33 +209,181 @@ class SubscriptionService(BaseService[UserSubscriptionModel]):
                 ext_msg=str(exc),
             ) from exc
 
+    async def subscription_lists(
+        self, *, user_ids: Sequence[int]
+    ) -> list[UserSubscriptionModel]:
+        """批量读取用户原始订阅，包含已过期记录。"""
+        async with get_async_session() as db:
+            result = await db.execute(
+                select(UserSubscriptionModel).where(
+                    cast(ColumnElement[int], UserSubscriptionModel.user_id).in_(
+                        user_ids
+                    )
+                )
+            )
+            return list(result.scalars().all())
+
+    async def get_subscription_settings(self, user_id: int) -> UserSubscriptionSettings:
+        """读取人工订阅表单，失效权益从当前纽约时间增加一个自然月。"""
+        subscription = await self.get_by_id(user_id)
+        products = [
+            item
+            for item in await payment_config_service.list_subscription_products()
+            if item.period != SubscriptionPeriodEnum.NONE.value
+            and item.product_id != FREE_SUBSCRIPTION_PRODUCT_ID
+        ]
+        now_ms = timestamp_now()
+        if (
+            subscription is not None
+            and subscription.expires_at is not None
+            and subscription.expires_at > now_ms
+        ):
+            return UserSubscriptionSettings(
+                product_id=subscription.product_id or UNLIMITED_SUBSCRIPTION_PRODUCT_ID,
+                period=subscription.period or SubscriptionPeriodEnum.MONTH.value,
+                expires_at=subscription.expires_at,
+                is_auto_renew=self.is_auto_renew(subscription),
+                products=products,
+            )
+        monthly = next(
+            (
+                item
+                for item in products
+                if item.period == SubscriptionPeriodEnum.MONTH.value
+            ),
+            None,
+        )
+        return UserSubscriptionSettings(
+            product_id=monthly.product_id if monthly else None,
+            period=SubscriptionPeriodEnum.MONTH.value,
+            expires_at=add_natural_months(now_ms, 1),
+            is_auto_renew=False,
+            products=products,
+        )
+
     async def update_user_subscription(
         self,
         user_id: int,
-        expires_at: int,
-    ) -> bool:
-        """
-        更新用户 Unlimited 订阅到期时间。
-
-        Args:
-            user_id: 用户 ID
-            expires_at: 过期时间（毫秒时间戳）
-        """
-        existing = await self.get_by_id(user_id)
-
-        if existing:
-            return await self.update(
-                user_id,
-                expires_at=expires_at,
-                updated_at=timestamp_now(),
+        *,
+        product_id: str,
+        expires_at: int | None,
+    ) -> UserSubscriptionModel:
+        """原子设置人工权益，保留有效同商品实例，换商品时清空旧购买事实。"""
+        async with get_async_session() as db:
+            current = await db.get(UserSubscriptionModel, user_id)
+            now_ms = timestamp_now()
+            active = bool(
+                current is not None
+                and current.expires_at is not None
+                and current.expires_at > now_ms
             )
+            same_product = bool(
+                active
+                and current is not None
+                and (current.product_id or UNLIMITED_SUBSCRIPTION_PRODUCT_ID)
+                == product_id
+            )
+            if current is not None and self.is_auto_renew(current) and not same_product:
+                raise AppCommonException(
+                    CommonCode.INVALID_REQUEST,
+                    ext_msg=f"subscription_set: auto-renew product cannot change: user_id={user_id}, product_id={product_id}",
+                    data={"field": "product_id"},
+                )
+            if same_product and current is not None:
+                period = current.period or SubscriptionPeriodEnum.MONTH.value
+            else:
+                products = await payment_config_service.list_subscription_products()
+                product = next(
+                    (
+                        item
+                        for item in products
+                        if item.product_id == product_id
+                        and item.period != SubscriptionPeriodEnum.NONE.value
+                        and item.product_id != FREE_SUBSCRIPTION_PRODUCT_ID
+                    ),
+                    None,
+                )
+                if product is None:
+                    raise AppCommonException(
+                        CommonCode.INVALID_REQUEST,
+                        ext_msg=f"subscription_set: enabled paid product missing: user_id={user_id}, product_id={product_id}",
+                        data={"field": "product_id"},
+                    )
+                period = product.period
 
-        subscription = UserSubscriptionModel(  # type: ignore[call-arg]
-            user_id=user_id,
-            expires_at=expires_at,
-        )
-        await self.create(subscription)
-        return True
+            if period == SubscriptionPeriodEnum.LIFETIME.value:
+                if expires_at is not None:
+                    raise AppCommonException(
+                        CommonCode.INVALID_REQUEST,
+                        ext_msg=f"subscription_set: lifetime requires null expires_at: user_id={user_id}, expires_at={expires_at}",
+                        data={"field": "expires_at"},
+                    )
+                base = (
+                    current.expires_at
+                    if active and current is not None and current.expires_at is not None
+                    else now_ms
+                )
+                expires_at = (
+                    base
+                    if same_product
+                    else add_natural_months(
+                        base, _PERIOD_MONTHS[SubscriptionPeriodEnum.LIFETIME]
+                    )
+                )
+            elif expires_at is None:
+                raise AppCommonException(
+                    CommonCode.INVALID_REQUEST,
+                    ext_msg=f"subscription_set: ordinary product requires expires_at: user_id={user_id}, product_id={product_id}",
+                    data={"field": "expires_at"},
+                )
+
+            fields: dict[str, object] = {
+                "expires_at": expires_at,
+                "updated_at": now_ms,
+            }
+            if not same_product:
+                fields.update(
+                    product_id=product_id,
+                    period=period,
+                    auto_renew=False,
+                    product_price_id=None,
+                    payment_method=None,
+                    original_order_no=None,
+                    channel_subscription_id=None,
+                    channel_uid=None,
+                    start_at=None,
+                    cancelled_at=None,
+                )
+            stmt = mysql_insert(UserSubscriptionModel).values(
+                user_id=user_id, created_at=now_ms, **fields
+            )
+            await db.execute(stmt.on_duplicate_key_update(**fields))
+            await db.commit()
+            result = await db.execute(
+                select(UserSubscriptionModel)
+                .where(
+                    cast(ColumnElement[int], UserSubscriptionModel.user_id) == user_id
+                )
+                .execution_options(populate_existing=True)
+            )
+            return result.scalar_one()
+
+    async def cancel_user_subscription(
+        self, user_id: int
+    ) -> UserSubscriptionModel | None:
+        """立即撤销有效本地权益，保留购买及渠道事实，不创建订阅记录。"""
+        now_ms = timestamp_now()
+        async with get_async_session() as db:
+            await db.execute(
+                update(UserSubscriptionModel)
+                .where(
+                    cast(ColumnElement[int], UserSubscriptionModel.user_id) == user_id,
+                    cast(ColumnElement[int], UserSubscriptionModel.expires_at) > now_ms,
+                )
+                .values(expires_at=now_ms, updated_at=now_ms)
+            )
+            await db.commit()
+            return await db.get(UserSubscriptionModel, user_id)
 
     async def get_user_subscription_config(
         self, user_id: int

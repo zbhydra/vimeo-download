@@ -1,7 +1,7 @@
 /**
- * 管理后台通用用户信息弹窗 API。
+ * 管理后台用户管理与通用用户信息弹窗 API。
  *
- * 封装用户 profile、最近下载、积分记录和订单列表四个只读接口。
+ * 封装用户列表、订阅操作和共享用户详情的只读接口。
  */
 import request from "./request";
 import type { AdminOrder } from "./orders";
@@ -65,6 +65,71 @@ export interface AdminUserSubscriptionInfo {
   has_subscription: boolean;
   /** 原始订阅过期时间，毫秒时间戳。 */
   expires_at: number | null;
+  product_id: string | null;
+  period: string | null;
+}
+
+/** 用户管理列表行。 */
+export interface AdminUserListRow {
+  user_id: number;
+  email: string | null;
+  account_status: AdminUserAccountStatus;
+  created_at: number;
+  last_login_at: number | null;
+  subscription: AdminUserSubscriptionInfo;
+}
+
+/** 用户管理查询条件，ID 与邮箱前缀取交集。 */
+export interface AdminUsersParams extends AdminUserPageParams {
+  user_id?: number;
+  email?: string;
+}
+
+export interface AdminUsersPageData {
+  rows: AdminUserListRow[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface AdminSubscriptionProduct {
+  product_id: string;
+  name: string;
+  period: string;
+}
+
+/** 服务端默认时间保留毫秒，终生开通仅在保存时计算。 */
+export interface AdminSubscriptionSettingsData {
+  product_id: string | null;
+  period: string;
+  expires_at: number;
+  is_auto_renew: boolean;
+  products: AdminSubscriptionProduct[];
+}
+
+export interface AdminSubscriptionWritePayload {
+  product_id: string;
+  expires_at: number | null;
+}
+
+/** 按用户 ID 和邮箱字面前缀查询。 */
+export function getAdminUsers(params: AdminUsersParams) {
+  return request.get<never, AdminUsersPageData>("/users", { params });
+}
+
+/** 读取订阅设置表单。 */
+export function getAdminSubscriptionSettings(userId: number) {
+  return request.get<never, AdminSubscriptionSettingsData>(`/users/${userId}/subscription`);
+}
+
+/** 保存人工订阅权益。 */
+export function setAdminSubscription(userId: number, payload: AdminSubscriptionWritePayload) {
+  return request.post<never, AdminUserSubscriptionInfo>(`/users/${userId}/subscription`, payload);
+}
+
+/** 立即撤销本地权益，不取消渠道扣款。 */
+export function cancelAdminSubscription(userId: number) {
+  return request.post<never, AdminUserSubscriptionInfo>(`/users/${userId}/subscription/cancel`);
 }
 
 /** 用户 profile 聚合响应。 */
@@ -166,10 +231,7 @@ export function getAdminUserProfile(userId: number) {
 
 /** 查询用户最近下载分页。 */
 export function getAdminUserDownloads(userId: number, params: AdminUserPageParams) {
-  return request.get<never, AdminUserDownloadsPageData>(
-    `/users/${userId}/downloads`,
-    { params },
-  );
+  return request.get<never, AdminUserDownloadsPageData>(`/users/${userId}/downloads`, { params });
 }
 
 /** 查询用户积分流水分页。 */
