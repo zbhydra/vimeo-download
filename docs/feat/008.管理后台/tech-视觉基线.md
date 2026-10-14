@@ -136,7 +136,7 @@
 
 ### 4.2 各视图响应式规则
 
-**表格记录卡片化（手机档统一规则，`isMobile` 分支）**：Dashboard / Orders / ServiceNodes / DownloadLogs / MarkLogDiagnostics / Analytics 的 5 个 tab 表 / UserInfoDialog 的 3 个 tab 表，手机（<768）一律渲染 `RecordCardList` 记录卡片（§3），不再横滚 NDataTable；带 remote 分页的视图在卡片列表下方用 NPagination 接同一分页状态（翻页滚回列表顶部），Analytics/Dashboard 无分页照常全量卡片；操作列经 `actionKeys` 渲染到卡底操作区。平板/桌面（≥768）保持 NDataTable + `scroll-x` 横滚不变（含 fixed 列）。
+**表格记录卡片化（手机档统一规则，`isMobile` 分支）**：Dashboard / Orders / ServiceNodes / DownloadLogs / MarkLogDiagnostics / Analytics 的表格标签页 / UserInfoDialog 的表格标签页，手机（<768）一律渲染 `RecordCardList` 记录卡片（§3），不再横滚 NDataTable；带 remote 分页的视图在卡片列表下方用 NPagination 接同一分页状态（翻页滚回列表顶部），Analytics/Dashboard 无分页照常全量卡片；操作列经 `actionKeys` 渲染到卡底操作区。平板/桌面（≥768）保持 NDataTable + `scroll-x` 横滚不变（含 fixed 列）。
 
 | 视图 | 规则 |
 | --- | --- |
@@ -146,7 +146,7 @@
 | Orders | 手机卡片 + NPagination（含每页数量切换）；详情 NDrawer 宽度 `isMobile ? '100vw' : 720`（修复固定 720 在手机溢出）；筛选 grid 已有 960/560 降列，保留 |
 | ServiceNodes | 手机卡片客户端分页（pageSize 50，与桌面表格同口径）；编辑弹窗 `calc(100vw-32px)` 上限已有，保留 |
 | DownloadLogs / MarkLogDiagnostics | 手机卡片 + NPagination（remote 同源）；桌面 `scroll-x` 已有（1810/1400）；状态列换 StatusPill 后不换行 |
-| Analytics | 手机 5 个 tab 表全部卡片化（无分页）；摘要 grid 已有 960/560 降列；宽表 3/5 已传 scroll-x（资源 900 / 每日充值 960 / 商品统计 1120），下载排名（4 列）与用户地理（2 列）列少无溢出未传；保留 |
+| Analytics | 手机所有表格标签页卡片化（无分页），每周/月充值共用桌面与手机列定义；摘要 grid 按视口降列；桌面宽表设置 scroll-x，具体列宽与滚动宽度以 AnalyticsView.vue 各列定义为准 |
 | SystemSettings | tab `isMobile ? 'line' : 'segment'` 已有；页面 max-width 960 保留 |
 | UserInfoDialog | `min(960px, 100vw-32px)` 已有；描述列数按 isMobile 降列已有；手机 3 个 tab 表卡片化 + NPagination（remote 同源，翻页滚回弹窗内容顶部） |
 | Login | 卡片 `min(400px,100%)` 已有，无需额外适配 |

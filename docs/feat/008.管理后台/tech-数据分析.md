@@ -1,6 +1,6 @@
 # 008 · 数据分析
 
-> 覆盖管理后台「数据分析」菜单(下载资源分析 / 下载排名 / 下载统计 / 用户地理分析 / 每日充值(+8) / 商品统计(+8) 六个子标签页)的只读聚合接口与前端实现。通用 admin 接口约定见 `@tech-管理模块接口.md`,后台架构与认证见 `@tech-后台架构与认证.md`,前端栈与请求封装见 `@tech-后台架构与认证.md` 的前端章节。
+> 覆盖管理后台「数据分析」的只读聚合接口与前端边界。标签页与用户操作见 [feat.md「数据分析页」](feat.md#数据分析页)。通用 admin 接口约定见 `@tech-管理模块接口.md`,后台架构、认证与请求封装见 `@tech-后台架构与认证.md`。
 > 下载数据模型、扣费口径属下载域 `@../002.下载功能/feat.md`;用户与注册地区属用户域 `@../007.用户系统/feat.md`。本文件只描述 admin 侧的聚合读取。
 
 ## 范围与口径
@@ -9,7 +9,8 @@
 
 - **下载维度三个标签页**(下载资源分析 / 下载排名 / 下载统计)统一基于 `user_download_records` 表(`UserDownloadRecordModel`)。该表**只记录账号扣费路径（Credits）的下载**,不含 extension 下载(扩展端走每日次数规则,不写本表)。网站网页下载已改为全部匿名、不扣 Credits,**不再产生新记录**:这三个标签页不再有网站新数据,只保留历史记录;Dashboard 的网站下载打点与「下载详情」(mark-log)不受影响。依据与后续清理见 `@../000.架构/plans/004.官网改版-插件展示与免费网页下载.md` §7 第 1 条、§8。
 - **用户地理分析**基于 `users` 表(`UserModel`)的 `register_country`(注册时国家码, ISO 3166-1 alpha-2)。只有国家粒度,无省/城市/经纬度。
-- **订单维度两个标签页**(每日充值(+8) / 商品统计(+8))统一基于 `orders` 表(`OrderModel`)。时间按 `orders.created_at` 归属 UTC+8 自然日;成功订单口径为 `order_status = 2`;全部订单口径为不筛状态的所有订单。金额使用订单金额快照 `amount` 和 `currency`,按币种拆分展示,不跨币种混加。
+- **订单维度**(每日、每周、每月充值与商品统计)统一基于 `orders` 表(`OrderModel`),包含订阅和积分商品。时间按 `orders.created_at` 归属 UTC+8;成功订单口径仅为 `order_status = 2`,不要求履约成功。每日充值与商品统计另有不筛状态的全部订单口径;周/月只累计成功订单。金额使用订单快照 `amount` / `currency`,不是渠道回调的 `paid_amount` / `paid_currency`。
+- **已接受的统计限制**:订单按创建日期归属,不是实际支付日期或渠道结算净收入;跨日支付会改变原创建周期的结果。
 
 ### 积分口径(已确认)
 
@@ -54,8 +55,8 @@
 
 - 所有时间字段是**毫秒级 Unix 时间戳**,存绝对时刻。
 - 下载维度与用户地理统计是**区间内汇总聚合**(非"按自然日分桶"),因此时间过滤直接用 `created_at >= from_ms AND created_at <= to_ms`(闭区间),**不需要** `dashboard_service` / `external_system_dashboard_service` 那套 UTC+8 自然日分桶逻辑。
-- 订单维度统计例外:每日充值和商品统计需要按 UTC+8 自然日分桶,但筛选仍先按 `created_at >= from_ms AND created_at <= to_ms` 限定区间。分桶使用 `floor((created_at + 8h) / 86400000)` 的整数桶,避免依赖 MySQL 会话时区。
-- **已知口径局限**:`from_ms`/`to_ms` 由前端 `Date.now()` 产生,是**管理员客户端本地时间**。不同时区管理员点「最近 24 小时」得到的窗口起点会偏移,因而统计结果略有差异。这与 `OrdersView` 等所有现有时间筛选页面一致,内部后台(运营通常同地区)可接受,不专门处理;如未来需要统一基准,再改为后端给定 `now`。
+- 订单统计先按创建时间闭区间过滤,每日充值与商品统计按 UTC+8 自然日分桶;周/月复用每日结果。日桶使用 `floor((created_at + 8h) / 86400000)`,避免依赖 MySQL 会话时区,不使用后端公共工具的纽约自然日。
+- **已接受的输入限制**:日期选择器的展示、输入与默认自然日边界沿用浏览器本地时区,本功能以 UTC+8 浏览器验收,不统一跨时区输入。Unix 时间戳与滚动「最近 24 小时」「最近 7 天」快捷本身表示绝对时刻,时区差异发生在本地日历日期的解释与展示。
 
 ## 通用约定
 
@@ -67,14 +68,34 @@
 
 ### 时间范围选择器组件
 
-新增通用组件 `admin/src/components/TimeRangePicker.vue`,封装 Naive UI `<NDatePicker type="datetimerange">`:
+`admin/src/components/TimeRangePicker.vue` 封装 Naive UI `datetimerange`:
 
 - `v-model` 绑定 `[number, number] | null`(毫秒时间戳二元组),与 `OrdersView.vue` 的 datetimerange 值类型一致。
-- `:shortcuts` 提供两个快捷(每次打开面板点击时求值,取当时的 `Date.now()`):
-  - **最近 24 小时**:`() => { const n = Date.now(); return [n - 24*3600*1000, n]; }`
-  - **最近 7 天**:`() => { const n = Date.now(); return [n - 7*24*3600*1000, n]; }`
-- **默认值由父组件决定**:下载资源分析 / 下载排名 / 下载统计 / 用户地理分析默认最近 24 小时(`timeRange = [now - 24h, now]`);每日充值(+8) / 商品统计(+8)默认最近 7 天(`timeRange = [now - 7d, now]`)。默认窗口在**挂载时锁定**,不随时间自动滚动;管理员点「查询」时以当前选择的区间重新请求。
-- 六个标签页共用此组件,后续其它需要时间范围的 admin 页面也可复用。
+- 快捷项「最近 24 小时」「最近 7 天」均在点击时取当前时刻,使用滚动时间窗,不改变下方初始化默认范围。
+- 可选 `defaultTime` 透传 [Naive UI `default-time` 合同](https://github.com/tusen-ai/naive-ui/blob/v2.44.1/src/date-picker/demos/enUS/index.demo-entry.md#datetimerange-type-props),只控制选日默认时分秒,不能替代父组件的初始范围。
+- 日/周/月充值传入 `00:00:00`、`23:59:59`;有此设置且终点为当天最后一秒时,`handleUpdate` 补齐毫秒至 `999`,保留管理员手动修改时分秒的能力。
+
+### 默认范围
+
+范围在页面初始化时锁定,不自动滚动。下载与商品统计沿用 `AnalyticsView.defaultRange`;充值自然日边界由 `admin/src/utils/time.ts` 的 `getRechargeDefaultRange` 计算,按浏览器本地时区输出毫秒时间戳。
+
+| 标签页 | 初始范围 |
+| --- | --- |
+| 下载资源 / 排名 / 统计、用户地理 | 滚动最近 24 小时 |
+| 商品统计 | 滚动最近 7 天 |
+| 每日充值 | 6 天前 `00:00:00.000` 至今天 `23:59:59.999` |
+| 每周充值 | 含当前周的最近 4 个自然周,从最早一周的周一 `00:00:00.000` 至今天 `23:59:59.999` |
+| 每月充值 | 含当前月的最近 12 个公历月,从最早一月的 1 日 `00:00:00.000` 至今天 `23:59:59.999` |
+
+### 订单金额
+
+订单金额对象以 `AdminOrderCurrencyAmount` 为合同,沿用 `format_normalized_amount` 输出和前端 `formatAmountList` 展示;币种分别聚合,不折算或混加。
+
+| 字段 | 类型 | 含义 |
+| --- | --- | --- |
+| `currency` | string | 订单快照币种,如 USD、XTR |
+| `amount` | int | 真实金额乘以 1,000,000 的 6 位精度整数 |
+| `display_amount` | string | 上述整数格式化后的十进制展示金额 |
 
 ## 接口
 
@@ -87,6 +108,7 @@
 | GET | `/api/admin/download-analytics/summary` | `from_ms`,`to_ms` | `get_admin_user` |
 | GET | `/api/admin/download-analytics/user-geo` | `from_ms`,`to_ms` | `get_admin_user` |
 | GET | `/api/admin/order-analytics/daily-recharge` | `from_ms`,`to_ms` | `get_admin_user` |
+| GET | `/api/admin/order-analytics/period-recharge` | `period`,`from_ms`,`to_ms` | `get_admin_user` |
 | GET | `/api/admin/order-analytics/product-statistics` | `from_ms`,`to_ms` | `get_admin_user` |
 
 ### 1. 下载资源分布 `resource-distribution`
@@ -175,14 +197,14 @@
       "success_count": 12,
       "success_user_count": 8,
       "success_amounts": [
-        { "currency": "USD", "amount": 12000000, "display_amount": "12" },
-        { "currency": "USD", "amount": 15300000, "display_amount": "15.3" }
+        { "currency": "USD", "amount": 15300000, "display_amount": "15.3" },
+        { "currency": "XTR", "amount": 12000000, "display_amount": "12" }
       ],
       "total_count": 20,
       "total_user_count": 13,
       "total_amounts": [
-        { "currency": "USD", "amount": 12000000, "display_amount": "12" },
-        { "currency": "USD", "amount": 30600000, "display_amount": "30.6" }
+        { "currency": "USD", "amount": 30600000, "display_amount": "30.6" },
+        { "currency": "XTR", "amount": 12000000, "display_amount": "12" }
       ]
     }
   ]
@@ -192,7 +214,7 @@
 - `date` 为 UTC+8 自然日 `YYYY-MM-DD`。
 - `success_count` / `success_user_count` / `success_amounts`:仅 `order_status = 2` 的订单;`success_user_count` 为成功订单去重用户数。
 - `total_count` / `total_user_count` / `total_amounts`:区间内所有订单;`total_user_count` 为全部订单去重用户数。
-- `amount` 为 6 位精度整数;`display_amount` 为十进制字符串。前端按订单币种分组展示,如 `12 USD, 15.3 USD`;当前渠道(Clink / PayPal)结算币种均为 USD。
+- 金额对象遵循「订单金额」合同,前端按币种展示,如 `15.3 USD, 12 XTR`。
 
 ### 6. 商品统计(+8) `product-statistics`
 
@@ -223,6 +245,42 @@
 - 成功 / 全部 / 金额口径与每日充值一致。
 - 排序为日期倒序、商品 ID 升序;同一行内金额按后端返回的币种顺序展示。
 
+### 7. 周/月充值 `period-recharge`
+
+`GET /api/admin/order-analytics/period-recharge`,参数均必传:
+
+| 参数 | 类型 | 合同 |
+| --- | --- | --- |
+| `period` | string | `week` 或 `month` |
+| `from_ms` | int | 创建时间筛选起点,毫秒时间戳,包含 |
+| `to_ms` | int | 创建时间筛选终点,毫秒时间戳,包含;必须大于 `from_ms` |
+
+有效终点取 `to_ms` 与当前时刻的较早者;筛选完全位于未来时返回空 `rows`。服务 `AdminOrderAnalyticsService.get_period_recharge` 调用 `get_daily_recharge`,只汇总 `success_count` 和各币种 `success_amounts`,不累计每日去重人数,不读取原始订单明细。
+
+自然周为周一至周日,自然月按公历。每行的 `start_date` 是周期起点与筛选起点 UTC+8 日期的较晚者,`end_date` 是周期终点与有效终点 UTC+8 日期的较早者;日期范围因此与日均分母一致。部分筛选日仍计一个自然日,没有充值的覆盖日期也计入分母,未来日期不计入。没有已支付订单的周期不补行,结果按周期倒序。
+
+成功响应 `data` 为 `{ "rows": [...] }`,每行字段:
+
+| 字段 | 类型 | 含义 |
+| --- | --- | --- |
+| `start_date` | string | 有效交集起点,UTC+8 `YYYY-MM-DD` |
+| `end_date` | string | 有效交集终点,UTC+8 `YYYY-MM-DD` |
+| `day_count` | int | 两个日期间的自然日数,包含起止日 |
+| `count` | int | 已支付订单总笔数,不是去重人数 |
+| `amounts` | 订单金额数组 | 各币种已支付总额,按币种升序 |
+| `daily_average_amounts` | 订单金额数组 | 与总额相同的币种顺序,金额为总额除以 `day_count` |
+
+总额使用 6 位精度整数累计。日均用 `Decimal` 除法与 `ROUND_HALF_UP` 四舍五入至一个金额整数单位,即真实金额的 6 位小数;再复用 `format_normalized_amount` 展示。例如总额整数 `1`、分母 `2` 的日均整数仍为 `1`,展示为 `0.000001`。
+
+| 情况 | HTTP 状态 | 响应 |
+| --- | --- | --- |
+| 合法请求,含未来或无已支付订单的空区间 | 200 | 统一信封,`code = 10000`,空区间 `data.rows = []` |
+| `from_ms >= to_ms` | 200 | 统一信封,`code = 400`,`data.field = "time_range"`,附原始起止值 |
+| 未登录 | 401 | 无响应信封 |
+| 非法 `period`、缺少必填参数或查询参数类型错误 | 422 | FastAPI 参数校验响应,含 `detail`,不经过业务信封 |
+
+范围校验在 API 层,参数业务错误经异常中间件和既有 `ResponseUtils` 封装;前端请求拦截器按业务码拒绝非成功响应,因此 HTTP 200 的业务错误仍进入标签页错误提示。鉴权和参数错误不增加额外兜底或回退。
+
 ## 聚合逻辑
 
 全部使用单表聚合,不使用 join、子查询或窗口函数。所有查询先按 `from_ms <= created_at <= to_ms` 过滤。
@@ -234,23 +292,24 @@
 | 下载统计 | 统计全部/付费下载数、全部/付费去重用户数、全部/付费文件字节数 | 空计数和空金额补 0;`size_bytes` 为空的记录不计入字节和 |
 | 用户地理 | 只统计未注销用户,按 `register_country` 分组;空国家归 `unknown` | 人数倒序 |
 | 每日充值 | 按 UTC+8 日期统计全部/成功订单数及去重用户数;金额再按币种分组 | 日期倒序;同日多币种合并为金额数组 |
+| 每周/月充值 | 复用每日已支付结果,按自然周/月累计笔数和金额;交集与日均规则见 `period-recharge` 合同 | 周期倒序,无已支付订单的周期不补行 |
 | 商品统计 | 按 UTC+8 日期 + `product_id` 统计全部/成功订单数及去重用户数;金额再按币种分组 | 日期倒序、商品 ID 升序;同组多币种合并为金额数组 |
 
 订单人数必须在日期或日期 + 商品维度直接去重,不能把按币种统计的人数相加,否则同一用户跨币种下单会被重复计入。成功口径、金额精度和返回字段以对应接口章节为准。
 
-## 文件树
+## 文件与职责
 
-### 后端(新增 / 修改)
+### 后端
 
 ```
 backend/src/app/
 ├── api/admin/
-│   ├── admin_download_analytics.py        # 新增:APIRouter(prefix="/download-analytics"),4 个 GET 路由 + from_ms/to_ms 参数校验
-│   └── admin_order_analytics.py           # 新增:APIRouter(prefix="/order-analytics"),2 个订单统计 GET 路由
+│   ├── admin_download_analytics.py        # 下载统计 GET 路由与时间参数校验
+│   └── admin_order_analytics.py           # 日/周/月充值及商品统计 GET 路由
 ├── services/
-│   ├── admin_download_analytics_service.py # 新增:4 个聚合方法 + 桶定义/补齐/标签映射,底部模块级实例
-│   └── admin_order_analytics_service.py    # 新增:每日充值 / 商品统计聚合 + UTC+8 日桶 + 多币种金额格式
-└── main.py                                 # 修改:_include_business_routes 注册两个 analytics router(prefix="/api/admin")
+│   ├── admin_download_analytics_service.py # 下载聚合、分桶、标签与模块级实例
+│   └── admin_order_analytics_service.py    # 每日聚合、周/月汇总、UTC+8 日期与多币种金额
+└── main.py                                 # 注册 analytics router,挂载 /api/admin 前缀
 ```
 
 - service 使用类 + 模块底部实例,具体组织约定见 `@docs/references/specs/spec-python.md` §9。
@@ -258,41 +317,42 @@ backend/src/app/
 - 接口参数校验在 API 层(`from_ms`/`to_ms` 必传且 `from_ms < to_ms`),聚合在 service 层,无写操作无事务。
 - 订单统计单独放 `admin_order_analytics_*`,不混入 `download-analytics` 路由,避免下载统计和订单统计两个数据域耦合。
 
-### 前端(新增 / 修改)
+### 前端
 
 ```
 admin/src/
 ├── components/
-│   └── TimeRangePicker.vue                 # 新增:通用时间范围选择器(datetimerange + 24H/7D 快捷;默认值由父组件控制)
+│   └── TimeRangePicker.vue                 # 受控时间范围、快捷、选日默认时间与整天毫秒终点
 ├── api/
-│   └── analytics.ts                        # 新增:6 个 getXxx 函数 + 请求/响应 interface(字段带 JSDoc)
+│   └── analytics.ts                        # 聚合请求与响应类型
 ├── views/
-│   └── AnalyticsView.vue                   # 新增:单文件容器,NTabs 内嵌 6 个 NTabPane(6 个 tab 内联,不拆子目录)
-├── router/index.ts                         # 修改:加 { path: "analytics", name: "Analytics", component: ... }
-├── layouts/AdminLayout.vue                 # 修改:menuOptions + routeMap 加 Analytics 项(图标用 @vicons/antd)
+│   └── AnalyticsView.vue                   # 标签页状态、请求与列定义;周/月共用逻辑
+├── utils/time.ts                           # getRechargeDefaultRange 与 UTC+8 时间展示
+├── router/index.ts                         # /analytics 路由
+├── layouts/AdminLayout.vue                 # 数据分析导航入口
 └── i18n/
-    ├── zh-CN.json                          # 修改:layout.analytics + analytics 段(6 tab 标题/列名/筛选/空态)
-    └── en-US.json                          # 修改:同步英文 key
+    ├── zh-CN.json                          # analytics 标题、列名、筛选与空态
+    └── en-US.json                          # 对应英文 key
 ```
 
-- **单文件 + 页内 NTabs**:`admin/src/views/` 现有 9 个页面**全部是单文件**(无子目录),`ChannelSettingsView.vue` 也是单文件内联 NTabPane。数据分析页沿用此惯例,6 个 tab 内联在 `AnalyticsView.vue` 中(每个 tab 一个表格或一组卡片,体量不大),不拆 `analytics/` 子目录,符合"概念越少越好"。`TimeRangePicker` 作为唯一跨 tab 复用点保留为独立组件。
+- 标签页内联在 `AnalyticsView.vue`,共用 `TimeRangePicker`。周/月由 `periodRecharge` 保存各自筛选、加载状态和结果,`loadPeriodRecharge` 共用请求,`periodRechargeColumns` 共用列定义;不新增子页面、持久状态或并发控制结构。
 - API service 按 `api/orders.ts` 模式:`request.get<never, T>("/download-analytics/xxx", { params })` / `request.get<never, T>("/order-analytics/xxx", { params })`(`request.ts` 的 `baseURL="/api/admin"` 自动拼出完整路径),泛型 `T` 为响应 `data` 类型。
-- 6 个标签页用**单路由**(`path: "analytics"`)。
-- 各标签页均为「TimeRangePicker + 查询按钮 + 内容区」,组件挂载即用各自默认时间范围触发首次查询(下载维度 24H,订单维度 7D;参考 `OrdersView.vue` 的 `onMounted` 加载模式);切换 Tab 时按需请求(切到的 Tab 若尚未加载则触发,已加载的不重复请求)。
+- 标签页共用 `/analytics` 路由,切换不改变 URL。
+- 挂载仅加载默认激活的下载资源标签页;其他标签页首次切换时加载,已加载的不重复请求。查询和刷新均使用各自当前筛选,默认范围见「默认范围」。
 
 ## UI 规格
 
 ### 数据分析页(整体)
 
-- 顶部 `NTabs`(6 个 `NTabPane`):下载资源分析 / 下载排名 / 下载统计 / 用户地理分析 / 每日充值(+8) / 商品统计(+8)。标签可点击切换,切换不改变 URL(单路由)。
+- 顶部标签栏与用户操作见 [feat.md「数据分析页」](feat.md#数据分析页)。样式、尺寸、动效与响应式布局遵循 `@tech-视觉基线.md`。
 - 每个 Tab 内统一布局:`NCard` 容器 → header 区放 `TimeRangePicker` + 「查询」主按钮 + 「刷新」按钮 → body 区放表格或统计卡片。
 - 进入页面默认激活第一个 Tab(下载资源分析),该 Tab 已用默认 24H 加载数据。
 
 ### TimeRangePicker
 
-- 形态:`NDatePicker type="datetimerange"`,宽度约 400px,与 `OrdersView` 的时间筛选一致。
+- 形态:Naive UI `datetimerange`,宽度最多 400px、不超出容器。
 - 快捷按钮区(面板内):「最近 24 小时」「最近 7 天」,点击立即填入对应区间(取点击时刻的 now)。
-- 默认值:由父组件挂载时初始化,窗口锁定不滚动;下载维度默认最近 24 小时,订单维度默认最近 7 天。
+- 初始范围与选日默认时间见「默认范围」和「时间范围选择器组件」,界面时间格式沿用 `ADMIN_DATETIME_FORMAT`。
 - 可点击:是;选择后面板关闭,`v-model` 更新为 `[from_ms, to_ms]`。
 
 ### 下载资源分析 Tab
@@ -322,15 +382,21 @@ admin/src/
 - 表格 5 列:日期 / 笔数/人数(成功) / 金额(成功) / 笔数/人数(全部) / 金额(全部)。
 - 日期为 UTC+8 自然日;成功为订单状态 2;全部为所有订单。
 - 笔数/人数单元格展示为 `x/y`,其中 `x` 为订单笔数,`y` 为去重用户数。
-- 金额单元格按币种展示,如 `12 USD, 15.3 USD`;没有成功金额时显示 `0`。
+- 金额单元格复用 `formatAmountList`,没有成功金额时显示 `0`。
 - 无数据显示空态文案。
+
+### 每周/月充值 Tab
+
+- 列顺序与日期呈现见 [feat.md「数据分析页」](feat.md#数据分析页);统计日期与日均按 `period-recharge` 返回值展示,不在前端重新累计金额或计算分母。
+- 桌面 `NDataTable` 和手机 `RecordCardList` 使用同一套 `periodRechargeColumns`,表格无分页,宽表只在内容容器内滚动。
+- 两个周期页使用同一 GET 请求函数 `getPeriodRecharge`,首次切换加载、查询、刷新与错误提示沿用页面行为;状态分别保存在 `periodRecharge` 的对应周期下。
 
 ### 商品统计(+8) Tab
 
 - 表格 6 列:日期 / 商品 ID / 笔数/人数(成功) / 金额(成功) / 笔数/人数(全部) / 金额(全部)。
 - 分组为 UTC+8 日期 + 商品 ID;成功 / 全部 / 金额口径同每日充值。
 - 笔数/人数单元格展示为 `x/y`,其中 `x` 为订单笔数,`y` 为去重用户数。
-- 金额单元格按币种展示,如 `12 USD, 15.3 USD`;没有成功金额时显示 `0`。
+- 金额单元格复用 `formatAmountList`,没有成功金额时显示 `0`。
 - 无数据显示空态文案。
 
 ## 实现锚点
@@ -342,8 +408,10 @@ admin/src/
 | 下载统计 | 同上 | 同上 | 同上 | 同上 |
 | 用户地理分析 | 同上 | 同上 | 同上 | 同上 |
 | 每日充值(+8) | `@backend/src/app/api/admin/admin_order_analytics.py` | `@backend/src/app/services/admin_order_analytics_service.py` | 同上 | 同上 |
+| 每周/月充值 | 同上,`get_period_recharge` | 同上,`AdminOrderAnalyticsService.get_period_recharge` | `AnalyticsView.vue` 的 `periodRechargeColumns` / `loadPeriodRecharge` | `analytics.ts` 的 `getPeriodRecharge` |
 | 商品统计(+8) | 同上 | 同上 | 同上 | 同上 |
 | 时间范围选择器 | — | — | `@admin/src/components/TimeRangePicker.vue` | — |
+| 充值默认范围 | — | — | `@admin/src/utils/time.ts` 的 `getRechargeDefaultRange` | — |
 | 通用用户信息弹窗 | `@backend/src/app/api/admin/admin_users.py` | `@backend/src/app/services/admin_user_profile_service.py` | `@admin/src/components/UserInfoDialog.vue` | `@admin/src/api/users.ts` |
 | 菜单与路由 | — | — | `AnalyticsView.vue` + `AdminLayout.vue` + `router/index.ts` | — |
 
@@ -353,13 +421,11 @@ admin/src/
 - 区间内无数据:资源分布返回 12 桶全 `0`;排名返回空数组;统计返回 6 个 `0`;地理返回空数组。均不报错。
 - `size_bytes IS NULL` 或 `= 0`:归 `unknown` 桶;`SUM(size_bytes)` 自动忽略 NULL,空集经 `coalesce` 归 `0`。
 - `register_country` 为空:归 `"unknown"`,前端显示「未知」。
-- 每日充值 / 商品统计的成功口径只看订单状态 `order_status = 2`;不额外要求履约成功,避免支付成功但履约失败的收入被漏看。
-- 每日充值 / 商品统计的全部口径不筛订单状态;待支付、取消、退款、过期都计入全部笔数与全部金额。
-- 每日充值 / 商品统计金额按 `currency` 分组展示;不同币种不混加。
+- 订单状态与快照来源遵循「数据源」,币种与精度遵循「订单金额」;每日充值 / 商品统计的全部口径包含待支付、取消、退款、过期订单。
 - 百分比分母为 `0`:资源分析百分比列与地理人数百分比显示 `0%`,不影响计数展示。
 - 接口失败:前端 `catch` 内 `console.error("AnalyticsView.xxx() 失败:", error)` + `message.error(t(...))`(不抛泛化 Error),表格保留上次数据或空态。
 - `Intl.DisplayNames` 不支持时(极旧浏览器):降级显示原始国家码。
-- 时区:`from_ms`/`to_ms` 取客户端时间,跨时区管理员窗口有偏移(已知局限,见「时区」)。
+- 周/月的当前时刻截断、未来空结果与日期交集遵循 `period-recharge` 合同;输入时区限制见「时区」。
 
 ## 性能
 
@@ -370,7 +436,7 @@ admin/src/
 
 ## 国际化
 
-- 所有文案(菜单名、6 个 Tab 标题、列名、筛选按钮、空态、统计卡片标签)走 `useI18n()` 的 `t()`,中英文两份 json 同步新增 `analytics` 段。
+- 所有文案(菜单名、标签页标题、列名、筛选按钮、空态、统计卡片标签)走 `useI18n()` 的 `t()`,中英文两份 json 同步维护 `analytics` 段。
 - 国家码 → 国家名用浏览器原生 `Intl.DisplayNames`(按 `locale` 转),不引入新依赖。
 - 百分比列表头走 `analytics.colPercentCount` i18n key;百分比单元格用数字与 `%` 符号展示。
 - **已知欠债**:admin 顶栏当前**无语言切换 UI**(`AdminLayout.vue` header 仅登出按钮),`useI18n().locale` 固定 `zh-CN`。`feat.md` 既有的"中英文切换正常"验收项依赖另一独立 feat 补语言切换入口,本功能只保证文案 key 中英文齐备 + 国名按当前 locale(默认中文)显示,不负责新增切换 UI。
@@ -378,5 +444,7 @@ admin/src/
 ## 交付与验证
 
 - 后端:`black` + `ruff` + `mypy` 通过;加 `created_at` 索引后执行 `sync_database_schema.py`。
-- 前端:`pnpm tsc --noEmit` + `pnpm build` 通过;中英文文案齐全。
-- 人工验证:菜单「数据分析」可见,6 个 Tab 切换正常;下载维度默认 24H、每日充值和商品统计默认 7D 加载数据;手动改时间区间与 24H/7D 快捷结果合理;空区间不报错;地理页国家名正确显示中文;每日充值和商品统计金额按 `12 USD, 15.3 USD` 形式展示。
+- 前端:`admin/ pnpm build` 包含类型检查与构建,新增文案中英文齐全。
+- 订单真实 API 用例为 `backend/tests/integration/real/api/admin/test_admin_order_analytics_real.py`:覆盖真实管理员鉴权、跨年自然周、闰年与部分自然月、零充值日期分母、快照多币种与精度、当前时刻截断、未来空结果和参数合同。
+- 页面流程为 `admin/e2e/analytics.spec.ts`:使用本地真实后端、真实临时管理员 JWT 与订单,覆盖每日初始/重新选日整天边界及手动时间、周/月默认范围/汇总/筛选独立性/跨年/空态、桌面表格和手机卡片。只运行该文件的 Chromium 定向流程;跨时区输入统一不属于验收范围。
+- 标签页切换动画中可能同时显示旧、新面板;页面用例的 `switchPeriod` 等待只剩一个可见面板再操作,不使用固定延时。按改动影响执行必要的最少验证,本次执行结果与证据见 [充值执行计划](plans/009.每周每月充值统计.md)。

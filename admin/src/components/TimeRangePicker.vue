@@ -17,6 +17,7 @@
     type="datetimerange"
     clearable
     :format="ADMIN_DATETIME_FORMAT"
+    :default-time="defaultTime"
     :shortcuts="shortcuts"
     style="width: min(400px, 100%)"
     @update:value="handleUpdate"
@@ -31,7 +32,7 @@ import { ADMIN_DATETIME_FORMAT } from "@/utils/time";
 /** 毫秒时间戳二元组或空。 */
 type RangeValue = [number, number] | null;
 
-defineProps<{ modelValue: RangeValue }>();
+const props = defineProps<{ modelValue: RangeValue; defaultTime?: [string, string] }>();
 const emit = defineEmits<{ "update:modelValue": [value: RangeValue] }>();
 
 const { t } = useI18n();
@@ -52,8 +53,15 @@ const shortcuts: Record<string, () => [number, number]> = {
   },
 };
 
-/** 值变更时透传给父组件。 */
+/** 整天终点补齐毫秒，避免漏掉最后一秒内的订单。 */
 function handleUpdate(value: RangeValue) {
+  if (value && props.defaultTime) {
+    const end = new Date(value[1]);
+    if (end.getHours() === 23 && end.getMinutes() === 59 && end.getSeconds() === 59) {
+      end.setMilliseconds(999);
+      value = [value[0], end.getTime()];
+    }
+  }
   emit("update:modelValue", value);
 }
 </script>

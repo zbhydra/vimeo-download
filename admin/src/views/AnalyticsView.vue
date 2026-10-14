@@ -1,5 +1,5 @@
 <!--
-  数据分析页面（单文件，页内 NTabs 内联 6 个标签页）。
+  数据分析页面（单文件，页内 NTabs）。
 
   结构：
     NTabs
@@ -8,10 +8,11 @@
     ├── 下载统计：    6 个 NStatistic 卡片（3×2 grid），资源大小格式化为 MB/GB
     ├── 用户地理分析：NDataTable，国家分布，2 列（国名用 Intl.DisplayNames 转，人数含占比）
     ├── 每日充值(+8)：NDataTable，按 Asia/Shanghai 日期聚合订单笔数和多币种金额
+    ├── 每周/月充值： NDataTable，共用已支付总额、笔数与自然日日均列
     └── 商品统计(+8)：NDataTable，按 Asia/Shanghai 日期 + 商品 ID 聚合订单笔数和多币种金额
 
-  每个 pane 独立：timeRange、loading、数据 ref、load()。
-  下载维度默认最近 24 小时；订单维度（每日充值 / 商品统计）默认最近 7 天。
+  每个 pane 独立保存筛选、加载状态和结果；周/月共用加载函数与列定义。
+  下载维度默认最近 24 小时；每日充值默认 7 自然日，周/月默认 4 自然周/12 自然月。
   onMounted 触发首个激活 pane 首次加载；切 tab 时仅对未加载过的 pane 触发加载，已加载不重复请求。
 
   口径/接口/UI 规格见 docs/feat/008.管理后台/tech-数据分析.md。
@@ -162,7 +163,10 @@
         <NCard :bordered="false">
           <template #header>
             <div class="pane-header">
-              <TimeRangePicker v-model="dailyRechargeRange" />
+              <TimeRangePicker
+                v-model="dailyRechargeRange"
+                :default-time="['00:00:00', '23:59:59']"
+              />
               <NSpace :size="8">
                 <NButton
                   type="primary"
@@ -195,6 +199,60 @@
           />
           <NEmpty
             v-if="!isMobile && !dailyRechargeLoading && dailyRechargeRows.length === 0"
+            class="pane-empty"
+            :description="t('analytics.empty')"
+          />
+        </NCard>
+      </NTabPane>
+
+      <NTabPane
+        v-for="period in rechargePeriods"
+        :key="period"
+        :name="period"
+        :tab="t(period === 'week' ? 'analytics.tabWeeklyRecharge' : 'analytics.tabMonthlyRecharge')"
+      >
+        <NCard :bordered="false">
+          <template #header>
+            <div class="pane-header">
+              <TimeRangePicker
+                v-model="periodRecharge[period].range"
+                :default-time="['00:00:00', '23:59:59']"
+              />
+              <NSpace :size="8">
+                <NButton
+                  type="primary"
+                  :loading="periodRecharge[period].loading"
+                  @click="loadPeriodRecharge(period, true)"
+                >
+                  {{ t("analytics.search") }}
+                </NButton>
+                <NButton
+                  :loading="periodRecharge[period].loading"
+                  @click="loadPeriodRecharge(period, true)"
+                >
+                  {{ t("analytics.refresh") }}
+                </NButton>
+              </NSpace>
+            </div>
+          </template>
+          <RecordCardList
+            v-if="isMobile"
+            :columns="periodRechargeColumns(period)"
+            :data="periodRecharge[period].rows"
+            :loading="periodRecharge[period].loading"
+          />
+          <NDataTable
+            v-else
+            :columns="periodRechargeColumns(period)"
+            :data="periodRecharge[period].rows"
+            :loading="periodRecharge[period].loading"
+            :pagination="false"
+            :bordered="false"
+            :scroll-x="880"
+            striped
+          />
+          <NEmpty
+            v-if="!isMobile && !periodRecharge[period].loading && periodRecharge[period].rows.length === 0"
             class="pane-empty"
             :description="t('analytics.empty')"
           />
@@ -250,7 +308,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, onMounted, ref } from "vue";
+import { computed, h, onMounted, reactive, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import {
   NButton,
@@ -269,6 +327,7 @@ import RecordCardList from "@/components/RecordCardList.vue";
 import {
   getDailyRecharge,
   getDownloadSummary,
+  getPeriodRecharge,
   getProductStatistics,
   getResourceDistribution,
   getTopUsers,
@@ -276,13 +335,15 @@ import {
   type DailyRechargeRow,
   type DownloadSummaryData,
   type OrderAnalyticsCurrencyAmount,
+  type PeriodRechargeRow,
   type ProductStatisticsRow,
+  type RechargePeriod,
   type ResourceBucket,
   type TopUserRow,
   type UserGeoRow,
 } from "@/api/analytics";
 import UserInfoDialog from "@/components/UserInfoDialog.vue";
-import { formatAdminDateWithWeekday } from "@/utils/time";
+import { formatAdminDateWithWeekday, getRechargeDefaultRange } from "@/utils/time";
 import { useViewport } from "@/composables/useViewport";
 
 interface UserInfoDialogExpose {
@@ -304,13 +365,14 @@ function defaultRange(days: number): RangeValue {
   return [now - days * 24 * 3600 * 1000, now];
 }
 
-/** 6 个 tab 的 key。 */
+/** 数据分析标签页的 key。 */
 type TabKey =
   | "resource"
   | "topUsers"
   | "summary"
   | "geo"
   | "dailyRecharge"
+  | RechargePeriod
   | "productStats";
 
 const activeTab = ref<TabKey>("resource");
@@ -596,7 +658,7 @@ async function loadGeo(force = false) {
 }
 
 // ---------- 每日充值(+8) ----------
-const dailyRechargeRange = ref<RangeValue>(defaultRange(7));
+const dailyRechargeRange = ref<RangeValue>(getRechargeDefaultRange("day"));
 const dailyRechargeLoading = ref(false);
 const dailyRechargeRows = ref<DailyRechargeRow[]>([]);
 const dailyRechargeLoaded = ref(false);
@@ -669,6 +731,80 @@ async function loadDailyRecharge(force = false) {
     if (force) dailyRechargeRows.value = [];
   } finally {
     dailyRechargeLoading.value = false;
+  }
+}
+
+// ---------- 每周/月充值(+8) ----------
+const rechargePeriods = ["week", "month"] as const;
+
+interface PeriodRechargeState {
+  range: RangeValue;
+  loading: boolean;
+  loaded: boolean;
+  rows: PeriodRechargeRow[];
+}
+
+const periodRecharge = reactive<Record<RechargePeriod, PeriodRechargeState>>({
+  week: { range: getRechargeDefaultRange("week"), loading: false, loaded: false, rows: [] },
+  month: { range: getRechargeDefaultRange("month"), loading: false, loaded: false, rows: [] },
+});
+
+/** 周筛选跨年时保留年份，月始终使用完整日期。 */
+function periodRechargeColumns(period: RechargePeriod): DataTableColumns<PeriodRechargeRow> {
+  const range = periodRecharge[period].range;
+  const showYear = period === "month" || !range ||
+    new Date(range[0]).getFullYear() !== new Date(range[1]).getFullYear();
+  return [
+    {
+      title: t("analytics.colDate"),
+      key: "start_date",
+      minWidth: 240,
+      render: (row) => showYear
+        ? `${row.start_date} ~ ${row.end_date}`
+        : `${row.start_date.slice(5)} ~ ${row.end_date.slice(5)}`,
+    },
+    {
+      title: t("analytics.colRechargeAmount"),
+      key: "amounts",
+      minWidth: 220,
+      align: "right",
+      render: (row) => formatAmountList(row.amounts),
+    },
+    {
+      title: t("analytics.colRechargeCount"),
+      key: "count",
+      width: 120,
+      align: "right",
+    },
+    {
+      title: t(period === "week" ? "analytics.colWeeklyDailyAverage" : "analytics.colMonthlyDailyAverage"),
+      key: "daily_average_amounts",
+      minWidth: 240,
+      align: "right",
+      render: (row) => formatAmountList(row.daily_average_amounts),
+    },
+  ];
+}
+
+/** 两个周期页共用请求逻辑，各自保留筛选、结果和首次加载状态。 */
+async function loadPeriodRecharge(period: RechargePeriod, force = false) {
+  const state = periodRecharge[period];
+  const range = state.range;
+  if (!range) {
+    message.error(t("analytics.rangeRequired"));
+    return;
+  }
+  state.loading = true;
+  try {
+    const data = await getPeriodRecharge({ period, from_ms: range[0], to_ms: range[1] });
+    state.rows = data.rows;
+    state.loaded = true;
+  } catch (error) {
+    console.error(`AnalyticsView.loadPeriodRecharge(${period}) 失败:`, error);
+    message.error(t("analytics.loadFailed"));
+    if (force) state.rows = [];
+  } finally {
+    state.loading = false;
   }
 }
 
@@ -752,6 +888,8 @@ function handleTabChange(key: string | number) {
     void loadDailyRecharge();
   } else if (tab === "productStats" && !productStatsLoaded.value) {
     void loadProductStats();
+  } else if ((tab === "week" || tab === "month") && !periodRecharge[tab].loaded) {
+    void loadPeriodRecharge(tab);
   }
 }
 

@@ -2,7 +2,8 @@
  * 管理后台时间展示工具。
  *
  * 后台所有展示时间固定按 UTC+8 输出 YYYY-MM-DD HH:mm:ss，避免浏览器 locale
- * 或操作系统时区不同导致同一时间在管理页显示不一致。
+ * 或操作系统时区不同导致同一时间在管理页显示不一致。日期选择器和默认筛选
+ * 边界沿用浏览器本地时区。
  */
 
 const ADMIN_UTC8_OFFSET_MS = 8 * 60 * 60 * 1000;
@@ -11,6 +12,23 @@ const ADMIN_WEEKDAY_LABELS = ["周日", "周一", "周二", "周三", "周四", 
 
 /** Naive UI DatePicker 展示格式。 */
 export const ADMIN_DATETIME_FORMAT = "yyyy-MM-dd HH:mm:ss";
+
+/** 充值默认范围：7 自然日、4 自然周或 12 自然月，整天覆盖至今天。 */
+export function getRechargeDefaultRange(period: "day" | "week" | "month"): [number, number] {
+  const start = new Date();
+  const end = new Date(start);
+  start.setHours(0, 0, 0, 0);
+  end.setHours(23, 59, 59, 999);
+  if (period === "day") {
+    start.setDate(start.getDate() - 6);
+  } else if (period === "week") {
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7) - 21);
+  } else {
+    start.setDate(1);
+    start.setMonth(start.getMonth() - 11);
+  }
+  return [start.getTime(), end.getTime()];
+}
 
 /** 数字补零到两位。 */
 function padDateUnit(value: number): string {

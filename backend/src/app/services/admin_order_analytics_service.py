@@ -1,6 +1,6 @@
 """Admin 订单统计聚合服务。
 
-为管理后台「数据分析」补充订单维度的每日充值和商品统计。两个聚合都按
+为管理后台「数据分析」提供每日、每周、每月充值和商品统计。订单按
 Asia/Shanghai 自然日分桶，成功口径为 ``orders.order_status == 2``，全部口径为
 时间范围内所有订单。
 """
@@ -8,7 +8,10 @@ Asia/Shanghai 自然日分桶，成功口径为 ``orders.order_status == 2``，�
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from calendar import monthrange
+from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal, ROUND_HALF_UP
+from typing import Literal
 
 from sqlalchemy import BigInteger, case, cast, func, select
 
@@ -16,6 +19,7 @@ from app.constants.order import OrderStatus
 from app.core.database import get_async_session
 from app.models.order_model import OrderModel
 from app.utils.money import format_normalized_amount
+from app.utils.time import timestamp_now
 
 #: 一天的毫秒数，用于把时间戳映射到自然日桶。
 MILLISECONDS_PER_DAY = 86_400_000
@@ -53,6 +57,19 @@ class AdminOrderDailyRechargeRow:
     total_user_count: int
     #: 全部订单金额，按币种拆分。
     total_amounts: list[AdminOrderCurrencyAmount]
+
+
+@dataclass(frozen=True, slots=True)
+class AdminOrderPeriodRechargeRow:
+    """已支付订单的自然周/月汇总，日期为周期与有效筛选的交集。"""
+
+    start_date: str
+    end_date: str
+    #: 包含零充值日期、截至今天的自然日数。
+    day_count: int
+    count: int
+    amounts: list[AdminOrderCurrencyAmount]
+    daily_average_amounts: list[AdminOrderCurrencyAmount]
 
 
 @dataclass(frozen=True, slots=True)
@@ -181,6 +198,74 @@ class AdminOrderAnalyticsService:
             )
             for stats in row_map.values()
         ]
+
+    async def get_period_recharge(
+        self,
+        period: Literal["week", "month"],
+        from_ms: int,
+        to_ms: int,
+    ) -> list[AdminOrderPeriodRechargeRow]:
+        """汇总每日已支付数据，按覆盖的自然日数计算各币种日均。"""
+        to_ms = min(to_ms, timestamp_now())
+        if from_ms > to_ms:
+            return []
+
+        local_timezone = timezone(timedelta(hours=8))
+        from_date = datetime.fromtimestamp(from_ms / 1000, local_timezone).date()
+        to_date = datetime.fromtimestamp(to_ms / 1000, local_timezone).date()
+        daily_rows = await self.get_daily_recharge(from_ms=from_ms, to_ms=to_ms)
+        groups: dict[date, list[AdminOrderDailyRechargeRow]] = {}
+        for row in daily_rows:
+            if row.success_count == 0:
+                continue
+            day = date.fromisoformat(row.date)
+            start = (
+                day - timedelta(days=day.weekday())
+                if period == "week"
+                else day.replace(day=1)
+            )
+            groups.setdefault(start, []).append(row)
+
+        rows: list[AdminOrderPeriodRechargeRow] = []
+        for start in sorted(groups, reverse=True):
+            end = (
+                start + timedelta(days=6)
+                if period == "week"
+                else start.replace(day=monthrange(start.year, start.month)[1])
+            )
+            start_date = max(start, from_date)
+            end_date = min(end, to_date)
+            day_count = (end_date - start_date).days + 1
+            amounts: dict[str, int] = {}
+            for row in groups[start]:
+                for amount in row.success_amounts:
+                    amounts[amount.currency] = (
+                        amounts.get(amount.currency, 0) + amount.amount
+                    )
+            rows.append(
+                AdminOrderPeriodRechargeRow(
+                    start_date=start_date.isoformat(),
+                    end_date=end_date.isoformat(),
+                    day_count=day_count,
+                    count=sum(row.success_count for row in groups[start]),
+                    amounts=[
+                        self._currency_amount(currency, amount)
+                        for currency, amount in sorted(amounts.items())
+                    ],
+                    daily_average_amounts=[
+                        self._currency_amount(
+                            currency,
+                            int(
+                                (Decimal(amount) / day_count).quantize(
+                                    Decimal("1"), rounding=ROUND_HALF_UP
+                                )
+                            ),
+                        )
+                        for currency, amount in sorted(amounts.items())
+                    ],
+                )
+            )
+        return rows
 
     async def get_product_statistics(
         self,

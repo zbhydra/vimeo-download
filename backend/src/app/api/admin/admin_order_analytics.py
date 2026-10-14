@@ -1,12 +1,13 @@
 """Admin 订单统计只读 API。
 
-提供管理后台「数据分析」中的订单维度统计：每日充值和商品统计。接口只做
+提供管理后台「数据分析」中的每日、每周、每月充值和商品统计。接口只做
 admin 鉴权、时间范围校验与响应封装，聚合逻辑在 ``admin_order_analytics_service``。
 """
 
 from __future__ import annotations
 
 from dataclasses import asdict
+from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
@@ -44,6 +45,21 @@ async def get_daily_recharge(
     rows = await admin_order_analytics_service.get_daily_recharge(
         from_ms=from_ms,
         to_ms=to_ms,
+    )
+    return ResponseUtils.ok({"rows": [asdict(row) for row in rows]})
+
+
+@router.get("/period-recharge")
+async def get_period_recharge(
+    period: Literal["week", "month"] = Query(..., description="自然周或自然月"),
+    from_ms: int = Query(..., description="区间起点，毫秒时间戳（闭区间）"),
+    to_ms: int = Query(..., description="区间终点，毫秒时间戳（闭区间）"),
+    _admin: AdminContext = Depends(get_admin_user),
+) -> JSONResponse:
+    """周/月充值：返回已支付笔数、多币种总额和自然日日均。"""
+    _validate_range(from_ms, to_ms)
+    rows = await admin_order_analytics_service.get_period_recharge(
+        period=period, from_ms=from_ms, to_ms=to_ms
     )
     return ResponseUtils.ok({"rows": [asdict(row) for row in rows]})
 

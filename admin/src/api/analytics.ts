@@ -1,15 +1,16 @@
 /**
  * 管理后台「数据分析」只读聚合 API。
  *
- * 对接后端 6 个 GET 接口（request.ts 的 baseURL=/api/admin 自动拼出完整路径）：
+ * request.ts 的 baseURL=/api/admin 自动拼出完整路径：
  *   - GET /download-analytics/resource-distribution  下载资源分布（12 档分桶）
  *   - GET /download-analytics/top-users              下载排名（前 20 用户）
  *   - GET /download-analytics/summary                下载统计（6 标量汇总）
  *   - GET /download-analytics/user-geo               用户地理分析（按注册国家）
  *   - GET /order-analytics/daily-recharge            每日充值（按 +8 日期）
+ *   - GET /order-analytics/period-recharge           每周/月充值（已支付订单）
  *   - GET /order-analytics/product-statistics        商品统计（按 +8 日期 + 商品 ID）
  *
- * 所有接口参数均为 { from_ms, to_ms }（毫秒时间戳，闭区间），后端校验 from_ms < to_ms。
+ * 时间参数为 { from_ms, to_ms }（毫秒时间戳，闭区间），后端校验 from_ms < to_ms。
  */
 import request from "./request";
 
@@ -119,6 +120,26 @@ export interface DailyRechargeData {
   rows: DailyRechargeRow[];
 }
 
+/** 充值汇总的自然周期。 */
+export type RechargePeriod = "week" | "month";
+
+/** 周/月已支付订单汇总行。 */
+export interface PeriodRechargeRow {
+  /** UTC+8 日期，周期与有效筛选区间的交集。 */
+  start_date: string;
+  end_date: string;
+  /** 包含零充值日期、截至今天的自然日数。 */
+  day_count: number;
+  count: number;
+  amounts: OrderAnalyticsCurrencyAmount[];
+  daily_average_amounts: OrderAnalyticsCurrencyAmount[];
+}
+
+/** 周/月充值响应。 */
+export interface PeriodRechargeData {
+  rows: PeriodRechargeRow[];
+}
+
 /** 商品统计行。 */
 export interface ProductStatisticsRow {
   /** Asia/Shanghai 日期，格式 YYYY-MM-DD。 */
@@ -178,6 +199,13 @@ export function getUserGeo(params: AnalyticsRangeParams) {
 /** 查询每日充值统计。 */
 export function getDailyRecharge(params: AnalyticsRangeParams) {
   return request.get<never, DailyRechargeData>("/order-analytics/daily-recharge", {
+    params,
+  });
+}
+
+/** 查询周/月已支付充值统计。 */
+export function getPeriodRecharge(params: AnalyticsRangeParams & { period: RechargePeriod }) {
+  return request.get<never, PeriodRechargeData>("/order-analytics/period-recharge", {
     params,
   });
 }
