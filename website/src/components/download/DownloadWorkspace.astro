@@ -3,23 +3,13 @@ import DownloadAnonymousModal from './DownloadAnonymousModal.astro'
 import DownloadParseResults from './DownloadParseResults.astro'
 import type { DownloadWorkspaceContent } from '../../i18n/schema'
 
-const {
-  copy,
-  installUrl,
-  deferRuntime = false
-} = Astro.props as {
+const { copy, installUrl } = Astro.props as {
   copy: DownloadWorkspaceContent
   installUrl: string
-  /** 匿名首屏是否延迟完整下载状态机，直到交互或发现可恢复本地状态。 */
-  deferRuntime?: boolean
 }
 ---
 
-<div
-  class="download-workspace"
-  data-download-workspace
-  data-defer-download-runtime={deferRuntime ? 'true' : undefined}
->
+<div class="download-workspace" data-download-workspace>
   <script is:inline type="application/json" data-download-copy set:html={JSON.stringify(copy)} />
 
   <div class="download-workspace-shell" data-download-workspace-shell>
@@ -32,18 +22,7 @@ const {
 </div>
 
 <script>
-  const root = document.querySelector<HTMLElement>('[data-download-workspace]')
-  const runtimeImport = root?.dataset.deferDownloadRuntime === 'true'
-    ? import('../../scripts/download/workspace-loader')
-    : import('../../scripts/download/workspace')
-
-  void runtimeImport.catch(error => {
-    console.error(
-      new Error('[download-workspace] Failed to load the workspace entry module.', {
-        cause: error
-      })
-    )
-  })
+  import '../../scripts/download/workspace-loader'
 </script>
 
 <style is:global>

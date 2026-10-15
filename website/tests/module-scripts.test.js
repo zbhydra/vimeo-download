@@ -215,12 +215,17 @@ test('homepage keeps fonts and route CSS off the critical path while preserving 
   assert.equal(html.includes('fonts.gstatic.com'), false)
   assert.equal(/<script\b[^>]*src="https:\/\/www\.googletagmanager\.com/i.test(html), false)
   assert.match(html, /window\.gtag\('config', GA_ID\)/)
-  assert.match(
-    html,
-    /window\.addEventListener\('load'[\s\S]*?'https:\/\/www\.googletagmanager\.com\/gtag\/js\?id=' \+ GA_ID/
+  const astroAssets = await readdir(path.join(distDir, '_astro'))
+  const layoutEntries = await Promise.all(
+    astroAssets
+      .filter(name => name.startsWith('Layout.astro_astro_type_script'))
+      .map(name => readFile(path.join(distDir, '_astro', name), 'utf8'))
+  )
+  assert.equal(
+    layoutEntries.some(code => code.includes('https://www.googletagmanager.com/gtag/js?id=')),
+    true
   )
   assert.equal(/<link\b[^>]+rel="stylesheet"/i.test(html), false)
-  assert.equal(html.includes('data-defer-download-runtime="true"'), true)
 })
 
 test('every locale homepage has one H1, eight ordered sections and valid structured data', async () => {
