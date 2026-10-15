@@ -214,7 +214,6 @@ const popupItems = [
     --ext-chip-ink: #111827;
     /* 取自插件 buttons.css 的 Vimeo 青（选中按钮实底）。 */
     --ext-vimeo: #00adef;
-    --ext-vimeo-ink: #f7fbff;
     --ext-chip-border: rgba(15, 23, 42, 0.18);
     --ext-panel-line: #b9ccf7;
     --ext-panel-inset: rgba(238, 243, 254, 0.55);
@@ -227,7 +226,6 @@ const popupItems = [
     --ext-player-lo: #0b1020;
     --ext-violet: #7c5cf6;
     --ext-ink-muted: #475467;
-    --ext-ink-faint: #667085;
     --ext-idle: #98a2b3;
     --ext-ok: #12a150;
     --ext-ok-fill: #22b573;
@@ -612,7 +610,8 @@ const popupItems = [
   .ext-chip--selected {
     border-color: var(--ext-vimeo);
     background: var(--ext-vimeo);
-    color: var(--ext-vimeo-ink);
+    /* 青底上浅色字对比度不足 4.5:1，改用深色字。 */
+    color: var(--ext-ink);
   }
 
   /* 标注胶囊：深底浅字，压在面板 / popup 的边线上。 */
@@ -847,7 +846,7 @@ const popupItems = [
   .ext-popup-speed {
     display: block;
     margin-top: 6px;
-    color: var(--ext-ink-faint);
+    color: var(--ext-ink-muted);
     font-size: 12px;
     font-variant-numeric: tabular-nums;
   }
