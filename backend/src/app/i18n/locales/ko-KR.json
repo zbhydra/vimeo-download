@@ -62,7 +62,7 @@
     "MEDIA_PARSE_INVALID_LINK": "Invalid media link",
     "MEDIA_PARSE_UNSUPPORTED_PLATFORM": "Unsupported media platform",
     "MEDIA_PARSE_REQUIRES_CLIENT": "Client extension is required for this media",
-    "MEDIA_PARSE_RESOURCE_NOT_FOUND": "Media resource not found",
+    "MEDIA_PARSE_RESOURCE_NOT_FOUND": "미디어가 없거나 현재 접근할 수 없습니다. 전체 링크와 접근 권한을 확인해 주세요.",
     "MEDIA_PARSE_NODE_UNAVAILABLE": "Media parse node is unavailable",
     "MEDIA_DOWNLOAD_FILE_TOO_LARGE": "Media file is too large",
     "MEDIA_PARSE_PRE_INVALID_LINK": "Invalid media link",

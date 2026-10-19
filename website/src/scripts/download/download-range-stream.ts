@@ -357,6 +357,7 @@ export async function pipeRangeResponseToWriter(
 
     lastCheckpointBytes = downloadedBytes
     lastCheckpointAtMs = now
+    await options.writer.flush()
     await options.onCheckpoint?.({ downloadedBytes, totalBytes, mimeType })
   }
 
@@ -407,17 +408,21 @@ export async function pipeRangeResponseToWriter(
       await checkpoint(false)
     }
   } catch (error) {
+    if (closed) throw error
     if (reader) {
       await cancelActiveResponseReader(reader)
     }
-    if (!responseValidated) {
-      await cancelUnreadResponse(response)
-    } else {
-      await checkpoint(true)
+    try {
+      if (!responseValidated) {
+        await cancelUnreadResponse(response)
+      } else {
+        await checkpoint(true)
+      }
+    } finally {
+      await closeWriter().catch(closeError => {
+        console.error(closeError)
+      })
     }
-    await closeWriter().catch(closeError => {
-      console.error(closeError)
-    })
     if (error instanceof Error && isLikelyStreamInterruption(error)) {
       throw new RangeStreamInterruptedError(
         options.sourceId,

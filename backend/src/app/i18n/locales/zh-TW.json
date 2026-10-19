@@ -62,7 +62,7 @@
     "MEDIA_PARSE_INVALID_LINK": "媒體連結無效",
     "MEDIA_PARSE_UNSUPPORTED_PLATFORM": "不支援的媒體平台",
     "MEDIA_PARSE_REQUIRES_CLIENT": "該媒體需要客戶端擴充處理",
-    "MEDIA_PARSE_RESOURCE_NOT_FOUND": "媒體資源不存在",
+    "MEDIA_PARSE_RESOURCE_NOT_FOUND": "媒體不存在或目前無法存取，請檢查完整連結與存取權限。",
     "MEDIA_PARSE_NODE_UNAVAILABLE": "媒體解析節點暫不可用",
     "MEDIA_DOWNLOAD_FILE_TOO_LARGE": "媒體檔案過大",
     "MEDIA_PARSE_PRE_INVALID_LINK": "媒體連結無效",

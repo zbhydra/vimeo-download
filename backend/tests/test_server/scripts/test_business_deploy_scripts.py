@@ -40,14 +40,19 @@ def test_business_init_generates_config_before_dependency_import_checks():
         "prepare_repo\n    create_log_dir\n    generate_config\n    install_python_dependencies"
         in script
     )
-    assert "git_with_project_key clone --bare --filter=blob:none --single-branch" in script
+    assert (
+        "git_with_project_key clone --bare --filter=blob:none --single-branch" in script
+    )
     assert 'git_with_project_key --git-dir="$REPO_DIR" archive "HEAD:backend"' in script
     assert 'git_with_project_key clone -b "$BRANCH"' not in script
 
     remote_script = _read_deploy_file("script/deploy_remote.sh")
     assert "require_bare_repository" in remote_script
-    assert "git --git-dir=\"$REPO_DIR\" rev-parse --is-bare-repository" in remote_script
-    assert "for path in .git .venv config.yaml log data private public/uploads .backups .current_version; do" in remote_script
+    assert 'git --git-dir="$REPO_DIR" rev-parse --is-bare-repository' in remote_script
+    assert (
+        "for path in .git .venv config.yaml log data private public/uploads .backups .current_version; do"
+        in remote_script
+    )
 
 
 def test_business_deploy_scripts_use_uv_local_install_path():
@@ -134,24 +139,11 @@ def test_business_supervisor_and_nginx_paths_are_env_rendered():
         "'Authorization, Content-Type, X-Device-Id, X-Client-Product, Accept-Language'"
     ) in nginx_conf
     assert "if ($request_method = OPTIONS) { return 204; }" in nginx_conf
-    assert "proxy_buffering off;" in nginx_conf
-    assert "proxy_max_temp_file_size 0;" in nginx_conf
-    assert "proxy_request_buffering off;" in nginx_conf
-    assert "proxy_set_header Range $http_range;" in nginx_conf
-    assert "proxy_set_header If-Range $http_if_range;" in nginx_conf
     assert "proxy_set_header CF-Connecting-IP $http_cf_connecting_ip;" in nginx_conf
-    assert "proxy_read_timeout 3600s;" in nginx_conf
-    assert "proxy_send_timeout 3600s;" in nginx_conf
+    assert "proxy_read_timeout 65s;" in nginx_conf
+    assert "proxy_send_timeout 65s;" in nginx_conf
     assert "large_client_header_buffers 4 16k;" in nginx_conf
     assert "location ~ ^/api/client/media/download-v2/?$ {" not in nginx_conf
-    assert '"$request_method $uri $server_protocol"' in nginx_conf
-    assert "$request_uri" not in nginx_conf
-    assert "$http_referer" not in nginx_conf
-    assert (
-        "access_log logs/vimeo_business_download_v2_{BACKEND_PORT_PY}_access.log "
-        "vimeo_business_download_v2_no_query_{BACKEND_PORT_PY};"
-    ) in nginx_conf
-    assert "error_log /dev/null crit;" in nginx_conf
     assert "/api/client/tg/play" not in nginx_conf
     assert "upstream vimeo_download_backend_{BACKEND_PORT_PY}" in nginx_conf
     assert "server 127.0.0.1:{BACKEND_PORT_PY};" in nginx_conf

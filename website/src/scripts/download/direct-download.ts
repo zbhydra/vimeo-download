@@ -37,6 +37,7 @@ import type {
 } from './download-methods'
 import type { DownloadCompletion, DownloadMethodResult } from './download-completion'
 import type { DirectDownloadIntent, MediaPost } from './types'
+import { DownloadStorageError } from './download-storage-error'
 
 const MAX_AUTO_RANGE_RESUME_RETRIES = 3
 
@@ -237,6 +238,10 @@ async function runDirectDownloadToOpfsWithAutoResume(
         usedNodeId
       }
     } catch (error) {
+      if (error instanceof DownloadStorageError) {
+        await clearDownloadResumeRecord(activeRecord)
+        throw error
+      }
       if (!(error instanceof Error)) {
         throw error
       }

@@ -32,7 +32,7 @@ website 端下载产出的临时文件、轻量恢复记录、object URL 的存�
 | `storageType` | 保存内容 | `recoveryMode` | 刷新后行为 |
 | --- | --- | --- | --- |
 | `opfs` | OPFS 临时单文件 + checkpoint | `resumable` | 仅资源可校验非 0 Range 续传时使用;显示「继续下载」,按 `downloadedBytes` 发 Range 续传 |
-| `opfs` | OPFS 轻量任务记录 | `restartable` | OPFS 可用但资源未知大小、缺少可校验总大小/文件指纹或 Provider 未确认支持非 0 Range;显示「重新下载」,从 0 重新下载 |
+| `opfs` | OPFS 临时文件 + 轻量任务记录 | `restartable` | 方法禁用 Range 续传时显示「重新下载」，从 0 重新下载 |
 | `indexeddb` | IndexedDB 轻量任务记录(不存 Blob 分片) | `restartable` | 显示「重新下载」,从 0 重新下载 |
 | `memory` | 仅页面内临时数据 | `current_page` | 当前页面内完成;刷新后无恢复入口 |
 
@@ -40,7 +40,7 @@ IndexedDB 本期只保存轻量恢复记录(资源标识、已下载字节、方
 
 ### 3.2 真实写入探测
 
-存储能力只在**新下载开始时探测一次**,写入 `storageType/recoveryMode`,恢复时不再重新探测、不动态降级。探测必须覆盖「写入 → 读取 → 删除」完整链路,而不是 API 存在性。
+存储能力只在**新下载开始时探测一次**,写入 `storageType/recoveryMode`,恢复时不再重新探测、不动态降级。预检必须覆盖「写入 → flush → close → 读取 → 删除」完整链路,而不是 API 存在性。
 
 ```text
 OPFS 真实 write/read/delete 成功且资源可校验非 0 Range 续传 -> storageType=opfs,    recoveryMode=resumable
@@ -57,11 +57,19 @@ OPFS 真实 write/read/delete 成功但资源不可校验续传         -> stora
 
 预检规则:
 
-1. 仅对 `resource.size` 已知且大于 0 的资源做容量判断;未知大小不阻断。
-2. 需要空间为 `fileSize + max(64MiB, fileSize * 15%)`,给 `navigator.storage.estimate()` 的近似值留余量。
-3. `navigator.storage.estimate()` 的 `quota - usage` 小于需要空间时阻断。OPFS 和 IndexedDB 共享同一个 origin quota,不按两块独立空间计算。
-4. 执行 1MiB OPFS 写入、读取、删除探测;OPFS 不可写且文件大于 100MiB 时阻断,因为后续只能走不可靠的 Memory 临时数据。
-5. estimate 不可用、大小未知、小文件 OPFS 不可用时不阻断,继续走既有 OPFS -> IndexedDB -> Memory 降级。
+1. direct 大小未知时跳过容量预检；client_mux 大小未知时仍要求 OPFS 实际可写。
+2. direct 按单文件、client_mux 按双轨加输出（约两倍成品）预留，再加 `download-storage-preflight.ts` 定义的容量余量。
+3. `navigator.storage.estimate()` 的 `quota - usage` 小于需要空间时阻断。OPFS 与 IndexedDB 共享 origin quota。
+4. 实际探测 Worker 写入、关闭、读取与删除；OPFS 不可用时，direct 仅已知不超过 100 MiB、client_mux 仅已知不超过 50 MiB 的资源可使用内存。容量未知的 client_mux 引导插件。
+5. estimate 不可用时依实际 OPFS 能力和内存门禁决定，不推断用户磁盘剩余空间。
+
+### 3.4 Worker 写入合同
+
+`opfs-writer.ts::createOpfsWriter` 是网站唯一 OPFS 写入口，Dedicated Worker 通过 `createSyncAccessHandle()` 持有文件写锁。预检、client_mux 输入/输出临时文件、direct 初始文件和恢复写入共用运行时；每次写入均指定位置，并按底层实际写入字节数确认完成。
+
+正常读取按 `flush → close → getFile` 执行。失败时 flush 即使失败也关闭句柄，然后清理本轮临时文件；关闭与清理可重复执行。原地写入不具有事务回滚语义。延迟保存的输出 File 按既有保存清理时点保留；浏览器硬关闭后的孤儿文件治理不在保证内。
+
+兼容基线为 Chrome/Edge 102+、Firefox 111+、Safari 17+，最终以真实能力探测为准。WebKit 自动化与其他 Safari 版本不能替代指定 Safari 版本的实机证据。
 
 本阶段不引入浏览器原生 File System Access API,也不引入 Redis 或跨机房全局并发记录。
 
@@ -78,12 +86,14 @@ OPFS 真实 write/read/delete 成功但资源不可校验续传         -> stora
 
 | 记录状态 | 行为 |
 | --- | --- |
-| `opfs + resumable`,OPFS 临时文件真实大小等于 `downloadedBytes` | 显示「继续下载」 |
+| `opfs + resumable`,OPFS 临时文件真实大小大于等于 `downloadedBytes` | 显示「继续下载」 |
 | `opfs + restartable` | 显示「重新下载」 |
 | `indexeddb + restartable` | 显示「重新下载」 |
 | `storageType` 当前探测不可用 | 清记录,资源卡片显示普通下载 |
-| OPFS 临时文件大小与记录不一致 | 清记录,资源卡片显示普通下载 |
+| OPFS 临时文件缺失或短于记录 | 清记录,资源卡片显示普通下载 |
 | `memory + current_page` | 不被 `loadDownloadResumeRecord()` 读出,刷新后无恢复入口 |
+
+文件领先 checkpoint 时，`openResumeWriter` 先截断未确认尾部，再从记录中的已确认偏移续传；不得以实际文件大小跳过数据。
 
 恢复记录失效时,workspace 解析结果 snapshot 与 playback snapshot 不受影响。
 
@@ -131,13 +141,13 @@ OPFS 真实 write/read/delete 成功但资源不可校验续传         -> stora
 ## 8. 验收标准
 
 1. OPFS 完整可写时,下载中刷新后可继续 Range 续传。
-2. OPFS 目录 API 存在但 `createWritable` 缺失/抛错时,下载成功,并记 OPFS 探测失败。
+2. 主线程没有 `createWritable`、但 Worker 同步句柄实际可写时，大文件通过预检并使用 OPFS。
 3. IndexedDB 写轻量 checkpoint 成功时,刷新后显示「重新下载」。
 4. IndexedDB transaction 失败时,当前下载自动切 Memory 并成功。
 5. 恢复记录的 `storageType/recoveryMode` 与 UI 行为一致。
 6. 恢复失效只清恢复记录,解析结果与播放恢复保持稳定。
 7. direct 下载 URL 过期时清理记录并要求用户手动重新解析。
-8. `web_download_failed` 只代表真实传输失败或最终文件生成失败,不把 checkpoint 失败计入。
+8. 写入或 checkpoint 提交失败进入真实下载失败路径；底层错误名保留在诊断，用户提示走 i18n。
 9. `direct` / `client_mux` 容量预检失败时提示用户浏览器存储不足并引导插件下载,不申请下载授权（`proxy` 自动 GET fallback 已随 `proxy` 下线删除）。
 10. 存储预检 blocked 埋点只保留事件专用字段,不记录无消费方的浏览器指纹字段或重复错误内容,且入库后仍可解析为完整 JSON。
 
@@ -147,7 +157,9 @@ OPFS 真实 write/read/delete 成功但资源不可校验续传         -> stora
 website/src/scripts/download/
   download-storage-preflight.ts  # 下载前 origin quota 与 OPFS 可写预检
   download-resume-store.ts       # OPFS/IndexedDB 后端、能力探测、Memory fallback、恢复记录加载
-  download-temp-storage.ts       # 临时写入器抽象
+  download-temp-storage.ts       # 单次临时文件与延迟清理
+  opfs-writer.ts                 # 主线程按位置写入入口
+  opfs-writer.worker.ts          # 共用 Worker 与同步句柄
   types.ts                       # 存储、恢复与错误操作类型
   workspace-download.ts          # 调用探测、按计划触发下载
   workspace-render.ts            # 恢复提示渲染

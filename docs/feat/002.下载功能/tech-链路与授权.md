@@ -9,12 +9,12 @@
 parse-pre-v2 -> parse-v2 -> resource_token -> download(-anonymous)-pre-v2
 ```
 
-业务节点在 `parse-pre-v2` 选择一个健康解析节点和一条启用代理。代理配置、
+业务节点在 `parse-pre-v2` 完成 URL 与平台校验后，选择一个健康解析节点和一条启用代理。代理配置、
 原始链接、节点 ID 和短有效期被 Fernet 加密认证为执行 token；网站只把 token
 发给该节点一次。节点验 token 后创建带该代理的 Playwright context，只访问
 Vimeo 一次。
 
-节点把完整 `direct` 或 `client_mux` 材料放入加密认证的 `resource_token`。材料
+节点把完整 `direct` 或 `client_mux` 材料序列化为 JSON，经 zlib 压缩后直接交给 Fernet，生成自包含 `resource_token`。材料
 包括 `source_id`、文件元数据、直链，或完整视频/音频轨道、初始化分片和分片 URL。
 业务的 `download-pre-v2` 和匿名预授权先解密并校验材料、模式、资源身份、4 GiB
 上限和网站文件白名单，再执行计费/计次，最后直接返回材料。业务不再选择下载
@@ -31,7 +31,7 @@ Vimeo 一次。
 
 成功：`{"node": {"node_id": 2, "url": "https://.../api/client/media/parse-v2"}, "token": "<encrypted-token>"}`。
 
-只返回一个节点。没有健康节点使用 `MEDIA_SERVICE_NODE_UNAVAILABLE`，没有启用代理、
+不支持的平台在选择节点与代理之前返回 `MEDIA_PARSE_UNSUPPORTED_PLATFORM`。只返回一个节点。没有健康节点使用 `MEDIA_SERVICE_NODE_UNAVAILABLE`，没有启用代理、
 动态代理 GET 失败或返回内容不是标准代理 URL 使用 `MEDIA_PARSE_PROXY_UNAVAILABLE`。
 动态代理 `dynamic_url` 只 GET 一次，响应必须是单条带协议的代理 URL 文本，支持
 HTTP、HTTPS、SOCKS5 及认证信息。
@@ -48,6 +48,8 @@ Vimeo 上游资源不可达、平台不支持和解析节点自身故障分别�
 
 成功响应仍是通用 media schema；`resources[].resource_token` 是加密材料 token，
 公开 JSON 不包含直链、轨道或 Provider 私有字段。
+
+resource token 的最终长度由 `constants/media_download.py::MEDIA_RESOURCE_TOKEN_MAX_LENGTH` 统一约束签发、HTTP schema、预授权与解码；签发超限返回 `MEDIA_PARSE_REQUIRES_CLIENT`，引导插件。仅接收压缩格式，未压缩材料返回 `MEDIA_RESOURCE_MATERIAL_INVALID`，发生在计费/计次之前；旧页面与快照需重新解析。proxy execution token 的编码、TTL 与共用 claims 版本保持不变。解析快照仍遵守 `snapshot.ts::SNAPSHOT_MAX_BYTES`，不会为大材料放宽容量。
 
 ### `POST /api/client/media/download-pre-v2`
 
@@ -87,7 +89,8 @@ Vimeo 上游资源不可达、平台不支持和解析节点自身故障分别�
 | `MEDIA_PARSE_PRE_INVALID_LINK`、`MEDIA_PARSE_UNSUPPORTED_PLATFORM` | 修改链接后重新解析 |
 | `MEDIA_PARSE_PROXY_UNAVAILABLE`、`MEDIA_SERVICE_NODE_UNAVAILABLE`、`MEDIA_PARSE_NODE_UNAVAILABLE` | 提示解析暂不可用，用户手动重新解析 |
 | `MEDIA_PARSE_EXECUTION_TOKEN_INVALID`、`MEDIA_PARSE_EXECUTION_TOKEN_EXPIRED` | 重新解析 |
-| `MEDIA_PARSE_RESOURCE_NOT_FOUND` | 检查 Vimeo 链接后重新解析 |
+| `MEDIA_PARSE_RESOURCE_NOT_FOUND` | 检查完整 Vimeo 链接与访问权限后重新解析；不代表视频已删除 |
+| `MEDIA_PARSE_REQUIRES_CLIENT` | 使用插件下载 |
 | `MEDIA_RESOURCE_MATERIAL_INVALID`、`MEDIA_RESOURCE_MATERIAL_EXPIRED`、`MEDIA_DOWNLOAD_FILE_TYPE_NOT_ALLOWED` | 重新解析或下载插件 |
 | `CREDIT_INSUFFICIENT` | 充值后重新下载 |
 

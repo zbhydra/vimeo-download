@@ -13,6 +13,8 @@ from urllib.parse import urlparse
 
 from app.api.user_dependencies import UserContext
 from app.contracts.media_download import MediaDownloadMode
+from app.contracts.media_platform import detect_platform
+from app.constants.media_download import MEDIA_RESOURCE_TOKEN_MAX_LENGTH
 from app.exceptions.common_exception import AppCommonException
 from app.i18n.common_code import CommonCode
 from app.services.media_execution_token_service import media_execution_token_service
@@ -117,6 +119,15 @@ class MediaPreAuthorizationService:
             code=CommonCode.MEDIA_PARSE_PRE_INVALID_LINK,
             field_name="link",
         )
+        try:
+            detect_platform(str(link).strip())
+        except AppCommonException as exc:
+            if exc.code == CommonCode.MEDIA_PLATFORM_UNSUPPORTED:
+                raise AppCommonException(
+                    CommonCode.MEDIA_PARSE_UNSUPPORTED_PLATFORM,
+                    ext_msg=exc.ext_msg,
+                ) from exc
+            raise
         nodes = await service_node_service.select_parse_nodes()
         if not nodes:
             raise AppCommonException(
@@ -223,7 +234,7 @@ class MediaPreAuthorizationService:
         )
         resource_token = self._validate_non_empty_string(
             data.get("resource_token"),
-            max_length=1024 * 1024,
+            max_length=MEDIA_RESOURCE_TOKEN_MAX_LENGTH,
             code=CommonCode.MEDIA_DOWNLOAD_PRE_INVALID_REQUEST,
             field_name="resource_token",
         )

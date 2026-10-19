@@ -6,6 +6,7 @@
  */
 
 import type { MediaPost } from './types'
+import { createOpfsWriter, type OpfsWriter } from './opfs-writer'
 
 /** 1 MiB 字节数。 */
 const MIB = 1024 * 1024
@@ -173,12 +174,13 @@ async function probeOpfsWritable(sourceId: string): Promise<OpfsProbeResult> {
   const probeFileName =
     `download_preflight_${safeSourceId}_${Date.now()}_${Math.floor(Math.random() * 1_000_000)}`
   let root: FileSystemDirectoryHandle | null = null
+  let writer: OpfsWriter | null = null
   try {
     root = await storage.getDirectory()
     const handle = await root.getFileHandle(probeFileName, { create: true })
-    const writable = await handle.createWritable()
-    await writable.write(new Uint8Array(OPFS_PROBE_BYTES))
-    await writable.close()
+    writer = await createOpfsWriter(handle)
+    await writer.write(new Uint8Array(OPFS_PROBE_BYTES), 0)
+    await writer.close()
     const file = await handle.getFile()
     if (file.size !== OPFS_PROBE_BYTES) {
       return {
@@ -197,6 +199,7 @@ async function probeOpfsWritable(sourceId: string): Promise<OpfsProbeResult> {
       errorMessage: errorMessage(cause)
     }
   } finally {
+    await writer?.close().catch(error => console.error(error))
     if (root) {
       try {
         await root.removeEntry(probeFileName)

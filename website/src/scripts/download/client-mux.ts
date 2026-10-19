@@ -17,6 +17,7 @@ import {
   type StreamTargetChunk
 } from 'mediabunny'
 import { createOpfsDownloadTempFile } from './download-temp-storage'
+import { DownloadStorageError } from './download-storage-error'
 import type { ClientMuxDownloadIntent, ClientMuxTrackIntent, DownloadProgressSnapshot } from './types'
 
 export type ClientMuxStage = 'download' | 'mux'
@@ -77,7 +78,7 @@ async function fetchTrackWithProgress(
     if (!file && downloadedBytes > MEMORY_MAX_BYTES) {
       throw new ClientMuxDownloadError('opfs_unavailable_for_large_file', 0)
     }
-    if (file) await file.writable.write(chunk.slice().buffer)
+    if (file) await file.writer.write(chunk, trackBytes)
     else chunks.push(chunk.slice().buffer)
     trackBytes += chunk.byteLength
     onProgress?.({
@@ -131,7 +132,7 @@ async function fetchTrackWithProgress(
     }
   }
   if (file) {
-    await file.writable.close()
+    await file.writer.close()
     return file.getFile()
   }
   return new Blob(chunks, { type: track.mimeType })
@@ -161,10 +162,10 @@ async function muxToMp4(videoBlob: Blob, audioBlob: Blob, file?: TempFile): Prom
         if (chunk.position + chunk.data.byteLength > RESOURCE_MAX_BYTES) {
           throw new ClientMuxDownloadError('client_mux_too_large', 0)
         }
-        await file.writable.write(chunk)
+        await file.writer.write(chunk.data, chunk.position)
       },
-      close: () => file.writable.close(),
-      abort: () => file.writable.abort()
+      close: () => file.writer.close(),
+      abort: () => file.writer.close()
     })) : bufferTarget!
     output = new Output({ format: new Mp4OutputFormat({ fastStart: false }), target })
     const videoSource = new EncodedVideoPacketSource(videoCodec)
@@ -212,7 +213,7 @@ async function muxToMp4(videoBlob: Blob, audioBlob: Blob, file?: TempFile): Prom
     } catch (cancelError) {
       console.error(cancelError)
     }
-    if (error instanceof ClientMuxDownloadError) throw error
+    if (error instanceof ClientMuxDownloadError || error instanceof DownloadStorageError) throw error
     throw new ClientMuxDownloadError('client_mux_failed', 0)
   } finally {
     // Mediabunny 1.46 在格式探测拒绝后 dispose 会再次抛出未处理拒绝；BlobSource 本身没有文件句柄。

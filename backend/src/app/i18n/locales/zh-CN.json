@@ -80,7 +80,7 @@
     "MEDIA_PARSE_INVALID_LINK": "媒体链接无效",
     "MEDIA_PARSE_UNSUPPORTED_PLATFORM": "不支持的媒体平台",
     "MEDIA_PARSE_REQUIRES_CLIENT": "该媒体需要客户端扩展处理",
-    "MEDIA_PARSE_RESOURCE_NOT_FOUND": "媒体资源不存在",
+    "MEDIA_PARSE_RESOURCE_NOT_FOUND": "媒体不存在或当前无法访问，请检查完整链接与访问权限。",
     "MEDIA_PARSE_NODE_UNAVAILABLE": "媒体解析节点暂不可用",
     "MEDIA_DOWNLOAD_FILE_TOO_LARGE": "媒体文件过大",
     "MEDIA_PARSE_PRE_INVALID_LINK": "媒体链接无效",

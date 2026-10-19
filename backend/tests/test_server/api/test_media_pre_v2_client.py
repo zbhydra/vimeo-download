@@ -38,6 +38,24 @@ def _allow_device_and_rate_limit(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.mark.asyncio
+async def test_parse_pre_rejects_platform_before_node_and_proxy_selection(monkeypatch):
+    async def must_not_select():
+        pytest.fail("非 Vimeo 输入不得申请节点或代理")
+
+    monkeypatch.setattr(
+        pre_module.service_node_service, "select_parse_nodes", must_not_select
+    )
+    monkeypatch.setattr(
+        pre_module.proxy_pool_service, "select_parse_proxy", must_not_select
+    )
+    with pytest.raises(AppCommonException) as error:
+        await pre_module.media_pre_authorization_service.parse_pre_v2(
+            link="https://example.com/video"
+        )
+    assert error.value.code == CommonCode.MEDIA_PARSE_UNSUPPORTED_PLATFORM
+
+
+@pytest.mark.asyncio
 async def test_parse_pre_v2_returns_one_node_and_proxy_token(
     async_client, monkeypatch: pytest.MonkeyPatch
 ) -> None:

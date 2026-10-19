@@ -16,6 +16,7 @@ import type {
   MediaPost
 } from './types'
 import { DownloadStorageError } from './download-storage-error'
+import { createOpfsWriter, type OpfsWriter } from './opfs-writer'
 
 /** 创建恢复记录需要的下载上下文。 */
 interface ResumeRecordContext {
@@ -52,12 +53,14 @@ type JsonArray = JsonValue[]
 /** JSON 值。 */
 type JsonValue = JsonPrimitive | JsonObject | JsonArray
 
-/** OPFS 写入器，隐藏 FileSystemWritableFileStream 细节。 */
+/** direct 流写入器，按 checkpoint 提交已确认字节。 */
 export interface DownloadResumeWriter {
   /** 当前写入器对应的存储类型。 */
   storageType?: DownloadStorageType
   /** 写入一个二进制分片。 */
   write(chunk: Uint8Array): Promise<void>
+  /** 在保存 checkpoint 前提交原地写入。 */
+  flush(): Promise<void>
   /** 提交并关闭临时文件。 */
   close(): Promise<void>
 }
@@ -608,11 +611,12 @@ async function prepareOpfsRecord(
 
   const recoveryMode = metadata.rangeResumable === false ? 'restartable' : 'resumable'
   const tempFileName = createTempFileName(resource.sourceId)
+  let writer: OpfsWriter | undefined
   try {
     const handle = await root.getFileHandle(tempFileName, { create: true })
-    const writable = await handle.createWritable({ keepExistingData: true })
-    await writable.truncate(0)
-    await writable.close()
+    writer = await createOpfsWriter(handle)
+    await writer.truncate(0)
+    await writer.close()
   } catch (error) {
     const cause = error instanceof Error ? error : new Error(String(error))
     console.error(
@@ -624,6 +628,8 @@ async function prepareOpfsRecord(
         cause
       )
     )
+    await writer?.close().catch(closeError => console.error(closeError))
+    await root.removeEntry(tempFileName).catch(removeError => console.error(removeError))
     return null
   }
 
@@ -742,7 +748,7 @@ export async function loadDownloadResumeRecord(): Promise<DownloadResumeRecord |
     }
 
     const tempFile = await getOpfsTempFile(opfsRecord)
-    if (!tempFile || tempFile.size !== opfsRecord.downloadedBytes) {
+    if (!tempFile || tempFile.size < opfsRecord.downloadedBytes) {
       await clearDownloadResumeRecord(opfsRecord)
       return null
     }
@@ -858,12 +864,12 @@ export async function openResumeWriter(
     )
   }
 
-  let writable: FileSystemWritableFileStream
+  let writer: OpfsWriter | undefined
   try {
-    writable = await handle.createWritable({ keepExistingData: true })
-    await writable.truncate(startByte)
-    await writable.seek(startByte)
+    writer = await createOpfsWriter(handle)
+    await writer.truncate(startByte)
   } catch (error) {
+    await writer?.close().catch(closeError => console.error(closeError))
     const cause = error instanceof Error ? error : new Error(String(error))
     const storageError = createRecordStorageError(
       record,
@@ -874,13 +880,14 @@ export async function openResumeWriter(
     console.error(storageError)
     throw storageError
   }
+  const activeWriter = writer
+  let position = startByte
   return {
     storageType: 'opfs',
     async write(chunk: Uint8Array): Promise<void> {
-      const chunkCopy = new Uint8Array(chunk.byteLength)
-      chunkCopy.set(chunk)
       try {
-        await writable.write(chunkCopy)
+        await activeWriter.write(chunk, position)
+        position += chunk.byteLength
       } catch (error) {
         const cause = error instanceof Error ? error : new Error(String(error))
         const storageError = createRecordStorageError(
@@ -893,9 +900,19 @@ export async function openResumeWriter(
         throw storageError
       }
     },
+    async flush(): Promise<void> {
+      try {
+        await activeWriter.flush()
+      } catch (error) {
+        const cause = error instanceof Error ? error : new Error(String(error))
+        const storageError = createRecordStorageError(record, 'write_temp', 'download-resume-store openResumeWriter flush', cause)
+        console.error(storageError)
+        throw storageError
+      }
+    },
     async close(): Promise<void> {
       try {
-        await writable.close()
+        await activeWriter.close()
       } catch (error) {
         const cause = error instanceof Error ? error : new Error(String(error))
         const storageError = createRecordStorageError(

@@ -143,13 +143,13 @@ test('真实网站下载与 OPFS 生命周期', async ({ page, context }, testIn
         evidence.active = evidence.active.filter(entry => entry !== name);
       }
     };
-    const write = FileSystemWritableFileStream.prototype.write;
-    FileSystemWritableFileStream.prototype.write = async function (data) {
-      const value = typeof data === 'object' && data !== null && 'data' in data ? data.data : data;
-      const size = value instanceof ArrayBuffer || ArrayBuffer.isView(value) ? value.byteLength : value instanceof Blob ? value.size : 0;
-      evidence.writes++;
-      evidence.maxWriteBytes = Math.max(evidence.maxWriteBytes, size);
-      await write.call(this, data);
+    const postMessage = Worker.prototype.postMessage;
+    Worker.prototype.postMessage = function (message: { operation?: string; data?: Uint8Array }, transferOrOptions?: Transferable[] | StructuredSerializeOptions) {
+      if (message.operation === 'write' && message.data) {
+        evidence.writes++;
+        evidence.maxWriteBytes = Math.max(evidence.maxWriteBytes, message.data.byteLength);
+      }
+      Reflect.apply(postMessage, this, [message, transferOrOptions]);
     };
   }, { deviceId });
 

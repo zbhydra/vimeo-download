@@ -2,6 +2,8 @@
 
 # 业务允许的最大下载资源大小：4 GiB。
 MEDIA_DOWNLOAD_MAX_SIZE_BYTES = 4 * 1024 * 1024 * 1024
+# resource token 最终编码长度，签发与接收共用。
+MEDIA_RESOURCE_TOKEN_MAX_LENGTH = 1024 * 1024
 # TTL 分档阈值：小于等于 100 MiB 的资源给 1 小时 token。
 MEDIA_DOWNLOAD_100_MIB = 100 * 1024 * 1024
 # TTL 分档阈值：100 MiB 到 500 MiB 的资源给 3 小时 token。

@@ -15,7 +15,7 @@ direct 或 client_mux 材料，业务预授权验证材料后直接返回，浏�
 
 ## 后端流程
 
-1. `POST /api/client/media/parse-pre-v2` 在业务节点校验链接，选择一个健康解析节点，
+1. `POST /api/client/media/parse-pre-v2` 在业务节点校验 URL 与平台后，选择一个健康解析节点，
    从启用代理池选择一条代理。动态代理地址只 GET 一次，响应必须是单条带协议的
    标准代理 URL；支持 HTTP/HTTPS/SOCKS5 及可解码认证，不接受 JSON、空白、path、
    query 或 fragment。
@@ -27,10 +27,18 @@ direct 或 client_mux 材料，业务预授权验证材料后直接返回，浏�
    `server` 作用于所有请求并支持 HTTP/SOCKS，`username/password` 为 HTTP 代理认证。
 4. Vimeo Provider 只捕获当前视频 config 和 DASH 清单，生成 direct 或完整
    client_mux material。material 与资源身份、模式、文件元数据一起加密进 resource
-   token；公开解析响应只返回元数据和 token，不暴露 CDN URL、轨道或私有字段。
+   token；编码与大小边界见[材料授权合同](tech-链路与授权.md#post-apiclientmediaparse-v2)。公开解析响应只返回元数据和 token，不暴露 CDN URL、轨道或私有字段。
 5. `download-pre-v2`（登录）或 `download-anonymous-pre-v2`（匿名）先验签 resource
    token 和 material、大小及文件白名单，再扣 Credits 或设备次数，最后返回 material。
    Website 直接消费返回的材料。
+
+### Vimeo 访问与失败分类
+
+`VimeoMedia._compute_canonical_link` 将标准两段路径 `/<id>/<hex10>`（含全数字 hash）归一为 `/<id>?h=<hash>`，保留受支持 query，已有 query `h` 优先；player URL 消费同一 canonical。channel 等多段路径不参与 hash 归一。匿名排重和登录免扣仍使用既有资源键，不迁移或双查旧键。
+
+当前视频的有效 inline/XHR 配置优先于页面错误线索。没有有效配置时，明确 challenge、429 与上游 5xx 返回节点不可用；404、无明确 challenge 的 401/403 复用资源不存在或当前不可达合同。挑战 frame 仅进入诊断，不独立判失败。Provider、nginx 与浏览器分别为处理、反向代理读写与节点请求预留预算，具体入口见 `_extract_vimeo`、`backend/deploy/nginx/nginx.conf` 与 `media-api.ts::MEDIA_NODE_PREPARATION_TIMEOUT_MS`。
+
+解析出口必须为 Playwright 支持且实际可达的既有配置。带认证 SOCKS5 会在创建 browser context 时被拒绝；需通过现有代理配置入口选择兼容出口，失败仍由用户重试，不自动转换协议或切换出口。
 
 ## Website 合同
 

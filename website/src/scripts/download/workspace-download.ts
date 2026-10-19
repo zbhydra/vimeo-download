@@ -515,11 +515,9 @@ function updateRuntimeDownloadProgress(
 
 function updateRuntimeDownloadNode(
   context: RuntimeDownloadMarkContext,
-  state: WorkspaceDownloadState,
   nodeId: number
 ): void {
   context.usedNodeId = nodeId
-  recordDownloadStartOnce(context, state)
 }
 
 function buildRuntimeDownloadMarkError(
@@ -600,11 +598,12 @@ async function runSingleResourcePlan(
   await clearDownloadResumeRecord(state.pendingDownloadTask ?? undefined)
   state.pendingDownloadTask = null
 
+  recordDownloadStartOnce(markContext, state)
   const result = await downloadPlannedResource(
     plan,
     buildRequestContext(state),
     {
-      onUsedNode: nodeId => updateRuntimeDownloadNode(markContext, state, nodeId),
+      onUsedNode: nodeId => updateRuntimeDownloadNode(markContext, nodeId),
       onProgress
     }
   )
@@ -723,7 +722,6 @@ export async function handleDownloadClick(
           : formatProgressLabel(state.copy.parse.downloading, snapshot)
     })
     downloadRetryCount = downloadResult.retryCount
-    recordDownloadStartOnce(markContext, state)
 
     const successEventParameters = {
       platform: resource.platform,
@@ -859,7 +857,6 @@ export async function handleDownloadAllClick(
           )
         })
         downloadRetryCount += downloadResult.retryCount
-        recordDownloadStartOnce(markContext, state)
         successfulResources.push(
           resourceWithUsedNodeId(resource, markContext.usedNodeId ?? downloadResult.usedNodeId)
         )
@@ -980,6 +977,11 @@ export async function handlePendingResumeContinue(
   setParseErrorMessage(elements, '')
 
   try {
+    if (!method.canResume?.(record, buildRequestContext(state))) {
+      await clearPendingResumeRecord(record, elements, state)
+      return
+    }
+    recordDownloadStartOnce(markContext, state)
     const result = await resumeDownloadResource(resource, record, buildRequestContext(state), {
       onProgress: snapshot => {
         updateRuntimeDownloadProgress(markContext, snapshot)

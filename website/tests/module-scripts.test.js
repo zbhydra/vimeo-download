@@ -4281,7 +4281,7 @@ test('homepage download success mark message includes download stats', async () 
   }
 })
 
-test('workspace download source reports start after used node and annotates failed stats', async () => {
+test('workspace download source records start before authorization and annotates failed stats', async () => {
   const source = await readFile(
     path.resolve(repoDir, 'src/scripts/download/workspace-download.ts'),
     'utf8'
@@ -5691,109 +5691,92 @@ function snapshotResumeStoreGlobals() {
     window: globalThis.window,
     navigator: globalThis.navigator,
     indexedDB: globalThis.indexedDB,
-    URL: globalThis.URL
+    URL: globalThis.URL,
+    Worker: globalThis.Worker
   }
 }
 
-function installFakeOpfs() {
+/** 使用实际编译后的 Worker 协议处理器，仅替换浏览器文件与消息传递。 */
+function installFakeOpfs({ writeError, flushError, maxWriteBytes = Infinity, events = [] } = {}) {
+  globalThis.Worker = class {
+    constructor(url) {
+      const workerUrl = new URL(url)
+      workerUrl.pathname = workerUrl.pathname.replace(/\.ts$/, '.js')
+      this.scope = { postMessage: data => queueMicrotask(() => this.onmessage?.({ data })) }
+      this.ready = readFile(workerUrl, 'utf8').then(source => {
+        new Function('self', source.replace(/^export \{\};?$/m, ''))(this.scope)
+      })
+    }
+    postMessage(data) {
+      void this.ready.then(() => this.scope.onmessage({ data }))
+    }
+    terminate() {}
+  }
   const files = new Map()
+  const locks = new Set()
   const root = {
     async getFileHandle(name, options = {}) {
       if (!files.has(name)) {
-        if (!options.create) {
-          throw new DOMException('missing file', 'NotFoundError')
-        }
+        if (!options.create) throw new DOMException('missing file', 'NotFoundError')
         files.set(name, new Uint8Array())
       }
       return {
         async getFile() {
+          assert.equal(locks.has(name), false, '读取前必须释放写锁')
           return new File([files.get(name)], name)
         },
-        async createWritable() {
-          let draft = files.get(name).slice()
+        async createSyncAccessHandle() {
+          assert.equal(locks.has(name), false, '同一文件只有一个写句柄')
+          locks.add(name)
           return {
-            async truncate(size) {
-              draft = draft.slice(0, size)
+            truncate(size) {
+              const next = new Uint8Array(size)
+              next.set(files.get(name).subarray(0, size))
+              files.set(name, next)
             },
-            async seek() {},
-            async write(chunk) {
-              draft = chunk instanceof Uint8Array ? chunk.slice() : new Uint8Array(chunk)
+            write(data, { at }) {
+              if (writeError) throw writeError
+              const count = Math.min(data.byteLength, maxWriteBytes)
+              const next = new Uint8Array(Math.max(files.get(name).length, at + count))
+              next.set(files.get(name))
+              next.set(data.subarray(0, count), at)
+              files.set(name, next)
+              events.push('write')
+              return count
             },
-            async close() {
-              files.set(name, draft)
+            flush() {
+              events.push('flush')
+              if (flushError) throw flushError
             },
-            async abort() {}
+            close() {
+              assert.equal(locks.delete(name), true, '句柄只关闭一次')
+              events.push('close')
+            }
           }
         }
       }
     },
     async removeEntry(name) {
-      if (!files.has(name)) {
-        throw new DOMException('missing file', 'NotFoundError')
-      }
-      files.delete(name)
+      assert.equal(locks.has(name), false, '删除前必须释放写锁')
+      if (!files.delete(name)) throw new DOMException('missing file', 'NotFoundError')
     }
   }
   Object.defineProperty(globalThis, 'navigator', {
     configurable: true,
-    value: {
-      storage: {
-        async getDirectory() {
-          return root
-        }
-      }
-    }
+    value: { storage: { async getDirectory() { return root } } }
   })
   return files
 }
 
 function installFakeOpfsWithWriteFailure(writeError) {
-  const files = new Map()
-  const root = {
-    async getFileHandle(name, options = {}) {
-      if (!files.has(name)) {
-        if (!options.create) {
-          throw new DOMException('missing file', 'NotFoundError')
-        }
-        files.set(name, new Uint8Array())
-      }
-      return {
-        async getFile() {
-          return new File([files.get(name)], name)
-        },
-        async createWritable() {
-          return {
-            async truncate() {},
-            async seek() {},
-            async write() {
-              throw writeError
-            },
-            async close() {}
-          }
-        }
-      }
-    },
-    async removeEntry(name) {
-      files.delete(name)
-    }
-  }
-  Object.defineProperty(globalThis, 'navigator', {
-    configurable: true,
-    value: {
-      storage: {
-        async getDirectory() {
-          return root
-        }
-      }
-    }
-  })
-  return files
+  return installFakeOpfs({ writeError })
 }
 
 function clearResumeStoreGlobals() {
   delete globalThis.window
   delete globalThis.navigator
   delete globalThis.indexedDB
+  delete globalThis.Worker
   delete globalThis.URL
 }
 
@@ -5811,6 +5794,7 @@ function restoreResumeStoreGlobals(snapshot) {
   if (snapshot.indexedDB !== undefined) {
     globalThis.indexedDB = snapshot.indexedDB
   }
+  if (snapshot.Worker !== undefined) globalThis.Worker = snapshot.Worker
   if (snapshot.URL !== undefined) {
     globalThis.URL = snapshot.URL
   }
@@ -5958,18 +5942,18 @@ test('download temporary OPFS files clean only their own input and deferred outp
   try {
     const input = await module.createOpfsDownloadTempFile()
     const output = await module.createOpfsDownloadTempFile()
-    await input.writable.write(new Uint8Array([1, 2, 3]))
-    await input.writable.close()
+    await input.writer.write(new Uint8Array([1, 2, 3]), 0)
+    await input.writer.close()
     assert.equal((await input.getFile()).size, 3)
-    await output.writable.write(new Uint8Array([4, 5]))
-    await output.writable.close()
+    await output.writer.write(new Uint8Array([4, 5]), 0)
+    await output.writer.close()
     assert.equal((await output.getFile()).size, 2)
     await input.cleanup()
     await input.cleanup()
     assert.equal(files.size, 1)
     assert.equal((await output.getFile()).size, 2)
     const failed = await module.createOpfsDownloadTempFile()
-    await failed.writable.write(new Uint8Array([6]))
+    await failed.writer.write(new Uint8Array([6]), 0)
     await failed.cleanup()
     assert.equal(files.size, 1)
     await output.cleanup()
@@ -5985,10 +5969,8 @@ test('download resume store chooses OPFS resumable and does not persist clientRe
   const globals = snapshotResumeStoreGlobals()
   const values = installResumeStoreWindow()
   const files = installFakeOpfs()
-  globalThis.URL = {
-    createObjectURL() {
-      return 'blob:resume'
-    }
+  globalThis.URL = class extends globals.URL {
+    static createObjectURL() { return 'blob:resume' }
   }
 
   try {
@@ -6016,11 +5998,20 @@ test('download resume store chooses OPFS resumable and does not persist clientRe
       filename: 'demo-video.mp4',
       downloadUrl: 'https://cdn.example.com/demo.mp4'
     })
+    files.set(updated.methodState.tempFileName, new Uint8Array([1, 2, 3, 4, 9, 9, 9]))
     const loaded = await module.loadDownloadResumeRecord()
     assert.equal(loaded.downloadedBytes, 4)
     assert.equal(loaded.totalBytes, null)
     assert.equal(loaded.methodState.tempFileName, updated.methodState.tempFileName)
 
+    const resumedWriter = await module.openResumeWriter(loaded, loaded.downloadedBytes)
+    assert.equal(files.get(loaded.methodState.tempFileName).length, 4)
+    await resumedWriter.write(new Uint8Array([5, 6]))
+    await resumedWriter.flush()
+    await resumedWriter.close()
+    assert.deepEqual([...files.get(loaded.methodState.tempFileName)], [1, 2, 3, 4, 5, 6])
+    files.set(loaded.methodState.tempFileName, new Uint8Array(3))
+    assert.equal(await module.loadDownloadResumeRecord(), null)
     await module.clearDownloadResumeRecord(loaded)
     assert.equal(values.get(module.DOWNLOAD_RESUME_RECORD_STORAGE_KEY), undefined)
     assert.equal(files.size, 0)
@@ -6186,6 +6177,7 @@ test('download range stream resumes unknown size when 206 Content-Range start ma
   const { module, cleanup } = await importDownloadRangeStreamModule()
   const chunks = []
   const checkpoints = []
+  const events = []
 
   try {
     const response = new Response(new Uint8Array([5, 6]), {
@@ -6200,16 +6192,20 @@ test('download range stream resumes unknown size when 206 Content-Range start ma
       startByte: 4,
       fallbackTotalBytes: null,
       writer: {
+        async flush() { events.push('flush') },
         async write(chunk) {
+          events.push('write')
           chunks.push(...Array.from(chunk))
         },
         async close() {}
       },
       onCheckpoint: async snapshot => {
         checkpoints.push(snapshot)
+        events.push('checkpoint')
       }
     })
 
+    assert.deepEqual(events, ['write', 'flush', 'checkpoint'])
     assert.deepEqual(chunks, [5, 6])
     assert.equal(result.downloadedBytes, 6)
     assert.equal(result.totalBytes, null)
@@ -6239,6 +6235,7 @@ test('download range stream resume speed excludes existing bytes', async () => {
       startByte: 6,
       fallbackTotalBytes: 10,
       writer: {
+        async flush() {},
         async write() {
           now = 3_000
         },
@@ -6342,6 +6339,7 @@ test('download range stream turns browser Load failed into resumable interruptio
           startByte: 0,
           fallbackTotalBytes: 5,
           writer: {
+        async flush() {},
             async write(chunk) {
               chunks.push(...Array.from(chunk))
             },
@@ -6386,6 +6384,7 @@ test('download range stream rejects resume 200 before appending bytes', async ()
             startByte: 4,
             fallbackTotalBytes: 12,
             writer: {
+        async flush() {},
               async write(chunk) {
                 chunks.push(...Array.from(chunk))
               },
@@ -6427,6 +6426,7 @@ test('download range stream cancels invalid resumed response before appending by
           startByte: 4,
           fallbackTotalBytes: 12,
           writer: {
+        async flush() {},
             async write(chunk) {
               chunks.push(...Array.from(chunk))
             },
@@ -6621,6 +6621,99 @@ test('网站 SLS 的 user_id 为数字，缺少或无法识别账号时为 0', a
     }
   } finally {
     restore()
+    await cleanup()
+  }
+})
+
+
+test('OPFS writer handles partial random writes and closes before reads', async () => {
+  const { module, cleanup } = await importCompiledTypescriptModule(
+    path.resolve(repoDir, 'src/scripts/download/download-temp-storage.ts'),
+    'download-temp-storage.js', 'opfs-random-'
+  )
+  const globals = snapshotResumeStoreGlobals()
+  const events = []
+  installFakeOpfs({ maxWriteBytes: 2, events })
+  try {
+    const file = await module.createOpfsDownloadTempFile()
+    await file.writer.write(new Uint8Array([1, 2, 3, 4, 5, 6]), 0)
+    await file.writer.write(new Uint8Array([9, 8]), 2)
+    await file.writer.close()
+    await file.writer.close()
+    assert.deepEqual([...new Uint8Array(await (await file.getFile()).arrayBuffer())], [1, 2, 9, 8, 5, 6])
+    assert.deepEqual(events, ['write', 'write', 'write', 'write', 'flush', 'close'])
+    await file.cleanup()
+    await file.cleanup()
+  } finally {
+    restoreResumeStoreGlobals(globals)
+    await cleanup()
+  }
+})
+
+test('OPFS flush failure keeps its name and releases the handle before cleanup', async () => {
+  const { module, cleanup } = await importCompiledTypescriptModule(
+    path.resolve(repoDir, 'src/scripts/download/download-temp-storage.ts'),
+    'download-temp-storage.js', 'opfs-flush-error-'
+  )
+  const globals = snapshotResumeStoreGlobals()
+  const files = installFakeOpfs({ flushError: new DOMException('quota', 'QuotaExceededError') })
+  const originalConsoleError = console.error
+  console.error = () => {}
+  try {
+    const file = await module.createOpfsDownloadTempFile()
+    await file.writer.write(new Uint8Array([1]), 0)
+    await assert.rejects(file.writer.close(), error => error.originalName === 'QuotaExceededError')
+    await file.cleanup()
+    await file.cleanup()
+    assert.equal(files.size, 0)
+  } finally {
+    console.error = originalConsoleError
+    restoreResumeStoreGlobals(globals)
+    await cleanup()
+  }
+})
+
+test('download range stream never checkpoints an unflushed file and closes on failure', async () => {
+  const { module, cleanup } = await importDownloadRangeStreamModule()
+  let closed = 0
+  let saved = 0
+  try {
+    await assert.rejects(module.pipeRangeResponseToWriter(new Response(new Uint8Array([1, 2])), {
+      sourceId: 'flush-check', startByte: 0, fallbackTotalBytes: 2,
+      writer: {
+        async write() {},
+        async flush() { throw new DOMException('quota', 'QuotaExceededError') },
+        async close() { closed++ }
+      },
+      async onCheckpoint() { saved++ }
+    }), error => error.name === 'QuotaExceededError')
+    assert.equal(saved, 0)
+    assert.equal(closed, 1)
+  } finally {
+    await cleanup()
+  }
+})
+
+test('download range stream preserves close failure without more writer I/O', async () => {
+  const { module, cleanup } = await importDownloadRangeStreamModule()
+  let flushes = 0
+  let closes = 0
+  let saved = 0
+  const closeError = new DOMException('close flush quota', 'QuotaExceededError')
+  try {
+    await assert.rejects(module.pipeRangeResponseToWriter(new Response(new Uint8Array([1, 2])), {
+      sourceId: 'close-flush-check', startByte: 0, fallbackTotalBytes: 2,
+      writer: {
+        async write() {},
+        async flush() { flushes++ },
+        async close() { closes++; throw closeError }
+      },
+      async onCheckpoint() { saved++ }
+    }), error => error === closeError)
+    assert.equal(flushes, 1)
+    assert.equal(saved, 1)
+    assert.equal(closes, 1)
+  } finally {
     await cleanup()
   }
 })

@@ -4,6 +4,13 @@
  * 小文件使用内存；大文件使用本轮独占的 OPFS 文件，不保存可恢复状态。
  */
 
+import { createOpfsWriter, type OpfsWriter } from './opfs-writer'
+import { DownloadStorageError } from './download-storage-error'
+
+function storageError(error: Error, context: string): DownloadStorageError {
+  return new DownloadStorageError({ storageType: 'opfs', recoveryMode: 'current_page', operation: 'write_temp', context, cause: error })
+}
+
 /** 单次下载临时文件结果。 */
 export interface DownloadTempFileResult {
   /** 写入完成后的 Blob。 */
@@ -40,14 +47,14 @@ export function createMemoryDownloadTempWriter(): DownloadTempWriter {
   }
 }
 
-/** 创建一次性 OPFS 文件；调用者负责关闭 writable 后读取 File，保存完成后 cleanup。 */
+/** 创建一次性 OPFS 文件；关闭写锁后读取 File，保存完成后 cleanup。 */
 export async function createOpfsDownloadTempFile() {
   const root = await navigator.storage.getDirectory()
   const name = `download_temp_${crypto.randomUUID()}`
   const handle = await root.getFileHandle(name, { create: true })
-  let writable: FileSystemWritableFileStream
+  let writer: OpfsWriter
   try {
-    writable = await handle.createWritable()
+    writer = await createOpfsWriter(handle)
   } catch (error) {
     console.error(error)
     await root.removeEntry(name)
@@ -55,12 +62,29 @@ export async function createOpfsDownloadTempFile() {
   }
   let removed = false
   return {
-    writable,
+    writer: {
+      async write(data: Uint8Array, position: number): Promise<void> {
+        try {
+          await writer.write(data, position)
+        } catch (error) {
+          const cause = error instanceof Error ? error : new Error(String(error))
+          throw storageError(cause, 'download-temp-storage write')
+        }
+      },
+      async close(): Promise<void> {
+        try {
+          await writer.close()
+        } catch (error) {
+          const cause = error instanceof Error ? error : new Error(String(error))
+          throw storageError(cause, 'download-temp-storage close')
+        }
+      }
+    },
     getFile: () => handle.getFile(),
     async cleanup(): Promise<void> {
       if (removed) return
       try {
-        await writable.abort()
+        await writer.close()
       } catch (error) {
         console.error(error)
       }

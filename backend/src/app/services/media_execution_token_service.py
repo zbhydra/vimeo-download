@@ -11,13 +11,17 @@ import base64
 import hashlib
 import json
 import time
+import zlib
 from dataclasses import dataclass
 from typing import Any
 
 from cryptography.fernet import Fernet, InvalidToken
 from pydantic import TypeAdapter
 
-from app.constants.media_download import MEDIA_DOWNLOAD_MAX_SIZE_BYTES
+from app.constants.media_download import (
+    MEDIA_DOWNLOAD_MAX_SIZE_BYTES,
+    MEDIA_RESOURCE_TOKEN_MAX_LENGTH,
+)
 from app.core.config import settings
 from app.exceptions.common_exception import AppCommonException
 from app.i18n.common_code import CommonCode
@@ -28,7 +32,6 @@ _PROXY_TOKEN_TYPE = "media_proxy_execution"
 _RESOURCE_TOKEN_TYPE = "media_resource"
 _PROXY_TOKEN_TTL_SECONDS = 120
 _RESOURCE_TOKEN_TTL_SECONDS = 24 * 60 * 60
-_MAX_TOKEN_LENGTH = 1024 * 1024
 _MATERIAL_ADAPTER: TypeAdapter[DownloadMaterial] = TypeAdapter(DownloadMaterial)
 
 
@@ -123,7 +126,7 @@ class MediaExecutionTokenService:
         """加密签发包含完整 direct/client_mux 材料的 resource token。"""
 
         now = int(time.time())
-        return self._encode(
+        token = self._encode(
             purpose="resource",
             payload={
                 "typ": _RESOURCE_TOKEN_TYPE,
@@ -140,6 +143,15 @@ class MediaExecutionTokenService:
                 "exp": now + _RESOURCE_TOKEN_TTL_SECONDS,
             },
         )
+        if len(token) > MEDIA_RESOURCE_TOKEN_MAX_LENGTH:
+            raise AppCommonException(
+                CommonCode.MEDIA_PARSE_REQUIRES_CLIENT,
+                ext_msg=(
+                    "media_execution_token.issue_resource_token: compressed material "
+                    f"exceeds limit, source_id={source_id}, length={len(token)}"
+                ),
+            )
+        return token
 
     def decode_resource_token(self, token: str) -> ResourceMaterialClaims:
         """验签、校验过期时间并恢复完整资源材料。"""
@@ -199,6 +211,8 @@ class MediaExecutionTokenService:
 
     def _encode(self, *, purpose: str, payload: dict[str, object]) -> str:
         raw = json.dumps(payload, separators=(",", ":"), ensure_ascii=False).encode()
+        if purpose == "resource":
+            raw = zlib.compress(raw)
         return self._fernet(purpose).encrypt(raw).decode()
 
     def _decode(
@@ -209,13 +223,21 @@ class MediaExecutionTokenService:
         code: CommonCode,
         expired_code: CommonCode,
     ) -> dict[str, Any]:
-        if not token or len(token) > _MAX_TOKEN_LENGTH:
+        if not token or len(token) > MEDIA_RESOURCE_TOKEN_MAX_LENGTH:
             raise AppCommonException(
                 code, ext_msg="media_execution_token: token is empty or too large"
             )
         try:
-            payload = json.loads(self._fernet(purpose).decrypt(token.encode()).decode())
-        except (InvalidToken, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raw = self._fernet(purpose).decrypt(token.encode())
+            if purpose == "resource":
+                raw = zlib.decompress(raw)
+            payload = json.loads(raw.decode())
+        except (
+            InvalidToken,
+            zlib.error,
+            UnicodeDecodeError,
+            json.JSONDecodeError,
+        ) as exc:
             raise AppCommonException(
                 code,
                 ext_msg=f"media_execution_token: verification failed, purpose={purpose}",

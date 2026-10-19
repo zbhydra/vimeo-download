@@ -151,7 +151,7 @@ runner 返回值由 `completion` 和 `retryCount` 组成。
 
 1. 每次用户触发下载消费一次预授权 material，计费或计次由预授权阶段完成。
 2. 授权拿到 direct URL 后,按存储能力选择 OPFS / IndexedDB;都不可用时普通 Memory 下载。
-3. OPFS 时写单文件 checkpoint,并把当前 direct URL 写入方法字段。
+3. OPFS 每次先写入，再 flush，最后保存单文件 checkpoint，并把当前 direct URL 写入方法字段。
 4. 新下载过程中 direct URL 过期，清理记录并提示用户重新解析。
 5. `video.twimg.com` direct 响应没有对浏览器 `fetch` 暴露 `Content-Range`;X direct 只用 OPFS 保存本次流,跨刷新只允许 Restart,不做非 0 Range Continue。
 6. 完成后创建 object URL,清理 checkpoint。
@@ -213,11 +213,11 @@ runner 返回值由 `completion` 和 `retryCount` 组成。
 
 1. 接收 `Response`、`startByte`、writer、progress callback。
 2. `startByte > 0` 时要求 HTTP `206`。
-3. 校验 `Content-Range` 起点等于 `startByte`;非 0 续传必须能拿到可校验总大小或文件指纹。
-4. `size=null` 可以从头下载,但不能标记为任意偏移 `resumable`;只有拿到可校验总大小/文件指纹且 Provider 明确支持非 0 Range 时才允许 OPFS Continue,否则只能 restart/from 0。
+3. 校验 `Content-Range` 起点等于 `startByte`；不允许把 200 响应追加到非零偏移。
+4. 大小未知的 direct 仍可按起点匹配的 206 响应续传；不以未知总大小拒绝该协议。
 5. 服务端返回 `200`、Range 不可拼接或网络失败,抛出可识别错误,由方法清理记录并让按钮回到 Download。
-6. 每 1MiB 或 1 秒保存一次 checkpoint。
-7. 完成后从 OPFS `File` 创建 object URL,避免为了保存把大文件完整读入 JS 内存。
+6. 沿用既有节流间隔，按 `write → flush → 保存 checkpoint` 提交；关闭或 flush 失败仍释放文件写锁。
+7. 完成按 `flush → close → getFile` 从 OPFS `File` 创建 object URL；文件与记录偏移关系见[存储治理](tech-下载存储治理.md#5-刷新后恢复记录加载)。
 
 ### 8.4 direct Range 续传与 Continue 收口
 
@@ -322,6 +322,10 @@ website/src/scripts/download/
 - GA4/mark 记录 `web_download_mode_unsupported`,包含 `platform`、`download_mode`、`source_id`,不包含上游 URL。
 
 ## 12. 数据埋点
+
+`web_download_start` 表示本轮合法执行已提交给下载器：新下载由 `workspace-download.ts::runSingleResourcePlan` 在存储预检后、申请授权前记录；Continue 在恢复记录校验后记录。节点信息只补充诊断，不控制 start。成功后不补记 start。
+
+`web_download_success` 表示文件生成并已触发浏览器保存，不代表用户确认保存到磁盘。等待取消、转插件或页面离开允许没有终态；失败率使用 `failed / (success + failed)`，预检 blocked 单列。
 
 所有下载事件必须带:
 

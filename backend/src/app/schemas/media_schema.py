@@ -9,6 +9,7 @@ from typing import Annotated, Any, Literal, TypeAlias
 from pydantic import BaseModel, Field
 
 from app.contracts.media_download import MediaDownloadMode
+from app.constants.media_download import MEDIA_RESOURCE_TOKEN_MAX_LENGTH
 
 
 class MediaParseV2Request(BaseModel):
@@ -188,7 +189,7 @@ class MediaDownloadPreV2Request(BaseModel):
     resource_token: str = Field(
         ...,
         min_length=1,
-        max_length=1024 * 1024,
+        max_length=MEDIA_RESOURCE_TOKEN_MAX_LENGTH,
         description="parse-v2 返回的 resource token",
     )
     preferred_node_id: Any = Field(

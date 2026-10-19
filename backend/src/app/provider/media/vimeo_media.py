@@ -20,6 +20,8 @@ from app.provider.media.base_media import (
     JsonDownloadResult,
     MediaParseRequest,
     MediaParseResult,
+    MediaProviderError,
+    MediaProviderErrorCode,
     ProviderPolicy,
     build_client_mux_json_result,
     build_direct_json_result,
@@ -156,9 +158,12 @@ class VimeoMedia(BaseMedia):
             raise self._error("canonical", f"缺少视频ID，path={path}")
         params = {
             key: value
-            for key, value in parse_qs(parsed.query).items()
+            for key, value in parse_qs(parsed.query, keep_blank_values=True).items()
             if not key.lower().startswith(("utm_", "fbclid", "gclid"))
         }
+        if match := re.fullmatch(r"/(\d+)/([0-9a-fA-F]{10})", path):
+            path = f"/{match[1]}"
+            params.setdefault("h", [match[2]])
         return urlunsplit(
             ("https", "vimeo.com", path, urlencode(params, doseq=True), "")
         )
@@ -288,7 +293,7 @@ class VimeoMedia(BaseMedia):
         proxy_url: str,
     ) -> tuple[MediaParseResponse, JsonDownloadResult]:
         # 同一次材料准备共用截止时间，避免导航、配置与清单各自重新计时。
-        async with asyncio.timeout(60):
+        async with asyncio.timeout(50):
             return await self._capture_vimeo(canonical, original, source_id, proxy_url)
 
     async def _capture_vimeo(
@@ -421,19 +426,32 @@ class VimeoMedia(BaseMedia):
             )
             page_status = navigation.status if navigation is not None else None
             page_title = await page.title()
-            if await page.locator("#challenge-stage").count():
-                raise AppCommonException(
-                    CommonCode.MEDIA_PARSE_NODE_UNAVAILABLE,
-                    ext_msg=(
-                        "vimeo_page: Cloudflare challenge blocked player config, "
-                        f"video_id={video_id}, status={page_status}"
-                    ),
-                )
             inline = await page.evaluate("window.playerConfig ?? null")
             if inline is not None and not config_ready.done():
                 config = _Config.model_validate(inline)
                 if config.id == video_id:
                     config_ready.set_result(config)
+            if not config_ready.done():
+                challenged = (
+                    navigation is not None
+                    and navigation.headers.get("cf-mitigated") == "challenge"
+                ) or bool(await page.locator("#challenge-stage").count())
+                if (
+                    challenged
+                    or page_status == 429
+                    or (page_status is not None and page_status >= 500)
+                ):
+                    raise MediaProviderError(
+                        MediaProviderErrorCode.NODE_UNAVAILABLE,
+                        f"vimeo_page: 播放器暂不可用，video_id={video_id}, "
+                        f"status={page_status}, challenge={challenged}",
+                    )
+                if page_status in {401, 403, 404}:
+                    raise MediaProviderError(
+                        MediaProviderErrorCode.RESOURCE_UNREACHABLE,
+                        f"vimeo_page: 资源不存在或当前无法访问，"
+                        f"video_id={video_id}, status={page_status}",
+                    )
             config = await config_ready
             filename = sanitize_filename(
                 f"{config.title}.mp4", fallback="vimeo-media.mp4"

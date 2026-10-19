@@ -121,7 +121,11 @@ export function mapErrorToCopy(
   }
 
   if (error instanceof DownloadStorageError) {
-    return error.message
+    if (error.originalName === 'QuotaExceededError') {
+      return (copy.errors.browserStorageInsufficientUseExtension ?? copy.errors.downloadFailed ?? fallback)
+        .replace(/\{(?:file_size|available_space|required_space)\}/g, '-')
+    }
+    return copy.errors.downloadFailed ?? fallback
   }
 
   if (error instanceof HomepageApiError) {
