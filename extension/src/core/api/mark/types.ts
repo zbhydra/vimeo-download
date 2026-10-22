@@ -22,7 +22,7 @@ export const MARK_TYPE = {
   LOGIN_CLICK: 'login_click',
   /** 凭据兑换并持久化完成 */
   LOGIN_SUCCESS: 'login_success',
-  /** 用户主动关闭插件登录弹窗 */
+  /** 用户取消 Google 授权 */
   LOGIN_CANCELLED: 'login_cancelled',
   /** 登录未完成，阶段与原因放在 mark_msg */
   LOGIN_FAILED: 'login_failed',

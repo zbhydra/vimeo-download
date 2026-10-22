@@ -1,9 +1,10 @@
 /** Google 授权地址与回调的纯协议检查；不伪造后端兑换结果。 */
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const redirectUrl = 'https://abcdefghijklmnopabcdefghijklmnop.chromiumapp.org/google-login'
 
 describe('Google 登录协议', () => {
+  afterEach(() => vi.restoreAllMocks())
   beforeEach(() => {
     vi.resetModules()
     vi.stubGlobal('__DEV__', true)
@@ -39,5 +40,24 @@ describe('Google 登录协议', () => {
       status: 'failed',
       reason: 'missing_code'
     })
+  })
+
+  it('用户关窗只记录一次取消，成功事件为零且归因保持一致', async () => {
+    const { markApi } = await import('@/core/api/mark')
+    const record = vi.spyOn(markApi, 'record')
+    const { googleLoginService } = await import('@/background/services/GoogleLoginService')
+    vi.mocked(chrome.identity.launchWebAuthFlow).mockRejectedValueOnce(
+      new Error('The user did not approve access.')
+    )
+    await expect(googleLoginService.start({ source: 'popup_quota_counter' })).resolves.toEqual({
+      status: 'cancelled',
+      reason: 'user_closed_window'
+    })
+    expect(record).toHaveBeenCalledOnce()
+    expect(record).toHaveBeenCalledWith(
+      'login_cancelled',
+      JSON.stringify({ source: 'popup_quota_counter', stage: 'google', reason: 'user_closed_window' }),
+      {}
+    )
   })
 })

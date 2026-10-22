@@ -1,6 +1,6 @@
 /**
  * 固定真实 player 样本 → content 资源 → popup → background/offscreen → 原生下载。
- * 项目 API 只访问真实 localhost:7900；普通扩展页面只证明 UI/产物，action 生命周期另验。
+ * 项目 API 只访问构建配置指定的本地真实后端；action 生命周期另验。
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -13,6 +13,9 @@ import type { DownloadHistoryEntry } from '../../src/core/storage/downloadHistor
 
 const SAMPLE_URL = 'https://player.vimeo.com/video/1196869805'
 const DOWNLOAD_SUBDIR = 'vimeo-video-downloader'
+const API_BASE_URL =
+  process.env.EXTENSION_API_BASE_URL?.trim().replace(/\/+$/, '') || 'http://localhost:7900'
+const QUOTA_CHECK_URL = `${API_BASE_URL}/api/client/quota/check`
 
 test('真实 player 的 FIFO、MP4、MP3 裁剪、额度与原生输入边界', async ({
   context,
@@ -24,10 +27,7 @@ test('真实 player 的 FIFO、MP4、MP3 裁剪、额度与原生输入边界', 
   const quotaResults: { httpStatus: number; code: number; data: QuotaCheckResponse }[] = []
   const quotaReads: Promise<void>[] = []
   context.on('response', response => {
-    if (
-      response.request().serviceWorker() &&
-      response.url() === 'http://localhost:7900/api/client/quota/check'
-    ) {
+    if (response.request().serviceWorker() && response.url() === QUOTA_CHECK_URL) {
       quotaReads.push(
         response.json().then(body => {
           quotaResults.push({ httpStatus: response.status(), ...body })
@@ -171,12 +171,15 @@ async function checkPopupDialogs(popup: Page): Promise<void> {
   await expect(history).toBeVisible()
   await popup.keyboard.press('Escape')
   await expect(history).toBeHidden()
-  await popup.locator('.login-btn').click()
-  const login = popup.locator('dialog[aria-labelledby="vdl-login-modal-title"]')
-  await expect(login).toBeVisible()
-  await popup.keyboard.press('Escape')
-  await expect(login).toBeHidden()
-  await expect(popup.locator('.login-btn')).toBeFocused()
+  const [login] = await Promise.all([
+    popup.context().waitForEvent('page'),
+    popup.locator('.login-btn').click()
+  ])
+  await expect(login).toHaveURL(/\/ext-login\.html\?source=popup$/)
+  await expect(login.locator('.login-google-button')).toBeVisible()
+  await expect(login.locator('input[type="email"]')).toBeVisible()
+  await login.close()
+  await popup.bringToFront()
 }
 
 /** 原生不完整 number 输入须拒绝；直接派发 click 也不能越过共同提交校验。 */

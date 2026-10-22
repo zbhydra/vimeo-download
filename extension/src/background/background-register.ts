@@ -209,7 +209,7 @@ export const METHOD_TARGETS = {
   getVimeoPlayerConfig: ['content'],
   /** Popup 与 content 共用 background 安装身份和 SLS 写入。 */
   recordMark: ['content', 'popup'],
-  /** startGoogleLogin 只允许扩展自有页面调用：登录面只存在于 popup。 */
+  /** startGoogleLogin 只允许扩展自有页面调用，登录表单由插件登录页承载。 */
   startGoogleLogin: ['popup'],
   /** offscreen 任务生命周期回传只允许 offscreen 调用。 */
   taskProgress: ['offscreen'],

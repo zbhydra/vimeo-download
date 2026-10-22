@@ -132,7 +132,7 @@ return value
 | 回跳内容 | 处理 |
 | --- | --- |
 | `google_login_code` | 用一次性 code 调 `/api/client/auth/google/exchange` 换正式 token 并写入三键 |
-| `google_email_verification` | 记录失败打点，提示用户改走 Popup 内邮箱登录 |
+| `google_email_verification` | 记录失败打点并返回邮箱，登录页原地展开验证码步骤（§9.4） |
 | `google_login_error=access_denied` | **归为用户取消**，静默处理（与 Chrome 关窗同口径），不当作失败展示 |
 | 其它 error 或缺 code | `missing_code` / 原因为失败，记录日志与打点 |
 
@@ -189,14 +189,14 @@ Authorized JavaScript origins 需包含 `https://vimeodownloader.app`；本地 O
 
 ## 9. extension browser identity 登录(已实施)
 
-插件主动登录走 **Chrome identity 授权窗口**：background 用 `chrome.identity.launchWebAuthFlow({interactive:true})` 打开后端的 OAuth authorize 入口，后端把 `return_to` 设为扩展自己的 `chromiumapp.org` 回调地址，Google 完成授权后由后端 303 回该地址，background 捕获最终 URL 并用一次性 code 换 token。RPC 返回值只是 popup 存活时的附加信息，不承担完成语义。
+插件登录页的 Google 按钮走 **Chrome identity 授权窗口**：background 用 `chrome.identity.launchWebAuthFlow({interactive:true})` 打开后端的 OAuth authorize 入口，后端把 `return_to` 设为扩展自己的 `chromiumapp.org` 回调地址，Google 完成授权后由后端 303 回该地址，background 捕获最终 URL 并用一次性 code 换 token。登录页等待 RPC 结果，展示成功、邮箱二次确认或失败。
 
-> 授权窗口只能由 background 发起：`launchWebAuthFlow({interactive:true})` 打开的窗口会抢焦点，popup 随之被 Chrome 关闭。整条链路——打开授权窗口、解析回跳、兑换一次性 code、写入登录态、终态打点——都在 `GoogleLoginService` 完成，不依赖 popup 存活；用户重开 popup 时由 `authStore.initialize()` 从 storage 恢复登录态。
+> `GoogleLoginService` 负责打开授权窗口、解析回跳、兑换一次性 code、写入登录态和终态打点；登录页负责 UI 与成功去向。用户重开 popup 时由 `authStore.initialize()` 从 storage 恢复登录态。
 
 ### 9.1 登录流程
 
 ```text
-用户在插件 Popup 点击登录
+用户打开插件登录页，点击 Google 按钮
   -> background 取 redirectUrl = chrome.identity.getRedirectURL("google-login")
      （形如 https://<32 位扩展 ID>.chromiumapp.org/google-login）
   -> background 拼 authorize URL：后端 /api/client/auth/google/oauth/authorize
@@ -206,6 +206,7 @@ Authorized JavaScript origins 需包含 `https://vimeodownloader.app`；本地 O
   -> 浏览器捕获回调，把最终 URL 交给 background
   -> background 解析回跳（google_login_code / google_email_verification / google_login_error）
   -> 命中一次性 code 时调 /api/client/auth/google/exchange 写入认证三键
+  -> 登录页按 source 展示成功提示或返回插件订阅页（§9.4）
   -> 用户重开 Popup，既有初始化读取 storage 展示账号与额度
 ```
 
@@ -215,7 +216,7 @@ Authorized JavaScript origins 需包含 `https://vimeodownloader.app`；本地 O
 | --- | --- |
 | 用户关闭授权窗口（Chrome 固定文案 `The user did not approve access.`） | 归为取消，静默，不展示失败 |
 | 回跳 `google_login_error=access_denied` | 归为取消，静默，不展示失败 |
-| 回跳 `google_email_verification` | 记录失败打点；提示用户重开 Popup 走邮箱验证码登录 |
+| 回跳 `google_email_verification` | 记录失败打点，返回邮箱，由登录页原地展开验证码步骤（§9.4） |
 | 回跳缺结果参数 | 按 `missing_code` 失败，记录日志与打点 |
 | 一次性 code 兑换失败 | 记录失败打点；不清除旧登录态，用户可重新发起 |
 
@@ -235,6 +236,51 @@ Authorized JavaScript origins 需包含 `https://vimeodownloader.app`；本地 O
 - 一次性 code 180 秒 TTL、原子消费；回跳 URL 不携带任何可用 token。
 - Website 与插件继续独立登出；跨账号切换只覆盖插件 storage，旧账号服务端 token 按 TTL 自然过期。
 
+### 9.4 插件登录页
+
+插件登录页是 Google 与邮箱登录的唯一承载面，Google 按钮与邮箱表单同页常驻。Popup 与插件订阅页只提供登录入口。UI 规格见 [用户系统产品需求](./feat.md#extension-插件登录页)。
+
+文件树：
+
+```text
+extension/
+  ext-login.html                          登录页入口（vite additionalInputs）
+  src/login/main.ts                       挂载 Vue / i18n
+  src/login/LoginApp.vue                  卡片、品牌、成功状态与去向判定
+  src/login/LoginPanel.vue                Google / 邮箱 / 验证码 / 条款
+  src/login/loginTheme.ts                 卡片与表单颜色
+  src/core/utils/loginUrl.ts              登录页 URL 合同
+  src/core/composables/loginPage.ts        统一入口与显式 source 打点
+  src/background/services/GoogleLoginService.ts  Google 授权、兑换、终态打点
+```
+
+登录页 URL 合同：`chrome-extension://<id>/ext-login.html?source=<LoginSource>`。
+
+| 参数 | 必传 | 说明 |
+| --- | --- | --- |
+| `source` | 否 | 登录入口归因，取值同 `LOGIN_SOURCES`；缺失或非法回退 `popup` |
+
+`openLoginPage(source)` 先记录一次 `login_click`，再导航到登录页：popup 新开标签页，插件订阅页在当前标签页跳转。入口根据当前扩展资源页路径选择导航方式，不维护第二份宿主状态。登录页解析 URL 后将 `source` 作为 prop 传给 `LoginPanel`，邮箱成功与失败打点显式接收该来源。
+
+`GoogleLoginService.start` 只接收登录请求，不区分调用方是否带 `tabId`。收到 `email_verification` 时将邮箱返回给登录页，由页面填入邮箱并切到验证码步骤。
+
+Google 授权调用的 RPC 超时：授权窗口内的选账号、输密码、二次认证都计入同一次 `startGoogleLogin` 调用，沿用普通 RPC 的 30 秒默认超时会让标签页宿主收不到二次确认与成功结果；调用时单独传 660 秒（后端 OAuth state 有效期 600 秒 + 60 秒余量），不改全局默认。
+
+登录成功去向只由 `source` 决定：
+
+| 来源 | 成功去向 |
+| --- | --- |
+| `popup` | 清除 `STORAGE_KEYS.PENDING_PREMIUM_PURCHASE`，保留品牌并展示成功提示 |
+| `popup_upgrade_now` / `popup_quota_counter` / `upgrade_modal` | `location.replace` 到插件订阅页，即使没有待购记录也返回；由订阅页恢复购买选择 |
+
+待购记录由 `PremiumView` 在未登录确认购买时写入；订阅页恢复并命中套餐与渠道后，先 `clearPendingPurchase()` 消费持久化记录，再展示购买确认。渠道失效时同样清除记录，停留在套餐页。取消确认后重开订阅页不会再次弹出旧商品。
+
+打点：登录页加载不重复记点击。邮箱兑换并持久化成功后由页面记一次 `login_success`；Google 成功与取消由 background 各自记一次，页面不重复记录。关闭登录标签页不记取消。
+
+已知限制：
+- 登录成功后不自动关闭标签页或拉起 Popup；重复点击不复用已有登录标签页。
+- 用户关闭登录页即放弃，验证码在后端 10 分钟内仍有效，但重开时需重新输入邮箱（同邮箱 60 秒发送冷却仍生效）。
+
 ## 10. 实现代码索引
 
 - Google 认证 service（id_token 校验 / JWKS / 权威邮箱 / code 换 token）：`@backend/src/app/services/google_auth_service.py`
@@ -242,7 +288,7 @@ Authorized JavaScript origins 需包含 `https://vimeodownloader.app`；本地 O
 - Google 登录 API（oauth authorize / callback / exchange / google-login）：`@backend/src/app/api/client/auth_client.py`
 - extension Google 授权登录服务（打窗口 / 解析回跳 / 兑换 / 终态打点）：`@extension/src/background/services/GoogleLoginService.ts`
 - extension 登录态写入与 API：`@extension/src/core/api/auth/api.ts`
-- extension Popup 登录入口：`@extension/src/popup/components/LoginModal.vue` `@extension/src/popup/components/AppHeader.vue`
+- extension 登录界面：`@extension/src/login/LoginPanel.vue`（表单）`@extension/src/login/LoginApp.vue`（页面）`@extension/src/core/composables/loginPage.ts`（统一入口）
 - website 前端 Google（Identity 加载 / One Tap / 自定义按钮）：`@website/src/scripts/runtime/auth.ts`
 - website Pricing 页 redirect 收尾与登录控制：`@website/src/components/pricing/pricing-auth-controller.ts`（`handleGoogleRedirectResult`）
 - website 认证弹窗：`@website/src/components/pricing/PricingAuthModal.astro`
@@ -266,8 +312,6 @@ Authorized JavaScript origins 需包含 `https://vimeodownloader.app`；本地 O
 
 ### 插件登录入口与升级去向
 
-- 插件 popup 的 `LoginModal` 承担登录界面；Google 授权/code 兑换与邮箱 code 兑换的后台完成不依赖 popup 存活。邮箱 owner 合同见 [账号与认证](./tech-账号与认证.md#81-邮箱验证码登录)。
-- 登录入口的业务归因取值固定为 `popup` / `popup_upgrade_now` / `popup_quota_counter` / `upgrade_modal`，其中 `popup_upgrade_now`、`popup_quota_counter` 与 `upgrade_modal` 同时保留升级意图。
-- **没有登录面的上下文（如 content 页面）打开登录时退回订阅页**，只记录 warning，保证页面入口仍有一条可用路径。
-- 登录取消、回跳缺 code、兑换或持久化失败都不打开 Pricing；登录成功后也不自动跳转 Pricing，升级仍由用户主动点击升级入口触发。
+- 登录表单与成功去向统一见 §9.4；邮箱兑换与登录态写入 owner 见 [账号与认证](./tech-账号与认证.md#81-邮箱验证码登录)。
+- 登录取消、回跳缺 code、兑换或持久化失败时保留登录页，用户可再次发起。
 - 升级动作由宿主决定：popup 打开内嵌 `PremiumView`，content 页面经 `UpgradeModalManager` 打开官网 Pricing（`utm_source=extension` + `source=<入口>`，页面见 `@../011.Pricing页/feat.md`）。渲染位置参数不决定业务动作；导航失败只记录错误，不回滚登录态。

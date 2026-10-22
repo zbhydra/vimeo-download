@@ -49,8 +49,8 @@ describe('ExtensionMarkReporter', () => {
     await vi.waitFor(() => expect(mocks.recordMark).toHaveBeenCalledOnce())
     expect(mocks.recordMark).toHaveBeenCalledWith(MARK_TYPE.UPGRADE_MODAL_OPEN, '', {})
 
-    const handleLoginModalOpened = mocks.eventOn.mock.calls[1]?.[1] as () => void
-    handleLoginModalOpened()
+    const handleLoginPromptOpened = mocks.eventOn.mock.calls[1]?.[1] as () => void
+    handleLoginPromptOpened()
     await vi.waitFor(() => expect(mocks.recordMark).toHaveBeenCalledTimes(2))
     expect(mocks.recordMark).toHaveBeenLastCalledWith(MARK_TYPE.LOGIN_MODAL_OPEN, '{"source":"upgrade_modal"}', {})
 

@@ -24,9 +24,6 @@
       @upgrade="openPremiumView('upgrade_modal')"
     />
 
-    <!-- 插件本地登录弹窗 -->
-    <LoginModal @success="handleLoginSuccess" />
-
     <!-- 设置弹层 -->
     <SettingsModal />
 
@@ -60,7 +57,6 @@ import AppFooter from './components/AppFooter.vue'
 import AnnouncementBar from './components/AnnouncementBar.vue'
 import SettingsModal from './components/SettingsModal.vue'
 import UpgradeModal from '@/core/content/components/UpgradeModal.vue'
-import LoginModal from './components/LoginModal.vue'
 import PremiumView from './components/PremiumView.vue'
 import HistoryView from './components/HistoryView.vue'
 import Toast from '@/core/components/Toast.vue'
@@ -125,15 +121,6 @@ onUnmounted(() => {
   eventSubscriber.destroy()
   downloadStatusStore.destroy()
 })
-
-/** 登录弹窗成功后重新校验令牌并刷新配额，无需重开 Popup。 */
-async function handleLoginSuccess(): Promise<void> {
-  try {
-    await authStore.initialize()
-  } catch (error) {
-    logger.error('[Popup] 登录后刷新登录态失败:', error)
-  }
-}
 
 // 事件处理
 /** 面板发来的单个资源（片段区间已并入身份）直接交给 content 下载。 */

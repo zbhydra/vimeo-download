@@ -66,7 +66,7 @@ Playwright 使用 `fullyParallel=false`、`workers=1`；`retries` 在本地为 0
 
 ## 不在当前 E2E 的范围
 
-- Popup 登录、Pricing、语言切换、空态和假资源列表不用 E2E 验收。
+- 完整登录流程、Pricing、语言切换、空态和假资源列表不用当前 Vimeo E2E 验收；登录入口仅检查新开插件登录页及 Google 与邮箱表单同页。
 - 面板选项解析、配置捕获、mux 分段边界、局部失败与并发由 Unit/Integration 覆盖。
 - `tests/manual/*.manual.spec.ts` 是人工诊断，不进入自动化通过数（当前仓库没有 manual 套件）。
 - 邮箱登录真实链路单独在 `tests/integration/email-login-real.spec.ts`，不属于 Playwright E2E project。

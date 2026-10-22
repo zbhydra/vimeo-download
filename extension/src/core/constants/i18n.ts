@@ -265,9 +265,9 @@ export const I18N_KEYS = {
     LOGIN: 'auth.login',
     /** 退出登录 */
     LOGOUT: 'auth.logout',
-    /** 登录弹窗标题 */
+    /** 登录页标题 */
     MODAL_TITLE: 'auth.modal.title',
-    /** 登录弹窗说明 */
+    /** 登录页说明 */
     MODAL_DESCRIPTION: 'auth.modal.description',
     /** 邮箱字段标签 */
     MODAL_EMAIL_LABEL: 'auth.modal.emailLabel',
@@ -287,8 +287,6 @@ export const I18N_KEYS = {
     MODAL_OR: 'auth.modal.or',
     /** 使用 Google 继续 */
     MODAL_CONTINUE_WITH_GOOGLE: 'auth.modal.continueWithGoogle',
-    /** 登录弹窗关闭按钮 */
-    MODAL_CLOSE: 'auth.modal.close',
     /** 验证码已发送 */
     MODAL_CODE_SENT: 'auth.modal.codeSent',
     /** 邮箱非法 */
@@ -304,7 +302,11 @@ export const I18N_KEYS = {
     /** 服务条款 */
     MODAL_TERMS_LINK: 'auth.modal.termsLink',
     /** 隐私政策 */
-    MODAL_PRIVACY_LINK: 'auth.modal.privacyLink'
+    MODAL_PRIVACY_LINK: 'auth.modal.privacyLink',
+    /** 插件登录页：登录成功标题 */
+    PAGE_SUCCESS_TITLE: 'auth.page.successTitle',
+    /** 插件登录页：登录成功后引导回到插件 */
+    PAGE_SUCCESS_DESCRIPTION: 'auth.page.successDescription'
   },
 
   /** 订阅相关 */

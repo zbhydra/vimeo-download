@@ -147,7 +147,6 @@ async function mountPopup(): Promise<VueWrapper> {
         AnnouncementBar: true,
         SettingsModal: true,
         UpgradeModal: true,
-        LoginModal: true,
         PremiumView: true,
         HistoryView: true
       }

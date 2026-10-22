@@ -11,7 +11,7 @@
 - 本地调试：`pnpm dev` 使用 `vite build --watch --mode development` 构建 `dist`，并通过当前 Microsoft Edge 的 CDP `DevToolsActivePort` 执行 `Extensions.loadUnpacked` 重新加载本地 unpacked extension；不创建新 profile，不接管浏览器启动。
 - **Chrome Manifest V3**（`manifest_version: 3`）：站点静态数据以 `extension/src/platforms/registry.ts` 的 `SITE_REGISTRATION` 为唯一事实源，权限与入口的最终组装以 `extension/vite.config.ts` 的 `webExtension({ manifest })` 配置为准。`permissions` 当前为 `storage` / `identity` / `downloads` / `offscreen` / `notifications`（offscreen 用于 DASH/HLS 下载的 offscreen document；notifications 用于下载终态系统通知），`host_permissions` 只含 Vimeo 页面与 Vimeo 媒体 CDN。标签页 URL 只通过已限定的 host_permissions 读取，不申请 `activeTab` 或 `tabs`。API 与 SLS 走标准 CORS，Google 登录走 `identity` 权限 + `chrome.identity.launchWebAuthFlow` 交互窗口（不注入 content script、不授予官网 host access、不申请 host_permissions），两者均不重复进入 host_permissions。
 - e2e：Playwright。
-- 入口页：`popup`（`src/popup.html`）。旧 `options_page` 已删除；购买收进 popup 内嵌购买视图（页面注入场景回退官网订阅购买页，路径常量 `WEBSITE.PRICING_PATH` = `/ext-pricing/`，定义在 `extension/src/core/api/config.ts`，由 `core/utils/pricingUrl.ts` 拼接来源参数），订阅管理入口在用户菜单（见 `@../006.订阅系统/tech-订阅商品与状态.md`）。
+- 入口页：`popup`（`src/popup.html`）；扩展标签页 `ext-pricing.html`（插件订阅页）与 `ext-login.html`（插件登录页，统一承载 Google 与邮箱登录，见 `@../007.用户系统/tech-第三方登录.md` §9.4）由 vite `additionalInputs` 打包。旧 `options_page` 已删除；购买由独立插件订阅页与 popup 内嵌购买视图承载（页面注入场景回退官网订阅购买页，路径常量 `WEBSITE.PRICING_PATH` = `/ext-pricing/`，定义在 `extension/src/core/api/config.ts`，由 `core/utils/pricingUrl.ts` 拼接来源参数），订阅管理入口在用户菜单（见 `@../006.订阅系统/tech-订阅商品与状态.md`）。
 
 ### A2. 目录结构（五上下文 + 共享核心）
 
@@ -56,7 +56,7 @@ extension/src/
 
 **上下文划分**：
 - `background/`（Service Worker）、`content/`（Content Script）、`injected/`（MAIN world 注入页上下文）、`offscreen/`（offscreen document）各有独立入口；offscreen 不在 manifest 声明入口，由 background 在首个下载任务时用 `chrome.offscreen.createDocument` 惰性创建（见 A2.1）。
-- 旧 `options/` 设置页已删除；`popup/`（弹窗 UI）承载单视频操作面板、登录状态、额度/升级入口，底部固定显示可点击、可复制的支持邮箱，复制结果通过全局 Toast 反馈。Popup 固定 448px 宽、最小 300px、最大 600px 高；header 与 footer 固定，主区（视频信息 / 四行档位 / 时间裁剪）超出上限时内部滚动；四行档位的 Video 行另带「带音轨 / 无音轨」独立开关，它是该行的行内控件、不是主区独立区块（见 `@../002.下载功能/tech-扩展端Vimeo本地下载.md` §12.5）。宽度以 header 控件与 footer 整句能完整显示为准；header 额度计数并入订阅按钮、已登录只显示头像，常见 locale 单行放下，订阅文案过长的 locale 才折到第二行（文案不省略）。header 的设置齿轮打开设置弹层（界面语言 + 保存位置，唯一编辑入口）；额度与升级入口打开 popup 内嵌购买视图；主区之下、footer 之间是任务队列与公告跑马灯。未登录按钮经真实 background RPC 发起 Google 登录：background 用 `chrome.identity.launchWebAuthFlow` 打开后端 `/api/client/auth/google/oauth/authorize`，用户完成授权后由后端 303 回 `https://<扩展 ID>.chromiumapp.org/google-login`，background 解析回跳并用一次性 code 换取登录态后写入 storage；Popup 被授权窗口抢焦点关闭也不影响登录完成，重开 Popup 由 auth store 从 storage 恢复账号。邮箱验证码登录仍由 Popup 内的登录弹窗承担。
+- 旧 `options/` 设置页已删除；`popup/`（弹窗 UI）承载单视频操作面板、登录状态、额度/升级入口，底部固定显示可点击、可复制的支持邮箱，复制结果通过全局 Toast 反馈。Popup 固定 448px 宽、最小 300px、最大 600px 高；header 与 footer 固定，主区（视频信息 / 四行档位 / 时间裁剪）超出上限时内部滚动；四行档位的 Video 行另带「带音轨 / 无音轨」独立开关，它是该行的行内控件、不是主区独立区块（见 `@../002.下载功能/tech-扩展端Vimeo本地下载.md` §12.5）。宽度以 header 控件与 footer 整句能完整显示为准；header 额度计数并入订阅按钮、已登录只显示头像，常见 locale 单行放下，订阅文案过长的 locale 才折到第二行（文案不省略）。header 的设置齿轮打开设置弹层（界面语言 + 保存位置，唯一编辑入口）；顶栏额度与升级按钮打开独立插件订阅页，额度不足弹窗确认打开 popup 内嵌购买视图；主区之下、footer 之间是任务队列与公告跑马灯。未登录按钮经 `core/composables/loginPage.ts` 的 `openLoginPage(source)` 打开插件登录页，Google 按钮与邮箱表单同页；Google 授权、兑换与登录态持久化由 background 负责，重开 Popup 由 auth store 从 storage 恢复账号。入口导航、成功去向与归因合同见 [第三方登录](../007.用户系统/tech-第三方登录.md#94-插件登录页)。
 - `core/` 是**跨上下文共享核心**——API 客户端、RPC 框架、Pinia store、事件、存储与共享组件。Vimeo content 负责页面内解析与按钮面板；全部下载统一入队 background 的 `DownloadOrchestrator`（页面按钮与 Popup 都只投递完整 MediaResource），DASH/HLS 分片读取与 remux 在 offscreen document 执行（见 `@../002.下载功能/tech-扩展端Vimeo本地下载.md` §8），injected 只保留原生 config 捕获。
 
 ### A2.1 offscreen document 上下文
@@ -69,9 +69,9 @@ DASH/HLS 下载需要长生命周期执行环境且只用 blob API 与 OPFS（�
 
 ### A2.2 Popup 与内容页模态
 
-Login、Settings、History、Premium、Upgrade 使用常驻 closed 原生 `dialog`，由 `core/composables/nativeDialog.ts` 将 owner 显隐同步到 `showModal/close`，`close` 事件回写原 owner。普通扩展页与 Shadow DOM 使用原生焦点、Tab 和最上层 Escape；action popup 的 Escape 可由浏览器宿主关闭整个 popup，焦点返回来源页，用户重开继续，不额外拦截宿主键盘。
+Settings、History、Premium、Upgrade 使用常驻 closed 原生 `dialog`，由 `core/composables/nativeDialog.ts` 将 owner 显隐同步到 `showModal/close`，`close` 事件回写原 owner。普通扩展页与 Shadow DOM 使用原生焦点、Tab 和最上层 Escape；action popup 的 Escape 可由浏览器宿主关闭整个 popup，焦点返回来源页，用户重开继续，不额外拦截宿主键盘。
 
-Upgrade 的购买动作由宿主提供：popup 打开 Premium，content 打开官网 `/ext-pricing/`（`WEBSITE.PRICING_PATH`）；Teleport 参数仅控制渲染位置。邮箱登录界面在 popup，兑换与保存的 background owner 见 [账号与认证](../007.用户系统/tech-账号与认证.md#81-邮箱验证码登录)。
+Upgrade 的购买动作由宿主提供：popup 打开 Premium，content 打开官网 `/ext-pricing/`（`WEBSITE.PRICING_PATH`）；Teleport 参数仅控制渲染位置。Google 与邮箱登录界面统一在插件登录页（Popup 与插件订阅页只提供入口），兑换与保存的 background owner 见 [账号与认证](../007.用户系统/tech-账号与认证.md#81-邮箱验证码登录)。
 
 ### A3. RPC 系统（自研 v2，声明式 + 代码生成）
 

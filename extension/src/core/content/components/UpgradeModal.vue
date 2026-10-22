@@ -52,7 +52,6 @@ import { useI18n } from 'vue-i18n'
 import { Icon, IconName, IconSize } from '@/core/components/icons'
 import { logger } from '@/core/utils/logger'
 import { I18N_KEYS } from '@/core/constants/i18n'
-import { openLoginModal } from '@/core/composables/loginModal'
 import { useNativeDialog } from '@/core/composables/nativeDialog'
 import { authApi } from '@/core/api/auth/api'
 import { ChromeEventEmitter } from '@/core/rpc/ChromeEventBus'
@@ -175,13 +174,8 @@ function handleClose(): void {
   emit('update:show', false)
 }
 
-/** 游客进入现有登录入口，已登录购买动作交给实际宿主。 */
-async function handleUpgrade(): Promise<void> {
-  if (!(await authApi.isAuthenticated())) {
-    openLoginModal('upgrade_modal')
-    handleClose()
-    return
-  }
+/** 购买动作交给实际宿主，由购买视图负责登录门控。 */
+function handleUpgrade(): void {
   emit('upgrade')
   handleClose()
 }

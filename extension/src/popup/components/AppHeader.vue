@@ -49,7 +49,7 @@ import { Icon, IconName, IconSize } from '@/core/components/icons'
 import { QuotaCounter } from '@/core/components/quota'
 import LoginButton from '@/core/components/auth/LoginButton.vue'
 import { buildHomeUrl, openExtensionPricingPage, openExternalPage } from '@/core/utils/navigation'
-import { openLoginModal } from '@/core/composables/loginModal'
+import { openLoginPage } from '@/core/composables/loginPage'
 import { openSettingsModal } from '@/core/composables/settingsModal'
 
 // I18n
@@ -63,9 +63,9 @@ async function handleOpenOfficialWebsite(): Promise<void> {
   await openExternalPage(buildHomeUrl('header_brand'), 'home:header_brand')
 }
 
-/** 打开 popup 内登录弹窗；登录结果由根组件在成功事件里刷新。 */
+/** 在扩展标签页打开登录页。 */
 function handleOpenLogin(): void {
-  openLoginModal('popup')
+  openLoginPage('popup')
 }
 
 /**

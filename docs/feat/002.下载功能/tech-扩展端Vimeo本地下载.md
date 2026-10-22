@@ -872,7 +872,7 @@ content 的 Vimeo 缓存按视频分组持有资源(见 §11):播放页走 `repl
 
 ### 12.7 设置弹层（界面语言 + 保存位置 + 文件名规则 + 下载历史入口）
 
-- 设置集中在 header 齿轮打开的设置弹层（`SettingsModal.vue`，模块级单例控制器 `core/composables/settingsModal.ts`，与 LoginModal/PremiumView 控制器同构；不设独立 options 页）。弹层本期四项：界面语言、保存位置、文件名规则与下载历史入口。
+- 设置集中在 header 齿轮打开的设置弹层（`SettingsModal.vue`，模块级单例控制器 `core/composables/settingsModal.ts`，与 PremiumView 控制器同构；不设独立 options 页）。弹层本期四项：界面语言、保存位置、文件名规则与下载历史入口。
 - **界面语言**：下拉提供 Auto（跟随浏览器，默认值）+ 14 个 locale；写入 `settings.language`，该字段新增 `'auto'` 取值（`LanguageSetting`），读取时即时按浏览器解析、不固化为具体 locale，旧版本留下的空值统一归一为 Auto。具体 locale 即改即生效。
 - **保存位置**：值持久化在 `chrome.storage.local` 的 `settings.downloadPath`（既有 `SettingsManager`，不新建存储层）；默认值 `vimeoMediaDownloader`，输入变化在 `change` 时写回，不逐按键写。设置弹层是保存位置的**唯一编辑入口**——VideoPanel 面板内已不再渲染该输入。读取中间版本默认值 `vimeo-video-downloader` 时迁移到新默认，其他自定义目录保留。
 - **文件名规则**：默认 / 自定义双模式按钮 + 自定义输入框 + 6 个变量 chips（点击在光标处插入 `{变量}`）+ 实时预览 + 恢复默认按钮。值持久化在 `settings.filenamePattern`（默认 `{title}_{quality}_{type}`，见 §8.1 变量集）；`change` 时写入（去空白,空值归一默认模板）,非默认值即自定义模式。预览用与 background 同一个渲染函数,按当前输入即时渲染样例文件名（不含扩展名,不做净化——净化只发生在 background 命名边界,弹层不复制规则）。

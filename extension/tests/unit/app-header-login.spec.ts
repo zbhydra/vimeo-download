@@ -1,7 +1,7 @@
 /**
  * Popup Header 登录入口回归测试。
  *
- * 登录改为插件内弹窗后，Header 只负责打开弹窗，不再发起任何 RPC 或跳转官网。
+ * Header 将顶栏登录交给统一登录页入口。
  */
 
 import { mount } from '@vue/test-utils'
@@ -12,12 +12,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import AppHeader from '../../src/popup/components/AppHeader.vue'
 
 const mocks = vi.hoisted(() => ({
-  openLoginModal: vi.fn(),
+  openLoginPage: vi.fn(),
   logout: vi.fn()
 }))
 
-vi.mock('../../src/core/composables/loginModal', () => ({
-  openLoginModal: mocks.openLoginModal
+vi.mock('../../src/core/composables/loginPage', () => ({
+  openLoginPage: mocks.openLoginPage
 }))
 
 vi.mock('../../src/popup/rpc/background.rpc', () => ({
@@ -83,12 +83,12 @@ describe('AppHeader login entry', () => {
     vi.clearAllMocks()
   })
 
-  it('点击 Login 打开插件本地登录弹窗，不再跳转官网', async () => {
+  it('点击登录打开插件登录页并传递顶栏来源', async () => {
     const wrapper = mountHeader()
 
     await wrapper.get('.login-stub').trigger('click')
 
-    expect(mocks.openLoginModal).toHaveBeenCalledOnce()
-    expect(mocks.openLoginModal).toHaveBeenCalledWith('popup')
+    expect(mocks.openLoginPage).toHaveBeenCalledOnce()
+    expect(mocks.openLoginPage).toHaveBeenCalledWith('popup')
   })
 })

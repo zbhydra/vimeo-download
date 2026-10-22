@@ -4,16 +4,14 @@ import { createPinia } from 'pinia'
 import { createI18n } from 'vue-i18n'
 import { expect, it } from 'vitest'
 import PremiumView from '@/popup/components/PremiumView.vue'
-import LoginModal from '@/popup/components/LoginModal.vue'
 import { premiumViewVisible } from '@/core/composables/premiumView'
-import { loginModalVisible } from '@/core/composables/loginModal'
 import TRANSLATIONS from '@/locales/messages'
 
-it('购买视图打开登录后，原生关闭仅收起登录；购买视图可随后独立关闭', async () => {
+it('购买视图保持原生 dialog 关闭接线', async () => {
   const wrapper = mount(
     {
-      components: { PremiumView, LoginModal },
-      template: '<div><PremiumView /><LoginModal /></div>'
+      components: { PremiumView },
+      template: '<PremiumView />'
     },
     {
       attachTo: document.body,
@@ -28,23 +26,10 @@ it('购买视图打开登录后，原生关闭仅收起登录；购买视图可�
   )
   try {
     const premium = () => wrapper.get('.premium-overlay').element as HTMLDialogElement
-    const login = () => wrapper.get('.login-modal-overlay').element as HTMLDialogElement
     expect(premium().open).toBe(false)
-    expect(login().open).toBe(false)
 
     // 仅验证原生 dialog 接线；购买视图套餐加载走真实 API，由集成/E2E 验收覆盖。
     premium().showModal()
-    expect(premium().open).toBe(true)
-
-    loginModalVisible.value = true
-    await flushPromises()
-    expect(login().open).toBe(true)
-    premium().showModal()
-
-    login().close()
-    await flushPromises()
-    expect(loginModalVisible.value).toBe(false)
-    expect(premiumViewVisible.value).toBe(false)
     expect(premium().open).toBe(true)
 
     premium().close()
@@ -54,6 +39,5 @@ it('购买视图打开登录后，原生关闭仅收起登录；购买视图可�
   } finally {
     wrapper.unmount()
     premiumViewVisible.value = false
-    loginModalVisible.value = false
   }
 })

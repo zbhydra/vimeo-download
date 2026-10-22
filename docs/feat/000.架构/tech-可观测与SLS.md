@@ -145,8 +145,8 @@ Website 的首次打开时间由 `device.ts` 的 `ensureFirstOpenedAt()` 维护�
 ### 插件登录漏斗
 
 - `login_modal_open`：游客在插件额度或升级流程中实际看到登录提示，每次从隐藏进入显示记一次，`mark_msg.source=upgrade_modal`。
-- `login_click`：插件顶部登录按钮或登录提示按钮发起 browser identity 流程，每次点击一次；`mark_msg.source` 由实际按钮显式传递：顶部 Login 为 `popup`、顶部 Upgrade Now 为 `popup_upgrade_now`、额度数字为 `popup_quota_counter`、登录提示弹窗为 `upgrade_modal`；结果事件沿用同一来源，不按 RPC 的 popup/content 通道推断。
-- `login_success`：一次性 code 兑换成功且插件凭据已持久化，不表示新账号注册。
+- `login_click`：统一入口 `core/composables/loginPage.ts` 的 `openLoginPage(source)` 在导航到插件登录页前记录一次；登录页加载不重复记录。来源由调用方显式传递，结果事件沿用同一来源；入口与去向合同见 [第三方登录](../007.用户系统/tech-第三方登录.md#94-插件登录页)。
+- `login_success`：Google 一次性 code 或邮箱验证码兑换成功且插件凭据已持久化，不表示新账号注册。Google 由 background 记录，邮箱由登录页记录，每条链路一次。
 - `login_cancelled`：Chrome identity 明确报告用户关闭登录窗口，单列取消，不计技术失败。
 - `login_failed`：登录准备、浏览器身份流程、回调缺 code、兑换或持久化失败；`mark_msg` 包含 `source`、`stage` 与经现有 sanitizer 脱敏的 `reason`。浏览器未明确报告主动取消的错误仍归失败。
 - 上述事件统一由 background 的 `recordBackgroundMark()` 写入，身份始终是插件 `device_id` 与 `first_opened_at`；网站自身日志继续使用网站身份。SLS 异常不改变登录结果，不记录 token、验证码或邮箱。

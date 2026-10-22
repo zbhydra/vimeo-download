@@ -11,6 +11,18 @@ import { ref } from 'vue'
 /** 打开购买视图的业务入口，同时用作视图内登录门控的归因来源。 */
 export type PremiumSource = 'popup_quota_counter' | 'popup_upgrade_now' | 'upgrade_modal'
 
+/**
+ * 匿名购买在登录成功后恢复的精确商品渠道。
+ *
+ * 购买视图在未登录确认购买时写入 `STORAGE_KEYS.PENDING_PREMIUM_PURCHASE`；登录后由
+ * 插件订阅页恢复并消费持久化记录，再展示购买确认。
+ */
+export interface PendingPurchase {
+  productId: string
+  productPriceId: number
+  paymentMethod: string
+}
+
 /** 购买视图当前是否可见。 */
 export const premiumViewVisible = ref(false)
 

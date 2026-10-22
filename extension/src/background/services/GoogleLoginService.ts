@@ -1,12 +1,8 @@
 /**
  * Google 授权登录服务（background）。
  *
- * 授权窗口只能由 background 发起：`launchWebAuthFlow({interactive:true})` 打开的窗口会抢焦点，
- * popup 随之被 Chrome 关闭。因此整条链路——打开授权窗口、解析回跳、兑换一次性 code、
- * 写入登录态、终态打点——都在这里完成，不依赖 popup 存活；用户重开 popup 时由
- * `authStore.initialize()` 从 storage 恢复登录态。
- *
- * RPC 返回值只是 popup 仍存活时的附加信息（顺手刷新界面 / 展开验证码步骤），不承担完成语义。
+ * background 负责打开授权窗口、解析回跳、兑换一次性 code、写入登录态和终态打点；
+ * 插件登录页等待 RPC 结果，并在 Google 邮箱非权威时原地展示验证码步骤。
  */
 
 import { API } from '@/core/api/config'
@@ -49,7 +45,7 @@ export type GoogleCallbackResult =
 
 /** Google 授权登录服务。 */
 export class GoogleLoginService {
-  /** 打开 Google 授权窗口，完成兑换与登录态写入，返回 popup 存活时的附加信息。 */
+  /** 打开 Google 授权窗口，完成兑换与登录态写入，返回登录页所需的结果。 */
   async start(
     request: BackgroundStartGoogleLoginRequest
   ): Promise<BackgroundStartGoogleLoginResponse> {
@@ -98,8 +94,6 @@ export class GoogleLoginService {
     }
 
     if (callbackResult.status === 'email_verification') {
-      // 后端已把验证码发到它确认出的邮箱；popup 还活着就继续验证码步骤，
-      // 已被销毁则用户重开 popup 走邮箱登录即可（不新增跨上下文交接状态）。
       await recordGoogleLoginMark(
         MARK_TYPE.LOGIN_FAILED,
         request.source,

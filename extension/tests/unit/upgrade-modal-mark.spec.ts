@@ -9,16 +9,11 @@ import UpgradeModal from '@/core/content/components/UpgradeModal.vue'
 const mocks = vi.hoisted(() => ({
   emit: vi.fn(),
   isAuthenticated: vi.fn(),
-  openLoginModal: vi.fn(),
   onUpgrade: vi.fn()
 }))
 
 vi.mock('@/core/api/auth/api', () => ({
   authApi: { isAuthenticated: mocks.isAuthenticated }
-}))
-
-vi.mock('@/core/composables/loginModal', () => ({
-  openLoginModal: mocks.openLoginModal
 }))
 
 vi.mock('@/core/rpc/ChromeEventBus', () => ({
@@ -68,7 +63,6 @@ describe('UpgradeModal SLS event', () => {
     vi.setSystemTime('2026-08-13T10:00:00.000Z')
     mocks.emit.mockReset()
     mocks.isAuthenticated.mockResolvedValue(true)
-    mocks.openLoginModal.mockReset()
     mocks.onUpgrade.mockReset()
   })
 
@@ -147,7 +141,7 @@ describe('UpgradeModal SLS event', () => {
     )
   })
 
-  it('游客提示登录，登录用户的购买动作交给宿主', async () => {
+  it('游客与登录用户的购买动作都交给宿主', async () => {
     mocks.isAuthenticated.mockResolvedValue(false)
     wrapper = mountUpgradeModal(true)
     await flushPromises()
@@ -156,9 +150,7 @@ describe('UpgradeModal SLS event', () => {
     expect(mocks.emit).toHaveBeenCalledWith('loginModalOpened', undefined)
     await wrapper.get('.vdl-upgrade-modal-btn').trigger('click')
     await flushPromises()
-    expect(mocks.openLoginModal).toHaveBeenCalledOnce()
-    expect(mocks.openLoginModal).toHaveBeenCalledWith('upgrade_modal')
-    expect(mocks.onUpgrade).not.toHaveBeenCalled()
+    expect(mocks.onUpgrade).toHaveBeenCalledOnce()
 
     await wrapper.setProps({ show: false })
     mocks.isAuthenticated.mockResolvedValue(true)
@@ -167,7 +159,7 @@ describe('UpgradeModal SLS event', () => {
     expect(wrapper.get('.vdl-upgrade-modal-title').text()).toBe('Upgrade')
     await wrapper.get('.vdl-upgrade-modal-btn').trigger('click')
     await flushPromises()
-    expect(mocks.onUpgrade).toHaveBeenCalledOnce()
+    expect(mocks.onUpgrade).toHaveBeenCalledTimes(2)
   })
 
   it('Teleport 挂载使用同一宿主购买动作', async () => {

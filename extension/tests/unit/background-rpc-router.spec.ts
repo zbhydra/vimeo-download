@@ -7,6 +7,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { JsonObject, JsonValue, RpcContext, RpcServeHandlers } from '../../src/core/rpc/types'
+import { chrome as chromeMock } from '../mocks/chrome-api'
 
 const mocks = vi.hoisted(() => ({
   handlers: null as RpcServeHandlers | null,
@@ -131,6 +132,27 @@ describe('background rpc router', () => {
     for (const params of invalidParams) {
       expect(() => parseStartGoogleLoginRequest(params)).toThrow()
     }
+  })
+
+  it('Google 邮箱二次确认只回传结果，由发起页原地展示验证码步骤', async () => {
+    const email = 'user@example.com'
+    chromeMock.identity.launchWebAuthFlow.mockResolvedValue(
+      `https://abcdefghijklmnopabcdefghijklmnop.chromiumapp.org/google-login?google_email_verification=${encodeURIComponent(email)}`
+    )
+    const createTab = vi.mocked(chrome.tabs.create)
+    createTab.mockReset()
+    const handler = getHandler('startGoogleLogin')
+    const params = { source: 'popup_upgrade_now' }
+    const expected = { status: 'email_verification', email }
+    await expect(
+      handler(params, {
+        transport: 'chrome',
+        caller: 'popup',
+        tabId: 3,
+        origin: 'chrome-extension://x/'
+      })
+    ).resolves.toEqual(expected)
+    expect(createTab).not.toHaveBeenCalled()
   })
 
   it('返回扩展自有运行时配置', async () => {

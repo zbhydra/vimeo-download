@@ -400,7 +400,7 @@
  * background 创建订单并保存当前用户的订单引用，重开视图立即向服务端查询该订单。
  */
 
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Icon, IconName, IconSize } from '@/core/components/icons'
 import { I18N_KEYS } from '@/core/constants/i18n'
@@ -427,14 +427,15 @@ import { STORAGE_KEYS, WEBSITE } from '@/core/api/config'
 import type { SubscriptionStatus } from '@/core/api/subscription'
 import { MARK_TYPE } from '@/core/api/mark/types'
 import { openExternalPage } from '@/core/utils/navigation'
-import { openLoginModal } from '@/core/composables/loginModal'
+import { openLoginPage } from '@/core/composables/loginPage'
 import { useNativeDialog } from '@/core/composables/nativeDialog'
 import { BackgroundChannel } from '@/popup/rpc/background.rpc'
 import {
   closePremiumView,
   getPremiumAttributionSource,
   getPremiumSource,
-  premiumViewVisible
+  premiumViewVisible,
+  type PendingPurchase
 } from '@/core/composables/premiumView'
 
 /** 扩展自带的 PayPal 品牌图标（public/payment-icons），与官网结算弹窗同源素材。 */
@@ -472,13 +473,6 @@ type FailedReason =
   | 'invalidPaymentData'
   | 'activeSubscription'
 
-/** 匿名购买在登录成功后恢复的精确商品渠道。 */
-interface PendingPurchase {
-  productId: string
-  productPriceId: number
-  paymentMethod: string
-}
-
 const { t } = useI18n()
 const dialog = useNativeDialog(premiumViewVisible)
 const confirmationVisible = ref(false)
@@ -490,7 +484,7 @@ const background = new BackgroundChannel()
 
 /**
  * 组件根节点是 Teleport，Vue 的 style v-bind()（useCssVars）会把变量挂到 Teleport
- * 锚点而非真实 DOM，teleport 出去的子树拿不到变量（LoginModal 同构同坑）。因此颜色
+ * 锚点而非真实 DOM，teleport 出去的子树拿不到变量。因此颜色
  * 不用 v-bind，改为把 COMMON_COLORS 显式声明成覆盖层根节点上的 CSS 变量向下级联。
  */
 const colorVars = {
@@ -599,10 +593,6 @@ watch(premiumViewVisible, visible => {
   }
 })
 
-function handleLoginCancelled(): void {
-  clearPendingPurchase()
-}
-
 // 用户变化后重新读取该用户的订单引用，避免沿用上一位用户的交易投影。
 watch(
   () => authStore.user?.user_id,
@@ -614,14 +604,7 @@ watch(
   }
 )
 
-onMounted(() => {
-  window.addEventListener('vdl-login-cancelled', handleLoginCancelled)
-})
-
-onBeforeUnmount(() => {
-  stopPolling()
-  window.removeEventListener('vdl-login-cancelled', handleLoginCancelled)
-})
+onBeforeUnmount(stopPolling)
 
 /** 打开视图：先恢复当前用户的订单定位，没有引用时加载套餐。 */
 async function enterView(): Promise<void> {
@@ -769,7 +752,7 @@ async function createPurchase(
       paymentMethod: channel.payment_method
     }
     await persistPendingPurchase(pendingPurchase.value)
-    openLoginModal(getPremiumSource())
+    openLoginPage(getPremiumSource())
     return
   }
 
@@ -786,7 +769,7 @@ async function createPurchase(
       if (result.reason === 'auth') {
         await clearAuthSession()
         phase.value = 'gate'
-        openLoginModal(getPremiumSource())
+        openLoginPage(getPremiumSource())
       } else if (result.reason === 'priceUpdated') {
         await loadPlans()
       } else {
@@ -843,10 +826,11 @@ async function continuePendingPurchase(): Promise<void> {
     channel.product_price_id !== pending.productPriceId ||
     channel.payment_method !== pending.paymentMethod
   ) {
-    pendingPurchase.value = null
+    clearPendingPurchase()
     return
   }
 
+  clearPendingPurchase()
   await handleBuy()
 }
 
@@ -899,7 +883,7 @@ async function pollOnce(): Promise<void> {
       stopPolling()
       await clearAuthSession()
       phase.value = 'gate'
-      openLoginModal(getPremiumSource())
+      openLoginPage(getPremiumSource())
       return
     }
     if (error instanceof Error && isRecoverableOrderStatusError(error)) {
@@ -973,7 +957,7 @@ function handleClose(): void {
 }
 
 function handleLogin(): void {
-  openLoginModal(getPremiumSource())
+  openLoginPage(getPremiumSource())
 }
 
 async function handleLogout(): Promise<void> {
