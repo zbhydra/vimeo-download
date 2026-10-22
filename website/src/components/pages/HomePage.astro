@@ -163,7 +163,7 @@ const faqSchema = {
     stroke-linejoin: round;
   }
 
-  /* 手机：信任点 2×2，第 4 条较长，跨两列。 */
+  /* 手机：两个信任点并排显示。 */
   @media (max-width: 600px) {
     .hero-tool {
       padding: 48px 0 40px;
@@ -181,10 +181,6 @@ const faqSchema = {
       align-items: flex-start;
       font-size: 13px;
       line-height: 1.45;
-    }
-
-    .hero-trust-point:nth-child(4) {
-      grid-column: 1 / -1;
     }
 
     .hero-trust-check {

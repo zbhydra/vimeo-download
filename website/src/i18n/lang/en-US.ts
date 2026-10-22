@@ -196,11 +196,11 @@ export const enUS: SiteContent = {
           },
           {
             title: 'Paste it into the online tool',
-            description: 'Paste the link into the tool above and select Paste Vimeo Video Link to find the video file.'
+            description: 'Paste the link into the tool above and select “Paste Vimeo Video Link” to find the video file.'
           },
           {
             title: 'Download the MP4',
-            description: 'Select Download and keep this tab open until your browser saves the file.'
+            description: 'Select “Download” and keep this tab open until your browser saves the file.'
           }
         ]
       },

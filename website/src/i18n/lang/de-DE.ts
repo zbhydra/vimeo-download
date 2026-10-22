@@ -60,11 +60,11 @@ export const deDE: SiteContent = {
           extensionEntryLine: 'Benötigen Sie Audio, Untertitel oder eine Download-Warteschlange? Nutzen Sie die Erweiterung.',
           largeFileExtensionInlineChromeTitle: 'Chrome-Erweiterung',
           largeFileExtensionInlineChromeDescription:
-            'Chrome-Erweiterung: Lade jedes Vimeo-Video herunter, speichere Audio separat und profitiere von schnellen Downloads. Große Downloads laufen außerhalb des Tabs weiter.',
+            'Chrome-Erweiterung: Laden Sie jedes Vimeo-Video herunter, speichern Sie Audio separat und profitieren Sie von schnellen Downloads. Große Downloads laufen außerhalb des Tabs weiter.',
           largeFileExtensionInlineChromeCta: 'Erweiterung installieren',
           largeFileExtensionInlineEdgeTitle: 'Edge-Erweiterung',
           largeFileExtensionInlineEdgeDescription:
-            'Edge-Erweiterung: Lade jedes Vimeo-Video herunter, speichere Audio separat und profitiere von schnellen Downloads. Große Downloads laufen außerhalb des Tabs weiter.',
+            'Edge-Erweiterung: Laden Sie jedes Vimeo-Video herunter, speichern Sie Audio separat und profitieren Sie von schnellen Downloads. Große Downloads laufen außerhalb des Tabs weiter.',
           largeFileExtensionInlineEdgeCta: 'Erweiterung installieren'
         },
                 errors: {

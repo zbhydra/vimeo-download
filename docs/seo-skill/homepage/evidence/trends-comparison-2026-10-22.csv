@@ -1,0 +1,16 @@
+group,region,term,complete_weeks,average_trends_index,relative_to_vimeo_downloader_100,weeks_above_zero
+global12m-core,Worldwide,vimeo downloader,52,59.3462,100.0,52
+global12m-core,Worldwide,vimeo video downloader,52,30.1923,50.87,52
+global12m-core,Worldwide,download vimeo video,52,75.5192,127.25,52
+global12m-core,Worldwide,free vimeo downloader,52,4.6154,7.78,32
+global12m-core,Worldwide,vimeo downloader online,52,3.9615,6.68,27
+global12m-variants,Worldwide,vimeo downloader,52,22.9231,100.0,52
+global12m-variants,Worldwide,vimeo download,52,71.5577,312.16,52
+global12m-variants,Worldwide,download vimeo,52,71.5962,312.33,52
+global12m-variants,Worldwide,vimeo to mp4,52,6.7692,29.53,52
+global12m-variants,Worldwide,free vimeo video downloader,52,0.3077,1.34,6
+us12m-core,US,vimeo downloader,52,44.9038,100.0,48
+us12m-core,US,vimeo video downloader,52,13.5769,30.24,22
+us12m-core,US,download vimeo video,52,69.9808,155.85,52
+us12m-core,US,free vimeo downloader,52,0.6731,1.5,2
+us12m-core,US,vimeo downloader online,52,0.0385,0.09,1

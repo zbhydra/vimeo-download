@@ -119,13 +119,13 @@ hydra 已确认以下产品决定，实施依赖已解除：
 | --- | --- | --- |
 | B1 | 保持插件卡默认展开 | 保留 10-10 的行为；首访先看到 Chrome、Edge 两张卡，一行入口仍被隐藏；不改下载状态机、不增加收起方案用例、不修改下载域合同 |
 | B2 · H1 | 使用突出免费、移除 Any 的确认稿 | 具体英文维护于[英文源稿](en-US.md#12-h1-与插件卡片)，14 语言本地化 |
-| B2 · 卡片 | 保留 Chrome/Edge 卡片当前原文 | 现有 14 语言的 Description、Title、CTA 全部保留，包括 any / fast，不采用改写候选；这是产品决定，不作为本次待修复问题 |
+| B2 · 卡片 | 保留 Chrome/Edge 卡片当前原文 | 除下述德语 Description 人称例外外，现有 14 语言的 Description、Title、CTA 全部保留，包括 any / fast，不采用改写候选 |
 
 - 本轮保留各 locale 的 `meta.title`、`meta.description` 与 `site.description`。英文标题仍为 `Vimeo Downloader - Download HD Video & Audio`，描述已把免费网页视频与扩展能力区分；不根据小样本重写标题。
 - H1 继续由 `titleBrand` 与 `titleTagline` 拼接，保持一个 H1；使用确认的免费标语，不新增标题行。
 - helper 说明免费 MP4、最高可用画质及大文件、大小未知文件可能需插件；不重复紧邻的 No registration，也不无条件写 No installation required。
 - 原有两个 trust points 保留。一行入口说明音频、字幕与队列需求，使用不限定浏览器的 extension，匹配后面的 Chrome、Edge 两按钮；首访因插件卡展开而隐藏，保持原有显隐规则。
-- 14 语言的 `workspace.parse.largeFileExtensionInlineChromeDescription`、`largeFileExtensionInlineEdgeDescription` 及同组 `*Title`、`*Cta` 保留当前原文；helper 与 `extensionEntryLine` 按确认稿同步。
+- 14 语言的 `workspace.parse.largeFileExtensionInlineChromeDescription`、`largeFileExtensionInlineEdgeDescription` 及同组 `*Title`、`*Cta` 保留当前原文；唯一例外是德语两张卡的 Description 人称统一为 Sie，保留 jedes / fast 承诺，其他 13 语言卡片及德语 Title / CTA 不变。helper 与 `extensionEntryLine` 按确认稿同步。
 
 所有替换文案只维护在[英文源稿](en-US.md)，本文件不复制英文段落。
 
@@ -162,7 +162,7 @@ hydra 已确认以下产品决定，实施依赖已解除：
 
 ### 3.4 本地化
 
-按确认的英文稿同步现有 14 个 locale 的 H1、helper、`extensionEntryLine`、网页三步、插件介绍与插件四步，Chrome/Edge 卡片原文及显隐保持不变。沿用现有文案键，仅为迁移的插件四步增加必填 `intro.steps` 数组，复用现有 `HomepageCardMessage` 类型；`schema.ts` 同步区块顺序与步骤职责，不新增可选 SEO 开关。
+按确认的英文稿同步现有 14 个 locale 的 H1、helper、`extensionEntryLine`、网页三步、插件介绍与插件四步，Chrome/Edge 卡片遵守 §3.1 的原文保留与德语人称例外，显隐保持不变。沿用现有文案键，仅为迁移的插件四步增加必填 `intro.steps` 数组，复用现有 `HomepageCardMessage` 类型；`schema.ts` 同步区块顺序与步骤职责，不新增可选 SEO 开关。
 
 网页第 2、3 步引用的按钮名称分别取自该 locale 的 `workspace.parse.submit`、`workspace.parse.download`，与实际界面一致，不直译英文按钮名。
 
@@ -173,7 +173,7 @@ hydra 已确认以下产品决定，实施依赖已解除：
 ### 4.1 交付验收
 
 - 所有首页均只有一个 H1、8 个静态展示区块，顺序符合 §3.2；网页三步中不混入插件安装步骤，插件介绍区完整保留安装、固定图标、打开视频页、选画质四步；独立音频仍明确属于插件。
-- 首访插件卡默认展开、一行入口隐藏，解析成功、无结果及原有需插件场景的显隐保持原规则；H1 采用确认的免费稿，Chrome/Edge 卡片现有 14 语言 Description、Title、CTA 原文保留。
+- 首访插件卡默认展开、一行入口隐藏，解析成功、无结果及原有需插件场景的显隐保持原规则；H1 采用确认的免费稿，Chrome/Edge 卡片遵守 §3.1 的原文保留与德语人称例外。
 - 原有 Title、Meta、canonical、hreflang 与 FAQ/SoftwareApplication 合同继续成立；免费、能力和方案范围没有矛盾。
 - 教程链接只指向存在的同语言正文，文章仍指回首页；安装和 Pricing 链接目标、原有埋点来源可核对。
 - 桌面 1440px 与手机 390px 可用，没有因三列布局、插件四步迁移、较长本地化文案或教程前移导致横向溢出、遮挡或键盘焦点不可见。
@@ -203,4 +203,4 @@ hydra 已确认以下产品决定，实施依赖已解除：
 
 GSC 仅有 14 天的小样本，不能证明单个文案的收益或稳定排名。历史 HTTP 首页有流量，但 2026-10-22 已核实其返回 301 至 HTTPS，本轮不把它当成待修复缺陷。源码与生产发布版本的对应关系、GA4 数据可用性仍须在实施与效果观察时核对。
 
-审核顺带发现：[首页 lastmod 来源](../../../website/src/sitemap/languageSitemap.mjs)未包含语言字典；实施前[首屏 CSS](../../../website/src/components/pages/HomePage.astro)仍有已无对应元素的第四个信任点规则。本轮只记录，不修改这两项；本次结构调整涉及已被 lastmod 跟踪的 `HomePage.astro`，无需扩成 Sitemap 重构。今后单独改字典的 lastmod 问题另行处理。
+审核顺带发现：[首页 lastmod 来源](../../../website/src/sitemap/languageSitemap.mjs)未包含语言字典，本轮只记录，不修改；[首屏 CSS](../../../website/src/components/pages/HomePage.astro)中已无对应元素的第四个信任点规则按本次批准范围删除。本次结构调整涉及已被 lastmod 跟踪的 `HomePage.astro`，无需扩成 Sitemap 重构。今后单独改字典的 lastmod 问题另行处理。

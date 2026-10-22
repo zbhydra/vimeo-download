@@ -23,7 +23,7 @@ B2 的 H1 确认稿如下，14 语言按此本地化：
 | --- | --- |
 | `workspace.parse.titleTagline` | Save Public Vimeo Videos for Free |
 
-Chrome/Edge 卡片的现有 14 语言 Description、Title、CTA 全部保留：`largeFileExtensionInlineChromeDescription`、`largeFileExtensionInlineEdgeDescription`、同组 `*Title` 与 `*Cta` 均不替换，不删 any / fast。原改写候选已撤去，卡片原文不作为本次待修复项。
+Chrome/Edge 卡片的现有 14 语言 Description、Title、CTA 保留原文，不删 any / fast。唯一例外是德语 `largeFileExtensionInlineChromeDescription`、`largeFileExtensionInlineEdgeDescription` 的人称统一为 Sie，保留 jedes / fast 承诺；其他 13 语言卡片及德语 `*Title`、`*Cta` 不变。原改写候选已撤去，除此人称例外不改写卡片原文。
 
 ## 2. 网页三步教程
 
@@ -36,8 +36,8 @@ Chrome/Edge 卡片的现有 14 语言 Description、Title、CTA 全部保留：`
 | 顺序 | title | description |
 | --- | --- | --- |
 | 1 | Copy the Vimeo link | Open a public Vimeo video you have permission to save and copy its URL. |
-| 2 | Paste it into the online tool | Paste the link into the tool above and select Paste Vimeo Video Link to find the video file. |
-| 3 | Download the MP4 | Select Download and keep this tab open until your browser saves the file. |
+| 2 | Paste it into the online tool | Paste the link into the tool above and select “Paste Vimeo Video Link” to find the video file. |
+| 3 | Download the MP4 | Select “Download” and keep this tab open until your browser saves the file. |
 
 教程下方的指南链接使用现有文章标题 How to download a Vimeo video 及实际路径，不另存一份英文锚文本。方法型 how-to 查询由文章承接；H2 与正文不写 “in 3 steps”等数字。
 
