@@ -116,14 +116,14 @@ XML 写入做实体转义。sitemap index 内每个 sitemap 的 `<lastmod>` 用�
 ### 3.1 文件与区块顺序
 
 - 路由：`pages/index.astro`（en-US）与 `pages/[lang]/index.astro`（其余 13 语言）都只装配 `components/pages/HomePage.astro`。
-- 区块组件在 `components/homepage/`，每个区块一个文件，共用 `HomeSection.astro` 外壳（输出区块唯一的 H2，id 为 `<区块>-heading`）。
+- 区块组件在 `components/homepage/`，每个区块一个文件、输出唯一的 H2，id 为 `<区块>-heading`；一般由 `HomeSection.astro` 外壳输出，插件介绍自行输出。首屏后仍为 8 个静态 H2。
 
 | 顺序 | 组件 | 文案键(`pages.homepage.*`) |
 | --- | --- | --- |
 | 首屏 | `components/download/DownloadWorkspace.astro` + 信任徽标 | `workspace`、`heroTrustPoints`(恰好 2 个) |
-| 1 | `HomeIntroSection` | `intro`（含 `panel` 四行面板示意；示意由 `ExtensionMockup.astro` 渲染，与 `HomeFinalCtaSection` 共用） |
-| 2 | `HomeFeaturesSection` | `features` |
-| 3 | `HomeStepsSection` | `steps` |
+| 1 | `HomeStepsSection` | `steps`（网页下载三步） |
+| 2 | `HomeIntroSection` | `intro`（含迁入的插件安装四步 `intro.steps` 与 `panel` 四行面板示意；示意由 `ExtensionMockup.astro` 渲染，与 `HomeFinalCtaSection` 共用） |
+| 3 | `HomeFeaturesSection` | `features` |
 | 4 | `HomeComparisonSection` | `comparison`（维度 / 网页版 / 插件三列） |
 | 5 | `HomeScopeSection` | `scope`（适用 / 不做 / 合规三组） |
 | 6 | `HomePlansSection` | `plans`（Free / Unlimited 两卡） |
@@ -134,6 +134,9 @@ XML 写入做实体转义。sitemap index 内每个 sitemap 的 `<lastmod>` 用�
 
 - 页面唯一 H1 是下载工作区的解析工具标题，由 `workspace.parse.titleBrand`（品牌词，渐变文字）与 `workspace.parse.titleTagline`（标语）两个键拼成，两个 span 之间保留空白，使 H1 文本内容为「品牌词 + 空格 + 标语」；不新增独立标题行。
 - 首屏另有一行插件入口，文案键 `workspace.parse.extensionEntryLine`，后接 Chrome / Edge 两个按钮，链接均为安装地址；引导卡可见时由 CSS 兄弟选择器隐藏（显示条件见 `@../002.下载功能/feat.md`），不增加脚本状态。
+- 工具、网页步骤、插件介绍共用现有 `SiteStage hero`，舞台装饰仍由该组件维护。
+- `steps.items` 只解释网页下载；原插件四步迁入必填 `intro.steps`，复用 `HomepageCardMessage`，由 `HomeIntroSection` 在 CTA 下、示意图前输出有序列表，每步标题为 H3，区块内仅保留原有一个 H2，不保留旧位置的插件步骤副本。
+- `HomePage` 用 `getLocaleGuides(locale)` 查找 `how-to-download-a-vimeo-video`，由 `getGuidesPath` 生成链接，文章标题同时用作链接文字与 title，经 `HomeStepsSection` 的 slot 输出。仅当前语言有正文时显示，不输出空占位或英语回退；链接样式由 `HomePage` 维护，沿用 `text-link` 与全局焦点环，独立成行的点击区域至少高 44px。
 - 展示区块纯静态、无客户端脚本；只有下载工作区运行前端状态机。
 - 展示区块文案不写「无限」承诺、额度数字与价格，不出现 Credits、签到、积分购买；方案概览的数值来自后端配置，由 Pricing 页呈现。
 - 文案事实与术语来源是 `docs/assets/store/<商店语言>.txt`，商店语言到站点 locale 的映射（如 `en_US`→`en-US`、`pt`→`pt-BR`）见 004 计划 §2.2。
@@ -142,7 +145,8 @@ XML 写入做实体转义。sitemap index 内每个 sitemap 的 `<lastmod>` 用�
 
 ### 3.2 响应式
 
-- 功能、步骤区块：四列 → 1200px 以下两列 → 960px 以下单列。
+- 功能区块：四列 bento，≤960px 单列。
+- 网页步骤区块：桌面三列、≤960px 单列、≤600px 竖向时间线；没有 1200px 两列档。
 - 范围、方案、插件介绍区块：960px 以下单列。
 - 对比表：960px 以下纵向堆叠，不横向溢出。
 - 全站移动端主断点为 960px（见 `../../references/specs/spec-website.md` §4）。
@@ -157,6 +161,8 @@ XML 写入做实体转义。sitemap index 内每个 sitemap 的 `<lastmod>` 用�
 ### 3.4 埋点
 
 沿用 `data-ga-event` 委派：首页内链 / CTA 用内部跳转事件，来源字段区分区块（插件介绍、方案概览的 Free / Unlimited）；安装 CTA 用外链点击事件，来源字段区分导航、移动导航、插件介绍、结尾 CTA。不新增自定义事件类型。
+
+网页教程的指南链接复用 `internal_workflow_click`，来源为 `homepage_steps`、目标为 `download_guide`，实际 href 由既有委派器采集。
 
 ## 4. SEO meta 来源治理(website)
 

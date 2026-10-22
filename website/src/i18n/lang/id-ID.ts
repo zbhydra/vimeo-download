@@ -33,9 +33,9 @@ export const idID: SiteContent = {
         parse: {
           eyebrow: 'Pemeriksaan tautan cepat',
           titleBrand: 'Pengunduh video Vimeo',
-          titleTagline: 'Simpan video Vimeo publik apa pun',
+          titleTagline: 'Simpan video Vimeo publik secara gratis',
           helperText:
-            'Tempel tautan video Vimeo publik, lalu unduh sebagai MP4 dalam kualitas tertinggi yang tersedia.',
+            'Tempel tautan Vimeo publik untuk menyimpan MP4 secara gratis dalam kualitas tertinggi yang tersedia. Berkas besar atau berkas yang ukurannya tidak diketahui mungkin memerlukan ekstensi.',
           linkLabel: 'Tautan Vimeo',
           linkPlaceholder: 'https://vimeo.com/123456789',
           clearInput: 'Hapus input',
@@ -57,7 +57,7 @@ export const idID: SiteContent = {
           resumeUnavailableText: 'Catatan pemulihan lokal sudah kedaluwarsa.',
           resumeDismiss: 'Abaikan',
           resuming: 'Melanjutkan...',
-          extensionEntryLine: 'Unduh langsung di Vimeo dengan ekstensi',
+          extensionEntryLine: 'Perlu audio, subtitle, atau antrean unduhan? Gunakan ekstensi.',
           largeFileExtensionInlineChromeTitle: 'Ekstensi Chrome',
           largeFileExtensionInlineChromeDescription:
             'Ekstensi khusus Chrome: unduh video Vimeo apa pun, simpan audio secara terpisah, dan nikmati unduhan cepat. Unduhan besar tetap berjalan di luar tab.',
@@ -111,10 +111,28 @@ export const idID: SiteContent = {
         ]
       },
       intro: {
-        heading: 'Lebih jauh dengan ekstensi Chrome',
-        lead: 'Alat online di atas menyimpan video Vimeo dari sebuah tautan. Ekstensi bekerja langsung di halaman Vimeo yang sedang Anda tonton dan menambahkan audio, subtitle, gambar sampul, serta antrean unduhan.',
+        heading: 'Vimeo Downloader untuk Chrome',
+        lead: 'Gunakan ekstensi Chrome di halaman Vimeo yang sedang Anda tonton untuk menyimpan video, audio M4A atau MP3, subtitle VTT, dan gambar sampul, dengan antrean unduhan. Tersedia kuota harian gratis dan paket Unlimited berbayar.',
         primaryCta: 'Tambahkan ke Chrome',
-        secondaryCta: 'Lihat paket',
+        secondaryCta: 'Lihat paket ekstensi',
+        steps: [
+          {
+            title: 'Pasang',
+            description: 'Pasang ekstensi dari Chrome Web Store.'
+          },
+          {
+            title: 'Sematkan ikon',
+            description: 'Sematkan di toolbar agar popup mudah dibuka.'
+          },
+          {
+            title: 'Buka video Vimeo',
+            description: 'Buka halaman video yang didukung di vimeo.com atau player.vimeo.com lalu mulai memutar.'
+          },
+          {
+            title: 'Pilih kualitas',
+            description: 'Klik kualitas yang Anda mau di panel, atau buka ikon ekstensi untuk daftar lengkap. Browser menulis berkas ke disk Anda.'
+          }
+        ],
         panel: {
           ariaLabel: 'Ilustrasi panel unduh di halaman',
           rows: {
@@ -137,7 +155,7 @@ export const idID: SiteContent = {
             description: 'Pilih 720p, 1080p, atau kualitas lain yang tersedia untuk video, atau biarkan Best memilih yang tertinggi.'
           },
           {
-            title: 'Audio sebagai M4A atau MP3',
+            title: 'Audio Vimeo sebagai M4A atau MP3',
             description: 'Simpan trek audio secara terpisah sebagai M4A, atau pilih MP3 di popup untuk keluaran hasil transkode.'
           },
           {
@@ -163,23 +181,19 @@ export const idID: SiteContent = {
         ]
       },
       steps: {
-        heading: 'Cara kerja ekstensi',
+        heading: 'Unduh video Vimeo secara online',
         items: [
           {
-            title: 'Pasang',
-            description: 'Pasang ekstensi dari Chrome Web Store.'
+            title: 'Salin tautan Vimeo',
+            description: 'Buka video Vimeo publik yang boleh Anda simpan, lalu salin URL-nya.'
           },
           {
-            title: 'Sematkan ikon',
-            description: 'Sematkan di toolbar agar popup mudah dibuka.'
+            title: 'Tempel ke alat online',
+            description: 'Tempel tautan ke alat di atas dan pilih “Tempel tautan video Vimeo” untuk menemukan berkas video.'
           },
           {
-            title: 'Buka video Vimeo',
-            description: 'Buka halaman video yang didukung di vimeo.com atau player.vimeo.com lalu mulai memutar.'
-          },
-          {
-            title: 'Pilih kualitas',
-            description: 'Klik kualitas yang Anda mau di panel, atau buka ikon ekstensi untuk daftar lengkap. Browser menulis berkas ke disk Anda.'
+            title: 'Unduh MP4',
+            description: 'Pilih “Unduh” dan biarkan tab ini terbuka sampai browser menyimpan berkas.'
           }
         ]
       },
@@ -253,7 +267,7 @@ export const idID: SiteContent = {
         }
       },
       plans: {
-        heading: 'Paket',
+        heading: 'Paket ekstensi Chrome',
         free: {
           name: 'Gratis',
           description: 'Kuota unduhan harian gratis. Akun atau perangkat baru memulai dengan hari pertama tanpa batas.',

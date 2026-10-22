@@ -33,9 +33,9 @@ export const esES: SiteContent = {
         parse: {
           eyebrow: 'Comprobación rápida del enlace',
           titleBrand: 'Descargador de vídeos de Vimeo',
-          titleTagline: 'Guarda cualquier vídeo público',
+          titleTagline: 'Guarda vídeos públicos de Vimeo gratis',
           helperText:
-            'Pega un enlace público de vídeo de Vimeo y descárgalo en MP4 con la máxima calidad disponible.',
+            'Pega un enlace público de Vimeo para guardar gratis un MP4 con la máxima calidad disponible. Los archivos grandes o de tamaño desconocido pueden requerir la extensión.',
           linkLabel: 'Enlace de Vimeo',
           linkPlaceholder: 'https://vimeo.com/123456789',
           clearInput: 'Borrar entrada',
@@ -57,7 +57,7 @@ export const esES: SiteContent = {
           resumeUnavailableText: 'El registro de recuperación local ha caducado.',
           resumeDismiss: 'Ignorar',
           resuming: 'Reanudando...',
-          extensionEntryLine: 'Descarga directamente en Vimeo con la extensión',
+          extensionEntryLine: '¿Necesitas audio, subtítulos o una cola de descargas? Usa la extensión.',
           largeFileExtensionInlineChromeTitle: 'Extensión para Chrome',
           largeFileExtensionInlineChromeDescription:
             'Extensión específica para Chrome: descarga cualquier vídeo de Vimeo, guarda el audio por separado y disfruta de descargas rápidas. Las descargas grandes continúan fuera de la pestaña.',
@@ -111,10 +111,28 @@ export const esES: SiteContent = {
         ]
       },
       intro: {
-        heading: 'Llega más lejos con la extensión de Chrome',
-        lead: 'La herramienta en línea de arriba guarda un vídeo de Vimeo a partir de un enlace. La extensión funciona en la página de Vimeo que ya estás viendo y añade audio, subtítulos, imágenes de portada y una cola de descargas.',
+        heading: 'Vimeo Downloader para Chrome',
+        lead: 'Usa la extensión de Chrome en la página de Vimeo que estás viendo para guardar vídeo, audio M4A o MP3, subtítulos VTT e imágenes de portada, con una cola de descargas. Incluye un cupo diario gratuito y un plan Unlimited de pago.',
         primaryCta: 'Añadir a Chrome',
-        secondaryCta: 'Ver planes',
+        secondaryCta: 'Ver planes de la extensión',
+        steps: [
+          {
+            title: 'Instalar',
+            description: 'Instala la extensión desde Chrome Web Store.'
+          },
+          {
+            title: 'Fijar el icono',
+            description: 'Fíjalo en la barra de herramientas para abrir la ventana emergente con rapidez.'
+          },
+          {
+            title: 'Abrir un vídeo de Vimeo',
+            description: 'Ve a una página de vídeo compatible de vimeo.com o player.vimeo.com y empieza a reproducir.'
+          },
+          {
+            title: 'Elegir una calidad',
+            description: 'Haz clic en la calidad que quieras en el panel, o abre el icono de la extensión para ver la lista completa. Tu navegador guarda el archivo en el disco.'
+          }
+        ],
         panel: {
           ariaLabel: 'Ilustración del panel de descarga en la página',
           rows: {
@@ -137,7 +155,7 @@ export const esES: SiteContent = {
             description: 'Elige 720p, 1080p u otra calidad que ofrezca el vídeo, o deja que Best seleccione la más alta.'
           },
           {
-            title: 'Audio en M4A o MP3',
+            title: 'Audio de Vimeo en M4A o MP3',
             description: 'Guarda la pista de audio por separado como M4A, o elige MP3 en la ventana emergente para una salida transcodificada.'
           },
           {
@@ -163,23 +181,19 @@ export const esES: SiteContent = {
         ]
       },
       steps: {
-        heading: 'Cómo funciona la extensión',
+        heading: 'Descarga un vídeo de Vimeo en línea',
         items: [
           {
-            title: 'Instalar',
-            description: 'Instala la extensión desde Chrome Web Store.'
+            title: 'Copia el enlace de Vimeo',
+            description: 'Abre un vídeo público de Vimeo que tengas permiso para guardar y copia su URL.'
           },
           {
-            title: 'Fijar el icono',
-            description: 'Fíjalo en la barra de herramientas para abrir la ventana emergente con rapidez.'
+            title: 'Pégalo en la herramienta en línea',
+            description: 'Pega el enlace en la herramienta de arriba y selecciona «Pegar enlace de vídeo de Vimeo» para encontrar el archivo de vídeo.'
           },
           {
-            title: 'Abrir un vídeo de Vimeo',
-            description: 'Ve a una página de vídeo compatible de vimeo.com o player.vimeo.com y empieza a reproducir.'
-          },
-          {
-            title: 'Elegir una calidad',
-            description: 'Haz clic en la calidad que quieras en el panel, o abre el icono de la extensión para ver la lista completa. Tu navegador guarda el archivo en el disco.'
+            title: 'Descarga el MP4',
+            description: 'Selecciona «Descargar» y mantén esta pestaña abierta hasta que el navegador guarde el archivo.'
           }
         ]
       },
@@ -253,7 +267,7 @@ export const esES: SiteContent = {
         }
       },
       plans: {
-        heading: 'Planes',
+        heading: 'Planes de la extensión de Chrome',
         free: {
           name: 'Free',
           description: 'Una cuota diaria de descargas gratuita. Una cuenta o un dispositivo nuevos empiezan con un primer día ilimitado.',

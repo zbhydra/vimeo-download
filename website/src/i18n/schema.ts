@@ -154,7 +154,12 @@ export interface HomepageContent {
     /** 插件能力清单。 */
     featureList: string[]
   }
-  /** 区块 1：插件介绍。 */
+  /** 区块 1：网页下载步骤，按复制公开视频链接 → 粘贴解析 → 下载 MP4 排序。 */
+  steps: {
+    heading: string
+    items: HomepageCardMessage[]
+  }
+  /** 区块 2：插件介绍与安装教程。 */
   intro: {
     heading: string
     lead: string
@@ -162,6 +167,8 @@ export interface HomepageContent {
     primaryCta: string
     /** 次按钮，指向 Pricing。 */
     secondaryCta: string
+    /** 插件四步，按安装 → 固定图标 → 打开视频页 → 选择画质排序。 */
+    steps: HomepageCardMessage[]
     /** 插件页内面板示意。 */
     panel: {
       ariaLabel: string
@@ -174,13 +181,8 @@ export interface HomepageContent {
       }
     }
   }
-  /** 区块 2：功能卡片，来自商店文案「CORE FEATURES」。 */
+  /** 区块 3：功能卡片，来自商店文案「CORE FEATURES」。 */
   features: {
-    heading: string
-    items: HomepageCardMessage[]
-  }
-  /** 区块 3：使用步骤，按安装 → 固定图标 → 打开视频页 → 选择画质排序。 */
-  steps: {
     heading: string
     items: HomepageCardMessage[]
   }

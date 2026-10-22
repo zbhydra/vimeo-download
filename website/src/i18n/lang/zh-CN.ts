@@ -33,8 +33,8 @@ export const zhCN: SiteContent = {
         parse: {
           eyebrow: '快速链接检查',
           titleBrand: 'Vimeo 视频下载器',
-          titleTagline: '保存任意公开的 Vimeo 视频',
-          helperText: '粘贴公开的 Vimeo 视频链接，即可下载最高可用清晰度的 MP4。',
+          titleTagline: '免费保存 Vimeo 公开视频',
+          helperText: '粘贴公开的 Vimeo 链接，免费保存最高可用画质的 MP4。大文件或大小未知的文件可能需要使用扩展。',
           linkLabel: 'Vimeo 链接',
           linkPlaceholder: 'https://vimeo.com/123456789',
           clearInput: '清除输入',
@@ -55,7 +55,7 @@ export const zhCN: SiteContent = {
           resumeUnavailableText: '本地恢复记录已失效。',
           resumeDismiss: '忽略',
           resuming: '继续下载中...',
-          extensionEntryLine: '用插件直接在 Vimeo 页面下载',
+          extensionEntryLine: '需要音频、字幕或下载队列？使用扩展。',
           largeFileExtensionInlineChromeTitle: 'Chrome 插件',
           largeFileExtensionInlineChromeDescription:
             'Chrome 专用插件：支持下载所有 Vimeo 视频，可单独下载音频，下载速度快。大文件下载可在标签页之外继续运行。',
@@ -116,10 +116,28 @@ export const zhCN: SiteContent = {
         ]
       },
       intro: {
-        heading: '用 Chrome 扩展做得更多',
-        lead: '上方的在线工具通过链接保存 Vimeo 视频。扩展则直接作用于你正在观看的 Vimeo 页面，并额外提供音频、字幕、封面图和下载队列。',
+        heading: 'Chrome 版 Vimeo 下载扩展',
+        lead: '在正在观看的 Vimeo 页面使用 Chrome 扩展，保存视频、M4A 或 MP3 音频、VTT 字幕和封面图，并使用下载队列。扩展提供每日免费额度和付费 Unlimited 方案。',
         primaryCta: '添加到 Chrome',
-        secondaryCta: '查看方案',
+        secondaryCta: '查看扩展方案',
+        steps: [
+          {
+            title: '安装',
+            description: '从 Chrome 应用商店添加扩展。'
+          },
+          {
+            title: '固定图标',
+            description: '把图标固定到工具栏，方便随时打开弹窗。'
+          },
+          {
+            title: '打开 Vimeo 视频',
+            description: '进入 vimeo.com 或 player.vimeo.com 上支持的视频页并开始播放。'
+          },
+          {
+            title: '选择画质',
+            description: '在面板中点击想要的画质，或打开扩展图标查看完整列表。文件由浏览器写入本地磁盘。'
+          }
+        ],
         panel: {
           ariaLabel: '页面内下载面板示意图',
           rows: {
@@ -142,7 +160,7 @@ export const zhCN: SiteContent = {
             description: '选 720p、1080p 或视频提供的其他画质，也可以让 Best 自动选最高的一档。'
           },
           {
-            title: '音频保存为 M4A 或 MP3',
+            title: 'Vimeo 音频：M4A 或 MP3',
             description: '把音频轨单独保存为 M4A，或在弹窗中选择 MP3 转码输出。'
           },
           {
@@ -168,23 +186,19 @@ export const zhCN: SiteContent = {
         ]
       },
       steps: {
-        heading: '扩展怎么用',
+        heading: '在线下载 Vimeo 视频',
         items: [
           {
-            title: '安装',
-            description: '从 Chrome 应用商店添加扩展。'
+            title: '复制 Vimeo 链接',
+            description: '打开你有权保存的 Vimeo 公开视频，并复制其网址。'
           },
           {
-            title: '固定图标',
-            description: '把图标固定到工具栏，方便随时打开弹窗。'
+            title: '粘贴到在线工具',
+            description: '将链接粘贴到上方工具，点击“粘贴 Vimeo 视频链接”查找视频文件。'
           },
           {
-            title: '打开 Vimeo 视频',
-            description: '进入 vimeo.com 或 player.vimeo.com 上支持的视频页并开始播放。'
-          },
-          {
-            title: '选择画质',
-            description: '在面板中点击想要的画质，或打开扩展图标查看完整列表。文件由浏览器写入本地磁盘。'
+            title: '下载 MP4',
+            description: '点击“下载”，保持此标签页打开，直到浏览器保存文件。'
           }
         ]
       },
@@ -258,7 +272,7 @@ export const zhCN: SiteContent = {
         }
       },
       plans: {
-        heading: '方案概览',
+        heading: 'Chrome 扩展方案',
         free: {
           name: 'Free',
           description: '每日免费下载额度。新账号或新设备的第一天不限次数。',

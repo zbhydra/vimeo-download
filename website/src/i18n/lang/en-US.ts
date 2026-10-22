@@ -33,9 +33,9 @@ export const enUS: SiteContent = {
         parse: {
           eyebrow: 'Quick link check',
           titleBrand: 'Vimeo Downloader',
-          titleTagline: 'Save Any Public Vimeo Video',
+          titleTagline: 'Save Public Vimeo Videos for Free',
           helperText:
-            'Paste a public Vimeo video link and download it as an MP4 in the highest quality available.',
+            'Paste a public Vimeo link to save an MP4 for free at the highest available quality. Large files or files of unknown size may require the extension.',
           linkLabel: 'Vimeo link',
           linkPlaceholder: 'https://vimeo.com/123456789',
           clearInput: 'Clear input',
@@ -57,7 +57,7 @@ export const enUS: SiteContent = {
           resumeUnavailableText: 'The local recovery record has expired.',
           resumeDismiss: 'Ignore',
           resuming: 'Resuming...',
-          extensionEntryLine: 'Download right on Vimeo with the extension',
+          extensionEntryLine: 'Need audio, subtitles or a queue? Use the extension.',
           largeFileExtensionInlineChromeTitle: 'Chrome Extension',
           largeFileExtensionInlineChromeDescription:
             'Dedicated extension for Chrome: download any Vimeo video, save audio separately, and enjoy fast downloads. Large downloads keep running outside the tab.',
@@ -118,10 +118,28 @@ export const enUS: SiteContent = {
         ]
       },
       intro: {
-        heading: 'Go further with the Chrome extension',
-        lead: 'The online tool above saves a Vimeo video from a link. The extension works on the Vimeo page you are already watching and adds audio, subtitles, cover images and a download queue.',
+        heading: 'Vimeo Downloader for Chrome',
+        lead: 'Use the Chrome extension on the Vimeo page you are watching to save video, M4A or MP3 audio, VTT subtitles and cover images, with a download queue. It has a free daily allowance and a paid Unlimited plan.',
         primaryCta: 'Add to Chrome',
-        secondaryCta: 'See plans',
+        secondaryCta: 'See extension plans',
+        steps: [
+          {
+            title: 'Install',
+            description: 'Add the extension from the Chrome Web Store.'
+          },
+          {
+            title: 'Pin the icon',
+            description: 'Pin it to your toolbar for quick access to the popup.'
+          },
+          {
+            title: 'Open a Vimeo video',
+            description: 'Go to a supported video page on vimeo.com or player.vimeo.com and start playing.'
+          },
+          {
+            title: 'Choose a quality',
+            description: 'Click the quality you want in the panel, or open the extension icon for the full list. Your browser writes the file to disk.'
+          }
+        ],
         panel: {
           ariaLabel: 'Illustration of the in-page download panel',
           rows: {
@@ -144,7 +162,7 @@ export const enUS: SiteContent = {
             description: 'Pick 720p, 1080p or another quality the video exposes, or let Best choose the highest one.'
           },
           {
-            title: 'Audio as M4A or MP3',
+            title: 'Vimeo audio as M4A or MP3',
             description: 'Save the audio track on its own as M4A, or choose MP3 in the popup for transcoded output.'
           },
           {
@@ -170,23 +188,19 @@ export const enUS: SiteContent = {
         ]
       },
       steps: {
-        heading: 'How the extension works',
+        heading: 'Download a Vimeo video online',
         items: [
           {
-            title: 'Install',
-            description: 'Add the extension from the Chrome Web Store.'
+            title: 'Copy the Vimeo link',
+            description: 'Open a public Vimeo video you have permission to save and copy its URL.'
           },
           {
-            title: 'Pin the icon',
-            description: 'Pin it to your toolbar for quick access to the popup.'
+            title: 'Paste it into the online tool',
+            description: 'Paste the link into the tool above and select Paste Vimeo Video Link to find the video file.'
           },
           {
-            title: 'Open a Vimeo video',
-            description: 'Go to a supported video page on vimeo.com or player.vimeo.com and start playing.'
-          },
-          {
-            title: 'Choose a quality',
-            description: 'Click the quality you want in the panel, or open the extension icon for the full list. Your browser writes the file to disk.'
+            title: 'Download the MP4',
+            description: 'Select Download and keep this tab open until your browser saves the file.'
           }
         ]
       },
@@ -260,7 +274,7 @@ export const enUS: SiteContent = {
         }
       },
       plans: {
-        heading: 'Plans',
+        heading: 'Chrome extension plans',
         free: {
           name: 'Free',
           description: 'A free daily download allowance. A new account or device starts with an unlimited first day.',

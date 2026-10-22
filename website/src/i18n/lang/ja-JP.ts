@@ -33,9 +33,9 @@ export const jaJP: SiteContent = {
         parse: {
           eyebrow: 'クイックリンクチェック',
           titleBrand: 'Vimeo 動画ダウンローダー',
-          titleTagline: '公開 Vimeo 動画を保存',
+          titleTagline: 'Vimeo の公開動画を無料で保存',
           helperText:
-            '公開 Vimeo 動画のリンクを貼り付けると、利用できる最高画質の MP4 をダウンロードできます。',
+            'Vimeo の公開動画のリンクを貼り付けて、利用可能な最高画質の MP4 を無料で保存できます。大きなファイルやサイズが不明なファイルには、拡張機能が必要になる場合があります。',
           linkLabel: 'Vimeo リンク',
           linkPlaceholder: 'https://vimeo.com/123456789',
           clearInput: '入力をクリア',
@@ -56,7 +56,7 @@ export const jaJP: SiteContent = {
           resumeUnavailableText: 'ローカルの復元記録は期限切れです。',
           resumeDismiss: '無視',
           resuming: '再開しています...',
-          extensionEntryLine: '拡張機能で Vimeo 上から直接ダウンロード',
+          extensionEntryLine: '音声、字幕、ダウンロードキューが必要ですか？拡張機能をご利用ください。',
           largeFileExtensionInlineChromeTitle: 'Chrome 拡張機能',
           largeFileExtensionInlineChromeDescription:
             'Chrome 専用の拡張機能で、Vimeo のすべての動画をダウンロードし、音声を個別に保存できます。高速ダウンロードにも対応し、大容量のダウンロードをタブの外で続行できます。',
@@ -110,10 +110,28 @@ export const jaJP: SiteContent = {
         ]
       },
       intro: {
-        heading: 'Chrome 拡張機能でさらに便利に',
-        lead: '上のオンラインツールは、リンクから Vimeo 動画を保存します。拡張機能は今まさに視聴している Vimeo のページ上で動作し、音声・字幕・カバー画像・ダウンロードキューを追加します。',
+        heading: 'Chrome 向け Vimeo ダウンローダー',
+        lead: '視聴中の Vimeo ページで Chrome 拡張機能を使い、動画、M4A または MP3 の音声、VTT 字幕、カバー画像を保存し、ダウンロードキューを利用できます。毎日の無料枠と、有料の Unlimited プランがあります。',
         primaryCta: 'Chrome に追加',
-        secondaryCta: 'プランを見る',
+        secondaryCta: '拡張機能のプランを見る',
+        steps: [
+          {
+            title: 'インストール',
+            description: 'Chrome ウェブストアから拡張機能を追加します。'
+          },
+          {
+            title: 'アイコンを固定',
+            description: 'ツールバーに固定すると、ポップアップをすぐ開けます。'
+          },
+          {
+            title: 'Vimeo の動画を開く',
+            description: 'vimeo.com または player.vimeo.com の対応する動画ページを開いて再生します。'
+          },
+          {
+            title: '画質を選ぶ',
+            description: 'パネルで希望の画質をクリックするか、拡張機能アイコンから一覧を開きます。ファイルはブラウザがディスクに書き込みます。'
+          }
+        ],
         panel: {
           ariaLabel: 'ページ内ダウンロードパネルのイメージ',
           rows: {
@@ -136,7 +154,7 @@ export const jaJP: SiteContent = {
             description: '720p や 1080p など、その動画で利用できる画質を選べます。Best なら最高画質を自動で選びます。'
           },
           {
-            title: '音声を M4A または MP3 で',
+            title: 'Vimeo の音声を M4A または MP3 で保存',
             description: '音声トラックだけを M4A で保存できます。ポップアップで MP3 を選ぶと変換して出力します。'
           },
           {
@@ -162,23 +180,19 @@ export const jaJP: SiteContent = {
         ]
       },
       steps: {
-        heading: '拡張機能の使い方',
+        heading: 'Vimeo 動画をオンラインでダウンロード',
         items: [
           {
-            title: 'インストール',
-            description: 'Chrome ウェブストアから拡張機能を追加します。'
+            title: 'Vimeo のリンクをコピー',
+            description: '保存する権限のある Vimeo の公開動画を開き、URL をコピーします。'
           },
           {
-            title: 'アイコンを固定',
-            description: 'ツールバーに固定すると、ポップアップをすぐ開けます。'
+            title: 'オンラインツールに貼り付け',
+            description: '上のツールにリンクを貼り付け、「Vimeo 動画リンクを貼り付け」を選んで動画ファイルを探します。'
           },
           {
-            title: 'Vimeo の動画を開く',
-            description: 'vimeo.com または player.vimeo.com の対応する動画ページを開いて再生します。'
-          },
-          {
-            title: '画質を選ぶ',
-            description: 'パネルで希望の画質をクリックするか、拡張機能アイコンから一覧を開きます。ファイルはブラウザがディスクに書き込みます。'
+            title: 'MP4 をダウンロード',
+            description: '「ダウンロード」を選び、ブラウザーがファイルを保存するまでこのタブを開いたままにします。'
           }
         ]
       },
@@ -252,7 +266,7 @@ export const jaJP: SiteContent = {
         }
       },
       plans: {
-        heading: 'プラン',
+        heading: 'Chrome 拡張機能のプラン',
         free: {
           name: 'Free',
           description: '毎日の無料ダウンロード枠があります。新しいアカウントやデバイスは初日が無制限です。',

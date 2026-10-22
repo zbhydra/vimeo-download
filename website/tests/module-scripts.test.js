@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import test from 'node:test'
@@ -230,9 +231,9 @@ test('homepage keeps fonts and route CSS off the critical path while preserving 
 
 test('every locale homepage has one H1, eight ordered sections and valid structured data', async () => {
   const sectionIds = [
+    'home-steps',
     'home-intro',
     'home-features',
-    'home-steps',
     'home-comparison',
     'home-scope',
     'home-plans',
@@ -264,6 +265,49 @@ test('every locale homepage has one H1, eight ordered sections and valid structu
       sectionIds.length,
       `${label}: expected one section H2 per section`
     )
+
+    const webStepsHtml = html.slice(
+      html.lastIndexOf('<section', positions[0]),
+      html.indexOf('</section>', positions[0])
+    )
+    const webSteps = webStepsHtml.match(/<ol\b[^>]*>([\s\S]*?)<\/ol>/)?.[1]
+    assert.ok(webSteps, `${label}: missing online download steps`)
+    assert.equal((webSteps.match(/<li\b/g) ?? []).length, 3, `${label}: expected three online steps`)
+    assert.equal((webSteps.match(/<h3\b/g) ?? []).length, 3, `${label}: online step titles must use H3`)
+    const workspaceCopy = JSON.parse(
+      html.match(/<script\b[^>]*data-download-copy[^>]*>([\s\S]*?)<\/script>/)[1]
+    )
+    assert.ok(webSteps.includes(workspaceCopy.parse.submit), `${label}: online steps must name the local parse button`)
+    assert.ok(webSteps.includes(workspaceCopy.parse.download), `${label}: online steps must name the local download button`)
+
+    const introHtml = html.match(/<section\b[^>]*\bid="home-intro"[^>]*>([\s\S]*?)<\/section>/)?.[1]
+    assert.ok(introHtml, `${label}: missing extension intro`)
+    assert.equal((introHtml.match(/<h2\b/g) ?? []).length, 1, `${label}: extension intro must have exactly one H2`)
+    const introSteps = introHtml.match(/<ol\b[^>]*>([\s\S]*?)<\/ol>/)?.[1]
+    assert.ok(introSteps, `${label}: missing extension installation steps`)
+    assert.equal((introSteps.match(/<li\b/g) ?? []).length, 4, `${label}: expected four extension steps`)
+    assert.equal((introSteps.match(/<h3\b/g) ?? []).length, 4, `${label}: extension step titles must use H3`)
+    assert.ok(introHtml.indexOf('<ol') > introHtml.lastIndexOf('</a>'), `${label}: extension steps must follow the CTAs`)
+    assert.ok(introHtml.indexOf('<ol') < introHtml.indexOf('<figure'), `${label}: extension steps must precede the illustration`)
+
+    const guideFile = path.join(distDir, languagePath, 'guides/how-to-download-a-vimeo-video/index.html')
+    const guideLinks = Array.from(webStepsHtml.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g))
+    if (existsSync(guideFile)) {
+      assert.equal(guideLinks.length, 1, `${label}: expected one local download guide link`)
+      const [guideLink] = guideLinks
+      const guideHtml = await readFile(guideFile, 'utf8')
+      const guideTitle = guideHtml.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/)?.[1].trim()
+      assert.ok(guideTitle, `${label}: download guide must have a title`)
+      assert.equal(guideHtml.match(/<html\b[^>]*lang="([^"]+)"/)?.[1], label)
+      assert.ok(guideLink[1].includes(`href="/${languagePath}guides/how-to-download-a-vimeo-video/"`))
+      assert.ok(guideLink[1].includes(`title="${guideTitle}"`))
+      assert.equal(guideLink[2].trim(), guideTitle)
+      assert.match(guideLink[1], /data-ga-event="internal_workflow_click"/)
+      assert.match(guideLink[1], /data-ga-source="homepage_steps"/)
+      assert.match(guideLink[1], /data-ga-target="download_guide"/)
+    } else {
+      assert.equal(guideLinks.length, 0, `${label}: must not fall back to a guide in another language`)
+    }
 
     const schemas = Array.from(
       html.matchAll(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)

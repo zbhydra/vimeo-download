@@ -33,8 +33,8 @@ export const zhTW: SiteContent = {
         parse: {
           eyebrow: '快速連結檢查',
           titleBrand: 'Vimeo 影片下載器',
-          titleTagline: '儲存任意公開的 Vimeo 影片',
-          helperText: '貼上公開的 Vimeo 影片連結，即可下載最高可用畫質的 MP4。',
+          titleTagline: '免費儲存 Vimeo 公開影片',
+          helperText: '貼上公開的 Vimeo 連結，免費儲存最高可用畫質的 MP4。大型檔案或大小未知的檔案可能需要使用擴充功能。',
           linkLabel: 'Vimeo 連結',
           linkPlaceholder: 'https://vimeo.com/123456789',
           clearInput: '清除輸入',
@@ -55,7 +55,7 @@ export const zhTW: SiteContent = {
           resumeUnavailableText: '本機恢復記錄已失效。',
           resumeDismiss: '忽略',
           resuming: '繼續下載中...',
-          extensionEntryLine: '用擴充功能直接在 Vimeo 頁面下載',
+          extensionEntryLine: '需要音訊、字幕或下載佇列？使用擴充功能。',
           largeFileExtensionInlineChromeTitle: 'Chrome 擴充功能',
           largeFileExtensionInlineChromeDescription:
             'Chrome 專用擴充功能：支援下載所有 Vimeo 影片，可單獨下載音訊，下載速度快。大檔案下載可在分頁之外繼續運作。',
@@ -110,10 +110,28 @@ export const zhTW: SiteContent = {
         ]
       },
       intro: {
-        heading: '用 Chrome 擴充功能做得更多',
-        lead: '上方的線上工具可依連結儲存 Vimeo 影片。擴充功能則直接作用於你正在觀看的 Vimeo 頁面，並額外支援音訊、字幕、封面圖與下載佇列。',
+        heading: 'Chrome 版 Vimeo 下載擴充功能',
+        lead: '在正在觀看的 Vimeo 頁面使用 Chrome 擴充功能，儲存影片、M4A 或 MP3 音訊、VTT 字幕與封面圖，並使用下載佇列。擴充功能提供每日免費額度與付費 Unlimited 方案。',
         primaryCta: '新增至 Chrome',
-        secondaryCta: '查看方案',
+        secondaryCta: '查看擴充功能方案',
+        steps: [
+          {
+            title: '安裝',
+            description: '從 Chrome 線上應用程式商店新增擴充功能。'
+          },
+          {
+            title: '固定圖示',
+            description: '將圖示固定到工具列，方便開啟彈窗。'
+          },
+          {
+            title: '開啟 Vimeo 影片',
+            description: '前往 vimeo.com 或 player.vimeo.com 上受支援的影片頁並開始播放。'
+          },
+          {
+            title: '選擇畫質',
+            description: '在面板中點選想要的畫質，或點擊擴充功能圖示查看完整清單。檔案由瀏覽器寫入本機磁碟。'
+          }
+        ],
         panel: {
           ariaLabel: '頁面內下載面板示意圖',
           rows: {
@@ -136,7 +154,7 @@ export const zhTW: SiteContent = {
             description: '選擇 720p、1080p 或影片提供的其他畫質，也可讓 Best 挑選最高畫質。'
           },
           {
-            title: '音訊 M4A 或 MP3',
+            title: 'Vimeo 音訊：M4A 或 MP3',
             description: '單獨儲存音訊軌為 M4A，或在彈窗中選擇 MP3 取得轉碼輸出。'
           },
           {
@@ -162,23 +180,19 @@ export const zhTW: SiteContent = {
         ]
       },
       steps: {
-        heading: '擴充功能如何使用',
+        heading: '線上下載 Vimeo 影片',
         items: [
           {
-            title: '安裝',
-            description: '從 Chrome 線上應用程式商店新增擴充功能。'
+            title: '複製 Vimeo 連結',
+            description: '開啟你有權儲存的 Vimeo 公開影片，並複製其網址。'
           },
           {
-            title: '固定圖示',
-            description: '將圖示固定到工具列，方便開啟彈窗。'
+            title: '貼上至線上工具',
+            description: '將連結貼上至上方工具，點選「貼上 Vimeo 影片連結」尋找影片檔案。'
           },
           {
-            title: '開啟 Vimeo 影片',
-            description: '前往 vimeo.com 或 player.vimeo.com 上受支援的影片頁並開始播放。'
-          },
-          {
-            title: '選擇畫質',
-            description: '在面板中點選想要的畫質，或點擊擴充功能圖示查看完整清單。檔案由瀏覽器寫入本機磁碟。'
+            title: '下載 MP4',
+            description: '點選「下載」，保持此分頁開啟，直到瀏覽器儲存檔案。'
           }
         ]
       },
@@ -252,7 +266,7 @@ export const zhTW: SiteContent = {
         }
       },
       plans: {
-        heading: '方案',
+        heading: 'Chrome 擴充功能方案',
         free: {
           name: 'Free',
           description: '有每日免費下載額度。新帳號或新裝置的第一天不限次數。',

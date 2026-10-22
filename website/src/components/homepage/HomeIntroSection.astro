@@ -1,6 +1,6 @@
 ---
 /**
- * 插件展示：标题、导语、两个 CTA（主按钮进商店，次按钮进 Pricing），下方是插件界面示意。
+ * 插件展示：标题、导语、两个 CTA（主按钮进商店，次按钮进 Pricing）、安装四步与插件界面示意。
  * 本区块放在首页 hero 舞台里，与首屏共用同一个 SiteStage，自己不再包底色与分隔线。
  * 示意图由 ExtensionMockup 渲染（纯 HTML/CSS，不使用截图）。
  */
@@ -49,6 +49,15 @@ const { copy, installUrl, pricingPath, brand, callouts } = Astro.props as {
         >{copy.secondaryCta}</a>
       </div>
     </div>
+
+    <ol class="home-intro-steps">
+      {copy.steps.map(step => (
+        <li>
+          <h3>{step.title}</h3>
+          <p>{step.description}</p>
+        </li>
+      ))}
+    </ol>
 
     <ExtensionMockup
       ariaLabel={copy.panel.ariaLabel}
@@ -106,6 +115,38 @@ const { copy, installUrl, pricingPath, brand, callouts } = Astro.props as {
     text-align: center;
   }
 
+  .home-intro-steps {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 24px 40px;
+    margin-top: 40px;
+    padding-left: 24px;
+  }
+
+  .home-intro-steps li::marker {
+    color: var(--blue-700);
+    font-weight: 600;
+  }
+
+  .home-intro-steps h3 {
+    color: var(--gray-1000);
+    font-size: 17px;
+    line-height: 1.3;
+  }
+
+  .home-intro-steps p {
+    margin-top: 8px;
+    color: var(--gray-900);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 960px) {
+    .home-intro-steps {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
   @media (max-width: 600px) {
     .home-intro {
       padding: 40px 0 120px;
@@ -126,6 +167,11 @@ const { copy, installUrl, pricingPath, brand, callouts } = Astro.props as {
       flex-direction: column;
       gap: 10px;
       margin-top: 24px;
+    }
+
+    .home-intro-steps {
+      grid-template-columns: minmax(0, 1fr);
+      margin-top: 32px;
     }
   }
 </style>

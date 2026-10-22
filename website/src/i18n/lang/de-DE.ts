@@ -33,9 +33,9 @@ export const deDE: SiteContent = {
         parse: {
           eyebrow: 'Schnelle Link-Prüfung',
           titleBrand: 'Vimeo Downloader',
-          titleTagline: 'Jedes öffentliche Vimeo-Video speichern',
+          titleTagline: 'Öffentliche Vimeo-Videos kostenlos speichern',
           helperText:
-            'Füge einen öffentlichen Vimeo-Link ein und lade das Video als MP4 in der höchsten verfügbaren Qualität herunter.',
+            'Fügen Sie einen öffentlichen Vimeo-Link ein, um kostenlos eine MP4-Datei in der höchsten verfügbaren Qualität zu speichern. Große Dateien oder Dateien mit unbekannter Größe können die Erweiterung erfordern.',
           linkLabel: 'Vimeo-Link',
           linkPlaceholder: 'https://vimeo.com/123456789',
           clearInput: 'Eingabe löschen',
@@ -57,7 +57,7 @@ export const deDE: SiteContent = {
           resumeUnavailableText: 'Der lokale Wiederherstellungseintrag ist abgelaufen.',
           resumeDismiss: 'Ignorieren',
           resuming: 'Wird fortgesetzt...',
-          extensionEntryLine: 'Direkt auf Vimeo mit der Erweiterung herunterladen',
+          extensionEntryLine: 'Benötigen Sie Audio, Untertitel oder eine Download-Warteschlange? Nutzen Sie die Erweiterung.',
           largeFileExtensionInlineChromeTitle: 'Chrome-Erweiterung',
           largeFileExtensionInlineChromeDescription:
             'Chrome-Erweiterung: Lade jedes Vimeo-Video herunter, speichere Audio separat und profitiere von schnellen Downloads. Große Downloads laufen außerhalb des Tabs weiter.',
@@ -111,10 +111,28 @@ export const deDE: SiteContent = {
         ]
       },
       intro: {
-        heading: 'Mehr herausholen mit der Chrome-Erweiterung',
-        lead: 'Das Online-Tool oben speichert ein Vimeo-Video per Link. Die Erweiterung arbeitet auf der Vimeo-Seite, die Sie gerade ansehen, und ergänzt Audio, Untertitel, Titelbilder und eine Download-Warteschlange.',
+        heading: 'Vimeo Downloader für Chrome',
+        lead: 'Nutzen Sie die Chrome-Erweiterung auf der Vimeo-Seite, die Sie gerade ansehen, um Videos, M4A- oder MP3-Audio, VTT-Untertitel und Titelbilder zu speichern und eine Download-Warteschlange zu verwenden. Es gibt ein kostenloses Tageskontingent und einen kostenpflichtigen Unlimited-Tarif.',
         primaryCta: 'Zu Chrome hinzufügen',
-        secondaryCta: 'Tarife ansehen',
+        secondaryCta: 'Erweiterungstarife ansehen',
+        steps: [
+          {
+            title: 'Installieren',
+            description: 'Installieren Sie die Erweiterung aus dem Chrome Web Store.'
+          },
+          {
+            title: 'Symbol anheften',
+            description: 'Heften Sie es an die Symbolleiste, um das Popup schnell zu öffnen.'
+          },
+          {
+            title: 'Vimeo-Video öffnen',
+            description: 'Öffnen Sie eine unterstützte Videoseite auf vimeo.com oder player.vimeo.com und starten Sie die Wiedergabe.'
+          },
+          {
+            title: 'Qualität wählen',
+            description: 'Klicken Sie im Panel auf die gewünschte Qualität oder öffnen Sie das Erweiterungssymbol für die vollständige Liste. Ihr Browser schreibt die Datei auf die Festplatte.'
+          }
+        ],
         panel: {
           ariaLabel: 'Darstellung des Download-Panels auf der Seite',
           rows: {
@@ -137,7 +155,7 @@ export const deDE: SiteContent = {
             description: 'Wählen Sie 720p, 1080p oder eine andere Qualität, die das Video anbietet, oder lassen Sie Best die höchste auswählen.'
           },
           {
-            title: 'Audio als M4A oder MP3',
+            title: 'Vimeo-Audio als M4A oder MP3',
             description: 'Speichern Sie die Audiospur einzeln als M4A oder wählen Sie im Popup MP3 als transkodierte Ausgabe.'
           },
           {
@@ -163,23 +181,19 @@ export const deDE: SiteContent = {
         ]
       },
       steps: {
-        heading: 'So funktioniert die Erweiterung',
+        heading: 'Ein Vimeo-Video online herunterladen',
         items: [
           {
-            title: 'Installieren',
-            description: 'Installieren Sie die Erweiterung aus dem Chrome Web Store.'
+            title: 'Vimeo-Link kopieren',
+            description: 'Öffnen Sie ein öffentliches Vimeo-Video, das Sie speichern dürfen, und kopieren Sie die URL.'
           },
           {
-            title: 'Symbol anheften',
-            description: 'Heften Sie es an die Symbolleiste, um das Popup schnell zu öffnen.'
+            title: 'In das Online-Tool einfügen',
+            description: 'Fügen Sie den Link in das Tool oben ein und wählen Sie „Vimeo-Videolink einfügen“, um die Videodatei zu finden.'
           },
           {
-            title: 'Vimeo-Video öffnen',
-            description: 'Öffnen Sie eine unterstützte Videoseite auf vimeo.com oder player.vimeo.com und starten Sie die Wiedergabe.'
-          },
-          {
-            title: 'Qualität wählen',
-            description: 'Klicken Sie im Panel auf die gewünschte Qualität oder öffnen Sie das Erweiterungssymbol für die vollständige Liste. Ihr Browser schreibt die Datei auf die Festplatte.'
+            title: 'MP4 herunterladen',
+            description: 'Wählen Sie „Herunterladen“ und lassen Sie diesen Tab geöffnet, bis Ihr Browser die Datei gespeichert hat.'
           }
         ]
       },
@@ -253,7 +267,7 @@ export const deDE: SiteContent = {
         }
       },
       plans: {
-        heading: 'Tarife',
+        heading: 'Tarife für die Chrome-Erweiterung',
         free: {
           name: 'Free',
           description: 'Ein kostenloses tägliches Download-Kontingent. Ein neues Konto oder Gerät startet mit einem unbegrenzten ersten Tag.',

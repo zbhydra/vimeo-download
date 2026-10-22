@@ -2,11 +2,11 @@
 /**
  * 首页：工具首屏 + 8 个静态展示区块。
  *
- * 区块顺序：Hero（下载工作区 + Trust Points + 一行插件入口）→ 插件介绍 → 功能 → 使用步骤
+ * 区块顺序：Hero（下载工作区 + Trust Points + 一行插件入口）→ 网页三步 → 插件介绍 → 功能
  * → 网页版与插件对比 → 适用范围与边界 → 方案概览 → FAQ → 结尾 CTA。
  *
  * 关键约定：
- * - 首屏与插件介绍放在同一个 SiteStage hero 里，舞台装饰只由 SiteStage 实现。
+ * - 首屏、网页三步与插件介绍放在同一个 SiteStage hero 里，舞台装饰只由 SiteStage 实现。
  * - 页面唯一 H1 = 下载工作区的解析工具标题（titleBrand + titleTagline），区块标题各为一个 H2。
  * - 展示区块纯静态、不带客户端脚本；只有下载工作区运行前端状态机。
  * - FAQPage JSON-LD 经 Layout 的 structuredData prop 注入，内容与可见 FAQ 同源。
@@ -25,6 +25,7 @@ import DownloadWorkspace from '../download/DownloadWorkspace.astro'
 import { CHROME_WEB_STORE_URL } from '../../lib/site.mjs'
 import { getContent, type Locale } from '../../i18n/content'
 import { localePaths } from '../../i18n/ui'
+import { getLocaleGuides, getGuidesPath } from '../../guides/guidesContent'
 
 interface Props {
   locale?: Locale
@@ -38,6 +39,7 @@ const homepage = content.pages.homepage
 const { title, description } = homepage.meta
 const localePath = localePaths[locale] || ''
 const pricingPath = `${localePath === '' ? '/' : `/${localePath}/`}ext-pricing/`
+const downloadGuide = (await getLocaleGuides(locale)).find(guide => guide.slug === 'how-to-download-a-vimeo-video')
 
 // 插件展示的标注胶囊复用功能卡标题：第 1 条是页内面板，第 6 条是 popup 列表与队列（14 语言条目顺序一致）。
 const [panelFeature, , , , , popupFeature] = homepage.features.items
@@ -85,6 +87,19 @@ const faqSchema = {
       </div>
     </section>
 
+    <HomeStepsSection copy={homepage.steps}>
+      {downloadGuide && (
+        <a
+          class="text-link home-guide-link"
+          href={getGuidesPath(locale, downloadGuide.slug)}
+          title={downloadGuide.entry.data.title}
+          data-ga-event="internal_workflow_click"
+          data-ga-source="homepage_steps"
+          data-ga-target="download_guide"
+        >{downloadGuide.entry.data.title}</a>
+      )}
+    </HomeStepsSection>
+
     <HomeIntroSection
       copy={homepage.intro}
       installUrl={installUrl}
@@ -95,7 +110,6 @@ const faqSchema = {
   </SiteStage>
 
   <HomeFeaturesSection copy={homepage.features} />
-  <HomeStepsSection copy={homepage.steps} />
   <HomeComparisonSection copy={homepage.comparison} />
   <HomeScopeSection copy={homepage.scope} />
   <HomePlansSection copy={homepage.plans} pricingPath={pricingPath} />
@@ -106,6 +120,15 @@ const faqSchema = {
 <style>
   .hero-tool {
     padding: 104px 0 64px;
+  }
+
+  .home-guide-link {
+    display: flex;
+    align-items: center;
+    width: fit-content;
+    min-height: 44px;
+    margin: 28px auto 0;
+    text-align: center;
   }
 
   .hero-trust-points {

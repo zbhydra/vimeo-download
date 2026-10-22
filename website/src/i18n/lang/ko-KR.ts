@@ -33,9 +33,9 @@ export const koKR: SiteContent = {
         parse: {
           eyebrow: '빠른 링크 확인',
           titleBrand: 'Vimeo 동영상 다운로더',
-          titleTagline: '공개 Vimeo 동영상 저장',
+          titleTagline: 'Vimeo 공개 동영상을 무료로 저장',
           helperText:
-            '공개 Vimeo 동영상 링크를 붙여넣으면 사용 가능한 최고 화질의 MP4로 다운로드할 수 있습니다.',
+            'Vimeo 공개 동영상 링크를 붙여넣어 사용 가능한 최고 화질의 MP4를 무료로 저장하세요. 대용량 파일이나 크기를 알 수 없는 파일은 확장 프로그램이 필요할 수 있습니다.',
           linkLabel: 'Vimeo 링크',
           linkPlaceholder: 'https://vimeo.com/123456789',
           clearInput: '입력 지우기',
@@ -56,7 +56,7 @@ export const koKR: SiteContent = {
           resumeUnavailableText: '로컬 복구 기록이 만료되었습니다.',
           resumeDismiss: '무시',
           resuming: '다시 시작하는 중...',
-          extensionEntryLine: '확장 프로그램으로 Vimeo에서 바로 다운로드',
+          extensionEntryLine: '오디오, 자막 또는 다운로드 대기열이 필요하신가요? 확장 프로그램을 사용하세요.',
           largeFileExtensionInlineChromeTitle: 'Chrome 확장 프로그램',
           largeFileExtensionInlineChromeDescription:
             'Chrome 전용 확장 프로그램으로 모든 Vimeo 동영상을 다운로드하고 오디오를 따로 저장할 수 있습니다. 빠른 다운로드를 지원하며, 큰 다운로드도 탭 밖에서 계속 진행합니다.',
@@ -110,10 +110,28 @@ export const koKR: SiteContent = {
         ]
       },
       intro: {
-        heading: 'Chrome 확장 프로그램으로 더 많이 저장하기',
-        lead: '위의 온라인 도구는 링크로 Vimeo 동영상을 저장합니다. 확장 프로그램은 지금 보고 있는 Vimeo 페이지에서 바로 동작하며 오디오, 자막, 커버 이미지, 다운로드 대기열을 더해 줍니다.',
+        heading: 'Chrome용 Vimeo 다운로더',
+        lead: '시청 중인 Vimeo 페이지에서 Chrome 확장 프로그램으로 동영상, M4A 또는 MP3 오디오, VTT 자막과 커버 이미지를 저장하고 다운로드 대기열을 이용하세요. 일일 무료 한도와 유료 Unlimited 플랜을 제공합니다.',
         primaryCta: 'Chrome에 추가',
-        secondaryCta: '플랜 보기',
+        secondaryCta: '확장 프로그램 플랜 보기',
+        steps: [
+          {
+            title: '설치',
+            description: 'Chrome 웹 스토어에서 확장 프로그램을 설치합니다.'
+          },
+          {
+            title: '아이콘 고정',
+            description: '도구 모음에 고정해 팝업을 빠르게 엽니다.'
+          },
+          {
+            title: 'Vimeo 동영상 열기',
+            description: 'vimeo.com 또는 player.vimeo.com의 지원되는 동영상 페이지를 열고 재생합니다.'
+          },
+          {
+            title: '화질 선택',
+            description: '패널에서 원하는 화질을 클릭하거나 확장 프로그램 아이콘을 열어 전체 목록을 봅니다. 파일은 브라우저가 디스크에 기록합니다.'
+          }
+        ],
         panel: {
           ariaLabel: '페이지 내 다운로드 패널 예시 이미지',
           rows: {
@@ -136,7 +154,7 @@ export const koKR: SiteContent = {
             description: '720p, 1080p 등 동영상이 제공하는 화질을 고르거나, Best로 가장 높은 화질을 자동 선택합니다.'
           },
           {
-            title: 'M4A 또는 MP3 오디오',
+            title: 'Vimeo 오디오를 M4A 또는 MP3로 저장',
             description: '오디오 트랙만 M4A로 저장하거나, 팝업에서 MP3를 선택해 변환 출력할 수 있습니다.'
           },
           {
@@ -162,23 +180,19 @@ export const koKR: SiteContent = {
         ]
       },
       steps: {
-        heading: '사용 방법',
+        heading: '온라인으로 Vimeo 동영상 다운로드',
         items: [
           {
-            title: '설치',
-            description: 'Chrome 웹 스토어에서 확장 프로그램을 설치합니다.'
+            title: 'Vimeo 링크 복사',
+            description: '저장할 권한이 있는 Vimeo 공개 동영상을 열고 URL을 복사하세요.'
           },
           {
-            title: '아이콘 고정',
-            description: '도구 모음에 고정해 팝업을 빠르게 엽니다.'
+            title: '온라인 도구에 붙여넣기',
+            description: '위 도구에 링크를 붙여넣고 “Vimeo 동영상 링크 붙여넣기”를 선택해 동영상 파일을 찾으세요.'
           },
           {
-            title: 'Vimeo 동영상 열기',
-            description: 'vimeo.com 또는 player.vimeo.com의 지원되는 동영상 페이지를 열고 재생합니다.'
-          },
-          {
-            title: '화질 선택',
-            description: '패널에서 원하는 화질을 클릭하거나 확장 프로그램 아이콘을 열어 전체 목록을 봅니다. 파일은 브라우저가 디스크에 기록합니다.'
+            title: 'MP4 다운로드',
+            description: '“다운로드”를 선택하고 브라우저가 파일을 저장할 때까지 이 탭을 열어 두세요.'
           }
         ]
       },
@@ -252,7 +266,7 @@ export const koKR: SiteContent = {
         }
       },
       plans: {
-        heading: '플랜',
+        heading: 'Chrome 확장 프로그램 플랜',
         free: {
           name: 'Free',
           description: '일일 무료 다운로드 한도가 있습니다. 새 계정이나 기기는 첫날 무제한으로 시작합니다.',

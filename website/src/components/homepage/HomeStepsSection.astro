@@ -1,7 +1,7 @@
 ---
 /**
- * 区块 3：使用步骤，序号由 CSS 计数器生成。
- * 桌面是 4 张卡；≤ 960 px 单列，≤ 600 px 改成竖向时间线（左侧编号圆点，圆点之间用渐变竖线连接）。
+ * 区块 1：网页下载三步，序号由 CSS 计数器生成，末尾可承接同语言指南。
+ * 桌面是 3 张卡；≤ 960 px 单列，≤ 600 px 改成竖向时间线（左侧编号圆点，圆点之间用渐变竖线连接）。
  */
 import HomeSection from './HomeSection.astro'
 import type { HomepageContent } from '../../i18n/schema'
@@ -20,12 +20,13 @@ const { copy } = Astro.props as { copy: HomepageContent['steps'] }
       ))
     }
   </ol>
+  <slot />
 </HomeSection>
 
 <style>
   .home-steps {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 16px;
     list-style: none;
     counter-reset: home-step;

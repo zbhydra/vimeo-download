@@ -33,9 +33,9 @@ export const viVN: SiteContent = {
         parse: {
           eyebrow: 'Kiểm tra liên kết nhanh',
           titleBrand: 'Trình tải video Vimeo',
-          titleTagline: 'Lưu mọi video Vimeo công khai',
+          titleTagline: 'Lưu video Vimeo công khai miễn phí',
           helperText:
-            'Dán liên kết video Vimeo công khai để tải xuống MP4 ở chất lượng cao nhất hiện có.',
+            'Dán liên kết Vimeo công khai để lưu MP4 miễn phí ở chất lượng cao nhất hiện có. Tệp lớn hoặc tệp chưa rõ dung lượng có thể cần tiện ích mở rộng.',
           linkLabel: 'Liên kết Vimeo',
           linkPlaceholder: 'https://vimeo.com/123456789',
           clearInput: 'Xóa nội dung nhập',
@@ -57,7 +57,7 @@ export const viVN: SiteContent = {
           resumeUnavailableText: 'Bản ghi phục hồi cục bộ đã hết hạn.',
           resumeDismiss: 'Bỏ qua',
           resuming: 'Đang tiếp tục...',
-          extensionEntryLine: 'Tải trực tiếp trên Vimeo bằng tiện ích',
+          extensionEntryLine: 'Cần âm thanh, phụ đề hoặc hàng đợi tải xuống? Hãy dùng tiện ích mở rộng.',
           largeFileExtensionInlineChromeTitle: 'Tiện ích Chrome',
           largeFileExtensionInlineChromeDescription:
             'Tiện ích dành riêng cho Chrome: tải mọi video Vimeo, tải riêng phần âm thanh và tận hưởng tốc độ tải nhanh. Các tệp lớn tiếp tục được tải ngoài tab.',
@@ -111,10 +111,28 @@ export const viVN: SiteContent = {
         ]
       },
       intro: {
-        heading: 'Làm được nhiều hơn với tiện ích Chrome',
-        lead: 'Công cụ trực tuyến ở trên lưu video Vimeo từ một liên kết. Tiện ích hoạt động ngay trên trang Vimeo bạn đang xem và bổ sung âm thanh, phụ đề, ảnh bìa cùng hàng đợi tải xuống.',
+        heading: 'Vimeo Downloader cho Chrome',
+        lead: 'Dùng tiện ích Chrome trên trang Vimeo bạn đang xem để lưu video, âm thanh M4A hoặc MP3, phụ đề VTT và ảnh bìa, cùng hàng đợi tải xuống. Tiện ích có hạn mức miễn phí hằng ngày và gói Unlimited trả phí.',
         primaryCta: 'Thêm vào Chrome',
-        secondaryCta: 'Xem các gói',
+        secondaryCta: 'Xem các gói tiện ích',
+        steps: [
+          {
+            title: 'Cài đặt',
+            description: 'Thêm tiện ích từ Chrome Web Store.'
+          },
+          {
+            title: 'Ghim biểu tượng',
+            description: 'Ghim lên thanh công cụ để mở cửa sổ bật lên nhanh.'
+          },
+          {
+            title: 'Mở một video Vimeo',
+            description: 'Vào trang video được hỗ trợ trên vimeo.com hoặc player.vimeo.com và bắt đầu phát.'
+          },
+          {
+            title: 'Chọn chất lượng',
+            description: 'Bấm chất lượng bạn muốn trong bảng, hoặc mở biểu tượng tiện ích để xem danh sách đầy đủ. Trình duyệt sẽ ghi tệp xuống ổ đĩa.'
+          }
+        ],
         panel: {
           ariaLabel: 'Hình minh họa bảng tải xuống trên trang',
           rows: {
@@ -137,7 +155,7 @@ export const viVN: SiteContent = {
             description: 'Chọn 720p, 1080p hoặc chất lượng khác mà video cung cấp, hoặc để Best chọn mức cao nhất.'
           },
           {
-            title: 'Âm thanh M4A hoặc MP3',
+            title: 'Âm thanh Vimeo dạng M4A hoặc MP3',
             description: 'Lưu riêng track âm thanh dạng M4A, hoặc chọn MP3 trong cửa sổ bật lên để có đầu ra chuyển mã.'
           },
           {
@@ -163,23 +181,19 @@ export const viVN: SiteContent = {
         ]
       },
       steps: {
-        heading: 'Cách tiện ích hoạt động',
+        heading: 'Tải video Vimeo trực tuyến',
         items: [
           {
-            title: 'Cài đặt',
-            description: 'Thêm tiện ích từ Chrome Web Store.'
+            title: 'Sao chép liên kết Vimeo',
+            description: 'Mở một video Vimeo công khai mà bạn có quyền lưu và sao chép URL.'
           },
           {
-            title: 'Ghim biểu tượng',
-            description: 'Ghim lên thanh công cụ để mở cửa sổ bật lên nhanh.'
+            title: 'Dán vào công cụ trực tuyến',
+            description: 'Dán liên kết vào công cụ phía trên và chọn “Dán liên kết video Vimeo” để tìm tệp video.'
           },
           {
-            title: 'Mở một video Vimeo',
-            description: 'Vào trang video được hỗ trợ trên vimeo.com hoặc player.vimeo.com và bắt đầu phát.'
-          },
-          {
-            title: 'Chọn chất lượng',
-            description: 'Bấm chất lượng bạn muốn trong bảng, hoặc mở biểu tượng tiện ích để xem danh sách đầy đủ. Trình duyệt sẽ ghi tệp xuống ổ đĩa.'
+            title: 'Tải MP4',
+            description: 'Chọn “Tải xuống” và giữ thẻ này mở cho đến khi trình duyệt lưu xong tệp.'
           }
         ]
       },
@@ -253,7 +267,7 @@ export const viVN: SiteContent = {
         }
       },
       plans: {
-        heading: 'Các gói',
+        heading: 'Các gói tiện ích Chrome',
         free: {
           name: 'Free',
           description: 'Có hạn mức tải miễn phí hằng ngày. Tài khoản hoặc thiết bị mới có ngày đầu tiên không giới hạn.',

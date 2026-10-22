@@ -33,9 +33,9 @@ export const thTH: SiteContent = {
         parse: {
           eyebrow: 'ตรวจลิงก์แบบรวดเร็ว',
           titleBrand: 'โปรแกรมดาวน์โหลดวิดีโอ Vimeo',
-          titleTagline: 'บันทึกวิดีโอ Vimeo สาธารณะ',
+          titleTagline: 'บันทึกวิดีโอ Vimeo สาธารณะได้ฟรี',
           helperText:
-            'วางลิงก์วิดีโอ Vimeo แบบสาธารณะ แล้วดาวน์โหลดเป็น MP4 ในคุณภาพสูงสุดที่มี',
+            'วางลิงก์ Vimeo สาธารณะเพื่อบันทึก MP4 ฟรีด้วยคุณภาพสูงสุดที่มี ไฟล์ขนาดใหญ่หรือไฟล์ที่ไม่ทราบขนาดอาจต้องใช้ส่วนขยาย',
           linkLabel: 'ลิงก์ Vimeo',
           linkPlaceholder: 'https://vimeo.com/123456789',
           clearInput: 'ล้างข้อมูลที่ป้อน',
@@ -57,7 +57,7 @@ export const thTH: SiteContent = {
           resumeUnavailableText: 'บันทึกกู้คืนในเครื่องหมดอายุแล้ว',
           resumeDismiss: 'ไม่สนใจ',
           resuming: 'กำลังทำต่อ...',
-          extensionEntryLine: 'ดาวน์โหลดได้โดยตรงบน Vimeo ด้วยส่วนขยาย',
+          extensionEntryLine: 'ต้องการเสียง คำบรรยาย หรือคิวดาวน์โหลดใช่ไหม? ใช้ส่วนขยายได้เลย',
           largeFileExtensionInlineChromeTitle: 'ส่วนขยาย Chrome',
           largeFileExtensionInlineChromeDescription:
             'ส่วนขยายสำหรับ Chrome โดยเฉพาะ: ดาวน์โหลดวิดีโอ Vimeo ได้ทุกวิดีโอ บันทึกเสียงแยกได้ และดาวน์โหลดได้รวดเร็ว ไฟล์ขนาดใหญ่ยังดาวน์โหลดต่อได้นอกแท็บ',
@@ -111,10 +111,28 @@ export const thTH: SiteContent = {
         ]
       },
       intro: {
-        heading: 'ไปให้ไกลกว่าด้วยส่วนขยาย Chrome',
-        lead: 'เครื่องมือออนไลน์ด้านบนบันทึกวิดีโอ Vimeo จากลิงก์ ส่วนขยายทำงานบนหน้า Vimeo ที่คุณกำลังดูอยู่ และเพิ่มเสียง คำบรรยาย ภาพปก และคิวดาวน์โหลด',
+        heading: 'Vimeo Downloader สำหรับ Chrome',
+        lead: 'ใช้ส่วนขยาย Chrome บนหน้า Vimeo ที่กำลังดูเพื่อบันทึกวิดีโอ เสียง M4A หรือ MP3 คำบรรยาย VTT และภาพปก พร้อมคิวดาวน์โหลด มีโควตาฟรีรายวันและแพ็กเกจ Unlimited แบบชำระเงิน',
         primaryCta: 'เพิ่มลงใน Chrome',
-        secondaryCta: 'ดูแพ็กเกจ',
+        secondaryCta: 'ดูแพ็กเกจส่วนขยาย',
+        steps: [
+          {
+            title: 'ติดตั้ง',
+            description: 'เพิ่มส่วนขยายจาก Chrome Web Store'
+          },
+          {
+            title: 'ปักหมุดไอคอน',
+            description: 'ปักหมุดไว้บนแถบเครื่องมือเพื่อเปิดป๊อปอัปได้เร็ว'
+          },
+          {
+            title: 'เปิดวิดีโอ Vimeo',
+            description: 'ไปที่หน้าวิดีโอที่รองรับบน vimeo.com หรือ player.vimeo.com แล้วเริ่มเล่น'
+          },
+          {
+            title: 'เลือกคุณภาพ',
+            description: 'คลิกคุณภาพที่ต้องการในแผง หรือเปิดไอคอนส่วนขยายเพื่อดูรายการทั้งหมด เบราว์เซอร์จะเขียนไฟล์ลงดิสก์ให้'
+          }
+        ],
         panel: {
           ariaLabel: 'ภาพประกอบแผงดาวน์โหลดบนหน้าเว็บ',
           rows: {
@@ -137,7 +155,7 @@ export const thTH: SiteContent = {
             description: 'เลือก 720p, 1080p หรือคุณภาพอื่นที่วิดีโอมีให้ หรือให้ Best เลือกระดับสูงสุด'
           },
           {
-            title: 'เสียงเป็น M4A หรือ MP3',
+            title: 'เสียง Vimeo เป็น M4A หรือ MP3',
             description: 'บันทึกแทร็กเสียงแยกเป็น M4A หรือเลือก MP3 ในป๊อปอัปเพื่อรับผลลัพธ์ที่แปลงรหัสแล้ว'
           },
           {
@@ -163,23 +181,19 @@ export const thTH: SiteContent = {
         ]
       },
       steps: {
-        heading: 'ส่วนขยายใช้งานอย่างไร',
+        heading: 'ดาวน์โหลดวิดีโอ Vimeo ออนไลน์',
         items: [
           {
-            title: 'ติดตั้ง',
-            description: 'เพิ่มส่วนขยายจาก Chrome Web Store'
+            title: 'คัดลอกลิงก์ Vimeo',
+            description: 'เปิดวิดีโอ Vimeo สาธารณะที่คุณมีสิทธิ์บันทึก แล้วคัดลอก URL'
           },
           {
-            title: 'ปักหมุดไอคอน',
-            description: 'ปักหมุดไว้บนแถบเครื่องมือเพื่อเปิดป๊อปอัปได้เร็ว'
+            title: 'วางในเครื่องมือออนไลน์',
+            description: 'วางลิงก์ในเครื่องมือด้านบน แล้วเลือก “วางลิงก์วิดีโอ Vimeo” เพื่อค้นหาไฟล์วิดีโอ'
           },
           {
-            title: 'เปิดวิดีโอ Vimeo',
-            description: 'ไปที่หน้าวิดีโอที่รองรับบน vimeo.com หรือ player.vimeo.com แล้วเริ่มเล่น'
-          },
-          {
-            title: 'เลือกคุณภาพ',
-            description: 'คลิกคุณภาพที่ต้องการในแผง หรือเปิดไอคอนส่วนขยายเพื่อดูรายการทั้งหมด เบราว์เซอร์จะเขียนไฟล์ลงดิสก์ให้'
+            title: 'ดาวน์โหลด MP4',
+            description: 'เลือก “ดาวน์โหลด” และเปิดแท็บนี้ไว้จนกว่าเบราว์เซอร์จะบันทึกไฟล์เสร็จ'
           }
         ]
       },
@@ -253,7 +267,7 @@ export const thTH: SiteContent = {
         }
       },
       plans: {
-        heading: 'แพ็กเกจ',
+        heading: 'แพ็กเกจส่วนขยาย Chrome',
         free: {
           name: 'Free',
           description: 'มีโควตาดาวน์โหลดรายวันแบบฟรี บัญชีหรืออุปกรณ์ใหม่จะได้วันแรกแบบไม่จำกัด',
