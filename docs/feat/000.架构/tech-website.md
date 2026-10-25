@@ -82,13 +82,13 @@ website/
 - **唯一布局 `src/layouts/Layout.astro`** 集中注入：
   - canonical URL
   - hreflang alternate 链：页面用 `alternateLocales` 声明内容对等且可索引的语言版本。默认 14 语言并含 `x-default` → en-US；不足 2 个时不输出。规则见 `@../009.SEO与增长/tech-落地页与Sitemap.md` §4.6
-  - 语言切换器：页面用 `availableLocales` 声明本页实际存在的语言版本（默认 14 语言），切换器只列这些语言，不足 2 个时不渲染；规则同见 §4.6
+  - 语言切换器：页面用 `availableLocales` 声明本页实际存在的语言版本（默认 14 语言），切换器只列这些语言，不足 2 个时不渲染；选项渲染为带 `href` / `hreflang` / `lang` 的链接（可抓取内链），查询参数在浏览器初始化时补入；规则同见 §4.6
   - 页脚 Resources 组：当前语言有 Guides 文章时在首位显示 Guides 入口
-  - Open Graph / Twitter card（`og:site_name` 为品牌词；`twitter:site` 绑定官方 X 账号）
+  - Open Graph / Twitter card（`og:site_name` 为品牌词；有可用官方 X 账号时才输出 `twitter:site`）
   - JSON-LD：
     - `SoftwareApplication`：仅首页和 Pricing 输出，Company、Legal、Guides、PaymentReturn 传 `includeSoftwareApplicationSchema={false}`；类别 `BrowserExtension`，`featureList` 为插件能力。
     - 全站 `WebSite`：站点名称。
-    - `Organization`：带 `legalName`、公开 `ContactPoint`，以及指向 Chrome Web Store 与官方 X 的 `sameAs`。
+    - `Organization`：带 `legalName`、公开 `ContactPoint`，以及指向 Chrome Web Store 的 `sameAs`；有可用官方 X 账号时再加入该地址。
     - 页面级 `structuredData` props 可叠加，首页、Pricing 各注入一份 FAQPage。
   - GA4 内联加载
   - 全站深色 token（Geist 语义名、深色值，另有品牌与装饰 token，`color-scheme: dark`）、按钮与焦点环全局样式，规则见 `../../references/specs/spec-website.md` §4

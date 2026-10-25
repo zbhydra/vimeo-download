@@ -19,6 +19,8 @@
 - [Why a Vimeo video has no Download button](https://vimeodownloader.app/guides/vimeo-download-button-missing/): The three reasons Vimeo lists and what owners and viewers can do.
 - [Vimeo Downloader not working](https://vimeodownloader.app/guides/vimeo-downloader-not-working/): Each error message the online tool shows, what it means and what to try.
 - [Is it legal to download Vimeo videos?](https://vimeodownloader.app/guides/is-it-legal-to-download-vimeo-videos/): How the owner's settings, Vimeo's Terms of Service and copyright law apply. General information, not legal advice.
+- [Save Vimeo audio as M4A or MP3](https://vimeodownloader.app/guides/save-vimeo-audio-as-mp3-or-m4a/): With the extension, save only a video's audio as M4A from the page panel or MP3 from the popup. The online tool saves MP4 video only.
+- [Download Vimeo subtitles as VTT](https://vimeodownloader.app/guides/download-vimeo-subtitles-as-vtt/): With the extension, save a video's subtitle or caption tracks as separate `.vtt` files. The online tool doesn't output subtitles.
 
 ## Sitemap
 

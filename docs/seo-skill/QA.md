@@ -128,3 +128,25 @@
 - 真实截图；
 - 法务或合规审阅（legal 一篇）。
 
+## 7. 发布复核（2026-10-25，audio 与 subtitles 两篇）
+
+插件于 2026-10-08 上架，「待插件上架」前提解除，两篇按运行时正文发布。
+
+| 项 | 结果 | 依据 |
+|---|---|---|
+| 5 canonical/robots/sitemap/内链/hreflang | 通过 | canonical 指向自身、`index, follow`，进入 `en-sitemap.xml`；只有英文版本，不输出 hreflang 与语言切换器；音频页的两处 `#when-the-audio-row-is-empty` 锚点都能跳转；商店链接、how-to、legal、`/ext-pricing/` 目标均存在 |
+| 6 结构化数据 | 通过 | Article（author / publisher 引用 Organization）+ BreadcrumbList；不含 FAQPage、HowTo、image 占位 |
+| 7 locale 记录 | 部分 | 只发布 en-US；其他 locale 未调研、未翻译 |
+| 9 构建与真实页面验证 | 部分 | `pnpm build` 与 module-scripts 101/101 通过；本地构建页面核对 title / canonical / robots / H1 / 结构化数据、390px 无横向溢出；线上未部署、未验证 |
+
+相对源稿的改动：
+- 删除 `<!-- MEDIA: ... -->` 截图占位（spec §8：没有真实截图前不放图片），待补真实截图；
+- `[EXTENSION_CTA]` 换成 Chrome Web Store 真实链接，并在首段后加一行安装入口；
+- FAQ 由粗体段落改成三级标题，与已发布四篇一致；
+- `Last reviewed` 改为 2026-10-25，`publishedAt` / `updatedAt` 同为 2026-10-25。
+
+仍待补齐（发布前 §4 表中的前置，未随本次发布完成）：
+- 用发布版插件实测 M4A、MP3、VTT 的落盘格式与文件名；
+- audio 2 张、subtitles 1 张真实截图；
+- 正文界面描述来自源码（`DEFAULT_DOWNLOAD_PATH`、`Best Audio`、kbps 标签、`Rescan`、`Unavailable` 已逐条核对），未在发布版界面逐项确认。
+

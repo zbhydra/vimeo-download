@@ -59,8 +59,6 @@ export interface ContactPageContent extends CompanyPageBaseContent {
 export interface CompanyContent {
   /** Footer heading for company links. */
   footerGroupLabel: string
-  /** Label for the official X profile in the footer and Contact page. */
-  officialXLabel: string
   /**
    * Names the legal entity behind the brand; shown in the footer and on About and Contact,
    * because Terms alone is not where buyers look for who runs a paid service.
@@ -82,7 +80,6 @@ export const COMPANY_PAGES_PUBLISHED_DATE = '2026-09-18'
 /** English source copy. */
 const enUS: CompanyContent = {
   footerGroupLabel: 'Company',
-  officialXLabel: 'Official X Account',
   operatorStatement: `${PRODUCT_NAME} is operated by ${OPERATOR_LEGAL_NAME}.`,
   privacyLabel: 'Privacy Policy',
   termsLabel: 'Terms of Service',
@@ -146,7 +143,6 @@ const enUS: CompanyContent = {
 /** Simplified Chinese copy. */
 const zhCN: CompanyContent = {
   footerGroupLabel: '关于我们',
-  officialXLabel: '官方 X 账号',
   operatorStatement: `${PRODUCT_NAME} 由 ${OPERATOR_LEGAL_NAME} 运营。`,
   privacyLabel: '隐私政策',
   termsLabel: '服务条款',
@@ -180,7 +176,6 @@ const zhCN: CompanyContent = {
 /** Traditional Chinese copy. */
 const zhTW: CompanyContent = {
   footerGroupLabel: '關於我們',
-  officialXLabel: '官方 X 帳號',
   operatorStatement: `${PRODUCT_NAME} 由 ${OPERATOR_LEGAL_NAME} 營運。`,
   privacyLabel: '隱私權政策',
   termsLabel: '服務條款',
@@ -207,7 +202,6 @@ const zhTW: CompanyContent = {
 /** Japanese copy. */
 const jaJP: CompanyContent = {
   footerGroupLabel: '運営情報',
-  officialXLabel: '公式Xアカウント',
   operatorStatement: `${PRODUCT_NAME}は${OPERATOR_LEGAL_NAME}が運営しています。`,
   privacyLabel: 'プライバシーポリシー',
   termsLabel: '利用規約',
@@ -234,7 +228,6 @@ const jaJP: CompanyContent = {
 /** Korean copy. */
 const koKR: CompanyContent = {
   footerGroupLabel: '회사 정보',
-  officialXLabel: '공식 X 계정',
   operatorStatement: `${PRODUCT_NAME}는 ${OPERATOR_LEGAL_NAME}가 운영합니다.`,
   privacyLabel: '개인정보 처리방침',
   termsLabel: '이용약관',
@@ -261,7 +254,6 @@ const koKR: CompanyContent = {
 /** Spanish copy. */
 const esES: CompanyContent = {
   footerGroupLabel: 'Empresa',
-  officialXLabel: 'Cuenta oficial en X',
   operatorStatement: `${PRODUCT_NAME} es un servicio operado por ${OPERATOR_LEGAL_NAME}.`,
   privacyLabel: 'Política de privacidad',
   termsLabel: 'Términos del servicio',
@@ -288,7 +280,6 @@ const esES: CompanyContent = {
 /** Portuguese copy. */
 const ptBR: CompanyContent = {
   footerGroupLabel: 'Empresa',
-  officialXLabel: 'Conta oficial no X',
   operatorStatement: `O ${PRODUCT_NAME} é operado pela ${OPERATOR_LEGAL_NAME}.`,
   privacyLabel: 'Política de Privacidade',
   termsLabel: 'Termos de Serviço',
@@ -315,7 +306,6 @@ const ptBR: CompanyContent = {
 /** German copy. */
 const deDE: CompanyContent = {
   footerGroupLabel: 'Unternehmen',
-  officialXLabel: 'Offizieller X-Account',
   operatorStatement: `${PRODUCT_NAME} wird von der ${OPERATOR_LEGAL_NAME} betrieben.`,
   privacyLabel: 'Datenschutzerklärung',
   termsLabel: 'Nutzungsbedingungen',
@@ -342,7 +332,6 @@ const deDE: CompanyContent = {
 /** French copy. */
 const frFR: CompanyContent = {
   footerGroupLabel: 'Entreprise',
-  officialXLabel: 'Compte X officiel',
   operatorStatement: `${PRODUCT_NAME} est exploité par ${OPERATOR_LEGAL_NAME}.`,
   privacyLabel: 'Politique de confidentialité',
   termsLabel: 'Conditions d’utilisation',
@@ -369,7 +358,6 @@ const frFR: CompanyContent = {
 /** Russian copy. */
 const ruRU: CompanyContent = {
   footerGroupLabel: 'Компания',
-  officialXLabel: 'Официальный аккаунт X',
   operatorStatement: `Оператор сервиса ${PRODUCT_NAME} — компания ${OPERATOR_LEGAL_NAME}.`,
   privacyLabel: 'Политика конфиденциальности',
   termsLabel: 'Условия использования',
@@ -396,7 +384,6 @@ const ruRU: CompanyContent = {
 /** Italian copy. */
 const itIT: CompanyContent = {
   footerGroupLabel: 'Azienda',
-  officialXLabel: 'Account X ufficiale',
   operatorStatement: `${PRODUCT_NAME} è gestito da ${OPERATOR_LEGAL_NAME}.`,
   privacyLabel: 'Informativa sulla privacy',
   termsLabel: 'Termini di servizio',
@@ -423,7 +410,6 @@ const itIT: CompanyContent = {
 /** Vietnamese copy. */
 const viVN: CompanyContent = {
   footerGroupLabel: 'Công ty',
-  officialXLabel: 'Tài khoản X chính thức',
   operatorStatement: `${PRODUCT_NAME} do ${OPERATOR_LEGAL_NAME} vận hành.`,
   privacyLabel: 'Chính sách quyền riêng tư',
   termsLabel: 'Điều khoản dịch vụ',
@@ -450,7 +436,6 @@ const viVN: CompanyContent = {
 /** Thai copy. */
 const thTH: CompanyContent = {
   footerGroupLabel: 'บริษัท',
-  officialXLabel: 'บัญชี X อย่างเป็นทางการ',
   operatorStatement: `${PRODUCT_NAME} ดำเนินการโดย ${OPERATOR_LEGAL_NAME}`,
   privacyLabel: 'นโยบายความเป็นส่วนตัว',
   termsLabel: 'ข้อกำหนดการใช้บริการ',
@@ -477,7 +462,6 @@ const thTH: CompanyContent = {
 /** Indonesian copy. */
 const idID: CompanyContent = {
   footerGroupLabel: 'Perusahaan',
-  officialXLabel: 'Akun X Resmi',
   operatorStatement: `${PRODUCT_NAME} dioperasikan oleh ${OPERATOR_LEGAL_NAME}.`,
   privacyLabel: 'Kebijakan Privasi',
   termsLabel: 'Ketentuan Layanan',

@@ -3,11 +3,12 @@ Disallow: /clink/cancel/
 Disallow: /clink/success/
 Disallow: /paypal/cancel/
 Disallow: /paypal/success/
+# Cloudflare 邮箱混淆在 HTML 里生成的占位地址并不是页面，抓取它只会得到 404。
+Disallow: /cdn-cgi/l/email-protection
 
 # AI-readable site indexes
 Allow: /llms.txt
 Allow: /llms-full.txt
 
 # Sitemap reference
-# TODO(待替换): 与 src/lib/site.mjs 的 SITE_ORIGIN 一起替换为真实域名。
 Sitemap: https://vimeodownloader.app/sitemap.xml

@@ -10,8 +10,6 @@ import { LANGUAGE_SITEMAP_LOCALES } from '../src/sitemap/languageSitemap.mjs'
 import {
   CHROME_WEB_STORE_URL,
   DEVELOPER_EMAIL,
-  OFFICIAL_X_HANDLE,
-  OFFICIAL_X_URL,
   PRODUCT_NAME,
   SITE_HOST,
   SITE_ORIGIN
@@ -544,19 +542,14 @@ test('About and Contact pages expose localized trust content and structured data
     assert.equal(contactHtml.includes(`href="/${languagePath}about/"`), true)
     assert.match(contactHtml, new RegExp(`href="mailto:${DEVELOPER_EMAIL}\\?subject=`))
     assert.equal(contactHtml.includes(DEVELOPER_EMAIL), true)
-    assert.equal(
-      (aboutHtml.match(new RegExp(`href="${OFFICIAL_X_URL}"`, 'g')) ?? []).length,
-      0
-    )
-    assert.equal(
-      (contactHtml.match(new RegExp(`href="${OFFICIAL_X_URL}"`, 'g')) ?? []).length,
-      1
-    )
-    assert.match(contactHtml, /data-ga-source="contact"/)
-    assert.equal(contactHtml.includes(`<meta name="twitter:site" content="${OFFICIAL_X_HANDLE}"`), true)
+    // 官方 X 入口在账号可用前不出现：Contact 不链过去，结构化数据的 sameAs 也不声明它，
+    // 免得公开指向一个 404 账号。
+    assert.equal(aboutHtml.includes('x.com/'), false)
+    assert.equal(contactHtml.includes('x.com/'), false)
+    assert.equal(contactHtml.includes('name="twitter:site"'), false)
     assert.match(
       contactHtml,
-      new RegExp(`"sameAs":\\[[^\\]]*"${OFFICIAL_X_URL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"[^\\]]*\\]`)
+      new RegExp(`"sameAs":\\["${CHROME_WEB_STORE_URL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"\\]`)
     )
   }
 })

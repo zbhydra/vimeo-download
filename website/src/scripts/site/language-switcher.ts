@@ -2,13 +2,17 @@
  * Website 页头语言切换器。
  *
  * 负责下拉菜单交互、语言偏好 Cookie，以及在语言路由之间导航时保留当前查询参数。
+ *
+ * 语言选项是带真实 href 的链接：爬虫能顺着它们发现 14 个语言版本，用户也能
+ * 中键或 Cmd/Ctrl 在新标签打开。查询参数在初始化时补进 href，因此不依赖点击拦截；
+ * 点击只额外写语言偏好 Cookie。
  */
 
 /** 当前语言按钮选择器。 */
 const LANGUAGE_BUTTON_SELECTOR = '.lang-btn'
 /** 语言下拉菜单选择器。 */
 const LANGUAGE_DROPDOWN_SELECTOR = '.lang-dropdown'
-/** 语言选项选择器。 */
+/** 语言选项链接选择器。 */
 const LANGUAGE_OPTION_SELECTOR = '.lang-option'
 /** 用户语言偏好 Cookie 的有效期，单位为秒。 */
 const LANGUAGE_COOKIE_MAX_AGE_SECONDS = 365 * 24 * 60 * 60
@@ -39,17 +43,19 @@ export function initializeLanguageSwitcher(): void {
     languageDropdown?.classList.remove('show')
   })
 
-  const languageOptions = document.querySelectorAll<HTMLButtonElement>(LANGUAGE_OPTION_SELECTOR)
+  const languageOptions = document.querySelectorAll<HTMLAnchorElement>(LANGUAGE_OPTION_SELECTOR)
   languageOptions.forEach(option => {
+    // 静态构建时只写语言路径；当前 query 要在浏览器里补，否则构建产物会把某个页面的
+    // utm / source 参数固化进所有语言链接。
+    option.href = buildLanguageSwitchUrl(option.href, window.location.href)
+
     option.addEventListener('click', () => {
       const locale = option.dataset.locale
-      const path = option.dataset.path
-      if (!locale || !path) {
+      if (!locale) {
         return
       }
 
       document.cookie = `user-language=${locale}; path=/; max-age=${LANGUAGE_COOKIE_MAX_AGE_SECONDS}; SameSite=Lax`
-      window.location.href = buildLanguageSwitchUrl(path, window.location.href)
     })
   })
 }

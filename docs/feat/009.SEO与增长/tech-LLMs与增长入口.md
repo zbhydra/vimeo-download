@@ -67,7 +67,7 @@ Astro 构建时复制到 `website/dist/`。两份文件手写维护，不从 sit
 
 ### 1.6 robots.txt 显式 Allow
 
-`website/public/robots.txt` 在 `User-agent: *` 下显式 Allow 两个 llms 入口，作为 AI-readable 入口提示。不新增易过期的 AI crawler 专用 User-Agent 规则。
+`website/public/robots.txt` 在 `User-agent: *` 下显式 Allow 两个 llms 入口，作为 AI-readable 入口提示。不新增易过期的 AI crawler 专用 User-Agent 规则。另 Disallow `/cdn-cgi/l/email-protection`：Cloudflare 邮箱混淆在 HTML 里写入的占位地址不是页面，抓取只会得到 404。
 
 ### 1.7 内容禁项(强约束)
 
@@ -92,23 +92,24 @@ LLMs 文件**不包含**：
 
 ## 2. 导航与 Install CTA(以代码为准)
 
-导航由 `website/src/layouts/Layout.astro` 渲染，桌面与移动导航同构：Home + Pricing 两个链接，加带插件图标的 Install 按钮与语言切换器。
+导航由 `website/src/layouts/Layout.astro` 渲染，桌面与移动导航同构：Home 一个链接，加带插件图标的 Install 按钮与语言切换器。Pricing 导航项已于 `756b322` 移除，`/ext-pricing/` 仍从首页方案区块进入。
 
 ### 2.1 桌面导航
 
 1. **品牌**：Logo + 品牌名，指向当前语言首页。
 2. **Home 链接**：指向当前语言首页，当前页高亮。
-3. **Pricing 链接**：指向当前语言 `/ext-pricing/`，当前页高亮；带内部跳转埋点（来源为 `nav`，目标为 `pricing`）。
-4. **Install CTA**：
+3. **Install CTA**：
    - 主按钮（`btn-primary nav-install-link`），链接为 `CHROME_WEB_STORE_URL`，新标签页打开且带 `noopener`。
    - 左侧图标是 `public/googe-ext-logo-192px.svg` 图片，`alt` 为空，装饰用。
    - 可访问名称与按钮文字均取 `t.common.installCta`。
    - 沿用外链点击埋点（来源为 `nav`）。
-5. **语言切换器**：只列 Layout `availableLocales`（本页实际存在的语言，默认 14 语言）；不足 2 个时不渲染，见 `@tech-落地页与Sitemap.md` §4.6。
+4. **语言切换器**：只列 Layout `availableLocales`（本页实际存在的语言，默认 14 语言）；不足 2 个时不渲染，见 `@tech-落地页与Sitemap.md` §4.6。
+   - 选项是带 `href`、`hreflang`、`lang` 的链接，不是按钮：14 个语言版本互为可抓取内链，不依赖 JS 就能被爬虫发现。
+   - `src/scripts/site/language-switcher.ts` 在初始化时把当前 query 补进每个链接的 href（构建产物里不带 query），点击只写 `user-language` Cookie，导航交给链接本身。
 
 ### 2.2 移动导航
 
-移动菜单含 Home、Pricing、Install（埋点来源均为 `mobile_nav`）；Install 是带图标的满宽主按钮（`btn-primary mobile-nav-install`）。
+移动菜单含 Home、Install（埋点来源均为 `mobile_nav`）；Install 是带图标的满宽主按钮（`btn-primary mobile-nav-install`）。
 
 ### 2.3 i18n
 

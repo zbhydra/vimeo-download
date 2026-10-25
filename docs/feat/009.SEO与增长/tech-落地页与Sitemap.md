@@ -242,7 +242,7 @@ hreflang 只在「内容对等、且允许索引」的语言版本之间互指�
 
 新增某语言的译本后，该语言法务页的索引、hreflang 与 sitemap（§2.7）自动恢复，不需要改路由或 sitemap 代码。
 
-语言切换器是另一个声明：Layout 的 `availableLocales` 是「本页实际存在的语言版本」（默认 14 语言），切换器只列这些语言，不足 2 个时不渲染。它与 `alternateLocales` 分开，因为法务页的英文回退路由存在（可切换过去）却不参与 hreflang。当前取值：
+语言切换器是另一个声明：Layout 的 `availableLocales` 是「本页实际存在的语言版本」（默认 14 语言），切换器只列这些语言，不足 2 个时不渲染。它与 `alternateLocales` 分开，因为法务页的英文回退路由存在（可切换过去）却不参与 hreflang。选项渲染为带 `href` / `hreflang` / `lang` 的链接而不是按钮：这样 14 个语言版本互为可抓取内链，与 `<link rel="alternate">` 一起构成两种发现路径；查询参数由 `language-switcher.ts` 在浏览器初始化时补进 href。当前取值：
 
 | 页面族 | `availableLocales` |
 | --- | --- |

@@ -8,10 +8,9 @@
 import { COMPANY_PAGES_PUBLISHED_DATE, getCompanyContent } from '../../company/companyContent'
 import { type Locale } from '../../i18n/content'
 import { localePaths } from '../../i18n/ui'
-import { CHROME_WEB_STORE_URL, DEVELOPER_EMAIL, OFFICIAL_X_HANDLE, OFFICIAL_X_URL, PRODUCT_NAME } from '../../lib/site.mjs'
+import { CHROME_WEB_STORE_URL, DEVELOPER_EMAIL, PRODUCT_NAME } from '../../lib/site.mjs'
 import Layout from '../../layouts/Layout.astro'
 import SiteBandHeader from '../site/SiteBandHeader.astro'
-import XBrandIcon from '../site/XBrandIcon.astro'
 
 /** Company information page variants supported by this renderer. */
 export type CompanyPageKind = 'about' | 'contact'
@@ -91,23 +90,7 @@ const companyPageSchema = {
             </a>
           )}
           {pageKind === 'contact' && (
-            <>
-              <a
-                class="btn-secondary company-secondary-link company-social-link"
-                href={OFFICIAL_X_URL}
-                target="_blank"
-                rel="me noopener noreferrer"
-                title={companyContent.officialXLabel}
-                data-ga-event="official_x_click"
-                data-ga-source="contact"
-                data-ga-target="official_x"
-              >
-                <XBrandIcon />
-                <span>{companyContent.officialXLabel}</span>
-                <span class="company-social-handle">{OFFICIAL_X_HANDLE}</span>
-              </a>
-              <span class="company-email">{DEVELOPER_EMAIL}</span>
-            </>
+            <span class="company-email">{DEVELOPER_EMAIL}</span>
           )}
         </div>
       </Fragment>
@@ -164,16 +147,6 @@ const companyPageSchema = {
     padding-block: 0;
     white-space: normal;
     text-align: center;
-  }
-
-  .company-social-link {
-    gap: 8px;
-  }
-
-  .company-social-handle {
-    color: var(--gray-900);
-    font-size: 13px;
-    font-weight: 400;
   }
 
   .company-email {

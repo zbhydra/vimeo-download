@@ -1,5 +1,34 @@
 # 009 · SEO 与增长 - 变更记录
 
+## 2026-10-25 SEO 修复：语言内链、X 占位入口下线、插件类文章发布
+
+**Why**：GSC 90 天数据（实际覆盖 2026-10-06 至 10-22）显示 65 点击 / 615 曝光、平均排名 19；31 页已索引、43 页未索引，其中 5 个 Guides 页全部「已发现但未抓取」；外链 24 条全部来自 google.com。技术侧 canonical / hreflang / sitemap / CWV 均正常，可动的杠杆是收录、内链、外链与内容供给。外链建设本轮不做（hydra 决定）。
+
+**变更**：
+- `website/src/layouts/Layout.astro`、`src/scripts/site/language-switcher.ts`：
+  - 语言切换器由 `<button data-path>` 改为带 `href` / `hreflang` / `lang` 的链接：14 个语言版本互为可抓取内链，不依赖 JS。
+  - 当前 query 在浏览器初始化时补进 href，构建产物不带 query；点击只写 `user-language` Cookie。
+- `website/public/robots.txt`：Disallow `/cdn-cgi/l/email-protection`（Cloudflare 邮箱混淆占位地址，抓取得到 404）；删除已过期的域名 TODO 注释。
+- 官方 X 入口下线：`x.com/VimeoDownloader` 返回 404。
+  - `src/lib/site.mjs` 删除 `OFFICIAL_X_HANDLE` / `OFFICIAL_X_URL`；`Layout.astro` 的 `Organization.sameAs` 只保留商店地址，移除 `twitter:site`。
+  - `CompanyPage.astro` 删除 Contact 页 X 按钮与 `official_x_click` 埋点；`companyContent.ts` 删除 14 语言的 `officialXLabel`；删除只此一处使用的 `XBrandIcon.astro`。
+  - 账号可用后按 `feat.md` §「官方 X 入口（暂停）」恢复。
+- 发布两篇插件类 Guides（英文）：`save-vimeo-audio-as-mp3-or-m4a`、`download-vimeo-subtitles-as-vtt`。
+  - 插件已于 2026-10-08 上架，「待插件上架」前提解除；正文按源码逐条核对（`vimeoMediaDownloader` 默认目录、`Best Audio`、kbps 标签、`Rescan`、`Unavailable`）。
+  - 源稿的截图占位按 spec §8 不保留假图，`[EXTENSION_CTA]` 换成商店真实链接；FAQ 由粗体段落改为三级标题，与已发布文章一致。
+  - `llms.txt` / `llms-full.txt` 的 `## Guides` 同步两条。
+- `feat.md` / `tech-LLMs与增长入口.md`：导航改为只有 Home；补语言切换器的链接化规格；robots 补 email-protection；文章清单补两篇。
+
+**验证**：`pnpm build` 通过（93 → 95 页，sitemap 63 → 65 URL）；`node --test tests/module-scripts.test.js` 101/101 通过；本地真实页面核对两篇文章的 title / canonical / robots / H1 / Article + BreadcrumbList、锚点有效、390px 无横向溢出；首页语言链接带 query 且下拉可展开。
+
+**部署与收录（2026-10-25）**：
+- 已部署生产（版本 `v20261025_095105`）。`deploy.sh` 的第 6 步 Nginx 配置上传因 SSH 连接中断失败，但 `vimeo-web.conf` 本次未改动，线上配置无需变更；版本目录已切换、`current` 指向正确。
+- 线上核验：`/`、`/guides/`、两篇新文章、`/about/`、`/contact/`、`/ext-pricing/` 均 200；`en-sitemap.xml` 13 条；首页 14 个语言链接；`llms.txt` 含两条新文章。IndexNow 手动补交返回 202（key 文件仍是 404，按既有裁决不修）。
+- GSC「要求建立索引」用 hydra 的浏览器提交 11 个 URL：6 个 Guides 页（含索引页与两篇新文章）、首页、`/ext-pricing/`、`/about/`、`/contact/`。两篇新文章在提交时「網址不在 Google 服務中」（从未被抓取）。
+- 提交到第 12 个 URL 时触发 GSC 单日配额上限（「超過配額」），未提交的 13 个语言首页、语言 about/contact 与 `terms`/`privacy` 需次日再提交。GSC 的 sitemap 操作菜单没有重新提交入口，只能等 Google 按 lastmod 重抓。
+
+**已知限制**：两篇文章的界面描述来自源码，未用发布版插件实测 M4A / MP3 / VTT 落盘；截图待补；索引与排名变化需数天到数周才可见，不能把本次提交当成结果。
+
 ## 2026-10-07 上线 Guides 长尾文章（英文 4 篇）
 
 **Why**：hydra 确认了 `docs/seo-skill/` 的英文源稿，并确认在线工具只针对公开视频。现在发布不依赖插件的 4 篇：

@@ -9,7 +9,7 @@
 - 每篇一个目录 `{slug}/`，含 `page_seo.md`（简体中文，决策与事实记录）和 `en-US.md`（英文正稿）。`QA.md` 是逐篇对照 spec §11 的自检记录与机械检查结果。
 - 全部页面类型为「信息/文章页」（spec §4）。路由 `/guides/{slug}/`（2026-10-07 定稿，见 §7）。
 - `en-US.md` 里的两个标记：
-  - `[EXTENSION_CTA]` 与成对的 `<!-- EXTENSION_BLOCK_START -->` / `<!-- EXTENSION_BLOCK_END -->`：扩展尚未在 Chrome Web Store 上架，上架前发布必须整块删除，上架后再启用。
+  - `[EXTENSION_CTA]` 与成对的 `<!-- EXTENSION_BLOCK_START -->` / `<!-- EXTENSION_BLOCK_END -->`：扩展已在 2026-10-08 上架，发布时换成商店真实链接（见 audio / subtitles 两篇的运行时正文）。
   - `<!-- MEDIA: 文件名 | alt: ... -->`：需要补真实截图的位置，截图清单见各 `page_seo.md`。不使用占位图。
 - 范围依据：`docs/feat/009.SEO与增长/feat.md` 在工作区有未提交改动，写明「长尾文章页尚未上线：2026-10-06 决定启动。选题与英文源稿在 `docs/seo-skill/` ……路由、模板与多语言形态在源稿确认后补入本文。在此之前，站内不出现文章页入口」。所以本轮源稿被授权，但路由、站内入口与多语言形态仍待 hydra 确认（见 §7）。
 - 状态词汇：「源语言稿已完成」不等于「已发布」。只有源码同步、构建通过并验证真实页面后才能标记已发布（spec §3）。
@@ -24,10 +24,10 @@
 | `is-it-legal-to-download-vimeo-videos` | 信息型：下载 Vimeo 视频是否合法，Vimeo 条款与版权各管什么 | is it legal to download vimeo videos | Q11 文章/问答 9/9（100%） | 可立即发布（不依赖产品能力） | P1 | 已同步到站点源码（2026-10-07），构建与本地真实页面验证通过，线上待部署 |
 | `vimeo-download-button-missing` | 排障型：为什么视频页没有 Download 按钮，该找谁、怎么办 | vimeo download button missing；why can't I download a vimeo video；vimeo video not downloading | N1 文章+官方 6/9，工具 0；N2 官方+文章+论坛 8/9，工具 0；N22 论坛+官方+文章 8/9，工具 0 | 可立即发布（解释性内容，引用 Vimeo 官方帮助） | P1 | 已同步到站点源码（2026-10-07），构建与本地真实页面验证通过，线上待部署 |
 | `vimeo-downloader-not-working` | 排障型：本站在线工具的报错文案逐条解释与恢复 | vimeo downloader not working；vimeo download failed | N3 论坛/Issue 6/9、厂商文章 2/9，工具 0；N21 论坛/Issue 6/10、厂商文章 2/10，工具 0 | 可立即发布（只写在线工具现有错误态） | P1 | 已同步到站点源码（2026-10-07），构建与本地真实页面验证通过，线上待部署 |
-| `save-vimeo-audio-as-mp3-or-m4a` | 方法型：只存 Vimeo 视频的音频，M4A 或 MP3 | vimeo to mp3；extract audio from vimeo video | Q8 文章 56%；N11 文章 5/9（56%） | 待插件上架（核心任务依赖扩展；在线工具只输出 MP4） | P2 | 源语言稿已完成，待 hydra 确认 |
-| `download-vimeo-subtitles-as-vtt` | 方法型：把视频自带字幕存成 VTT 文件，并说明它不是文字稿 | download vimeo video with subtitles；download vimeo captions | Q9 文章 78%；N23 文章+官方 8/9（89%），工具 1 | 待插件上架（在线工具不输出字幕） | P2 | 源语言稿已完成，待 hydra 确认 |
+| `save-vimeo-audio-as-mp3-or-m4a` | 方法型：只存 Vimeo 视频的音频，M4A 或 MP3 | vimeo to mp3；extract audio from vimeo video | Q8 文章 56%；N11 文章 5/9（56%） | 可发布（插件 2026-10-08 已上架） | P2 | 已发布（2026-10-25），构建与本地真实页面验证通过，线上待部署 |
+| `download-vimeo-subtitles-as-vtt` | 方法型：把视频自带字幕存成 VTT 文件，并说明它不是文字稿 | download vimeo video with subtitles；download vimeo captions | Q9 文章 78%；N23 文章+官方 8/9（89%），工具 1 | 可发布（插件 2026-10-08 已上架） | P2 | 已发布（2026-10-25），构建与本地真实页面验证通过，线上待部署 |
 
-建议发布顺序：`how-to-download-a-vimeo-video` → `is-it-legal-to-download-vimeo-videos` → `vimeo-download-button-missing` → `vimeo-downloader-not-working`；`save-vimeo-audio-as-mp3-or-m4a` 与 `download-vimeo-subtitles-as-vtt` 两篇待扩展上架后再发布。前四篇的路由、入口与多语言形态确认之前也不发布（§7 第 1 条）。
+发布顺序：`how-to-download-a-vimeo-video` → `is-it-legal-to-download-vimeo-videos` → `vimeo-download-button-missing` → `vimeo-downloader-not-working`（均 2026-10-07 发布）→ `save-vimeo-audio-as-mp3-or-m4a` 与 `download-vimeo-subtitles-as-vtt`（2026-10-25 发布，插件 2026-10-08 上架后解锁）。六篇都只有英文；其他语言没有正文。
 
 内链图（只在确实帮助用户继续任务时互链）：
 
@@ -48,8 +48,8 @@
 | I03 | 下载按钮缺失 / 为什么下不了 | N1 N2 N22 | 文章+官方帮助，工具 0 | 无（解释性） | 选中 `vimeo-download-button-missing` | SERP 为文章型；官方帮助是第一条结果，增量是完整自查流程与合规边界 |
 | I04 | 下载器报错 / 失败 | N3 N21 | 论坛/Issue 为主，工具 0 | 在线工具错误态 | 选中 `vimeo-downloader-not-working` | 本站错误文案在源码中可逐条核对，竞品没有对应内容 |
 | I05 | 合法性 | Q11 | 文章 100% | 无（合规说明） | 选中 `is-it-legal-to-download-vimeo-videos` | 纯信息型；可由 Vimeo 条款原文、官方帮助与美国版权局页面支撑 |
-| I06 | 音频 MP3 / M4A | Q8 N11 | 文章 56% | 扩展（M4A，popup 中转码 MP3） | 选中 `save-vimeo-audio-as-mp3-or-m4a` | 待插件上架 |
-| I07 | 字幕 | Q9 N23 | 文章 78%–89% | 扩展（VTT） | 选中 `download-vimeo-subtitles-as-vtt` | 待插件上架 |
+| I06 | 音频 MP3 / M4A | Q8 N11 | 文章 56% | 扩展（M4A，popup 中转码 MP3） | 选中 `save-vimeo-audio-as-mp3-or-m4a` | 已发布（2026-10-25） |
+| I07 | 字幕 | Q9 N23 | 文章 78%–89% | 扩展（VTT） | 选中 `download-vimeo-subtitles-as-vtt` | 已发布（2026-10-25） |
 | I08 | 文字稿 transcript | N9 | 文章 44%、工具 33%、扩展条目 22% | 无 | 不做 | 产品不生成文字稿；在字幕篇里说明区别 |
 | I09 | 只下载一段（裁剪） | N10 | how-to 56%、工具 44%，意图含糊（Vimeo 内剪辑与下载片段混在一起） | 扩展（DASH/HLS 按时间裁剪） | 暂缓 | 需求未被证据证实；待上架和 GSC 数据后再评估 |
 | I10 | 封面图 | Q12 | 工具 89% | 扩展（JPEG） | 不做 | 做成说明页属于页面类型错配 |
