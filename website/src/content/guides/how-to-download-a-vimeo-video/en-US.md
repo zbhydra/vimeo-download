@@ -3,7 +3,7 @@ title: How to download a Vimeo video
 seoTitle: 'How to Download a Vimeo Video: Button or Online Tool'
 description: "Use Vimeo's Download button when the owner enables it. For a public video you have the right to save, an online tool saves an MP4. Steps and limits."
 publishedAt: 2026-10-07
-updatedAt: 2026-10-07
+updatedAt: 2026-10-26
 ---
 
 Look for the **Download** button below the video on vimeo.com. If the owner turned downloads on, that button is Vimeo's own way to get a file. For a public video you have the right to save, you can also paste its link into the [Vimeo Downloader online tool](/), which saves one video at a time as an MP4 in the highest quality Vimeo provides for it. Private, password-protected and paid videos are not supported, and you are responsible for having the right to save the video.
@@ -58,7 +58,7 @@ The [Vimeo Downloader online tool](/) is free, needs no account, and runs in you
 
 - **One MP4 per link.** The tool works on one link at a time and has no batch mode.
 - **The highest quality Vimeo provides for that video.** There is no quality menu. The result card shows the resolution before you download, so you know what you are getting.
-- **The video as a single file.** You get one MP4 with the picture and sound. Separate audio files, subtitle files and cover images are not part of it.
+- **The video as a single file.** You get one MP4 with the picture and sound. Separate audio files, subtitle files and cover images are not part of it. If you need one of those on its own, the [Chrome extension](/ext-pricing/) can save [audio as M4A or MP3](/guides/save-vimeo-audio-as-mp3-or-m4a/) and [subtitles as VTT](/guides/download-vimeo-subtitles-as-vtt/).
 - **Public videos only.** The online tool only works with public videos. Private, password-protected and paid videos are not supported, and the tool does not remove DRM or unlock access controls. If it says "This Vimeo video is private or cannot be parsed", read [Vimeo Downloader not working](/guides/vimeo-downloader-not-working/).
 - **Very large files can be refused.** Files that are very large, or whose size Vimeo doesn't report, may be turned down. The tool also checks that your browser has enough storage before it starts.
 - **Interrupted downloads.** If your connection drops while a single-file MP4 is downloading, the page retries on its own and, if that fails, shows **Continue** so you can pick up where it stopped. Videos that need merging can't be resumed; start those again.

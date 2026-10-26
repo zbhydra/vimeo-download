@@ -3,7 +3,7 @@ title: How to save the audio from a Vimeo video as M4A or MP3
 seoTitle: "Vimeo to MP3: How to Save a Video's Audio as M4A or MP3"
 description: "Save only the audio of a public Vimeo video as M4A, or as MP3 from the extension popup. Steps, limits, and why the online tool can't do it."
 publishedAt: 2026-10-25
-updatedAt: 2026-10-25
+updatedAt: 2026-10-26
 ---
 
 To save only the audio of a public Vimeo video, use the Vimeo Downloader browser extension. Open the video on vimeo.com, then choose **Best Audio** in the Audio row of the page panel to get an M4A file, or open the extension's popup, set the Audio row's format to MP3 and select its download arrow. The [online tool](/) can't do this: it saves an MP4 video only.
@@ -48,6 +48,8 @@ The format menu always starts at M4A when you open the popup. Your MP3 choice is
 The extension builds its Audio options from the audio streams Vimeo offers for the video. If the video doesn't expose a separate audio stream, the page panel shows a disabled "-" button in the Audio row, and the popup shows "Unavailable". In that case this extension can't save the audio on its own.
 
 If the popup says "No downloadable video on this page" or is still scanning, wait for the page to finish loading and select **Rescan**. If it says the page isn't a Vimeo page, open the video on vimeo.com first.
+
+If the video page has no download panel at all, or the panel never fills in, that's a different problem from an empty Audio row. [Why a Vimeo video has no Download button](/guides/vimeo-download-button-missing/) covers the cases where nothing is offered, and [Vimeo Downloader not working](/guides/vimeo-downloader-not-working/) explains the messages the online tool shows. If you want the subtitles from the same video, see [Download Vimeo subtitles as VTT](/guides/download-vimeo-subtitles-as-vtt/).
 
 ## Limits
 

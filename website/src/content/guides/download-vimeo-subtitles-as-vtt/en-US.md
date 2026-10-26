@@ -3,7 +3,7 @@ title: How to download subtitles from a Vimeo video as VTT
 seoTitle: How to Download Vimeo Subtitles and Captions as a VTT File
 description: "Save a Vimeo video's subtitles or captions as a .vtt file with the browser extension. Steps, what you get, limits, and why the online tool can't do it."
 publishedAt: 2026-10-25
-updatedAt: 2026-10-25
+updatedAt: 2026-10-26
 ---
 
 To save a Vimeo video's subtitles or captions, use the Vimeo Downloader browser extension. Open a public video that has subtitles, pick a language in the Subtitle row, and the extension saves it as a separate `.vtt` file. The [online tool](/) can't do this: it saves an MP4 video only. Vimeo's own transcript download covers only videos you or your team uploaded, and it needs a paid plan.
@@ -44,6 +44,8 @@ If you don't have the extension yet, [install it from the Chrome Web Store](http
 The extension lists the subtitle and caption tracks that the Vimeo player offers for the video. When it finds none, the panel shows a disabled "-" button in the Subtitle row, and the popup shows "Unavailable". Typical reasons are that the owner hasn't added subtitles or captions, or that the text is part of the picture itself (burned in). Burned-in text is not a track, so there is nothing to save separately.
 
 If the popup says "No downloadable video on this page" or is still scanning, wait for the page to finish loading and select **Rescan**.
+
+If the video page has no download panel at all, [Why a Vimeo video has no Download button](/guides/vimeo-download-button-missing/) covers the cases where nothing is offered, and [Vimeo Downloader not working](/guides/vimeo-downloader-not-working/) explains the online tool's own errors. If you want the separate audio track from the same video, see [Save Vimeo audio as M4A or MP3](/guides/save-vimeo-audio-as-mp3-or-m4a/).
 
 ## If the video is yours
 

@@ -3,7 +3,7 @@ title: 'Vimeo Downloader not working: error messages and fixes'
 seoTitle: 'Vimeo Downloader Not Working? Error Messages and Fixes'
 description: 'Find the exact error the Vimeo Downloader online tool shows, what it means and what to try: link, private video, storage and connection problems.'
 publishedAt: 2026-10-07
-updatedAt: 2026-10-07
+updatedAt: 2026-10-26
 ---
 
 If the Vimeo Downloader online tool shows an error, find the exact message below. Most failures come down to the link, the video itself, your browser's storage or connection, or too many requests in a short time. The tool only works for public Vimeo videos, and it doesn't try to get around private, password-protected or paid ones.
@@ -50,6 +50,8 @@ If the Vimeo Downloader online tool shows an error, find the exact message below
 ## Still stuck?
 
 [Contact us](/contact/) with the Vimeo link and the exact message you saw. Please don't send links to private or password-protected videos. The tool can't read them, and it doesn't help you get around Vimeo's access controls.
+
+**If only part of the file is a problem.** The online tool saves one MP4 with the picture and sound. If what you actually need is the separate audio track or the subtitles, a browser limitation won't be fixed by retrying: those are not part of what the online tool produces. The [Chrome extension](/ext-pricing/) handles [audio as M4A or MP3](/guides/save-vimeo-audio-as-mp3-or-m4a/) and [subtitles as VTT](/guides/download-vimeo-subtitles-as-vtt/), and it keeps large downloads running outside the tab.
 
 ## Frequently asked questions
 
