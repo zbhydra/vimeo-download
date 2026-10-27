@@ -812,6 +812,11 @@ const structuredDataItems = [
         margin-top: 48px;
         padding-top: 24px;
         border-top: 1px solid var(--divider);
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
       }
 
       .footer-meta p {
@@ -821,6 +826,29 @@ const structuredDataItems = [
 
       .footer-meta p + p {
         margin-top: 4px;
+      }
+
+      /* Fazier / Startup Fame「Launched on」回链徽章（外链交换，见 009.SEO与增长 tech-外链提交平台） */
+      .footer-badges {
+        display: inline-flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .footer-badge {
+        display: inline-flex;
+        align-items: center;
+        opacity: 0.85;
+      }
+
+      .footer-badge:hover {
+        opacity: 1;
+      }
+
+      .footer-badge img {
+        height: 32px;
+        width: auto;
+        display: block;
       }
 
       .footer-link-group a {
@@ -1143,8 +1171,46 @@ const structuredDataItems = [
           </nav>
         </div>
         <div class="footer-meta">
-          <p>{t.layout.footer.rights}</p>
-          <p>{companyContent.operatorStatement}</p>
+          <div>
+            <p>{t.layout.footer.rights}</p>
+            <p>{companyContent.operatorStatement}</p>
+          </div>
+          <div class="footer-badges">
+            <a
+              href="https://fazier.com/launch/vimeodownloader"
+              target="_blank"
+              rel="noopener"
+              class="footer-badge"
+              title="Launched on Fazier"
+              data-ga-event="internal_workflow_click"
+              data-ga-source="footer"
+              data-ga-target="fazier-badge"
+            >
+              <img
+                src="https://fazier.com/api/v1/public/badges/launch_badges.svg?badge_type=launched&theme=light"
+                alt="Launched on Fazier"
+                loading="lazy"
+              />
+            </a>
+            <a
+              href="https://startupfa.me/s/vimeo-downloader?utm_source=vimeodownloader.app"
+              target="_blank"
+              rel="noopener"
+              class="footer-badge"
+              title="Featured on Startup Fame"
+              data-ga-event="internal_workflow_click"
+              data-ga-source="footer"
+              data-ga-target="startupfame-badge"
+            >
+              <img
+                src="https://startupfa.me/images/logo.svg"
+                alt="Startup Fame"
+                width="208"
+                height="36"
+                loading="lazy"
+              />
+            </a>
+          </div>
         </div>
       </div>
     </footer>}
