@@ -22,12 +22,13 @@ export const viVN: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo Downloader - Tải video HD và âm thanh',
+        title: 'Vimeo Downloader - Tải video HD miễn phí và tiện ích Chrome',
         description: 'Dán liên kết Vimeo để lưu video ngay trong trình duyệt, miễn phí và không cần đăng nhập. Cần âm thanh, phụ đề, ảnh bìa hoặc hàng đợi? Hãy thêm tiện ích Chrome.'
       },
       heroTrustPoints: [
         'Tải chất lượng HD',
-        'Không cần đăng ký'
+        'Không cần đăng ký',
+        'Âm thanh, phụ đề qua tiện ích'
       ],
       workspace: {
         parse: {

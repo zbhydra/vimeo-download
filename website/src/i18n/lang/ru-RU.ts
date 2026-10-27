@@ -22,12 +22,13 @@ export const ruRU: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo Downloader - скачать HD-видео и аудио',
+        title: 'Vimeo Downloader - бесплатное HD и расширение Chrome',
         description: 'Вставьте ссылку Vimeo, чтобы сохранить видео в браузере бесплатно и без входа. Нужны аудио, субтитры, обложка или очередь? Добавьте расширение Chrome.'
       },
       heroTrustPoints: [
         'Скачивание в HD',
-        'Без регистрации'
+        'Без регистрации',
+        'Аудио и субтитры — в расширении'
       ],
       workspace: {
         parse: {

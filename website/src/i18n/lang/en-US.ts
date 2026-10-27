@@ -22,12 +22,13 @@ export const enUS: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo Downloader - Download HD Video & Audio',
+        title: 'Vimeo Downloader - Free HD Downloads & Chrome Extension',
         description: 'Paste a Vimeo link to save the video in your browser, free and without signing in. Need audio, subtitles, cover images, or a queue? Add the Chrome extension.'
       },
       heroTrustPoints: [
         'HD downloads',
-        'No registration'
+        'No registration',
+        'Audio & subtitles via extension'
       ],
       workspace: {
         parse: {

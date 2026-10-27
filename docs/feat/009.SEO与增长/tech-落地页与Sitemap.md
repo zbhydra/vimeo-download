@@ -120,7 +120,7 @@ XML 写入做实体转义。sitemap index 内每个 sitemap 的 `<lastmod>` 用�
 
 | 顺序 | 组件 | 文案键(`pages.homepage.*`) |
 | --- | --- | --- |
-| 首屏 | `components/download/DownloadWorkspace.astro` + 信任徽标 | `workspace`、`heroTrustPoints`(恰好 2 个) |
+| 首屏 | `components/download/DownloadWorkspace.astro` + 信任徽标 | `workspace`、`heroTrustPoints`(恰好 3 个；第 3 个承接音频意图，指向插件) |
 | 1 | `HomeStepsSection` | `steps`（网页下载三步） |
 | 2 | `HomeIntroSection` | `intro`（含迁入的插件安装四步 `intro.steps` 与 `panel` 四行面板示意；示意由 `ExtensionMockup.astro` 渲染，与 `HomeFinalCtaSection` 共用） |
 | 3 | `HomeFeaturesSection` | `features` |
@@ -156,6 +156,7 @@ XML 写入做实体转义。sitemap index 内每个 sitemap 的 `<lastmod>` 用�
 
 - **FAQPage**：`HomePage.astro` 用 `homepage.faq.items` 构造，经 `Layout` 的 `structuredData` prop 注入，与可见 FAQ 同源；不能用 `slot="head"`（Layout 不消费该 slot）。
 - **SoftwareApplication**：Layout 默认注入（`includeSoftwareApplicationSchema` 默认为真），Company、Legal、PaymentReturn 页传 `false` 不输出，实际只有首页和 Pricing 输出；类别为浏览器扩展，`description` 与 `featureList` 取 `pages.homepage.softwareApplication`（插件定位与能力清单，不得写成「无需插件」）。
+- **`offers` 用 `AggregateOffer`**（`lowPrice: 0`、`offerCount: 2`），因为插件既有免费每日额度也有付费 Unlimited 订阅。不写 `price: 0` 的单一 `Offer`：那会与 FAQ、Pricing 页的付费事实矛盾。
 - 不输出 WebApplication、不输出无法由真实数据支持的 `aggregateRating`。
 - 验收：构建产物 `<head>` 内存在含 `FAQPage` 的 `application/ld+json`。
 
@@ -179,7 +180,7 @@ XML 写入做实体转义。sitemap index 内每个 sitemap 的 `<lastmod>` 用�
 
 | 页面族 | title / description 来源 |
 | --- | --- |
-| 首页 `/` | `pages.homepage.meta.{title,description}`（覆盖「在线工具 + 插件」），由 `schema.ts` 强制 14 语言齐全。title 必须包含品牌词 `Vimeo Downloader`，当前格式为「品牌词 - 当地语言的任务描述」；各语言分别本地化，不得用一个常量覆盖全部语言 |
+| 首页 `/` | `pages.homepage.meta.{title,description}`（覆盖「在线工具 + 插件」），由 `schema.ts` 强制 14 语言齐全。title 必须包含品牌词 `Vimeo Downloader`，当前格式为「品牌词 - 免费 HD + Chrome 扩展」，与 H1 的 Free 口径一致，并承接 `vimeo downloader extension` / `vimeo downloader chrome` 两个曝光最大的查询簇；各语言分别本地化，不得用一个常量覆盖全部语言 |
 | Pricing `/ext-pricing/` | `i18n/pricing.ts` 的 `getPricingPageCopy` 由订阅文案生成 seo |
 | Legal `/terms/` `/privacy/` | `legalContent.ts` 的 `seoTitle` / `seoDescription` |
 | Company `/about/` `/contact/` | `companyContent.ts` 的 `seoTitle` / `seoDescription` |

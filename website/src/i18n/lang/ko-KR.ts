@@ -22,12 +22,13 @@ export const koKR: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo Downloader - HD 동영상과 오디오 다운로드',
+        title: 'Vimeo Downloader - 무료 HD 동영상·Chrome 확장',
         description: 'Vimeo 링크를 붙여넣으면 로그인 없이 무료로 동영상을 저장할 수 있습니다. 오디오, 자막, 커버 이미지, 다운로드 대기열이 필요하다면 Chrome 확장 프로그램을 추가하세요.'
       },
       heroTrustPoints: [
         'HD 다운로드',
-        '가입 불필요'
+        '가입 불필요',
+        '오디오·자막은 확장 프로그램'
       ],
       workspace: {
         parse: {

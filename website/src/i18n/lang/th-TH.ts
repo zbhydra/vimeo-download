@@ -22,12 +22,13 @@ export const thTH: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo Downloader - ดาวน์โหลดวิดีโอ HD และเสียง',
+        title: 'Vimeo Downloader - ดาวน์โหลดวิดีโอ HD ฟรีและส่วนขยาย Chrome',
         description: 'วางลิงก์ Vimeo เพื่อบันทึกวิดีโอในเบราว์เซอร์ ฟรีและไม่ต้องเข้าสู่ระบบ ต้องการเสียง คำบรรยาย ภาพปก หรือคิวดาวน์โหลด? เพิ่มส่วนขยาย Chrome'
       },
       heroTrustPoints: [
         'ดาวน์โหลดคุณภาพ HD',
-        'ไม่ต้องสมัครสมาชิก'
+        'ไม่ต้องสมัครสมาชิก',
+        'เสียงและคำบรรยายผ่านส่วนขยาย'
       ],
       workspace: {
         parse: {

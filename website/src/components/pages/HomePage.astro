@@ -163,7 +163,7 @@ const faqSchema = {
     stroke-linejoin: round;
   }
 
-  /* 手机：两个信任点并排显示。 */
+  /* 手机：三个信任点纵向排列，避免两列网格在 3 项时留下半行空白。 */
   @media (max-width: 600px) {
     .hero-tool {
       padding: 48px 0 40px;
@@ -171,8 +171,8 @@ const faqSchema = {
 
     .hero-trust-points {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px 12px;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 8px;
       margin-top: 20px;
       font-size: 13px;
     }

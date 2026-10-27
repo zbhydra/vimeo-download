@@ -22,12 +22,13 @@ export const zhTW: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo Downloader - 下載高畫質影片與音訊',
+        title: 'Vimeo Downloader - 免費下載高畫質影片與 Chrome 擴充',
         description: '貼上 Vimeo 連結即可在瀏覽器中儲存影片，免費且無需登入。需要音訊、字幕、封面圖或下載佇列？加入 Chrome 擴充功能。'
       },
       heroTrustPoints: [
         '高清下載',
-        '不需註冊'
+        '不需註冊',
+        '音訊與字幕用擴充功能'
       ],
       workspace: {
         parse: {

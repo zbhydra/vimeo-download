@@ -130,10 +130,13 @@ const softwareApplicationSchema: JsonLd = {
   applicationCategory: 'BrowserExtension',
   operatingSystem: 'Chrome, Edge, Brave, and all Chromium-based browsers',
   browserRequirements: 'Requires JavaScript. Requires HTML5.',
+  // 插件有免费每日额度，也有付费 Unlimited 订阅，所以是 freemium 而不是免费的单一 Offer。
+  // 写成 price 0 的 Offer 会让结构化数据与 FAQ、Pricing 页的付费事实互相矛盾。
   offers: {
-    '@type': 'Offer',
-    price: '0',
-    priceCurrency: 'USD'
+    '@type': 'AggregateOffer',
+    priceCurrency: 'USD',
+    lowPrice: '0',
+    offerCount: '2'
   },
   author: {
     '@id': organizationId

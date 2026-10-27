@@ -22,12 +22,13 @@ export const jaJP: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo Downloader - HD 動画と音声をダウンロード',
+        title: 'Vimeo Downloader - 無料HD動画と Chrome 拡張機能',
         description: 'Vimeo のリンクを貼るだけで、ログイン不要・無料でブラウザに動画を保存できます。音声、字幕、カバー画像、キューが必要なら Chrome 拡張機能を追加してください。'
       },
       heroTrustPoints: [
         'HD ダウンロード',
-        '登録不要'
+        '登録不要',
+        '音声と字幕は拡張機能で'
       ],
       workspace: {
         parse: {

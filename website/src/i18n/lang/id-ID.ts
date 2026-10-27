@@ -22,12 +22,13 @@ export const idID: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo Downloader - Unduh Video HD dan Audio',
+        title: 'Vimeo Downloader - Unduh Video HD Gratis dan Ekstensi Chrome',
         description: 'Tempel tautan Vimeo untuk menyimpan video di browser, gratis dan tanpa masuk akun. Butuh audio, subtitle, gambar sampul, atau antrean? Pasang ekstensi Chrome.'
       },
       heroTrustPoints: [
         'Unduhan HD',
-        'Tanpa pendaftaran'
+        'Tanpa pendaftaran',
+        'Audio & subtitle lewat ekstensi'
       ],
       workspace: {
         parse: {

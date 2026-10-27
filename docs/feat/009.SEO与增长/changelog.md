@@ -1,5 +1,38 @@
 # 009 · SEO 与增长 - 变更记录
 
+## 2026-10-27 首页 SEO：Title 统一免费+扩展口径、首屏承接音频意图、修正 Offers
+
+**Why**：拉取 GSC 28/90 天与 GA4 28 天数据后，首页（`https://vimeodownloader.app/`）28 天为 41 点击 / 410 曝光 / CTR 10% / 均排 11.8，占全站点击 62%。诊断出三处口径不一致：① H1 已写 Free、Title 仍写 `Download HD Video & Audio`，两处都没提 `extension`；② `vimeo downloader extension`（57 曝光，首页最大曝光来源）与 `vimeo downloader chrome`（16 曝光）合计占首页曝光 20%，Title 未承接；③ mp3/wav 类查询已排到 4.5–10 但零点击，首屏没有任何音频是在插件里完成的提示。技术侧（canonical / hreflang / 4 组 JSON-LD / 单一 H1 / 移动端 LCP 1.17s / CLS 0 / 无渲染阻塞资源）无缺陷，本轮不动结构。
+
+**变更**：
+- `website/src/i18n/lang/*.ts`（14 语言）：首页 `meta.title` 改为「品牌词 - 免费 HD + Chrome 扩展」口径，与 H1 的 Free 一致并承接扩展类查询；长度受控在西文 ≤60、CJK ≤40。
+- `website/src/i18n/lang/*.ts` + `src/i18n/schema.ts`：`heroTrustPoints` 由 2 项扩为 3 项，新增「音频与字幕用扩展」，规格类型改为 `[string, string, string]`。
+- `website/src/components/pages/HomePage.astro`：≤600px 下三个信任点由两列网格改为纵向单列，避免 3 项在两列网格里留下半行空白。
+- `website/src/layouts/Layout.astro`：`SoftwareApplication.offers` 由 `price: 0` 的单一 `Offer` 改为 `AggregateOffer`（`lowPrice: 0`、`offerCount: 2`）。原写法与 FAQ、Pricing 页的付费 Unlimited 事实矛盾。
+- `docs/feat/009.SEO与增长/feat.md`、`tech-落地页与Sitemap.md`：同步信任点数量、Title 口径与 Offers 口径。
+
+**验证**：`pnpm build` 通过（95 页，sitemap 65 URL）；`every locale homepage has one H1, eight ordered sections and valid structured data` 通过；首页相关 20 个用例全部通过。本地 preview 下 1440 / 390 / 德语 390 三视口实测：三个信任点均渲染、无横向溢出，桌面单行、移动端三行。构建产物逐语言核对：Title 全部在阈值内，`offers` 均为 `AggregateOffer`。
+
+**已知限制**：
+- 其他 13 语言的新 Title 与信任点文案未经母语审校，为本轮按现有译文风格直译。
+- 效果观察口径：Deployment 后 14–28 天看 `vimeo downloader extension` / `vimeo downloader chrome` 的 CTR 与 `vimeo mp3 download` 簇的点击是否出现，不把单次文案修订归因为排名提升。
+- 未做：HSTS（需 Cloudflare 面板配置、不可快速回滚，另开）；`vimeo downloader` 品牌词仍排 37.6，属站点权重问题，非本轮可解。
+- 未部署，等待部署窗口，且需避开 10-26 内链/lastmod 实验的 7–14 天观察期，避免污染该实验结论。
+
+## 2026-10-25 外链平台批量提交：6 平台落袋，2 站审核中
+
+**Why**：10-25 changelog 记录「外链建设本轮不做」后，hydra 决定启动站外目录/启动平台提交，为域名补第一批第三方外链。
+
+**变更**：
+- 新增 `tech-外链提交平台.md`：平台清单（6 平台状态）、收录标准（只投接受非 AI 工具的综合平台）、各平台后续动作、自动化提交踩坑记录。
+- 新增 `references/外链提交素材库.md`：标准提交素材（区分 website 与 extension 两种口径）、各平台账号、长度硬限制对照。
+- 新增 `plans/002.外链平台批量提交.md`：执行记录与 DevPost 申诉邮件文本。
+- 提交结果：Product Hunt（排期 2026-10-27）、Crunchbase（profile 公开）、Indie Hackers（产品页上线）、AIToolboard / AlternativeTo（审核中）、DevPost（项目建成，账号申诉中）。
+
+**验证**：各平台提交后均有平台侧确认（弹窗/成功页/公开 URL）；Crunchbase 与 IH 的 profile URL 已可直接访问。
+
+**已知限制**：AlternativeTo 过审后需人工关联 Vimeo 才生效外链；DevPost 解封依赖邮件审核；产品缺 512×512 方形 logo，要求方图 icon 的平台暂用 og-image 代替。
+
 ## 2026-10-25 SEO 修复：语言内链、X 占位入口下线、插件类文章发布
 
 **Why**：GSC 90 天数据（实际覆盖 2026-10-06 至 10-22）显示 65 点击 / 615 曝光、平均排名 19；31 页已索引、43 页未索引，其中 5 个 Guides 页全部「已发现但未抓取」；外链 24 条全部来自 google.com。技术侧 canonical / hreflang / sitemap / CWV 均正常，可动的杠杆是收录、内链、外链与内容供给。外链建设本轮不做（hydra 决定）。

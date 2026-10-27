@@ -22,12 +22,13 @@ export const esES: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo Downloader - Descarga vídeos HD y audio',
+        title: 'Vimeo Downloader - Descargas HD gratis y extensión de Chrome',
         description: 'Pega un enlace de Vimeo y guarda el vídeo en tu navegador, gratis y sin iniciar sesión. ¿Necesitas audio, subtítulos, imagen de portada o una cola? Añade la extensión de Chrome.'
       },
       heroTrustPoints: [
         'Descargas en HD',
-        'Sin registro'
+        'Sin registro',
+        'Audio y subtítulos con extensión'
       ],
       workspace: {
         parse: {
