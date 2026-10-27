@@ -29,8 +29,8 @@
 | 6 | DevPost | 开发者项目库 | nofollow | 项目已建；**账号被风控暂停，申诉邮件已起草待发** | https://devpost.com/software/vimeo-downloader |
 | 7 | Clapstorm | 启动平台（PH 替代） | — | **已上线** | https://www.clapstorm.com/p/vimeo-downloader |
 | 8 | Tooltivity | Chrome 扩展目录 | — | 已认领，**待点邮箱确认链接**（发到 zbhydra115@gmail.com，48h 有效） | https://tooltivity.com/dashboard/listings/vimeo-downloader |
-| 9 | Fazier | 启动平台（DR 84） | dofollow（免费档需回链） | badge 已挂页脚并部署 ✅；**Verify Badge 已通过 ✅；最终多步表单的 Category/Topics 自绘组件不吃自动化事件，需人工 5 分钟走完**（文案见素材库） | https://fazier.com/launch |
-| 10 | Startup Fame | 目录（dofollow） | dofollow（免费档需回链） | 档案已自动建成（not listed）；**badge 已挂网站页脚，待部署后在 Promote 页选 Verified 免费档提交** | https://startupfa.me/dashboard/vimeo-downloader |
+| 9 | Fazier | 启动平台（DR 84） | dofollow（免费档需回链） | badge 已挂页脚 ✅、**Verify Badge 已通过 ✅**；已推进到 `/launch-new` 产品表单（Name / Tagline / Category / Topics / Description / Features / Use cases），**剩余填写与最终发布需人工完成**（文案见素材库） | 产品页（提交后）：https://fazier.com/launches/vimeodownloader ；表单位置：https://fazier.com/launch |
+| 10 | Startup Fame | 目录（dofollow） | dofollow（免费档需回链） | 档案页已可访问（`/s/vimeo-downloader` 正常返回）；**badge 已挂网站页脚，待部署后在 Promote 页选 Verified 免费档提交** | https://startupfa.me/dashboard/vimeo-downloader |
 | 11 | Neeed | 启动平台 | — | 本机网络不可达，待网络恢复人工提交 | https://neeed.com |
 
 ## 已放弃（勿重复尝试）
