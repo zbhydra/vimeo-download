@@ -90,20 +90,6 @@ class TestUserService:
         assert updated_user.login_count == initial_count + 1
         assert updated_user.last_login_at is not None
 
-    async def test_increment_failed_attempts(self, make_test_email):
-        """Test incrementing failed login attempts (stub)."""
-        service = UserService()
-
-        # Create a user
-        user = await service.create_user(
-            email=make_test_email("failed-attempts"),
-            password="TestPassword123!",
-        )
-
-        # This is a stub that always returns True
-        result = await service.increment_failed_attempts(user.user_id)
-        assert result is True
-
     async def test_lock_user_until(self, make_test_email):
         """Test locking user until specified time."""
         service = UserService()

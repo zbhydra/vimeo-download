@@ -1,7 +1,7 @@
 """客户端用户认证 API。
 
 本文件只负责把客户端认证接口串成业务流程；具体能力复用已有 service：
-- user_auth_service：校验密码、签发项目 access/refresh token 并登记白名单。
+- user_auth_service：签发项目 access/refresh token 并登记白名单。
 - user_token_service：token 白名单校验、撤销、refresh token 轮换。
 - user_service：创建/查询用户，构建客户端用户信息。
 - google_auth_service：Google ID token 和 OAuth code 协议交互。
@@ -9,7 +9,7 @@
 
 整体流程：
 1. 常规登录（插件 popup 与 Website 共用同一入口）
-   password / email-code / Google One Tap / Google redirect exchange
+   email-code / Google One Tap / Google redirect exchange
    -> 确认或创建用户
    -> _complete_login_flow
    -> 返回 access_token、refresh_token 和 user。
@@ -60,7 +60,6 @@ from app.services.user_token_service import user_token_service
 # Utils
 from app.utils.common import get_client_ip, get_locale
 from app.utils.geoip import geoip_service
-from app.utils.ip_block_manager import IPBlockManager
 from app.utils.jwt import JwtUnit
 from app.utils.logger import logger
 from app.utils.redis_fixed_limiter import RedisFixedLimiter
@@ -75,9 +74,6 @@ from app.constants.client_product import ClientProductEnum, normalize_client_pro
 from app.constants.auth import (
     HTTP_AUTH_BEARER_PREFIX,
     HTTP_AUTH_BEARER_PREFIX_LENGTH,
-    IP_BLOCK_DURATION,
-    LOGIN_RATE_LIMIT_MAX_ATTEMPTS,
-    LOGIN_RATE_LIMIT_WINDOW,
     MESSAGE_VERIFY_CODE_SENT,
     TokenType,
     UserLoginStatus,
@@ -92,19 +88,14 @@ from app.schemas.client_user_schema import (
     GoogleLoginCodeExchangeRequest,
     GoogleLoginRequest,
     RegistrationContext,
-    LoginRequest,
     LoginResponse,
     RefreshTokenRequest,
-    RegisterRequest,
     SendEmailVerifyRequest,
 )
 
 router = APIRouter(prefix="/auth", tags=["用户认证"])
 
-# 限流器和 IP 封禁管理器实例
-_rate_limiter = RedisFixedLimiter(key_prefix="login_rate_limit")
 _google_oauth_authorize_limiter = RedisFixedLimiter(key_prefix="google_oauth_authorize")
-_ip_block_manager = IPBlockManager(key_prefix="ip_block")
 _GOOGLE_OAUTH_AUTHORIZE_RATE_LIMIT_MAX = 10
 _GOOGLE_OAUTH_AUTHORIZE_RATE_LIMIT_WINDOW = 60
 
@@ -245,92 +236,6 @@ def _google_redirect_error_response(
         google_redirect_login_service.build_error_redirect_url(reason, redirect_state),
         status_code=status.HTTP_303_SEE_OTHER,
     )
-
-
-@router.post("/register", status_code=status.HTTP_201_CREATED)
-async def register(data: RegisterRequest, request: Request):
-    """用户注册.
-
-    1. 检查邮箱是否已存在
-    2. 创建用户（自动赠送注册 Credits）
-    3. 返回用户信息
-    """
-    register_source, register_user_agent = _extract_registration_context(request)
-    register_ip = get_client_ip(request)
-    register_country = geoip_service.get_country(register_ip) if register_ip else None
-
-    # 检查邮箱是否已存在
-    existing = await user_service.get_user_by_email(data.email)
-    if existing:
-        raise AppCommonException(code=CommonCode.USER_EMAIL_EXISTS)
-
-    # 创建用户并赠送注册 Credits
-    user = await user_service.create_user_with_registration_bonus(
-        email=data.email,
-        password=data.password,
-        full_name=data.full_name,
-        register_source=(
-            ClientProductEnum.EXTENSION
-            if data.registration_entry == "extension_v3"
-            else register_source
-        ),
-        register_device_id=data.register_device_id,
-        first_opened_at=data.first_opened_at,
-        register_user_agent=register_user_agent,
-        register_ip=register_ip,
-        register_country=register_country,
-    )
-
-    user_info = await user_service.build_client_user_info(user)
-    return ResponseUtils.ok(user_info.model_dump())
-
-
-@router.post("/login")
-async def login(data: LoginRequest, request: Request):
-    """用户登录.
-
-    1. 检查 IP 是否被封禁
-    2. 检查登录失败频率限制
-    3. 验证邮箱和密码
-    4. 生成 Token 并创建会话
-    """
-    # 获取客户端 IP，用于登录风控限流和封禁。
-    ip_address = _require_client_ip(request, "password_login.rate_limit")
-
-    # 检查 IP 是否被封禁
-    if await _ip_block_manager.is_blocked(ip_address):
-        remaining_time = await _ip_block_manager.get_remaining_time(ip_address)
-        logger.warning(
-            f"Blocked IP {ip_address} attempted login, remaining: {remaining_time}s",
-        )
-        raise AppCommonException(code=CommonCode.AUTH_IP_BLOCKED)
-
-    # 验证用户凭据
-    user = await user_auth_service.authenticate_user(data.email, data.password)
-    if not user:
-        # 检查并更新失败次数限制
-        allowed = await _rate_limiter.is_allowed(
-            identifier=ip_address,
-            limit=LOGIN_RATE_LIMIT_MAX_ATTEMPTS,
-            window=LOGIN_RATE_LIMIT_WINDOW,
-        )
-
-        if not allowed:
-            # 超过限制，封禁 IP
-            await _ip_block_manager.block(ip_address, IP_BLOCK_DURATION)
-            logger.warning(
-                f"IP {ip_address} exceeded login rate limit, "
-                f"blocked for {IP_BLOCK_DURATION}s",
-            )
-            raise AppCommonException(code=CommonCode.AUTH_IP_BLOCKED)
-
-        await user_auth_service.update_failed_login(data.email)
-        raise AppCommonException(code=CommonCode.AUTH_INVALID_CREDENTIALS)
-
-    _ensure_user_can_login(user)
-
-    login_response = await _complete_login_flow(user, request)
-    return ResponseUtils.ok(_serialize_login_response(login_response))
 
 
 @router.post("/logout")

@@ -28,7 +28,7 @@
 | `last_operation_ip` | varchar(64) | NULL | 最后操作 IP |
 | `last_operation_country` | varchar(8) | NULL | 最后操作国家/地区 |
 | `login_count` | int | `0` | 累计登录次数(每次登录 `+1`) |
-| `locked_until` | bigint | NULL | 账号锁定截止时间(毫秒时间戳);字段与判断就位,但当前失败计数为 stub,实际不触发(见 §6) |
+| `locked_until` | bigint | NULL | 账号锁定截止时间(毫秒时间戳);登录与刷新时检查，不按失败次数自动锁定 |
 | `created_at` | bigint | `timestamp_now()` | 创建时间(毫秒时间戳) |
 | `updated_at` | bigint | `timestamp_now()` | 更新时间(毫秒时间戳) |
 
@@ -38,8 +38,6 @@
 | --- | --- |
 | `PRIMARY KEY(user_id)` | 主键 |
 | `UNIQUE KEY email(email)` | 邮箱业务唯一;同一邮箱只能对应一个用户,登录/注册按邮箱查找依赖此约束 |
-
-> **不存在 `failed_login_attempts` 列**。失败计数当前是 stub(见 §6),用户级锁定字段虽在表里但未被失败登录流程触发。
 
 ### 1.2 user_ip_registers 表
 
@@ -89,8 +87,6 @@
 | `access_token_expire` | `86400`(24 小时) | access token TTL(秒) |
 | `refresh_token_expire` | `604800`(7 天) | refresh token TTL(秒) |
 | `refresh_token_remember_days` | `30` | "记住我"场景的延长天数(预留) |
-| `max_login_attempts` | `5` | 用户级最大失败次数(**已加载但未实际生效**,见 §6) |
-| `lock_duration_minutes` | `30` | 用户级锁定时长分钟(**已加载但未实际生效**) |
 | `rate_limit_times` | `10` | 登录限流次数 |
 | `rate_limit_period` | `60` | 登录限流窗口(秒) |
 
@@ -195,32 +191,9 @@ Token 不直接可信,服务端在 Redis 维护"未撤销 token 哈希集合"做
 - 发送成功响应消息:`验证码已发送`
 - 发送重试:`EMAIL_SEND_RETRY_TIMES = 3`,`EMAIL_SEND_RETRY_DELAY = 1`
 
-## 6. 登录失败保护
+## 6. 登录保护
 
-### 6.1 IP 级别(当前生效)
-
-| 常量 | 值 |
-| --- | --- |
-| `LOGIN_RATE_LIMIT_WINDOW` | `300`(5 分钟) |
-| `LOGIN_RATE_LIMIT_MAX_ATTEMPTS` | `10`(10 次失败) |
-| `IP_BLOCK_DURATION` | `600`(封禁 10 分钟) |
-
-登录接口 `login` 流程:
-
-1. 取 IP = `request.client.host`(原始 client host,非 `get_client_ip`)。
-2. 预检 `_ip_block_manager.is_blocked(ip)` → 命中抛 IP 封禁错误。
-3. 凭证失败:`_rate_limiter.is_allowed(identifier=ip, limit=10, window=300)`(`RedisFixedLimiter` 固定窗口 INCR + Lua,key 前缀 `login_rate_limit`)→ 不允许则 `_ip_block_manager.block(ip, 600)`(Redis `SET ip_block:{ip} EX 600`)并抛 IP 封禁错误;允许则 `update_failed_login` + 抛凭证错误。
-
-Redis 故障 fail-open。
-
-### 6.2 用户级别(已就位但未生效)
-
-- `UserAuthService.__init__` 加载了 `max_login_attempts=5` 与 `lock_duration_minutes=30`,但**登录流程未使用**。
-- `user_service.increment_failed_attempts(user_id)` 是 **stub,恒返回 `True`**(函数体注释掉,注 `failed_login_attempts field is not implemented in UserModel`)。
-- `locked_until` 字段、`is_locked()`、`lock_user_until/unlock_user` 方法、`UserLoginStatus.LOCKED` → 错误码映射全部就位,只差失败计数接线。
-- 实际生效的失败保护是 §6.1 的 IP 级别。
-
-> 这是已知 TODO;若需用户级锁定,要在 users 表加 `failed_login_attempts` 列并实现 `increment_failed_attempts`。
+邮箱验证码的尝试次数限制见 §5；账号锁定与注销判定见 §1.3。Google OAuth authorize 的 IP 限流见 `auth_client.py` 的 `google_oauth_authorize`。
 
 ## 7. 注册赠送与 IP 注册权益风控
 
@@ -228,7 +201,6 @@ Redis 故障 fail-open。
 | --- | --- | --- |
 | 邮箱验证码(`create_user_without_password_with_registration_bonus`) | 0 或 10 Credits | 未命中 IP 注册权益风控时走积分系统 `_add_registration_credits`;命中时跳过;不写订阅权益行 |
 | Google 无密码权威邮箱(同上方法) | 0 或 10 Credits | 同上 |
-| 密码注册(`create_user_with_registration_bonus`) | 0 或 10 Credits | 同上 |
 
 `REGISTRATION_BONUS_CREDITS = 10`,`REGISTRATION_BONUS_REASON = "registration_bonus"`。赠送失败只记日志,不影响注册成功。
 
@@ -292,17 +264,9 @@ VALUES ('registration_ip_benefit_guard', '{"window_seconds":86400,"max_registrat
 
 插件登录页的 `LoginPanel` 负责收集邮箱、发送验证码和展示结果；Popup 与插件订阅页只提供入口（承载面与成功去向见 [第三方登录](./tech-第三方登录.md#94-插件登录页)）；提交经 `loginWithEmailCode` RPC 交给 `BackgroundMessageRouter`（扩展自有页面的 RPC caller 统一为 `popup`）。background 完成兑换并保存 access、refresh 与用户信息三键后返回，发起页关闭不结束这段工作；重开由 `authStore.initialize()` 读取并校验存储身份。网站仍由自己的认证上下文完成登录，设备可信闸门见 [Website 设备可信校验](./tech-邮箱登录设备校验.md)。
 
-### 8.2 密码注册/登录(历史接口,前端未暴露 UI)
+### 8.2 Google 登录
 
-#### `POST /api/client/auth/register`
-
-Body:`{ email, password(min6/max100), full_name? }`。邮箱已存在则报错;否则 `create_user_with_registration_bonus`(按 IP 注册权益风控决定是否送 10 Credits)。响应:`UserInfo`(含 credits_balance)。
-
-#### `POST /api/client/auth/login`
-
-Body:`{ email, password }`。IP 封禁 + 限流预检 → `authenticate_user`(bcrypt 校验)→ 失败更新失败计数并抛错;成功走登录流程。响应:`LoginResponse`。
-
-> website/extension 当前不暴露密码登录 UI,主路径是邮箱验证码与 Google;这两个接口保留供历史/兼容。
+One Tap 与 OAuth 登录的接口和流程见 [第三方登录](./tech-第三方登录.md)。
 
 ### 8.3 Token 管理
 
@@ -367,7 +331,7 @@ Website Pro 恢复登录态时，HTTP 401 与 HTTP 200 但业务码非 10000 都
 
 ### 8.5 响应 schema(`UserInfo` / `LoginResponse`)
 
-`LoginResponse`:`{ access_token, refresh_token, token_type:"bearer", expires_in, user: UserInfo }`。`UserInfo` 即 §8.4 字段集。邮箱验证码登录、密码注册、Google 登录、exchange 均返回 `LoginResponse` 或 `UserInfo`。
+`LoginResponse`:`{ access_token, refresh_token, token_type:"bearer", expires_in, user: UserInfo }`。`UserInfo` 即 §8.4 字段集。邮箱验证码登录、Google 登录与 exchange 均返回 `LoginResponse`。
 
 插件登录不修改通用 `LoginResponse`。插件通过后端 OAuth authorize + Google 授权窗口拿到一次性 code,再调 `/api/client/auth/google/exchange`(公开端点,无需 Website 登录态)换取插件 token,响应字段与通用登录一致。协议细节见 `tech-第三方登录.md` §9。
 
@@ -375,12 +339,12 @@ Website Pro 恢复登录态时，HTTP 401 与 HTTP 200 但业务码非 10000 都
 
 - users 表模型:`@backend/src/app/models/user_model.py`
 - 用户 service(创建/查询/登录信息更新/锁定):`@backend/src/app/services/user_service.py`
-- 认证 service(密码校验/会话存储/登录信息):`@backend/src/app/services/user_auth_service.py`
+- 认证 service(token 签发/会话存储/登录信息):`@backend/src/app/services/user_auth_service.py`
 - Token service(Redis 存储/校验/轮换/撤销):`@backend/src/app/services/user_token_service.py`
 - JWT 工具(签发/解码/JwtData):`@backend/src/app/utils/jwt.py`
 - 认证常量(TTL/限流/验证码/宽限期):`@backend/src/app/constants/auth.py`
 - 邮箱验证码 service:`@backend/src/app/services/email_verification_service.py`
-- IP 封禁 / 限流:`@backend/src/app/utils/ip_block_manager.py` `@backend/src/app/utils/redis_rate_limiter.py`
+- 限流:`@backend/src/app/utils/redis_rate_limiter.py` `@backend/src/app/utils/redis_fixed_limiter.py`
 - 当前用户依赖(`get_current_user` / `get_current_user_optional` / `UserContext`):`@backend/src/app/api/user_dependencies.py`
 - 认证 API:`@backend/src/app/api/client/auth_client.py`
 - 响应 schema:`@backend/src/app/schemas/client_user_schema.py`

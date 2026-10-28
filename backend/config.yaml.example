@@ -50,8 +50,6 @@ auth:
   access_token_expire: 2592000
   refresh_token_expire: 5184000
   refresh_token_remember_days: 30
-  max_login_attempts: 5
-  lock_duration_minutes: 30
   rate_limit_times: 10
   rate_limit_period: 60
 

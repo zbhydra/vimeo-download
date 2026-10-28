@@ -1,31 +1,24 @@
-"""
-Auth API Tests - Using Real Database
-
-Tests for client authentication endpoints including:
-- User registration
-- User login/logout
-- Token refresh
-- Email verification login
-- Error cases (invalid credentials, duplicate registration, etc.)
-
-Note: This API uses a custom response format where successful endpoint returns 201,
-and errors return 200 with error code in response body.
-"""
+"""客户端认证 API 测试，使用真实数据库和 Redis 验证邮箱登录及 token 生命周期。"""
 
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
+from httpx import AsyncClient
 from sqlalchemy import delete, select, text
 
 from app.constants.auth import MESSAGE_VERIFY_CODE_SENT
 from app.core.config import settings
 from app.core.database import get_async_session
+from app.core.redis import redis_client
 from app.exceptions.common_exception import AppCommonException
 from app.i18n.common_code import CommonCode
 from app.models.user_first_day_model import UserFirstDayModel
 from app.models.user_model import UserModel
 from app.services.device_service import DEVICE_TRUST_CONFIG_KEY, device_service
-from app.services.email_verification_service import SendResult
+from app.services.email_verification_service import (
+    SendResult,
+    email_verification_service,
+)
 from app.services.google_auth_service import GoogleTokenProfile
 from app.services.subscription_service import subscription_service
 from app.services.user_auth_service import UserAuthService
@@ -35,8 +28,6 @@ from app.utils.uid import build_user_scope
 
 
 # Test data constants
-TEST_USER_PASSWORD = "Test123456!"
-TEST_USER_FULL_NAME = "Test Auth User"
 TEST_DEVICE_ID = "test-device-auth-api"
 TEST_TRUSTED_IP = "203.0.113.10"
 BRAND_LOGO_SVG_PATH = "/assets/icons/logo.svg"
@@ -47,6 +38,21 @@ def unwrap_ok(response):
     payload = response.json()
     assert payload["code"] == 10000
     return payload["data"]
+
+
+async def _login_with_email_code(async_client: AsyncClient, email: str) -> dict:
+    """在真实 Redis 安排验证码，通过邮箱登录接口获取认证数据。"""
+    redis = await redis_client.get_client()
+    await redis.set(email_verification_service._build_key(email), "123456", ex=60)
+    try:
+        response = await async_client.post(
+            "/api/client/auth/email-verify-login",
+            json={"email": email, "code": "123456"},
+            headers={"X-Client-Product": "extension"},
+        )
+        return unwrap_ok(response)
+    finally:
+        await email_verification_service.clear_verify_data(email)
 
 
 def parse_google_redirect_response(response):
@@ -155,176 +161,6 @@ def test_create_tokens_for_user_returns_seconds_expires_in():
 
 
 @pytest.mark.asyncio
-class TestAuthRegisterAPI:
-    """Test user registration endpoint."""
-
-    async def test_register_new_user_success(
-        self, async_client, test_db_session, make_test_email
-    ):
-        """Test successful user registration."""
-        email = make_test_email("new-user")
-        user_agent = "Mozilla/5.0 Test Web Register"
-
-        # Register user
-        response = await async_client.post(
-            "/api/client/auth/register",
-            json={
-                "email": email,
-                "password": TEST_USER_PASSWORD,
-                "full_name": TEST_USER_FULL_NAME,
-            },
-            headers={
-                "User-Agent": user_agent,
-                "X-Client-Product": "web",
-            },
-        )
-
-        assert response.status_code == 200
-        payload = response.json()
-        assert payload["code"] == 10000
-        data = payload["data"]
-        assert data["email"] == email
-        assert data["full_name"] == TEST_USER_FULL_NAME
-        assert "user_id" in data
-        assert "created_at" in data
-
-        result = await test_db_session.execute(
-            text(
-                "SELECT register_source, register_user_agent "
-                "FROM users WHERE email = :email"
-            ),
-            {"email": email},
-        )
-        row = result.one()
-        assert row.register_source == "web"
-        assert row.register_user_agent == user_agent
-
-    async def test_register_duplicate_email_fails(self, async_client, make_test_email):
-        """Test registering with duplicate email returns error."""
-        email = make_test_email("duplicate")
-
-        # First registration
-        response1 = await async_client.post(
-            "/api/client/auth/register",
-            json={
-                "email": email,
-                "password": TEST_USER_PASSWORD,
-                "full_name": TEST_USER_FULL_NAME,
-            },
-        )
-        unwrap_ok(response1)
-
-        # Second registration should fail
-        response = await async_client.post(
-            "/api/client/auth/register",
-            json={
-                "email": email,
-                "password": "AnotherPassword123!",
-                "full_name": "Duplicate User",
-            },
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["code"] == CommonCode.USER_EMAIL_EXISTS.value
-
-    async def test_register_with_short_password_fails(
-        self, async_client, make_test_email
-    ):
-        """Test registration with short password returns validation error."""
-        response = await async_client.post(
-            "/api/client/auth/register",
-            json={
-                "email": make_test_email("short"),
-                "password": "12345",
-                "full_name": "Short Password",
-            },
-        )
-
-        assert response.status_code == 422
-
-    async def test_register_with_invalid_email_fails(self, async_client):
-        """Test registration with invalid email returns validation error."""
-        response = await async_client.post(
-            "/api/client/auth/register",
-            json={
-                "email": "not-an-email",
-                "password": TEST_USER_PASSWORD,
-                "full_name": "Invalid Email",
-            },
-        )
-
-        assert response.status_code == 422
-
-
-@pytest.mark.asyncio
-class TestAuthLoginAPI:
-    """Test user login endpoint."""
-
-    async def test_login_with_valid_credentials(self, async_client, make_test_email):
-        """Test successful login with valid credentials."""
-        email = make_test_email("login-valid")
-
-        await async_client.post(
-            "/api/client/auth/register",
-            json={
-                "email": email,
-                "password": TEST_USER_PASSWORD,
-                "full_name": TEST_USER_FULL_NAME,
-            },
-        )
-
-        # Login
-        response = await async_client.post(
-            "/api/client/auth/login",
-            json={"email": email, "password": TEST_USER_PASSWORD},
-        )
-
-        data = unwrap_ok(response)
-        assert "access_token" in data
-        assert "refresh_token" in data
-        assert data["token_type"] == "bearer"
-        assert "expires_in" in data
-        assert data["user"]["email"] == email
-
-    async def test_login_with_wrong_password_fails(self, async_client, make_test_email):
-        """Test login with wrong password returns error."""
-        email = make_test_email("login-wrong")
-
-        await async_client.post(
-            "/api/client/auth/register",
-            json={
-                "email": email,
-                "password": TEST_USER_PASSWORD,
-                "full_name": TEST_USER_FULL_NAME,
-            },
-        )
-
-        # Login with wrong password
-        response = await async_client.post(
-            "/api/client/auth/login",
-            json={"email": email, "password": "WrongPassword123!"},
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["code"] == CommonCode.AUTH_INVALID_CREDENTIALS.value
-
-    async def test_login_with_nonexistent_user_fails(
-        self, async_client, make_test_email
-    ):
-        """Test login with non-existent user returns error."""
-        response = await async_client.post(
-            "/api/client/auth/login",
-            json={"email": make_test_email("missing"), "password": "AnyPassword123!"},
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["code"] == CommonCode.AUTH_INVALID_CREDENTIALS.value
-
-
-@pytest.mark.asyncio
 class TestAuthLogoutAPI:
     """Test user logout endpoint."""
 
@@ -332,21 +168,8 @@ class TestAuthLogoutAPI:
         """Test successful logout."""
         email = make_test_email("logout")
 
-        # Register and login
-        await async_client.post(
-            "/api/client/auth/register",
-            json={
-                "email": email,
-                "password": TEST_USER_PASSWORD,
-                "full_name": TEST_USER_FULL_NAME,
-            },
-        )
-
-        login_response = await async_client.post(
-            "/api/client/auth/login",
-            json={"email": email, "password": TEST_USER_PASSWORD},
-        )
-        token = unwrap_ok(login_response)["access_token"]
+        login_data = await _login_with_email_code(async_client, email)
+        token = login_data["access_token"]
 
         # Logout
         response = await async_client.post(
@@ -365,20 +188,8 @@ class TestAuthRefreshTokenAPI:
         """Test successful token refresh."""
         email = make_test_email("refresh")
 
-        await async_client.post(
-            "/api/client/auth/register",
-            json={
-                "email": email,
-                "password": TEST_USER_PASSWORD,
-                "full_name": TEST_USER_FULL_NAME,
-            },
-        )
-
-        login_response = await async_client.post(
-            "/api/client/auth/login",
-            json={"email": email, "password": TEST_USER_PASSWORD},
-        )
-        refresh_token = unwrap_ok(login_response)["refresh_token"]
+        login_data = await _login_with_email_code(async_client, email)
+        refresh_token = login_data["refresh_token"]
 
         # Refresh token
         response = await async_client.post(
@@ -410,20 +221,8 @@ class TestAuthGetMeAPI:
         """Test getting current user info."""
         email = make_test_email("getme")
 
-        await async_client.post(
-            "/api/client/auth/register",
-            json={
-                "email": email,
-                "password": TEST_USER_PASSWORD,
-                "full_name": TEST_USER_FULL_NAME,
-            },
-        )
-
-        login_response = await async_client.post(
-            "/api/client/auth/login",
-            json={"email": email, "password": TEST_USER_PASSWORD},
-        )
-        token = unwrap_ok(login_response)["access_token"]
+        login_data = await _login_with_email_code(async_client, email)
+        token = login_data["access_token"]
 
         # Get user info
         response = await async_client.get(
@@ -432,13 +231,20 @@ class TestAuthGetMeAPI:
 
         data = unwrap_ok(response)
         assert data["email"] == email
-        assert data["full_name"] == TEST_USER_FULL_NAME
+        assert data["full_name"] is None
         assert "user" not in data
         assert "credits_balance" in data
         assert data["subscription"]["period"] in {"free", "month"}
-        # 刚注册的账号当天处于首日：与下载链路同口径展示为不限次。
-        assert data["subscription"]["daily_limit"] == -1
-        assert "extension_download" in data["subscription"]
+        status_response = await async_client.get(
+            "/api/client/subscription/status",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        subscription = unwrap_ok(status_response)
+        assert data["subscription"]["daily_limit"] == subscription["daily_limit"]
+        assert (
+            data["subscription"]["extension_download"]
+            == subscription["extension_download"]
+        )
 
     async def test_get_me_subscription_config_failure_degrades(
         self, async_client, make_test_email, monkeypatch
@@ -446,19 +252,8 @@ class TestAuthGetMeAPI:
         """订阅配置异常只影响订阅展示，不能阻断账号和 Credits 响应。"""
         email = make_test_email("getme-subscription-config-failure")
 
-        await async_client.post(
-            "/api/client/auth/register",
-            json={
-                "email": email,
-                "password": TEST_USER_PASSWORD,
-                "full_name": TEST_USER_FULL_NAME,
-            },
-        )
-        login_response = await async_client.post(
-            "/api/client/auth/login",
-            json={"email": email, "password": TEST_USER_PASSWORD},
-        )
-        token = unwrap_ok(login_response)["access_token"]
+        login_data = await _login_with_email_code(async_client, email)
+        token = login_data["access_token"]
 
         async def fail_get_user_subscription_config(user_id: int):
             raise AppCommonException(
@@ -1726,28 +1521,10 @@ class TestAuthIntegration:
     """Integration tests for complete auth flows."""
 
     async def test_complete_auth_flow(self, async_client, make_test_email):
-        """Test complete registration -> login -> refresh -> logout flow."""
+        """验证邮箱注册登录、查询账号、刷新和登出的完整流程。"""
         email = make_test_email("integration")
-        password = "Integration123!"
-
-        # 1. Register
-        register_response = await async_client.post(
-            "/api/client/auth/register",
-            json={
-                "email": email,
-                "password": password,
-                "full_name": "Integration Test",
-            },
-        )
-        user_data = unwrap_ok(register_response)
-        assert user_data["email"] == email
-
-        # 2. Login
-        login_response = await async_client.post(
-            "/api/client/auth/login", json={"email": email, "password": password}
-        )
-        assert login_response.status_code == 200
-        login_data = unwrap_ok(login_response)
+        login_data = await _login_with_email_code(async_client, email)
+        assert login_data["user"]["email"] == email
         access_token = login_data["access_token"]
         refresh_token = login_data["refresh_token"]
         assert access_token

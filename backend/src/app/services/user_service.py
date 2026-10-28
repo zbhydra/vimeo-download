@@ -370,26 +370,6 @@ class UserService(BaseService[UserModel]):
                 await db.rollback()
                 raise
 
-    async def increment_failed_attempts(self, user_id: int) -> bool:
-        """增加用户失败登录次数"""
-        # TODO::
-        return True
-
-        # async with get_async_session() as db:
-        #     try:
-        #         stmt = select(UserModel).where(UserModel.user_id == user_id)
-        #         result = await db.execute(stmt)
-        #         user = result.scalar_one_or_none()
-
-        #         if user:
-        #             user.updated_at = timestamp_now()
-        #             await db.commit()
-        #             return True
-        #         return False
-        #     except Exception:
-        #         await db.rollback()
-        #         raise
-
     async def lock_user_until(self, user_id: int, lock_until: int) -> bool:
         """锁定用户直到指定时间"""
         async with get_async_session() as db:

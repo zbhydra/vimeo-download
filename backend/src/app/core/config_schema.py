@@ -205,8 +205,6 @@ class AuthSettings(BaseSettings):
     access_token_expire: int = Field(default=86400)
     refresh_token_expire: int = Field(default=604800)
     refresh_token_remember_days: int = Field(default=30)
-    max_login_attempts: int = Field(default=5)
-    lock_duration_minutes: int = Field(default=30)
     rate_limit_times: int = Field(default=10)
     rate_limit_period: int = Field(default=60)
 

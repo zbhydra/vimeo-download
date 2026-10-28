@@ -42,15 +42,6 @@ HTTP_AUTH_BEARER_PREFIX_LENGTH = len(HTTP_AUTH_BEARER_PREFIX)
 DEFAULT_SESSION_EXPIRY_MINUTES = 30
 
 
-# Rate limiting
-# Login rate limit: window in seconds, max attempts
-LOGIN_RATE_LIMIT_WINDOW = 300  # 5 minutes
-LOGIN_RATE_LIMIT_MAX_ATTEMPTS = 10
-
-# IP block duration in seconds
-IP_BLOCK_DURATION = 600  # 10 minutes
-
-
 # Email verification
 EMAIL_VERIFY_CODE_LENGTH = 6
 EMAIL_VERIFY_CODE_EXPIRE_SECONDS = 600  # 10 minutes

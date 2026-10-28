@@ -59,21 +59,6 @@ class RegistrationContext(BaseModel):
         return self
 
 
-class RegisterRequest(RegistrationContext):
-    """注册请求"""
-
-    email: EmailStr = Field(..., description="邮箱")
-    password: str = Field(..., min_length=6, max_length=100, description="密码")
-    full_name: str | None = Field(None, max_length=100, description="全名")
-
-
-class LoginRequest(BaseModel):
-    """登录请求"""
-
-    email: EmailStr = Field(..., description="邮箱")
-    password: str = Field(..., min_length=1, description="密码")
-
-
 class LoginResponse(BaseModel):
     """登录响应"""
 

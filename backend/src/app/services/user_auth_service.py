@@ -13,7 +13,6 @@ from app.services.user_service import user_service
 from app.services.user_token_service import (
     user_token_service,
 )
-from app.utils.crypto import verify_password
 from app.utils.jwt import JwtData, JwtUnit
 
 
@@ -31,26 +30,8 @@ class UserAuthService:
 
     def __init__(self) -> None:
         self.settings = settings
-        self.max_login_attempts = self.settings.auth.max_login_attempts
-        self.lock_duration_minutes = self.settings.auth.lock_duration_minutes
         self.user_ops = user_service
         self.token_ops = user_token_service
-
-    async def authenticate_user(
-        self,
-        email: str,
-        password: str,
-    ) -> UserModel | None:
-        """验证用户凭据"""
-        user = await self.user_ops.get_user_by_email(email)
-
-        if not user:
-            return None
-
-        if not verify_password(password, user.password_hash):
-            return None
-
-        return user
 
     async def create_user_session(
         self,
@@ -101,19 +82,6 @@ class UserAuthService:
         return await self.user_ops.update_login_info(
             user.user_id, login_ip=login_ip, login_country=login_country
         )
-
-    async def update_failed_login(self, email: str) -> UserModel | None:
-        """更新失败登录信息"""
-        user = await self.user_ops.get_user_by_email(email)
-
-        if not user:
-            return None
-
-        # Note: increment_failed_attempts is a stub that always returns True
-        # The failed_login_attempts field is not implemented in UserModel
-        await self.user_ops.increment_failed_attempts(user.user_id)
-
-        return user
 
     def create_tokens_for_user(
         self,

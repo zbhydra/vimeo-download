@@ -81,6 +81,7 @@ def test_download_role_only_mounts_node_and_media_v2_routes(monkeypatch):
     assert "/api/client/media/parse-pre-v2" not in paths
     assert "/api/client/media/download-pre-v2" not in paths
     assert "/api/system/health" not in paths
+    assert "/api/client/auth/register" not in paths
     assert "/api/client/auth/login" not in paths
     assert "/api/client/media/parse" not in paths
     assert "/api/client/media/download" not in paths
@@ -107,7 +108,10 @@ def test_business_role_keeps_current_business_routes(monkeypatch):
 
     assert "/api" in paths
     assert "/api/system/health" in paths
-    assert "/api/client/auth/login" in paths
+    assert "/api/client/auth/register" not in paths
+    assert "/api/client/auth/login" not in paths
+    assert "/api/client/auth/email-verify-login" in paths
+    assert "/api/client/auth/google-login" in paths
     assert "/api/client/media/parse" not in paths
     assert "/api/client/media/download" not in paths
     assert "/api/client/media/direct-download-intent" not in paths
