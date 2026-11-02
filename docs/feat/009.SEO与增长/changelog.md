@@ -1,5 +1,34 @@
 # 009 · SEO 与增长 - 变更记录
 
+## 2026-11-02 `/es/`、`/pt/` Title 恢复当地动作词
+
+**Why**：10-27 把 14 语言 Title 统一成「免费 HD + Chrome 扩展」时，去掉了 es / pt 的动作词（`Descarga vídeos`、`Baixe vídeos`），而这两个市场搜的正是动作词。证据如下，GSC 资源为 `sc-domain:vimeodownloader.app`，网页搜索、全部国家与设备，选择过去 28 天（实际覆盖 10-06 至 10-31），2026-11-02 读取：
+- 最近 7 天（10-25 至 10-31）：`descargar videos de vimeo` 1/1 排 33，`descargar de vimeo` 1/2 排 29，`descargar video vimeo` 0/3 排 33；`baixar video do vimeo` 0/2 排 75，`baixar videos do vimeo` 0/1 排 84。
+- 按国家维度手工分组，西语国家 28 天 19 点击 / 167 曝光，英语国家 16 / 207。`/es/` 的 14 次点击中有 5 次来自品牌词 `vimeodownloader`，不能全部算作通用需求。
+- 当地 SERP 抽样（2026-11-02，hydra 的浏览器，`hl=es&gl=es`、`hl=es-419&gl=mx`、`hl=pt-BR&gl=br`，各 8–9 条）：工具类结果的标题直接使用 `Descargar videos de Vimeo`、`Baixar video do Vimeo` 这类表达。只作用词参考，不是完整的当地排名。
+
+10-29 起 `descarg` 类查询只有 4 次曝光，看不出 10-27 的 Title 是否造成掉排名。这次是按查询词做的修正，不是回滚已证实的回退。
+
+**变更**：
+- `website/src/i18n/lang/es-ES.ts`：首页 `meta.title` 改为 `Vimeo Downloader - Descargar vídeos de Vimeo gratis en HD`（57 字符）。
+- `website/src/i18n/lang/pt-BR.ts`：首页 `meta.title` 改为 `Vimeo Downloader - Baixar vídeos do Vimeo grátis em HD`（54 字符）。
+- 其他 12 语言不变：当地动作词查询的证据不足。
+- `tech-落地页与Sitemap.md`、`docs/seo-skill/homepage/page_seo.md`：同步 Title 口径。
+
+**验证**：`pnpm build` 通过（95 页，sitemap 65 URL）；`every locale homepage has one H1, eight ordered sections and valid structured data` 通过。线上核对：`/es/`、`/pt/` 的 title 已更新，`/`、`/de/`、`/fr/` 未变；这些页面均返回 200、只有一个 H1、hreflang 15 条。
+
+**部署与收录**：
+- 已部署生产，版本 `v20261102_150013`，上一版 `v20261028_212937`。部署前核对：相对线上构建，工作区只多这两行 Title；`Layout.astro` 里未提交的 Launchstag 徽章线上已有；Nginx 配置校验值与服务器一致。
+- `deploy.sh` 退出码为 35：最后一步提交 IndexNow 时 curl 连接失败，`set -e` 让脚本提前退出。此时 `current` 已切换、Nginx 已重载，发布本身已完成。
+- GSC 已对 `/es/`、`/pt/` 提交「要求建立索引」，两次均显示「已要求建立索引」。
+
+**观察口径**：与英文首页分开看。GSC 按页面筛选 `/es/`、`/pt/`，比较上线前后各 14 个完整数据日（前窗 10-19 至 11-01）的曝光、点击、排名及 `descarg` / `baixar` 类查询。样本很小，只描述变化，不直接归因于 Title。
+
+**已知限制**：
+- 译文未经母语审校。es-ES 写 `vídeos`，而 `/es/` 的曝光多来自拉美（习惯写 `videos`），拼写是否调整留待观察。
+- Title 不再提 Chrome 扩展（描述仍提），`descargar videos vimeo extensión chrome` 等词（排 7–8，28 天合计 3 次曝光）可能受影响。
+- 首页 `lastmod` 的来源不含语言字典，这次 sitemap 的 `lastmod` 不变，只靠 GSC 索引请求通知 Google。单独改字典时都有这个缺口，本次未修。
+
 ## 2026-10-27 首页 SEO：Title 统一免费+扩展口径、首屏承接音频意图、修正 Offers
 
 **Why**：拉取 GSC 28/90 天与 GA4 28 天数据后，首页（`https://vimeodownloader.app/`）28 天为 41 点击 / 410 曝光 / CTR 10% / 均排 11.8，占全站点击 62%。诊断出三处口径不一致：① H1 已写 Free、Title 仍写 `Download HD Video & Audio`，两处都没提 `extension`；② `vimeo downloader extension`（57 曝光，首页最大曝光来源）与 `vimeo downloader chrome`（16 曝光）合计占首页曝光 20%，Title 未承接；③ mp3/wav 类查询已排到 4.5–10 但零点击，首屏没有任何音频是在插件里完成的提示。技术侧（canonical / hreflang / 4 组 JSON-LD / 单一 H1 / 移动端 LCP 1.17s / CLS 0 / 无渲染阻塞资源）无缺陷，本轮不动结构。

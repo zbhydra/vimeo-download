@@ -180,7 +180,7 @@ XML 写入做实体转义。sitemap index 内每个 sitemap 的 `<lastmod>` 用�
 
 | 页面族 | title / description 来源 |
 | --- | --- |
-| 首页 `/` | `pages.homepage.meta.{title,description}`（覆盖「在线工具 + 插件」），由 `schema.ts` 强制 14 语言齐全。title 必须包含品牌词 `Vimeo Downloader`，当前格式为「品牌词 - 免费 HD + Chrome 扩展」，与 H1 的 Free 口径一致，并承接 `vimeo downloader extension` / `vimeo downloader chrome` 两个曝光最大的查询簇；各语言分别本地化，不得用一个常量覆盖全部语言 |
+| 首页 `/` | `pages.homepage.meta.{title,description}`（覆盖「在线工具 + 插件」），由 `schema.ts` 强制 14 语言齐全。title 必须包含品牌词 `Vimeo Downloader`。当前格式为「品牌词 - 免费 HD + Chrome 扩展」，与 H1 的 Free 口径一致，并承接 `vimeo downloader extension` / `vimeo downloader chrome` 两个曝光最大的查询簇。`es`、`pt` 例外，格式为「品牌词 - 下载 Vimeo 视频 + 免费 HD」，用当地动作词承接这两个市场的搜索（证据见 `@changelog.md` 2026-11-02）。各语言分别本地化，不得用一个常量覆盖全部语言 |
 | Pricing `/ext-pricing/` | `i18n/pricing.ts` 的 `getPricingPageCopy` 由订阅文案生成 seo |
 | Legal `/terms/` `/privacy/` | `legalContent.ts` 的 `seoTitle` / `seoDescription` |
 | Company `/about/` `/contact/` | `companyContent.ts` 的 `seoTitle` / `seoDescription` |

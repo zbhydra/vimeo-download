@@ -122,6 +122,7 @@ hydra 已确认以下产品决定，实施依赖已解除：
 | B2 · 卡片 | 保留 Chrome/Edge 卡片当前原文 | 除下述德语 Description 人称例外外，现有 14 语言的 Description、Title、CTA 全部保留，包括 any / fast，不采用改写候选 |
 
 - 本轮保留各 locale 的 `meta.title`、`meta.description` 与 `site.description`。英文标题仍为 `Vimeo Downloader - Download HD Video & Audio`，描述已把免费网页视频与扩展能力区分；不根据小样本重写标题。
+- 后续变更：2026-10-27 起 Title 改为「品牌词 - 免费 HD + Chrome 扩展」；2026-11-02 起 `es`、`pt` 改用当地动作词。当前决定与证据见[增长域 changelog](../../feat/009.SEO与增长/changelog.md)。
 - H1 继续由 `titleBrand` 与 `titleTagline` 拼接，保持一个 H1；使用确认的免费标语，不新增标题行。
 - helper 说明免费 MP4、最高可用画质及大文件、大小未知文件可能需插件；不重复紧邻的 No registration，也不无条件写 No installation required。
 - 原有两个 trust points 保留。一行入口说明音频、字幕与队列需求，使用不限定浏览器的 extension，匹配后面的 Chrome、Edge 两按钮；首访因插件卡展开而隐藏，保持原有显隐规则。

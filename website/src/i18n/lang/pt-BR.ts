@@ -22,7 +22,7 @@ export const ptBR: SiteContent = {
   pages: {
     homepage: {
       meta: {
-        title: 'Vimeo Downloader - HD grátis e extensão do Chrome',
+        title: 'Vimeo Downloader - Baixar vídeos do Vimeo grátis em HD',
         description: 'Cole um link do Vimeo para salvar o vídeo no navegador, de graça e sem login. Precisa de áudio, legendas, imagem de capa ou fila? Adicione a extensão do Chrome.'
       },
       heroTrustPoints: [
