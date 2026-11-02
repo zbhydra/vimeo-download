@@ -4,6 +4,7 @@
  *
  * 原生 dialog 提供模态焦点约束；控制器只在当前打开周期内维护倒计时和领取状态。
  */
+import { CHROME_WEB_STORE_URL } from '../../lib/site.mjs'
 
 interface ReviewRewardCopy {
   /** 未领取账号看到的赠送说明。 */
@@ -67,7 +68,7 @@ const [installMessageBeforeLink, installMessageAfterLink = ''] = copy.installCon
 <dialog
   class="pricing-subscription-confirm"
   data-pricing-subscription-confirm
-  data-extension-review-url={`${extensionInstallUrl}/reviews`}
+  data-extension-review-url={`${CHROME_WEB_STORE_URL}/reviews`}
   data-failed-message={copy.reviewReward.failedMessage}
   data-busy-message={copy.reviewReward.busyMessage}
   aria-labelledby="pricing-subscription-confirm-title-confirm"

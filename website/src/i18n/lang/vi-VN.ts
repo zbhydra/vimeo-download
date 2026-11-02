@@ -72,6 +72,7 @@ export const viVN: SiteContent = {
           enterLink: 'Vui lòng nhập liên kết phương tiện.',
           invalidLink: 'Đây không phải là URL hợp lệ.',
           parseFailed: 'Không thể phân tích liên kết này.',
+          workspaceLoadFailed: 'Không tải được công cụ tải xuống. Hãy kiểm tra kết nối rồi tải lại trang này.',
           downloadFailed: 'Không thể tải tệp này.',
           unsafeFileTypeUseExtension:
             'Installers, scripts, and similar files may carry unknown risks. For security reasons, the website cannot provide downloads for this file type. You can still use the browser extension to download it.',
@@ -82,7 +83,7 @@ export const viVN: SiteContent = {
           clientMuxTooLarge: 'Video này vượt quá giới hạn dung lượng tải xuống của trình duyệt.',
           trackFetchFailed: 'Failed to download the video tracks.',
           unsupportedPlatform: 'This link platform is not supported.',
-          vimeoParseFailed: 'This Vimeo video is private or cannot be parsed.',
+          serverReadFailed: 'Máy chủ của chúng tôi không đọc được video này. Có thể liên kết chưa đầy đủ, video ở chế độ riêng tư, hoặc kết nối tới Vimeo đã thất bại. Hãy thử lại sau giây lát. Nếu vẫn lỗi và video phát được trong trình duyệt của bạn, hãy thử tiện ích bên dưới (chỉ dành cho trình duyệt máy tính): tiện ích đọc video trực tiếp từ trang bạn đang mở.',
           rateLimitExceeded: 'Too many requests. Please try again later.',
           useExtensionForResource: 'Tài nguyên này chỉ có thể tải xuống bằng tiện ích trình duyệt. Hãy cài đặt tiện ích để tiếp tục.'
         },

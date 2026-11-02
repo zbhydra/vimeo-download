@@ -4,6 +4,7 @@ import { defaultLocale, localeNames, localePaths, hreflangMap, locales } from '.
 import { getCompanyContent } from '../company/companyContent';
 import { getGuideLocales, getGuidesContent, getGuidesPath } from '../guides/guidesContent';
 import {
+  CHROME_WEB_STORE_INSTALL_URL,
   CHROME_WEB_STORE_URL,
   DEVELOPER_EMAIL,
   OPERATOR_LEGAL_NAME,
@@ -1010,7 +1011,7 @@ const structuredDataItems = [
 
         <div class="nav-actions">
           <a
-            href={chromeWebStoreUrl}
+            href={CHROME_WEB_STORE_INSTALL_URL}
             target="_blank"
             rel="noopener"
             class="btn-primary nav-install-link"
@@ -1083,7 +1084,7 @@ const structuredDataItems = [
             {t.layout.nav.home}
           </a>
           <a
-            href={chromeWebStoreUrl}
+            href={CHROME_WEB_STORE_INSTALL_URL}
             target="_blank"
             rel="noopener"
             class="btn-primary mobile-nav-install"

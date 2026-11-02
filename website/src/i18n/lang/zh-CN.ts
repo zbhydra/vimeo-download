@@ -70,6 +70,7 @@ export const zhCN: SiteContent = {
           enterLink: '请输入媒体链接。',
           invalidLink: '这不是一个合法的 URL。',
           parseFailed: '解析链接失败。',
+          workspaceLoadFailed: '下载工具没能加载。请检查网络连接，然后刷新页面。',
           downloadFailed: '下载失败。',
           unsafeFileTypeUseExtension:
             '安装包、脚本等文件存在未知风险。出于安全原因，网页端暂时无法提供此类文件的下载服务。你仍可以使用浏览器扩展下载。',
@@ -87,7 +88,7 @@ export const zhCN: SiteContent = {
           clientMuxTooLarge: '此视频超过浏览器下载大小限制。',
           trackFetchFailed: 'Failed to download the video tracks.',
           unsupportedPlatform: '暂不支持这个链接平台。',
-          vimeoParseFailed: '这个 Vimeo 视频为私有内容或暂时无法解析。',
+          serverReadFailed: '我们的服务器没能读取这个视频。可能是链接不完整、视频是私有的，也可能是服务器连接 Vimeo 失败。可以稍后再试一次。如果仍然失败，而视频能在你的浏览器里播放，可以试试下面的插件（仅限电脑浏览器）：插件直接从你打开的页面读取视频。',
           rateLimitExceeded: '请求过于频繁，请稍后再试。',
           useExtensionForResource: '该资源需使用插件下载，请安装插件后继续。'
         },

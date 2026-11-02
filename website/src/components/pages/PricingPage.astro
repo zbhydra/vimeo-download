@@ -8,7 +8,7 @@
 import PricingPageShell from '../pricing/PricingPageShell.astro'
 import Layout from '../../layouts/Layout.astro'
 import { getContent, type Locale } from '../../i18n/content'
-import { CHROME_WEB_STORE_URL, DEVELOPER_EMAIL } from '../../lib/site.mjs'
+import { CHROME_WEB_STORE_INSTALL_URL, DEVELOPER_EMAIL } from '../../lib/site.mjs'
 import { getPricingPageCopy } from '../../i18n/pricing'
 
 interface Props {
@@ -18,7 +18,7 @@ interface Props {
 const { locale = 'en-US' } = Astro.props as Props
 const t = getContent(locale)
 const pricing = getPricingPageCopy(t.pages.pricing)
-const installUrl = CHROME_WEB_STORE_URL
+const installUrl = CHROME_WEB_STORE_INSTALL_URL
 
 // 购买答疑 FAQPage 结构化数据：经 Layout 的 structuredData prop 注入 <head>
 const faqSchema = {

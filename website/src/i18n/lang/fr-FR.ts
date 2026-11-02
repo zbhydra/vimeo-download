@@ -72,6 +72,7 @@ export const frFR: SiteContent = {
           enterLink: 'Veuillez saisir un lien média.',
           invalidLink: 'Ce n’est pas une URL valide.',
           parseFailed: 'Impossible d’analyser ce lien.',
+          workspaceLoadFailed: 'L’outil de téléchargement n’a pas pu se charger. Vérifiez votre connexion, puis actualisez cette page.',
           downloadFailed: 'Impossible de télécharger ce fichier.',
           unsafeFileTypeUseExtension:
             'Installers, scripts, and similar files may carry unknown risks. For security reasons, the website cannot provide downloads for this file type. You can still use the browser extension to download it.',
@@ -82,7 +83,7 @@ export const frFR: SiteContent = {
           clientMuxTooLarge: 'Cette vidéo dépasse la limite de taille de téléchargement du navigateur.',
           trackFetchFailed: 'Failed to download the video tracks.',
           unsupportedPlatform: "La plateforme de ce lien n'est pas prise en charge.",
-          vimeoParseFailed: "Cette vidéo Vimeo est privée ou ne peut pas être analysée.",
+          serverReadFailed: 'Notre serveur n’a pas pu lire cette vidéo. Le lien est peut-être incomplet, la vidéo privée, ou la connexion à Vimeo a échoué. Réessayez dans un instant. Si l’échec persiste et que la vidéo se lit dans votre navigateur, essayez l’extension ci-dessous (navigateurs de bureau uniquement) : elle récupère la vidéo directement depuis la page ouverte.',
           rateLimitExceeded: 'Trop de requêtes. Veuillez réessayer plus tard.',
           useExtensionForResource: 'Cette ressource ne peut être téléchargée qu’avec l’extension de navigateur. Installez-la pour continuer.'
         },

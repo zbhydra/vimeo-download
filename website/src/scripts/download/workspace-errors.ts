@@ -27,6 +27,19 @@ const CODE_MEDIA_PARSE_UNSUPPORTED_PLATFORM = 24031
 const CODE_MEDIA_DOWNLOAD_FILE_TYPE_NOT_ALLOWED = 24049
 const CODE_RATE_LIMIT_EXCEEDED_MEDIA = 24004
 const CODE_VIMEO_PARSE_FAILED = 24005
+const CODE_MEDIA_PARSE_RESOURCE_NOT_FOUND = 24033
+const CODE_MEDIA_PARSE_NODE_UNAVAILABLE = 24034
+const CODE_MEDIA_PARSE_PROXY_UNAVAILABLE = 24050
+/**
+ * 服务端读不到视频：链接不完整、私有视频，或服务端经代理连接 Vimeo 失败。
+ * 这些情况都可以重试或改用插件，所以统一成同一条提示，不透传后端的技术文案。
+ */
+const SERVER_READ_FAILED_CODES: ReadonlySet<number> = new Set([
+  CODE_VIMEO_PARSE_FAILED,
+  CODE_MEDIA_PARSE_RESOURCE_NOT_FOUND,
+  CODE_MEDIA_PARSE_NODE_UNAVAILABLE,
+  CODE_MEDIA_PARSE_PROXY_UNAVAILABLE
+])
 
 interface ApiErrorLike {
   code?: number | string
@@ -81,8 +94,8 @@ export function mapErrorToCopy(
   ) {
     return copy.errors.unsupportedPlatform ?? fallback
   }
-  if (code === CODE_VIMEO_PARSE_FAILED) {
-    return copy.errors.vimeoParseFailed ?? fallback
+  if (code !== null && SERVER_READ_FAILED_CODES.has(code)) {
+    return copy.errors.serverReadFailed ?? fallback
   }
   if (code === CODE_MEDIA_DOWNLOAD_FILE_TYPE_NOT_ALLOWED) {
     return copy.errors.unsafeFileTypeUseExtension ?? fallback

@@ -8,6 +8,7 @@ import { promisify } from 'node:util'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { LANGUAGE_SITEMAP_LOCALES } from '../src/sitemap/languageSitemap.mjs'
 import {
+  CHROME_WEB_STORE_INSTALL_URL,
   CHROME_WEB_STORE_URL,
   DEVELOPER_EMAIL,
   PRODUCT_NAME,
@@ -551,6 +552,9 @@ test('About and Contact pages expose localized trust content and structured data
       contactHtml,
       new RegExp(`"sameAs":\\["${CHROME_WEB_STORE_URL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"\\]`)
     )
+    // 页面入口带 utm，商店后台才能拆出官网来源；上面的 sameAs 必须保持规范地址。
+    assert.equal(aboutHtml.includes(`href="${CHROME_WEB_STORE_INSTALL_URL}"`), true)
+    assert.equal(aboutHtml.includes(`href="${CHROME_WEB_STORE_URL}"`), false)
   }
 })
 
@@ -3341,6 +3345,27 @@ test('media download allowlist accepts media suffix or MIME and denies risky suf
       }),
       false
     )
+  } finally {
+    await cleanup()
+  }
+})
+
+test('workspace errors maps server read failures to extension guidance copy', async () => {
+  const { module, cleanup } = await importWorkspaceErrorsModule()
+  const guidance = 'Our server could not read this video, try the extension below.'
+  const copy = {
+    errors: {
+      serverReadFailed: guidance,
+      downloadFailed: 'fallback download failed'
+    }
+  }
+
+  try {
+    for (const code of [24005, 24033, 24034, 24050]) {
+      const error = new Error('backend technical message')
+      error.code = code
+      assert.equal(module.mapErrorToCopy(copy, error, 'fallback'), guidance)
+    }
   } finally {
     await cleanup()
   }

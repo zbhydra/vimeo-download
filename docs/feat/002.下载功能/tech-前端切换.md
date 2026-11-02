@@ -37,7 +37,9 @@ Vimeo CDN URL，`client_mux` 按材料中的 video/audio track 合成。Website 
 | `client-mux-download.ts` | 消费完整轨道材料并在浏览器合成 |
 
 所有用户可见错误仍经 `workspace-errors.ts` 和 i18n；后端 CommonCode 映射为重新
-解析、重新下载或下载插件。运行时不输出完整 token、代理 URL 或带签名的媒体地址。
+解析、重新下载或下载插件。服务端读不到视频的 24005、24033、24034、24050 统一映射为
+`serverReadFailed`，提示重试，仍失败再改用插件；注意 Provider 里的 `VIMEO_PARSE_FAILED` 到 `parse-v2`
+对外时已转成 24033，网站实际收到的主要是 24033 和 24034。工作区脚本本身加载失败时走不到这里，由 `workspace-loader.ts` 显示 `workspaceLoadFailed`，提示刷新。运行时不输出完整 token、代理 URL 或带签名的媒体地址。
 
 ## 4. 验收
 

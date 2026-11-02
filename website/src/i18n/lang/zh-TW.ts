@@ -70,6 +70,7 @@ export const zhTW: SiteContent = {
           enterLink: '請輸入媒體連結。',
           invalidLink: '這不是一個合法的 URL。',
           parseFailed: '解析連結失敗。',
+          workspaceLoadFailed: '下載工具未能載入。請檢查網路連線，然後重新整理頁面。',
           downloadFailed: '下載失敗。',
           unsafeFileTypeUseExtension:
             '安裝包、腳本等檔案存在未知風險。出於安全原因，網頁端暫時無法提供此類檔案的下載服務。你仍可以使用瀏覽器擴充功能下載。',
@@ -81,7 +82,7 @@ export const zhTW: SiteContent = {
           clientMuxTooLarge: '此影片超過瀏覽器下載大小限制。',
           trackFetchFailed: 'Failed to download the video tracks.',
           unsupportedPlatform: '暫不支援這個連結平台。',
-          vimeoParseFailed: '這個 Vimeo 影片為私有內容或暫時無法解析。',
+          serverReadFailed: '我們的伺服器沒能讀取這個影片。可能是連結不完整、影片為私有內容，也可能是伺服器連線到 Vimeo 失敗。可以稍後再試一次。如果仍然失敗，而影片能在你的瀏覽器中播放，可以試試下方的擴充功能（僅限電腦瀏覽器）：它會直接從你開啟的頁面讀取影片。',
           rateLimitExceeded: '請求過於頻繁，請稍後再試。',
           useExtensionForResource: '此資源需使用擴充功能下載，請安裝擴充功能後繼續。'
         },

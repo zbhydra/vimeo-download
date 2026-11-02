@@ -10,7 +10,10 @@ import { DOWNLOAD_WORKSPACE_SNAPSHOT_STORAGE_KEY } from '../runtime/runtime-stor
 /** 下载工作区完成全部事件绑定后写入的 DOM 标志。 */
 const WORKSPACE_READY_VALUE = 'true'
 
-/** 当前运行时加载任务；失败后清空，下一次交互可以重试。 */
+/**
+ * 当前运行时加载任务。失败后清空，部分浏览器下次 import 会重新请求；
+ * Chromium 会缓存失败结果，联网后也要刷新页面才能恢复，所以提示用户刷新。
+ */
 let runtimePromise: Promise<void> | null = null
 
 /** 加载工作区状态机。 */
@@ -42,9 +45,19 @@ function waitForWorkspaceReady(root: HTMLElement): Promise<void> {
   })
 }
 
-/** 输出完整上下文，同时保留页面供用户再次操作重试。 */
+/** 输出完整上下文。 */
 function reportRuntimeLoadError(error: Error): void {
   console.error(error)
+}
+
+/** 用户已经点了提交却加载失败时要给可见提示，否则页面看起来毫无反应。 */
+function showRuntimeLoadError(root: HTMLElement, error: Error): void {
+  reportRuntimeLoadError(error)
+  const parseError = root.querySelector<HTMLElement>('[data-download-parse-error]')
+  if (parseError) {
+    parseError.textContent = parseError.dataset.workspaceLoadFailed ?? ''
+    parseError.hidden = false
+  }
 }
 
 /** 为匿名首屏安装轻量交互代理。 */
@@ -77,7 +90,7 @@ function installWorkspaceLoader(root: HTMLElement): void {
       void loadWorkspaceRuntime()
         .then(() => waitForWorkspaceReady(root))
         .then(() => button.click())
-        .catch(reportRuntimeLoadError)
+        .catch(error => showRuntimeLoadError(root, error))
     },
     { capture: true }
   )
@@ -107,7 +120,7 @@ function installWorkspaceLoader(root: HTMLElement): void {
       void loadWorkspaceRuntime()
         .then(() => waitForWorkspaceReady(root))
         .then(() => submitButton.click())
-        .catch(reportRuntimeLoadError)
+        .catch(error => showRuntimeLoadError(root, error))
     },
     { capture: true }
   )

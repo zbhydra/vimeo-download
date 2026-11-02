@@ -101,7 +101,13 @@ const largeFileExtensionInline = {
   <div class="download-results-list" data-download-results></div>
 
   <!-- 提示条跟在结果卡后面：状态 3 时它就是「只能用插件下载」的琥珀提示。 -->
-  <p class="download-inline-error" data-download-parse-error role="alert" hidden></p>
+  <p
+    class="download-inline-error"
+    data-download-parse-error
+    data-workspace-load-failed={copy.errors.workspaceLoadFailed}
+    role="alert"
+    hidden
+  ></p>
 
   <div class="download-results-actions" data-download-results-actions hidden>
     <button type="button" class="btn-primary download-all-button" data-download-all-button>

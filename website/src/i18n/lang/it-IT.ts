@@ -72,6 +72,7 @@ export const itIT: SiteContent = {
           enterLink: 'Inserisci un link multimediale.',
           invalidLink: 'Questo non è un URL valido.',
           parseFailed: 'Impossibile analizzare questo link.',
+          workspaceLoadFailed: 'Lo strumento di download non si è caricato. Controlla la connessione, poi ricarica questa pagina.',
           downloadFailed: 'Impossibile scaricare questo file.',
           unsafeFileTypeUseExtension:
             'Installers, scripts, and similar files may carry unknown risks. For security reasons, the website cannot provide downloads for this file type. You can still use the browser extension to download it.',
@@ -82,7 +83,7 @@ export const itIT: SiteContent = {
           clientMuxTooLarge: 'Questo video supera il limite di dimensione per il download nel browser.',
           trackFetchFailed: 'Failed to download the video tracks.',
           unsupportedPlatform: 'La piattaforma di questo link non è supportata.',
-          vimeoParseFailed: 'Questo video Vimeo è privato o non può essere analizzato.',
+          serverReadFailed: 'Il nostro server non è riuscito a leggere questo video. Il link potrebbe essere incompleto, il video privato, oppure la connessione a Vimeo non è riuscita. Riprova tra poco. Se continua a non funzionare e il video si riproduce nel browser, prova l’estensione qui sotto (solo browser desktop): legge il video direttamente dalla pagina aperta.',
           rateLimitExceeded: 'Troppe richieste. Riprova più tardi.',
           useExtensionForResource: 'Questa risorsa può essere scaricata solo con l’estensione del browser. Installala per continuare.'
         },

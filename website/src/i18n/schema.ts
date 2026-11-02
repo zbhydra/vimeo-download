@@ -59,6 +59,8 @@ export interface DownloadWorkspaceContent {
     /** 用户输入不是合法 URL 时的本地校验提示。 */
     invalidLink?: string
     parseFailed: string
+    /** 工作区脚本加载失败（断网、部署后的旧页面）时的提示；只有刷新页面才能恢复。 */
+    workspaceLoadFailed: string
     downloadFailed: string
     /** 网站端出于安全策略不允许直接下载该文件类型时的插件引导文案。 */
     unsafeFileTypeUseExtension?: string
@@ -84,7 +86,8 @@ export interface DownloadWorkspaceContent {
     unsupportedPlatform: string
     /** 后端要求该资源改用插件下载（匿名状态 3）时的提示。 */
     useExtensionForResource: string
-    vimeoParseFailed?: string
+    /** 服务端读不到视频时的提示：先让用户重试，仍失败再改用下方的插件。 */
+    serverReadFailed?: string
     rateLimitExceeded: string
   }
   /** 批量下载结果文案。 */

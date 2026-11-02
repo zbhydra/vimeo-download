@@ -72,6 +72,7 @@ export const idID: SiteContent = {
           enterLink: 'Masukkan tautan media.',
           invalidLink: 'Ini bukan URL yang valid.',
           parseFailed: 'Gagal memproses tautan ini.',
+          workspaceLoadFailed: 'Alat unduhan gagal dimuat. Periksa koneksi Anda, lalu muat ulang halaman ini.',
           downloadFailed: 'Gagal mengunduh file ini.',
           unsafeFileTypeUseExtension:
             'Installers, scripts, and similar files may carry unknown risks. For security reasons, the website cannot provide downloads for this file type. You can still use the browser extension to download it.',
@@ -82,7 +83,7 @@ export const idID: SiteContent = {
           clientMuxTooLarge: 'Video ini melebihi batas ukuran unduhan browser.',
           trackFetchFailed: 'Failed to download the video tracks.',
           unsupportedPlatform: 'This link platform is not supported.',
-          vimeoParseFailed: 'This Vimeo video is private or cannot be parsed.',
+          serverReadFailed: 'Server kami tidak dapat membaca video ini. Mungkin tautannya tidak lengkap, videonya privat, atau koneksi ke Vimeo gagal. Coba lagi sebentar lagi. Jika masih gagal dan video bisa diputar di browser Anda, coba ekstensi di bawah ini (khusus browser desktop): ekstensi membaca video langsung dari halaman yang Anda buka.',
           rateLimitExceeded: 'Too many requests. Please try again later.',
           useExtensionForResource: 'Sumber ini hanya dapat diunduh dengan ekstensi browser. Instal ekstensi untuk melanjutkan.'
         },

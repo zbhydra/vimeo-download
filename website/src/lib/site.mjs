@@ -31,6 +31,12 @@ export const OPERATOR_LEGAL_NAME = 'Ginyo Technologies Limited'
 export const DEVELOPER_EMAIL = `support@${SITE_HOST}`
 
 
-/** Chrome Web Store 插件详情页；`/reviews` 后缀即评价页。 */
+/** Chrome Web Store 插件详情页的规范地址；`/reviews` 后缀即评价页，结构化数据 sameAs 也用它。 */
 export const CHROME_WEB_STORE_URL =
   'https://chromewebstore.google.com/detail/vimeo-downloader-download/joalfalamongfmejacciadcpdeahblai'
+
+/**
+ * 官网页面上的安装入口。带 utm 参数后，商店后台才能把官网带来的访问单独拆出来。
+ * 地址已带查询串，不能再往后拼路径；要评价页时用 CHROME_WEB_STORE_URL。
+ */
+export const CHROME_WEB_STORE_INSTALL_URL = `${CHROME_WEB_STORE_URL}?utm_source=${SITE_HOST}&utm_medium=website`

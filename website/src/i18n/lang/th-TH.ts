@@ -72,6 +72,7 @@ export const thTH: SiteContent = {
           enterLink: 'กรุณากรอกลิงก์สื่อ',
           invalidLink: 'นี่ไม่ใช่ URL ที่ถูกต้อง',
           parseFailed: 'ไม่สามารถแยกลิงก์นี้ได้',
+          workspaceLoadFailed: 'โหลดเครื่องมือดาวน์โหลดไม่สำเร็จ โปรดตรวจสอบการเชื่อมต่อ แล้วรีเฟรชหน้านี้',
           downloadFailed: 'ดาวน์โหลดไฟล์นี้ไม่สำเร็จ',
           unsafeFileTypeUseExtension:
             'Installers, scripts, and similar files may carry unknown risks. For security reasons, the website cannot provide downloads for this file type. You can still use the browser extension to download it.',
@@ -82,7 +83,7 @@ export const thTH: SiteContent = {
           clientMuxTooLarge: 'วิดีโอนี้มีขนาดเกินขีดจำกัดการดาวน์โหลดของเบราว์เซอร์',
           trackFetchFailed: 'Failed to download the video tracks.',
           unsupportedPlatform: 'This link platform is not supported.',
-          vimeoParseFailed: 'This Vimeo video is private or cannot be parsed.',
+          serverReadFailed: 'เซิร์ฟเวอร์ของเราอ่านวิดีโอนี้ไม่ได้ ลิงก์อาจไม่ครบถ้วน วิดีโออาจเป็นแบบส่วนตัว หรือการเชื่อมต่อกับ Vimeo อาจล้มเหลว โปรดลองอีกครั้งในอีกสักครู่ หากยังไม่สำเร็จและวิดีโอเล่นในเบราว์เซอร์ของคุณได้ ลองใช้ส่วนขยายด้านล่าง (เฉพาะเบราว์เซอร์บนคอมพิวเตอร์) ซึ่งอ่านวิดีโอจากหน้าที่คุณเปิดอยู่โดยตรง',
           rateLimitExceeded: 'Too many requests. Please try again later.',
           useExtensionForResource: 'ทรัพยากรนี้ดาวน์โหลดได้เฉพาะผ่านส่วนขยายเบราว์เซอร์ โปรดติดตั้งส่วนขยายเพื่อดำเนินการต่อ'
         },

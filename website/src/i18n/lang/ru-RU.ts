@@ -72,6 +72,7 @@ export const ruRU: SiteContent = {
           enterLink: 'Введите ссылку на медиа.',
           invalidLink: 'Это недопустимый URL.',
           parseFailed: 'Не удалось разобрать эту ссылку.',
+          workspaceLoadFailed: 'Не удалось загрузить инструмент скачивания. Проверьте подключение и обновите эту страницу.',
           downloadFailed: 'Не удалось скачать этот файл.',
           unsafeFileTypeUseExtension:
             'Installers, scripts, and similar files may carry unknown risks. For security reasons, the website cannot provide downloads for this file type. You can still use the browser extension to download it.',
@@ -82,7 +83,7 @@ export const ruRU: SiteContent = {
           clientMuxTooLarge: 'Размер этого видео превышает ограничение на скачивание в браузере.',
           trackFetchFailed: 'Failed to download the video tracks.',
           unsupportedPlatform: 'This link platform is not supported.',
-          vimeoParseFailed: 'This Vimeo video is private or cannot be parsed.',
+          serverReadFailed: 'Нашему серверу не удалось прочитать это видео. Возможно, ссылка неполная, видео приватное или не удалось подключиться к Vimeo. Повторите попытку через минуту. Если ошибка не исчезнет, а видео воспроизводится в вашем браузере, попробуйте расширение ниже (только для браузеров на компьютере): оно считывает видео прямо с открытой страницы.',
           rateLimitExceeded: 'Too many requests. Please try again later.',
           useExtensionForResource: 'Этот ресурс можно скачать только с помощью расширения для браузера. Установите его, чтобы продолжить.'
         },

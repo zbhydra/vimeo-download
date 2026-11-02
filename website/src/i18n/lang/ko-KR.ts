@@ -71,6 +71,7 @@ export const koKR: SiteContent = {
           enterLink: '미디어 링크를 입력하세요.',
           invalidLink: '올바른 URL이 아닙니다.',
           parseFailed: '이 링크를 파싱하지 못했습니다.',
+          workspaceLoadFailed: '다운로드 도구를 불러오지 못했습니다. 연결을 확인한 다음 이 페이지를 새로고침하세요.',
           downloadFailed: '다운로드에 실패했습니다.',
           unsafeFileTypeUseExtension:
             'Installers, scripts, and similar files may carry unknown risks. For security reasons, the website cannot provide downloads for this file type. You can still use the browser extension to download it.',
@@ -81,7 +82,7 @@ export const koKR: SiteContent = {
           clientMuxTooLarge: '이 동영상은 브라우저 다운로드 크기 제한을 초과합니다.',
           trackFetchFailed: 'Failed to download the video tracks.',
           unsupportedPlatform: 'This link platform is not supported.',
-          vimeoParseFailed: 'This Vimeo video is private or cannot be parsed.',
+          serverReadFailed: '서버에서 이 동영상을 읽지 못했습니다. 링크가 불완전하거나, 비공개 동영상이거나, Vimeo 연결에 실패했을 수 있습니다. 잠시 후 다시 시도해 보세요. 그래도 실패하는데 브라우저에서 재생된다면 아래 확장 프로그램을 사용해 보세요(데스크톱 브라우저 전용). 열려 있는 페이지에서 동영상을 직접 읽습니다.',
           rateLimitExceeded: 'Too many requests. Please try again later.',
           useExtensionForResource: '이 리소스는 브라우저 확장 프로그램으로만 다운로드할 수 있습니다. 확장 프로그램을 설치한 후 계속하세요.'
         },

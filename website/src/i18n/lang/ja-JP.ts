@@ -71,6 +71,7 @@ export const jaJP: SiteContent = {
           enterLink: 'メディアリンクを入力してください。',
           invalidLink: 'これは有効なURLではありません。',
           parseFailed: 'このリンクを解析できませんでした。',
+          workspaceLoadFailed: 'ダウンロードツールを読み込めませんでした。接続を確認してから、このページを再読み込みしてください。',
           downloadFailed: 'ダウンロードに失敗しました。',
           unsafeFileTypeUseExtension:
             'Installers, scripts, and similar files may carry unknown risks. For security reasons, the website cannot provide downloads for this file type. You can still use the browser extension to download it.',
@@ -81,7 +82,7 @@ export const jaJP: SiteContent = {
           clientMuxTooLarge: 'この動画はブラウザーのダウンロードサイズ制限を超えています。',
           trackFetchFailed: 'Failed to download the video tracks.',
           unsupportedPlatform: 'This link platform is not supported.',
-          vimeoParseFailed: 'This Vimeo video is private or cannot be parsed.',
+          serverReadFailed: 'サーバーからこの動画を読み取れませんでした。リンクが不完全、動画が非公開、または Vimeo への接続に失敗した可能性があります。少し待ってからもう一度お試しください。それでも失敗し、ブラウザで再生できる場合は、下の拡張機能をお試しください（パソコンのブラウザのみ）。開いているページから直接動画を読み取ります。',
           rateLimitExceeded: 'Too many requests. Please try again later.',
           useExtensionForResource: 'このリソースはブラウザ拡張機能でのみダウンロードできます。拡張機能をインストールして続行してください。'
         },
