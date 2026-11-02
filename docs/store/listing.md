@@ -3,9 +3,11 @@
 ## Basic information
 
 - Name: Vimeo Downloader - Download HD Video & Audio
-- Short description: Download Vimeo videos, audio and cover images from vimeo.com and player.vimeo.com in any available quality.
+- Short description: Download Vimeo videos as MP4 in any available quality, up to 4K. Save audio as MP3 or M4A and subtitles as VTT. Free to start.
 - Category: Productivity
 - Language: English
+
+The name and short description come from the extension package (`extension/public/_locales/*/messages.json`), so they change only when a new package is uploaded.
 
 ## Detailed description
 

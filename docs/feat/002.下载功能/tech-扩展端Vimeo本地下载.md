@@ -63,7 +63,7 @@ Vimeo 扩展端可以做**纯前端下载**,并且不应该只做“首版 progr
 
 ## 3. 权限与上下文边界
 
-Manifest 需要把 Vimeo 页面和 CDN 都列入 host permissions。这是扩展端本地请求,不是我们的后端请求。媒体主机以真实采样为准：progressive 为 `vod-progressive-ak.vimeocdn.com`，DASH/HLS 为 `vod-adaptive-ak.vimeocdn.com` 与 `skyfire.vimeocdn.com`，全部落在 `vimeocdn.com` 下，因此不额外申请其它 CDN 域。字幕不属于媒体 CDN：播放器 config 里的 `text_tracks[].url` 可指向 `player.vimeo.com/texttrack/*`、`vimeo.com/texttrack/*`、`www.vimeo.com/texttrack/*` 或 Vimeo 字幕 CDN；现有页面与 CDN host permissions 已覆盖这些来源，不新增权限。
+Manifest 需要把 Vimeo 页面和 CDN 都列入 host permissions。这是扩展端本地请求,不是我们的后端请求。媒体主机以真实采样为准：progressive 为 `vod-progressive-ak.vimeocdn.com`，DASH/HLS 为 `vod-adaptive-ak.vimeocdn.com` 与 `skyfire.vimeocdn.com`，全部落在 `vimeocdn.com` 下，因此不额外申请其它 CDN 域。字幕不属于媒体 CDN：播放器 config 里的 `text_tracks[].url` 可指向 `captions.vimeo.com/captions/*`、`player.vimeo.com/texttrack/*`、`vimeo.com/texttrack/*`、`www.vimeo.com/texttrack/*` 或 Vimeo 字幕 CDN。2026-11-02 真实采样的 11 条字幕轨（上传字幕和自动生成字幕）全部在 `captions.vimeo.com`。该域不在 host permissions 内，也不需要：字幕文件交给 `chrome.downloads` 保存，不经过扩展页的 fetch。如果以后要在插件内读取字幕内容（例如直接输出 TXT），才需要新增这个 host 权限，并评估已安装用户的重新授权。
 
 ```text
 https://vimeo.com/*
@@ -897,6 +897,7 @@ popup footer 上方展示公告跑马灯，只在 popup 渲染。
 - Audio 行的「不下载音频」：Audio 行只列可下载的音轨，不提供跳过音频的选项（无音轨交付由 Video 行的开关承担）。
 - 内嵌任务队列：下载状态与进度由底部任务队列（`DownloadQueue.vue` + `downloadStatusStore`）承载，数据源是 background 编排快照（§3、§8.1），不在面板内再做一层队列。
 - 批量下载、勾选框、统计头、清空缓存：随批量模型一并删除（`clearBuffer` RPC 失去唯一调用方，已从 content register 移除）。
+- Popup 商店评价提示：2026-10-06 删除了旧版五星引导（`572d3ef`），2026-11-02 hydra 再次确认不做。
 
 ### 12.9 视觉 token 与新组件
 
@@ -1015,5 +1016,5 @@ extension/src/sites/vimeo/
 - Audio 行格式下拉选 MP3 后,下载产物为 `.mp3`（audio/mpeg）,选 M4A（默认）产物为 `.m4a`;重开 Popup 回到 M4A。
 - 声明 AES-128 的 HLS parser/媒体字节检查：解密后字节与明文一致，缺省 IV 按 media sequence 构造，key 白名单与未知加密拒绝；这些检查不代替真实 HLS 兼容性证据。
 - 定向纯逻辑入口见 `extension/tests/unit/download-task-contract.spec.ts`、`offscreen-task-runner.spec.ts`、`vimeo-media.spec.ts` 与 `resource-buffer.spec.ts`；认证真实后端入口为 `extension/tests/integration/email-login-real.spec.ts`。Chrome/parser/媒体字节可以隔离，项目 HTTP 响应不得 mock。
-- `extension/tests/e2e/vimeo-real-download.spec.ts` 明确使用真实 `player.vimeo.com/video/1196869805`，经普通扩展页面验证 content 资源、FIFO、MP4/MP3 裁剪、真实 quota 业务字段/次数、历史与成功事实；轨道/时长与解码使用已有 ffprobe/ffmpeg。它不代替顶层 Vimeo 页面入口或 action popup 生命周期。命令/profile/fresh build 规则见 [客户端测试规范](../../references/specs/spec-test-client.md)。
+- `extension/tests/e2e/vimeo-real-download.spec.ts` 明确使用真实 `player.vimeo.com/video/1225933284`，经普通扩展页面验证 content 资源、FIFO、MP4/MP3 裁剪、真实 quota 业务字段/次数、历史与成功事实；轨道/时长与解码使用已有 ffprobe/ffmpeg。它不代替顶层 Vimeo 页面入口或 action popup 生命周期。命令/profile/fresh build 规则见 [客户端测试规范](../../references/specs/spec-test-client.md)。
 - 运行结果只记在对应执行计划；当前收口状态见 [035 验收记录](./plans/035.插件审查问题收口.md#5-验收记录)。源码合同和已写断言不等于真实样本通过；安全拦截或工具边界必须明确记为环境未验，不伪造媒体或把 skip 记 passed。

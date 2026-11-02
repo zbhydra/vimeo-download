@@ -1,18 +1,23 @@
-Lưu nội dung Vimeo bằng quy trình rõ ràng cho những video bạn được phép tải xuống.
+Tải video Vimeo dưới dạng MP4, lưu âm thanh MP3 hoặc M4A và lưu phụ đề thành tệp VTT ngay trên trang bạn đang xem. Bắt đầu miễn phí.
 
-Vimeo Downloader thêm nút tải xuống ngay trên các trang Vimeo được hỗ trợ. Bạn có thể thao tác từ trang đang xem mà không cần sao chép liên kết sang dịch vụ khác. Khi nguồn cung cấp các lựa chọn này, hãy chọn chất lượng video, lưu riêng luồng âm thanh hoặc tải ảnh bìa.
+Vimeo Downloader thêm bảng tải xuống vào các trang Vimeo được hỗ trợ. Bạn không cần sao chép liên kết sang trang khác vì tiện ích chạy ngay trong trình duyệt của bạn.
 
-Ưu điểm:
+Những gì bạn có thể lưu:
 
-- Chọn mọi chất lượng video mà nguồn cung cấp.
-- Lưu video, âm thanh và ảnh bìa thành các tệp riêng.
-- Cắt một khoảng DASH hoặc HLS trước khi tải.
-- Xếp nhiều lượt tải vào hàng đợi và tiếp tục duyệt web.
-- Xử lý tệp lớn bằng cách tự động chia tệp hoặc truyền thành một tệp duy nhất.
-- Xem tiến trình, lỗi, lượt tải hoàn tất và lịch sử trong cửa sổ bật lên.
+- Video: mọi chất lượng nguồn cung cấp, tối đa 4K, dưới dạng MP4.
+- Âm thanh: chỉ phần tiếng, dưới dạng M4A hoặc MP3.
+- Phụ đề: mỗi ngôn ngữ có sẵn thành một tệp VTT, bao gồm cả phụ đề tự động. Tệp VTT mở được bằng mọi trình soạn thảo văn bản và dùng được như bản ghi có mốc thời gian.
+- Ảnh bìa: ảnh thu nhỏ của video.
+- Đoạn cắt: cắt một khoảng thời gian từ chất lượng DASH hoặc HLS trước khi tải.
 
-Tiện ích hoạt động trên các trang vimeo.com và player.vimeo.com được hỗ trợ. Tiện ích đọc siêu dữ liệu phương tiện từ trang và không vượt qua đăng nhập, thanh toán, DRM hay các kiểm soát truy cập khác. Chỉ tải nội dung mà bạn có quyền lưu.
+Phù hợp với video dài:
 
-Bạn có thể dùng tiện ích để lưu bài giảng Vimeo, portfolio, bản demo sản phẩm, cuộc phỏng vấn hoặc đoạn tham khảo mà bạn được phép lưu, cho việc xem offline hoặc chỉnh sửa. Quy trình ngay trên trang giúp bạn xử lý video, âm thanh và ảnh bìa trong cùng một lần thao tác; định dạng và chất lượng tuân theo lựa chọn của nguồn.
+- Thêm nhiều lượt tải vào hàng đợi và tiếp tục duyệt web trong lúc chạy.
+- Xử lý tệp lớn bằng chế độ tự động chia nhỏ hoặc truyền trực tiếp vào một tệp.
+- Xem tiến độ, tệp đã xong, lỗi và lịch sử tải xuống trong cửa sổ bật lên.
 
-Cách dùng: mở trang Vimeo được hỗ trợ, chọn video, âm thanh hoặc ảnh bìa, chọn chất lượng có sẵn rồi thêm vào hàng đợi. Cửa sổ bật lên hiển thị trạng thái trong khi bạn tiếp tục duyệt web. Với phương tiện DASH và HLS được hỗ trợ, bạn có thể tải riêng khoảng thời gian cần thiết.
+Tiện ích hoạt động trên các trang vimeo.com và player.vimeo.com được hỗ trợ. Tiện ích đọc thông tin nội dung từ trang và không vượt qua đăng nhập, tường phí, DRM hay các biện pháp kiểm soát truy cập khác. Chỉ tải nội dung bạn có quyền lưu. Vimeo Downloader là công cụ độc lập và không liên kết với Vimeo, Inc.
+
+Cách dùng phổ biến: lưu bài học được phép tải, phần đánh giá portfolio, bản demo sản phẩm, cuộc phỏng vấn hoặc đoạn video tham khảo để xem ngoại tuyến hoặc biên tập.
+
+Cách hoạt động: mở trang Vimeo được hỗ trợ, chọn video, âm thanh, phụ đề hoặc hình ảnh trong bảng hoặc cửa sổ bật lên, rồi chọn chất lượng hoặc ngôn ngữ. Tác vụ vào hàng đợi và cửa sổ bật lên hiển thị trạng thái trong khi bạn tiếp tục duyệt web.

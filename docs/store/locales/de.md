@@ -1,18 +1,23 @@
-Speichere Vimeo-Medien in einem klaren Arbeitsablauf für Inhalte, die du herunterladen darfst.
+Laden Sie Vimeo-Videos als MP4 herunter und speichern Sie den Ton als MP3 oder M4A sowie Untertitel als VTT-Datei, direkt auf der Seite, die Sie gerade ansehen. Kostenlos starten.
 
-Vimeo Downloader fügt die Download-Funktion direkt auf unterstützten Vimeo-Seiten ein. Du musst keine Links kopieren und an einen anderen Dienst senden. Wenn die Quelle es anbietet, wählst du die Videoqualität, speicherst eine Audiospur separat oder lädst das Titelbild herunter.
+Vimeo Downloader ergänzt unterstützte Vimeo-Seiten um ein Download-Panel. Sie müssen keine Links in eine andere Website kopieren, denn die Erweiterung arbeitet in Ihrem eigenen Browser.
 
-Vorteile:
+Das können Sie speichern:
 
-- Jede von der Quelle angebotene Videoqualität auswählen.
-- Video, Audio und Titelbild als getrennte Ausgaben speichern.
-- Einen DASH- oder HLS-Zeitbereich vor dem Download zuschneiden.
-- Mehrere Downloads in eine Warteschlange stellen und weiterarbeiten.
-- Große Dateien automatisch teilen oder als eine Datei streamen.
-- Fortschritt, Abschluss, Fehler und Download-Verlauf im Popup sehen.
+- Video: jede von der Quelle angebotene Qualität bis 4K als MP4.
+- Audio: nur den Ton als M4A oder MP3.
+- Untertitel: jede verfügbare Sprache als VTT-Datei, auch automatisch erzeugte Spuren. Eine VTT-Datei lässt sich in jedem Texteditor öffnen und als Transkript mit Zeitangaben nutzen.
+- Titelbild: das Vorschaubild des Videos.
+- Ausschnitt: einen Zeitbereich einer DASH- oder HLS-Qualität vor dem Download zuschneiden.
 
-Die Erweiterung funktioniert auf unterstützten Seiten von vimeo.com und player.vimeo.com. Sie liest Medienmetadaten aus der geöffneten Seite und umgeht keine Anmeldung, Bezahlschranken, DRM- oder andere Zugriffskontrollen. Lade nur Inhalte herunter, die du speichern darfst.
+Für lange Videos gemacht:
 
-Typische Anwendungen sind das Speichern eines berechtigten Vimeo-Kursvideos, Portfolios, Produktdemos, Interviews oder Referenzclips für die Offline-Wiedergabe oder Bearbeitung. Der seitenbasierte Ablauf bündelt Video, Audio und Titelbild; Format und Qualität richten sich nach den Medienoptionen der Quelle.
+- Mehrere Downloads in die Warteschlange stellen und währenddessen weitersurfen.
+- Große Dateien mit automatischer Aufteilung oder im Streaming-Modus in eine einzige Datei laden.
+- Fortschritt, fertige Dateien, Fehler und Download-Verlauf im Popup sehen.
 
-So funktioniert es: Öffne eine unterstützte Vimeo-Seite, wähle Video, Audio oder Titelbild, entscheide dich für die verfügbare Qualität und stelle den Download in die Warteschlange. Der Popup-Status bleibt sichtbar, während du weiterarbeitest. Bei unterstützten DASH- und HLS-Medien kannst du nur den benötigten Zeitbereich herunterladen.
+Die Erweiterung funktioniert auf unterstützten Seiten von vimeo.com und player.vimeo.com. Sie liest Medieninformationen von der Seite und umgeht keine Anmeldung, Bezahlschranken, DRM oder andere Zugriffsbeschränkungen. Laden Sie nur Inhalte herunter, die Sie speichern dürfen. Vimeo Downloader ist ein unabhängiges Tool und nicht mit Vimeo, Inc. verbunden.
+
+Typische Einsätze sind eine freigegebene Kurslektion, ein Portfolio-Review, eine Produktdemo, ein Interview oder ein Referenzclip für die Offline-Wiedergabe oder den Schnitt.
+
+So funktioniert es: Öffnen Sie eine unterstützte Vimeo-Seite, wählen Sie im Panel oder Popup Video, Audio, Untertitel oder Bild und anschließend die Qualität oder Sprache. Der Auftrag kommt in die Warteschlange, und das Popup zeigt den Status an, während Sie weitersurfen.

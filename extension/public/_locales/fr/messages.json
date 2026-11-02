@@ -4,7 +4,7 @@
     "description": "Nom de l'extension Chrome Web Store"
   },
   "extensionDescription": {
-    "message": "Téléchargez vidéos, pistes audio et vignettes depuis vimeo.com et player.vimeo.com, dans la qualité disponible.",
+    "message": "Téléchargez les vidéos Vimeo en MP4, jusqu'en 4K. Enregistrez l'audio en MP3 ou M4A et les sous-titres en VTT. Démarrage gratuit.",
     "description": "Description de l'extension Chrome Web Store - max 132 caractères"
   },
   "actionTitle": {

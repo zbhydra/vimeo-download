@@ -4,7 +4,7 @@
     "description": "Tên tiện ích mở rộng Chrome Web Store"
   },
   "extensionDescription": {
-    "message": "Tải video, âm thanh và ảnh bìa từ vimeo.com và player.vimeo.com với mọi chất lượng có sẵn.",
+    "message": "Tải video Vimeo dưới dạng MP4, tối đa 4K. Lưu âm thanh MP3 hoặc M4A và phụ đề VTT. Bắt đầu miễn phí.",
     "description": "Mô tả tiện ích mở rộng Chrome Web Store - tối đa 132 ký tự"
   },
   "actionTitle": {

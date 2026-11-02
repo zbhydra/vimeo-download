@@ -1,18 +1,23 @@
-Simpan media Vimeo dengan alur kerja yang jelas untuk konten yang boleh Anda unduh.
+Unduh video Vimeo sebagai MP4, simpan audio sebagai MP3 atau M4A, dan simpan subtitel sebagai file VTT, langsung dari halaman yang sedang Anda tonton. Mulai gratis.
 
-Vimeo Downloader menambahkan kontrol unduhan langsung pada halaman Vimeo yang didukung. Anda dapat bekerja dari halaman yang sedang ditonton tanpa menyalin tautan ke layanan lain. Jika tersedia dari sumbernya, pilih kualitas video, simpan aliran audio secara terpisah, atau unduh gambar sampul.
+Vimeo Downloader menambahkan panel unduhan di halaman Vimeo yang didukung. Anda tidak perlu menyalin tautan ke situs lain karena ekstensi ini bekerja di browser Anda sendiri.
 
-Keunggulan:
+Yang bisa Anda simpan:
 
-- Pilih kualitas video apa pun yang ditawarkan sumber.
-- Simpan video, audio, dan gambar sampul sebagai keluaran terpisah.
-- Potong rentang waktu DASH atau HLS sebelum mengunduh.
-- Masukkan beberapa unduhan ke antrean dan tetap menjelajah.
-- Tangani file besar dengan pemisahan otomatis atau streaming menjadi satu file.
-- Lihat progres, kegagalan, penyelesaian, dan riwayat unduhan di popup.
+- Video: kualitas apa pun yang disediakan sumber, hingga 4K, sebagai MP4.
+- Audio: suaranya saja, sebagai M4A atau MP3.
+- Subtitel: setiap bahasa yang tersedia sebagai file VTT, termasuk trek yang dibuat otomatis. File VTT bisa dibuka di editor teks apa pun dan berfungsi sebagai transkrip dengan penanda waktu.
+- Gambar sampul: thumbnail video.
+- Klip: potong rentang waktu dari kualitas DASH atau HLS sebelum mengunduh.
 
-Ekstensi ini bekerja pada halaman vimeo.com dan player.vimeo.com yang didukung. Ekstensi membaca metadata media dari halaman dan tidak melewati login, pembayaran, DRM, atau kontrol akses lainnya. Unduh hanya konten yang berhak Anda simpan.
+Dibuat untuk video panjang:
 
-Gunakan ekstensi ini untuk menyimpan pelajaran Vimeo, portofolio, demo produk, wawancara, atau klip referensi yang boleh Anda simpan, untuk diputar offline atau diedit. Alur langsung dari halaman menyatukan penyimpanan video, audio, dan gambar sampul, dengan format dan kualitas mengikuti media yang disediakan sumber.
+- Masukkan beberapa unduhan ke antrean dan tetap menjelajah selagi berjalan.
+- Tangani file besar dengan pemisahan otomatis atau mode streaming satu file.
+- Lihat progres, file selesai, kegagalan, dan riwayat unduhan di popup.
 
-Caranya: buka halaman Vimeo yang didukung, pilih video, audio, atau gambar sampul, tentukan kualitas yang tersedia, lalu masukkan unduhan ke antrean. Popup menampilkan status saat Anda tetap menjelajah. Untuk media DASH dan HLS yang didukung, Anda dapat mengunduh hanya rentang waktu yang diperlukan.
+Ekstensi ini berfungsi di halaman vimeo.com dan player.vimeo.com yang didukung. Ekstensi membaca metadata media dari halaman dan tidak melewati login, paywall, DRM, atau kontrol akses lainnya. Unduh hanya konten yang berhak Anda simpan. Vimeo Downloader adalah alat independen dan tidak berafiliasi dengan Vimeo, Inc.
+
+Penggunaan umum: menyimpan pelajaran kursus yang diizinkan, tinjauan portofolio, demo produk, wawancara, atau klip referensi untuk diputar offline atau diedit.
+
+Cara kerjanya: buka halaman Vimeo yang didukung, pilih video, audio, subtitel, atau gambar di panel atau popup, lalu pilih kualitas atau bahasanya. Tugas masuk ke antrean, dan popup menampilkan statusnya selagi Anda terus menjelajah.

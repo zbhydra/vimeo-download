@@ -4,7 +4,7 @@
     "description": "Extension name for Chrome Web Store"
   },
   "extensionDescription": {
-    "message": "Download Vimeo videos, audio and cover images from vimeo.com and player.vimeo.com in any available quality.",
+    "message": "Download Vimeo videos as MP4 in any available quality, up to 4K. Save audio as MP3 or M4A and subtitles as VTT. Free to start.",
     "description": "Extension description for Chrome Web Store - 132 chars max"
   },
   "actionTitle": {

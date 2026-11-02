@@ -4,7 +4,7 @@
     "description": "Nome da extensão Chrome Web Store"
   },
   "extensionDescription": {
-    "message": "Baixe vídeos, áudios e capas do vimeo.com e player.vimeo.com em qualquer qualidade disponível.",
+    "message": "Baixe vídeos do Vimeo em MP4, até 4K. Salve o áudio em MP3 ou M4A e as legendas em VTT. Comece grátis.",
     "description": "Descrição da extensão Chrome Web Store - máx 132 caracteres"
   },
   "actionTitle": {

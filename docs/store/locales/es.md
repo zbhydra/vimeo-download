@@ -1,18 +1,23 @@
-Guarda contenido multimedia de Vimeo con un flujo sencillo para páginas que tienes permiso para descargar.
+Descarga videos de Vimeo en MP4, guarda el audio en MP3 o M4A y los subtítulos en archivos VTT, desde la misma página que estás viendo. Empieza gratis.
 
-Vimeo Downloader añade el control de descarga directamente a las páginas compatibles de Vimeo. Así puedes trabajar desde la página que ya estás viendo, sin copiar enlaces a otro servicio. Cuando la fuente las ofrece, elige la calidad del vídeo, guarda una pista de audio por separado o descarga la imagen de portada.
+Vimeo Downloader añade un panel de descarga a las páginas de Vimeo compatibles. No tienes que copiar enlaces en otro sitio, porque la extensión funciona en tu propio navegador.
 
-Ventajas:
+Qué puedes guardar:
 
-- Elige cualquier calidad de vídeo disponible en la fuente.
-- Guarda el vídeo, el audio y la portada como salidas independientes.
-- Recorta un intervalo DASH o HLS antes de descargar.
-- Pon varias descargas en cola y sigue navegando mientras avanzan.
-- Gestiona archivos grandes con división automática o transmisión en un solo archivo.
-- Consulta el progreso, los errores, las finalizaciones y el historial en la ventana emergente.
+- Video: cualquier calidad que ofrezca la fuente, hasta 4K, en MP4.
+- Audio: solo el sonido, en M4A o MP3.
+- Subtítulos: cada idioma disponible en un archivo VTT, incluidas las pistas generadas automáticamente. Un VTT se abre en cualquier editor de texto y sirve como transcripción con marcas de tiempo.
+- Portada: la miniatura del video.
+- Fragmento: recorta un rango de tiempo de una calidad DASH o HLS antes de descargar.
 
-La extensión funciona en páginas compatibles de vimeo.com y player.vimeo.com. Lee los metadatos multimedia de la página y no evita inicios de sesión, pagos, DRM ni otros controles de acceso. Descarga únicamente contenido que tengas derecho a guardar.
+Pensada para videos largos:
 
-Puedes usarlo para guardar una clase de Vimeo, un portafolio, una demostración de producto, una entrevista o un clip de referencia que tengas autorización para conservar, ya sea para reproducirlo sin conexión o editarlo. El flujo desde la página reúne las descargas de vídeo, audio y portada, y respeta el formato y la calidad que ofrece la fuente.
+- Pon varias descargas en cola y sigue navegando mientras se completan.
+- Gestiona archivos grandes con división automática o con el modo de streaming a un solo archivo.
+- Consulta en el popup el progreso, los archivos completados, los errores y el historial de descargas.
 
-El flujo es sencillo: abre una página de Vimeo compatible, elige vídeo, audio o portada, selecciona la calidad disponible y añade la descarga a la cola. El popup mantiene visible el estado mientras sigues navegando. En medios DASH y HLS compatibles, puedes descargar solo el intervalo que necesitas.
+La extensión funciona en páginas compatibles de vimeo.com y player.vimeo.com. Lee los datos del video desde la página y no evita inicios de sesión, muros de pago, DRM ni otros controles de acceso. Descarga solo contenido que tengas derecho a guardar. Vimeo Downloader es una herramienta independiente y no está afiliada a Vimeo, Inc.
+
+Usos habituales: guardar una lección de un curso autorizado, una revisión de portafolio, una demo de producto, una entrevista o un clip de referencia para verlo sin conexión o editarlo.
+
+Cómo funciona: abre una página de Vimeo compatible, elige en el panel o en el popup video, audio, subtítulos o imagen, y selecciona la calidad o el idioma. La tarea entra en la cola y el popup muestra su estado mientras sigues navegando.

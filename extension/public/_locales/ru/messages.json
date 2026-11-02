@@ -4,7 +4,7 @@
     "description": "Название расширения Chrome Web Store"
   },
   "extensionDescription": {
-    "message": "Скачивайте видео, аудио и обложки с vimeo.com и player.vimeo.com в любом доступном качестве.",
+    "message": "Скачивайте видео с Vimeo в MP4 до 4K. Сохраняйте аудио в MP3 или M4A, а субтитры в VTT. Начните бесплатно.",
     "description": "Описание расширения Chrome Web Store - макс 132 символа"
   },
   "actionTitle": {

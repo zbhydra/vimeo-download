@@ -4,7 +4,7 @@
     "description": "Chrome ウェブストア拡張機能名"
   },
   "extensionDescription": {
-    "message": "vimeo.com と player.vimeo.com の動画・音声・カバー画像を、選べる画質でダウンロード。",
+    "message": "Vimeo 動画を MP4 で最大 4K までダウンロード。音声は MP3 / M4A、字幕は VTT で保存。無料で始められます。",
     "description": "Chrome ウェブストア拡張機能説明 - 132文字まで"
   },
   "actionTitle": {

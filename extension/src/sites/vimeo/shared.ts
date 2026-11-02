@@ -104,6 +104,9 @@ const VIMEO_PLAYER_HOST = 'player.vimeo.com'
 const VIMEO_CDN_SUFFIXES = ['.vimeocdn.com'] as const
 /** 播放器文字轨端点；字幕直链可以不落在媒体 CDN 上。 */
 const VIMEO_TEXT_TRACK_PATH_PREFIX = '/texttrack/'
+/** 字幕文件专用域；上传字幕和自动生成字幕都从这里交付。 */
+const VIMEO_CAPTIONS_HOST = 'captions.vimeo.com'
+const VIMEO_CAPTIONS_PATH_PREFIX = '/captions/'
 const VIMEO_DESCRIPTOR_URI_PREFIX = 'vimeo:descriptor-uri:'
 const VIMEO_DESCRIPTOR_LEGACY_PREFIX = 'vimeo:descriptor:'
 const VIMEO_FRAME_IDENTITY_MESSAGE_TYPE = 'vdl:vimeo:frame-identity'
@@ -231,10 +234,11 @@ export function isVimeoMediaCdnUrl(url: string): boolean {
 /**
  * 判断 URL 是否为 Vimeo 字幕直链。
  *
- * 字幕来自 `text_tracks[].url`，不在 `*.vimeocdn.com` 下：播放器 config 给的是
- * `player.vimeo.com/texttrack/*` 或 `vimeo.com/texttrack/*` 端点（相对路径按 Vimeo 主站解析），
- * 部分交付也在 Vimeo CDN 上。
- * 这里单独判定，既不放宽 `VIMEO_CDN_SUFFIXES`，也不改 manifest host permissions。
+ * 字幕来自 `text_tracks[].url`，通常不在 `*.vimeocdn.com` 下：播放器 config 给的是
+ * `captions.vimeo.com/captions/*`，或 `player.vimeo.com/texttrack/*`、`vimeo.com/texttrack/*`
+ * 端点（相对路径按 Vimeo 主站解析），部分交付也在 Vimeo CDN 上。
+ * 字幕由 `chrome.downloads` 直接保存，不需要 host 权限。这里单独判定，既不放宽
+ * `VIMEO_CDN_SUFFIXES`，也不改 manifest host permissions。
  */
 export function isVimeoSubtitleUrl(url: string): boolean {
   const parsed = parseUrl(url)
@@ -245,6 +249,9 @@ export function isVimeoSubtitleUrl(url: string): boolean {
   const host = normalizeHostname(parsed.hostname)
   if (host === VIMEO_PLAYER_HOST || VIMEO_PAGE_HOSTS.has(host)) {
     return parsed.pathname.startsWith(VIMEO_TEXT_TRACK_PATH_PREFIX)
+  }
+  if (host === VIMEO_CAPTIONS_HOST) {
+    return parsed.pathname.startsWith(VIMEO_CAPTIONS_PATH_PREFIX)
   }
 
   return isVimeoMediaCdnUrl(url)

@@ -4,7 +4,7 @@
     "description": "Nombre de la extensión Chrome Web Store"
   },
   "extensionDescription": {
-    "message": "Descarga videos, audio e imágenes de portada de vimeo.com y player.vimeo.com en cualquier calidad disponible.",
+    "message": "Descarga videos de Vimeo en MP4, hasta 4K. Guarda el audio en MP3 o M4A y los subtítulos en VTT. Empieza gratis.",
     "description": "Descripción de la extensión Chrome Web Store - máx 132 caracteres"
   },
   "actionTitle": {

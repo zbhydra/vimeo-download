@@ -4,7 +4,7 @@
     "description": "Chrome 線上應用程式商店擴充功能名稱"
   },
   "extensionDescription": {
-    "message": "從 vimeo.com 與 player.vimeo.com 下載影片、音訊和封面圖，可選擇任意可用畫質。",
+    "message": "將 Vimeo 影片下載為 MP4，最高 4K。音訊可存為 MP3 或 M4A，字幕可存為 VTT。可免費開始使用。",
     "description": "Chrome 線上應用程式商店擴充功能描述 - 最多132字元"
   },
   "actionTitle": {
