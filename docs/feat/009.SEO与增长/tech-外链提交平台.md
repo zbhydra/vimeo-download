@@ -32,6 +32,7 @@
 | 9 | Fazier | 启动平台（DR 84） | dofollow（免费档需回链） | badge 已挂页脚 ✅、**Verify Badge 已通过 ✅**；已推进到 `/launch-new` 产品表单（Name / Tagline / Category / Topics / Description / Features / Use cases），**剩余填写与最终发布需人工完成**（文案见素材库） | 产品页（提交后）：https://fazier.com/launches/vimeodownloader ；表单位置：https://fazier.com/launch |
 | 10 | Startup Fame | 目录（dofollow） | dofollow（免费档需回链） | 档案页已可访问（`/s/vimeo-downloader` 正常返回）；**badge 已挂网站页脚，待部署后在 Promote 页选 Verified 免费档提交** | https://startupfa.me/dashboard/vimeo-downloader |
 | 11 | Neeed | 启动平台 | — | 本机网络不可达，待网络恢复人工提交 | https://neeed.com |
+| 12 | Launchstag | 启动平台（DR 71，35 万月访） | dofollow（免费档需 badge） | **done-pending-review** | ✅ **提交成功：STATUS Queued，Goes live Nov 27, 2026**（比排期表说的 Nov 28 提前一天）。破关技巧：表单字段用 CDP `Input.insertText` 输入（native setter 对该站 React 组件无效）。badge（badge-light.svg → /p/vimeo-downloader）已挂页脚第三枚并部署 | https://launchstag.com/dashboard |
 
 ## 已放弃（勿重复尝试）
 
