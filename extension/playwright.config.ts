@@ -15,7 +15,7 @@ const testIgnore = ['**/node_modules/**', '**/dist/**', '**/unit/**', '**/integr
 const projects = [
   {
     name: 'extension-e2e-vimeo-real',
-    testMatch: ['**/e2e/vimeo-real-download.spec.ts'],
+    testMatch: ['**/e2e/vimeo-real-*.spec.ts'],
     timeout: 240_000
   }
 ]

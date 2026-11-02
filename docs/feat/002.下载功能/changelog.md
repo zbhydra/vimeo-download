@@ -1,5 +1,23 @@
 # 002 · 下载功能 — 变更记录
 
+## 2026-11-02 插件字幕修复；官网解析失败引导改用插件
+
+**Why**：
+
+- 字幕：线上 1.0.2 的白名单只放行 `player.vimeo.com/texttrack/*`、`vimeo.com/texttrack/*` 和媒体 CDN，而 Vimeo 现在的字幕轨都在 `captions.vimeo.com/captions/*`。2026-11-02 抽样 13 个公开视频，10 个有字幕轨，这 11 条轨全部被丢弃，Subtitle 行显示 Unavailable。2026-09-26 的记录把 Unavailable 判断为「数据本身无字幕轨」，在这些视频上不成立。
+- 官网：解析失败是代理 IP 质量导致的预期情况（hydra 确认），不再追查，引导去插件。此前只给 24005 配了专门文案，而 `parse-v2` 实际返回 24033 和 24034，用户看到的是「检查完整链接与访问权限」和未翻译的英文「Media parse node is unavailable」。
+
+**变更**：
+
+- `extension/src/sites/vimeo/shared.ts`：字幕白名单加入 `captions.vimeo.com/captions/*`。新增单测和真实 E2E（`tests/e2e/vimeo-real-subtitle.spec.ts`）。
+- 插件版本升到 1.0.3，14 语言商店短描述改为写明 MP4、MP3/M4A、VTT 和 4K，详细描述同步（`docs/store/`）。
+- `website/src/scripts/download/workspace-errors.ts`：24005、24033、24034、24050 统一映射到 `serverReadFailed`（原键名 `vimeoParseFailed` 已不准确）；14 语言文案改写，说明可能原因，提示重试，仍失败再改用下方插件。真实后端跑通桌面和手机页面。
+- `website/src/scripts/download/workspace-loader.ts`：工作区脚本加载失败（断网、部署后旧页面）时，用户点提交原来毫无反应，现在显示 `workspaceLoadFailed`，提示检查网络并刷新。真实浏览器验证：Chromium 会缓存失败的动态 import，重新联网再点也不会恢复，刷新后才恢复。
+- 真实样本：1196869805 从 2026-10-22 起返回 401（后端日志 `vimeo_config_missing`），1194296700 同样失效。`extension/tests/e2e/vimeo-real-download.spec.ts`、`website/e2e/vimeo-client-mux-real.spec.ts`、`website/e2e/parse-download-smoke.spec.ts`、`backend/tests/integration/real/api/client/test_vimeo_media_api_real.py` 和相关文档换成 1225933284。
+- `test_vimeo_media_api_real.py`：`parse-v2` 自 2026-10-10 起要 `parse-pre-v2` 发的 token，这条测试还在直接传 `link`，一直 `KeyError`。改成先写设备可信记录、再走两步调用。只有 24034、24050（解析出口不可用）按环境 skip，样本失效（24033）等其他错误码直接失败。本地代理是带认证的 SOCKS5，Playwright 拒绝，所以本地只能 skip（24034），通过路径未验证。
+- `test-插件端e2e.md`、`extension/tests/README.md`：按现有用例重写，去掉已不存在的面板下载流程、导航重试预算和固定 quota 的说法；记录自动化 profile 打开 vimeo.com 每次都被人机验证盖住，以及文件名偶发退回 URL 文件名（根因未知）。
+- `tests/e2e/vimeo-real-download.spec.ts`：下载目录改为现行默认 `vimeoMediaDownloader`。`tests/fixtures.ts` 增加可选代理 `E2E_PROXY_SERVER`。
+
 ## 2026-10-07 Popup header 收窄为单行
 
 **Why**：448px 宽下 header 控件整组折到第二行、靠右对齐，品牌与控件上下错开，看起来像错位。

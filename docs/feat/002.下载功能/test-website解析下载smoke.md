@@ -39,7 +39,7 @@ pnpm --dir website test:e2e:parse-smoke
 
 ```bash
 E2E_REAL_API_BASE_URL=http://127.0.0.1:7900 E2E_WEB_PORT=7930 \
-E2E_MEDIA_URL=https://vimeo.com/1196869805 \
+E2E_MEDIA_URL=https://vimeo.com/1225933284 \
 pnpm --dir website exec playwright test --project=vimeo-client-mux-real \
   --workers=1 --retries=0 --output=tmp/vimeo-proof --reporter=line
 ```

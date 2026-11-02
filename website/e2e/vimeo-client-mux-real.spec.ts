@@ -43,7 +43,7 @@ test('真实网站下载与 OPFS 生命周期', async ({ page, context }, testIn
   test.setTimeout(30 * 60_000);
   page.setDefaultTimeout(90_000);
   page.setDefaultNavigationTimeout(90_000);
-  const targetUrl = process.env.E2E_MEDIA_URL ?? 'https://vimeo.com/1196869805';
+  const targetUrl = process.env.E2E_MEDIA_URL ?? 'https://vimeo.com/1225933284';
   const failCdn = process.env.E2E_FAIL_CDN === '1';
   // 网页下载固定走匿名授权：每次运行使用全新设备，不依赖登录态。
   const deviceId = randomUUID();

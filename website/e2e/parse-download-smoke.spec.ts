@@ -22,7 +22,7 @@ interface ApiEnvelope {
   }
 }
 
-const mediaUrl = process.env.E2E_MEDIA_URL ?? 'https://vimeo.com/1194296700'
+const mediaUrl = process.env.E2E_MEDIA_URL ?? 'https://vimeo.com/1225933284'
 
 test('真实解析与预授权只消费一次材料合同', async ({ page }) => {
   test.setTimeout(180_000)

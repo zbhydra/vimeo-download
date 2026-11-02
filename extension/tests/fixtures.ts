@@ -102,7 +102,7 @@ function writeProfileDownloadPrefs(profileDir: string, downloadDir: string): voi
  * 会被 GUID 改名落进 Playwright 的 downloadsPath（真实文件名与 `filename` 子目录全部
  * 丢失），任何按名字断言落盘产物的用例都无法成立。这里在 browser 级 CDP 会话上用
  * `behavior: 'default'` 覆盖回原生下载流：promise 正常 resolve、`downloads.search`
- * 终态可见、文件按扩展声明的 `filename`（含 `vimeo-video-downloader/` 子目录）落到
+ * 终态可见、文件按扩展声明的 `filename`（含 `vimeoMediaDownloader/` 子目录）落到
  * profile 偏好的下载目录。必须在 context 初始化后立刻调用一次，Playwright 不会再次
  * 下发该设置。
  */
@@ -144,7 +144,10 @@ async function launchExtensionContext(
       ...launchOptions,
       acceptDownloads: true,
       downloadsPath: downloadDir,
-      viewport: { width: 1280, height: 720 }
+      viewport: { width: 1280, height: 720 },
+      // 本机直连不到 Vimeo 时用 E2E_PROXY_SERVER 指定代理。Playwright 会强制回环地址也走代理，
+      // 所以代理规则要能把 localhost 转回本机（Clash Verge 实测可以）。
+      ...(process.env.E2E_PROXY_SERVER ? { proxy: { server: process.env.E2E_PROXY_SERVER } } : {})
     })
     await installE2eBrowserIdentity(context)
     await restoreNativeDownloadBehavior(context)
@@ -256,3 +259,34 @@ export const test = base.extend<ExtensionFixtures>({
 })
 
 export { expect }
+
+/** 列出目录下已完成的下载文件；Chrome 中间态仍为 .crdownload。 */
+export function listDownloadedFiles(root: string): string[] {
+  return fs
+    .readdirSync(root, { recursive: true, withFileTypes: true })
+    .filter(entry => entry.isFile() && !entry.name.endsWith('.crdownload'))
+    .map(entry => path.join(entry.parentPath, entry.name))
+}
+
+/** 等待本轮新出现的非空文件；baseline 排除 E2E_DOWNLOAD_DIR 里已有的文件。 */
+export async function waitForDownloadedFile(
+  downloadDir: string,
+  baseline: ReadonlySet<string>,
+  extension: string,
+  timeoutMs: number
+): Promise<string> {
+  let result = ''
+  await expect
+    .poll(
+      () => {
+        result =
+          listDownloadedFiles(downloadDir).find(
+            file => !baseline.has(file) && file.endsWith(extension) && fs.statSync(file).size > 0
+          ) ?? ''
+        return result
+      },
+      { timeout: timeoutMs, intervals: [500] }
+    )
+    .not.toBe('')
+  return result
+}

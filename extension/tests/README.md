@@ -22,9 +22,9 @@ pnpm run test:clean
 
 `pnpm test` 会 fresh build 当前源码，然后串行执行全部真实自动化项目：
 
-- `extension-e2e-vimeo-real`：真实 Vimeo 公网视频的 DASH 下载经 injected mux 合成 MP4，1 条。
+- `extension-e2e-vimeo-real`：真实 Vimeo 公网视频的 DASH 下载经 injected mux 合成 MP4，以及真实字幕轨从 Popup 和页面面板保存为 VTT，共 3 条。
 
-`pnpm run test:e2e:vimeo` 只运行该 project。
+`pnpm run test:e2e:vimeo` 只运行该 project。本机直连不到 Vimeo 时，用 `E2E_PROXY_SERVER=http://127.0.0.1:<端口>` 指定代理（Clash Verge 默认 7897）。Playwright 会强制回环地址也走代理，代理规则要能把 localhost 转回本机，Clash Verge 实测可以。
 
 ## 真实边界
 
@@ -69,17 +69,21 @@ Playwright 使用 `fullyParallel=false`、`workers=1`。
 
 ## 固定样本
 
-| 项目 | 覆盖 |
-|---|---|
-| Vimeo | 固定公网视频注入面板后按样本实际提供的 DASH 选项下载，injected mux 合成真实 MP4 并恢复按钮状态 |
+| 用例 | 样本 | 覆盖 |
+|---|---|---|
+| `vimeo-real-download.spec.ts` | `player.vimeo.com/video/1225933284`（只有 DASH/HLS） | Popup 下载最低画质 MP4 和 2 秒裁剪 MP3，覆盖 injected mux、FIFO 队列、真实额度和下载历史 |
+| `vimeo-real-subtitle.spec.ts` | `player.vimeo.com/video/1226740492`（字幕在 `captions.vimeo.com`，只有自动字幕） | 字幕从 Popup 和页面面板保存为 WebVTT |
 
-用例不预设 delivery：从面板实际渲染出的选项里取最小画质的 DASH/HLS 选项，覆盖 injected
-mux（本仓库唯一自有的下载实现）。样本不再提供该交付时带原因 skip，提示需要更换样本。
+样本失效时用例直接失败（导航或定位器超时），要更换样本，不改成假页面。
 
-Vimeo 命中 Cloudflare 人机验证时会明确 skip；该结果只说明当前自动化 profile 无法进入
-页面，不能记作产品通过。
+自动化 profile 打开 vimeo.com 时每次都被 Vimeo 的人机验证（`Verify to continue`）盖住
+（2026-11-02 连续 6 次），响应头没有 `cf-mitigated`，面板靠 player config 回退才能出现。
+在被拦截的页面上得到的结果不能记作产品通过，所以真实用例都用 player 页面；面板在正常
+vimeo.com 页面上的位置没有真实 E2E。
 
-Chrome 下载管理器（`progressive` / 缩略图交付）目前没有真实 E2E 锚点：固定样本 `1196869805`
+代理波动表现为导航超时（`ERR_TIMED_OUT`）或下载停在 0 B，用例失败，确认网络后重跑。
+
+Chrome 下载管理器（`progressive` / 缩略图交付）目前没有真实 E2E 锚点：固定样本 `1225933284`
 的 config 不含 progressive 交付，此前候选样本被 Vimeo Premium 弹层拦截指针事件。真实采样已
 确认公开样本 `1084537`（3 档）与 `32001208`（4 档）提供 progressive，媒体 host 为
 `vod-progressive-ak.vimeocdn.com`，但尚未接入自动化。该路径当前由

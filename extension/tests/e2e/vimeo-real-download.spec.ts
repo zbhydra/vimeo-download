@@ -2,17 +2,16 @@
  * 固定真实 player 样本 → content 资源 → popup → background/offscreen → 原生下载。
  * 项目 API 只访问构建配置指定的本地真实后端；action 生命周期另验。
  */
-import fs from 'node:fs'
 import path from 'node:path'
 import { execFileSync } from 'node:child_process'
 import type { BrowserContext, Page } from '@playwright/test'
-import { test, expect } from '../fixtures'
+import { test, expect, listDownloadedFiles, waitForDownloadedFile } from '../fixtures'
 import type { QuotaCheckResponse } from '../../src/core/api/quota/types'
 import type { BackgroundGetDownloadQueueResponse } from '../../src/background/types'
 import type { DownloadHistoryEntry } from '../../src/core/storage/downloadHistory'
 
-const SAMPLE_URL = 'https://player.vimeo.com/video/1196869805'
-const DOWNLOAD_SUBDIR = 'vimeo-video-downloader'
+const SAMPLE_URL = 'https://player.vimeo.com/video/1225933284'
+const DOWNLOAD_SUBDIR = 'vimeoMediaDownloader'
 const API_BASE_URL =
   process.env.EXTENSION_API_BASE_URL?.trim().replace(/\/+$/, '') || 'http://localhost:7900'
 const QUOTA_CHECK_URL = `${API_BASE_URL}/api/client/quota/check`
@@ -23,7 +22,7 @@ test('真实 player 的 FIFO、MP4、MP3 裁剪、额度与原生输入边界', 
   downloadDir
 }) => {
   test.setTimeout(300_000)
-  const baselineFiles = new Set(listMediaFiles(downloadDir))
+  const baselineFiles = new Set(listDownloadedFiles(downloadDir))
   const quotaResults: { httpStatus: number; code: number; data: QuotaCheckResponse }[] = []
   const quotaReads: Promise<void>[] = []
   context.on('response', response => {
@@ -37,7 +36,7 @@ test('真实 player 的 FIFO、MP4、MP3 裁剪、额度与原生输入边界', 
   })
 
   const page = await context.newPage()
-  await page.goto(SAMPLE_URL, { waitUntil: 'load', timeout: 30_000 })
+  await page.goto(SAMPLE_URL, { waitUntil: 'load', timeout: 60_000 })
   for (const frame of page.frames()) {
     await frame.evaluate(() => document.querySelectorAll('video').forEach(video => video.pause()))
   }
@@ -84,8 +83,8 @@ test('真实 player 的 FIFO、MP4、MP3 裁剪、额度与原生输入边界', 
     .toEqual(['downloading', 'waiting'])
   await popup.close()
 
-  const videoPath = await waitForMedia(downloadDir, baselineFiles, '.mp4')
-  const audioPath = await waitForMedia(downloadDir, baselineFiles, '.mp3')
+  const videoPath = await waitForDownloadedFile(downloadDir, baselineFiles, '.mp4', 180_000)
+  const audioPath = await waitForDownloadedFile(downloadDir, baselineFiles, '.mp3', 180_000)
   for (const filePath of [videoPath, audioPath]) {
     expect(filePath).toContain(`${path.resolve(downloadDir)}${path.sep}${DOWNLOAD_SUBDIR}`)
     execFileSync('/opt/homebrew/bin/ffmpeg', ['-v', 'error', '-i', filePath, '-f', 'null', '-'])
@@ -230,35 +229,6 @@ function probeMedia(filePath: string): {
       { encoding: 'utf8' }
     )
   )
-}
-
-/** 只认本轮新出现的最终媒体文件，Chrome 中间态仍为 .crdownload。 */
-async function waitForMedia(
-  downloadDir: string,
-  baseline: ReadonlySet<string>,
-  extension: string
-): Promise<string> {
-  let result = ''
-  await expect
-    .poll(
-      () => {
-        result =
-          listMediaFiles(downloadDir).find(
-            file => !baseline.has(file) && file.endsWith(extension) && fs.statSync(file).size > 0
-          ) ?? ''
-        return result
-      },
-      { timeout: 180_000, intervals: [1000] }
-    )
-    .not.toBe('')
-  return result
-}
-
-function listMediaFiles(root: string): string[] {
-  return fs
-    .readdirSync(root, { recursive: true, withFileTypes: true })
-    .filter(entry => entry.isFile() && /\.(mp4|mp3)$/i.test(entry.name))
-    .map(entry => path.join(entry.parentPath, entry.name))
 }
 
 function readLabelHeight(label: string): number {
