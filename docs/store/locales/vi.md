@@ -6,7 +6,7 @@ Vimeo Downloader thêm nút tải xuống ngay trên các trang Vimeo được h
 
 - Chọn mọi chất lượng video mà nguồn cung cấp.
 - Lưu video, âm thanh và ảnh bìa thành các tệp riêng.
-- Dùng Premium để cắt một khoảng DASH hoặc HLS trước khi tải.
+- Cắt một khoảng DASH hoặc HLS trước khi tải.
 - Xếp nhiều lượt tải vào hàng đợi và tiếp tục duyệt web.
 - Xử lý tệp lớn bằng cách tự động chia tệp hoặc truyền thành một tệp duy nhất.
 - Xem tiến trình, lỗi, lượt tải hoàn tất và lịch sử trong cửa sổ bật lên.
@@ -15,4 +15,4 @@ Tiện ích hoạt động trên các trang vimeo.com và player.vimeo.com đư�
 
 Bạn có thể dùng tiện ích để lưu bài giảng Vimeo, portfolio, bản demo sản phẩm, cuộc phỏng vấn hoặc đoạn tham khảo mà bạn được phép lưu, cho việc xem offline hoặc chỉnh sửa. Quy trình ngay trên trang giúp bạn xử lý video, âm thanh và ảnh bìa trong cùng một lần thao tác; định dạng và chất lượng tuân theo lựa chọn của nguồn.
 
-Cách dùng: mở trang Vimeo được hỗ trợ, chọn video, âm thanh hoặc ảnh bìa, chọn chất lượng có sẵn rồi thêm vào hàng đợi. Cửa sổ bật lên hiển thị trạng thái trong khi bạn tiếp tục duyệt web. Với phương tiện DASH và HLS được hỗ trợ, Premium cho phép tải riêng khoảng thời gian cần thiết.
+Cách dùng: mở trang Vimeo được hỗ trợ, chọn video, âm thanh hoặc ảnh bìa, chọn chất lượng có sẵn rồi thêm vào hàng đợi. Cửa sổ bật lên hiển thị trạng thái trong khi bạn tiếp tục duyệt web. Với phương tiện DASH và HLS được hỗ trợ, bạn có thể tải riêng khoảng thời gian cần thiết.

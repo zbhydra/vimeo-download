@@ -28,11 +28,11 @@ The extension does not sell personal information. It uses the minimum browser pe
 
 Upload these five general promotional screenshots:
 
-- 01-video-audio-thumbnail-1280x800.png: video, audio, and thumbnail output.
-- 02-available-quality-1280x800.png: source-provided quality selection.
-- 03-output-types-1280x800.png: choose exactly the output type needed.
-- 04-trim-before-download-1280x800.png: Premium DASH/HLS clip trimming.
-- 05-queue-large-files-1280x800.png: queued downloads and large-file modes.
+- 01-from-the-page-1280x800.png: download from the current page.
+- 02-quality-up-to-4k-1280x800.png: source-provided quality selection, up to 4K.
+- 03-video-audio-cover-1280x800.png: video, audio, or cover image output.
+- 04-trim-before-download-1280x800.png: DASH/HLS clip trimming.
+- 05-queue-1280x800.png: queued downloads and large files.
 
 Additional store assets:
 

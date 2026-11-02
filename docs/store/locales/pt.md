@@ -6,7 +6,7 @@ Vantagens:
 
 - Escolha qualquer qualidade de vídeo oferecida pela fonte.
 - Salve vídeo, áudio e capa como arquivos separados.
-- Corte um intervalo DASH ou HLS antes do download com o Premium.
+- Corte um intervalo DASH ou HLS antes do download.
 - Coloque vários downloads em uma fila e continue navegando.
 - Lide com arquivos grandes usando divisão automática ou streaming em um único arquivo.
 - Acompanhe progresso, falhas, conclusões e histórico no popup.
@@ -15,4 +15,4 @@ A extensão funciona em páginas compatíveis de vimeo.com e player.vimeo.com. E
 
 Use a extensão para salvar uma aula do Vimeo, um portfólio, uma demonstração de produto, uma entrevista ou um clipe de referência que você tem autorização para conservar, para reprodução offline ou edição. O fluxo direto na página reúne o salvamento de vídeo, áudio e capa, seguindo o formato e a qualidade oferecidos pela fonte.
 
-O processo é simples: abra uma página Vimeo compatível, escolha vídeo, áudio ou capa, selecione a qualidade disponível e coloque o download na fila. O popup mostra o estado enquanto você continua navegando. Para mídia DASH e HLS compatível, o Premium permite baixar apenas o intervalo necessário.
+O processo é simples: abra uma página Vimeo compatível, escolha vídeo, áudio ou capa, selecione a qualidade disponível e coloque o download na fila. O popup mostra o estado enquanto você continua navegando. Para mídia DASH e HLS compatível, você pode baixar apenas o intervalo necessário.

@@ -6,7 +6,7 @@ Ventajas:
 
 - Elige cualquier calidad de vídeo disponible en la fuente.
 - Guarda el vídeo, el audio y la portada como salidas independientes.
-- Recorta un intervalo DASH o HLS antes de descargar con Premium.
+- Recorta un intervalo DASH o HLS antes de descargar.
 - Pon varias descargas en cola y sigue navegando mientras avanzan.
 - Gestiona archivos grandes con división automática o transmisión en un solo archivo.
 - Consulta el progreso, los errores, las finalizaciones y el historial en la ventana emergente.
@@ -15,4 +15,4 @@ La extensión funciona en páginas compatibles de vimeo.com y player.vimeo.com. 
 
 Puedes usarlo para guardar una clase de Vimeo, un portafolio, una demostración de producto, una entrevista o un clip de referencia que tengas autorización para conservar, ya sea para reproducirlo sin conexión o editarlo. El flujo desde la página reúne las descargas de vídeo, audio y portada, y respeta el formato y la calidad que ofrece la fuente.
 
-El flujo es sencillo: abre una página de Vimeo compatible, elige vídeo, audio o portada, selecciona la calidad disponible y añade la descarga a la cola. El popup mantiene visible el estado mientras sigues navegando. En medios DASH y HLS compatibles, Premium permite descargar solo el intervalo que necesitas.
+El flujo es sencillo: abre una página de Vimeo compatible, elige vídeo, audio o portada, selecciona la calidad disponible y añade la descarga a la cola. El popup mantiene visible el estado mientras sigues navegando. En medios DASH y HLS compatibles, puedes descargar solo el intervalo que necesitas.
