@@ -26,6 +26,7 @@
 | `vimeo-downloader-not-working` | 排障型：本站在线工具的报错文案逐条解释与恢复 | vimeo downloader not working；vimeo download failed | N3 论坛/Issue 6/9、厂商文章 2/9，工具 0；N21 论坛/Issue 6/10、厂商文章 2/10，工具 0 | 可立即发布（只写在线工具现有错误态） | P1 | 已同步到站点源码（2026-10-07），构建与本地真实页面验证通过，线上待部署 |
 | `save-vimeo-audio-as-mp3-or-m4a` | 方法型：只存 Vimeo 视频的音频，M4A 或 MP3 | vimeo to mp3；extract audio from vimeo video | Q8 文章 56%；N11 文章 5/9（56%） | 可发布（插件 2026-10-08 已上架） | P2 | 已发布（2026-10-25），构建与本地真实页面验证通过，线上待部署 |
 | `download-vimeo-subtitles-as-vtt` | 方法型：把视频自带字幕存成 VTT 文件，并说明它不是文字稿 | download vimeo video with subtitles；download vimeo captions | Q9 文章 78%；N23 文章+官方 8/9（89%），工具 1 | 可发布（插件 2026-10-08 已上架） | P2 | 已发布（2026-10-25），构建与本地真实页面验证通过，线上待部署 |
+| `how-to-get-a-vimeo-transcript` | 方法型：拿到 Vimeo 视频的文字稿：看、下载，或存字幕文件后转纯文本 | vimeo transcript；vimeo transcript download；download vimeo transcript | N9 文章+官方 44%、工具 33%；Trends 见 §3 I08 | 依赖 1.0.3 上架；2026-11-11 后部署 | P1 | 已同步运行时（2026-11-02），未部署 |
 
 发布顺序：`how-to-download-a-vimeo-video` → `is-it-legal-to-download-vimeo-videos` → `vimeo-download-button-missing` → `vimeo-downloader-not-working`（均 2026-10-07 发布）→ `save-vimeo-audio-as-mp3-or-m4a` 与 `download-vimeo-subtitles-as-vtt`（2026-10-25 发布，插件 2026-10-08 上架后解锁）。六篇都只有英文；其他语言没有正文。
 
@@ -50,7 +51,7 @@
 | I05 | 合法性 | Q11 | 文章 100% | 无（合规说明） | 选中 `is-it-legal-to-download-vimeo-videos` | 纯信息型；可由 Vimeo 条款原文、官方帮助与美国版权局页面支撑 |
 | I06 | 音频 MP3 / M4A | Q8 N11 | 文章 56% | 扩展（M4A，popup 中转码 MP3） | 选中 `save-vimeo-audio-as-mp3-or-m4a` | 已发布（2026-10-25） |
 | I07 | 字幕 | Q9 N23 | 文章 78%–89% | 扩展（VTT） | 选中 `download-vimeo-subtitles-as-vtt` | 已发布（2026-10-25） |
-| I08 | 文字稿 transcript | N9 | 文章 44%、工具 33%、扩展条目 22% | 无 | 不做 | 产品不生成文字稿；在字幕篇里说明区别 |
+| I08 | 文字稿 transcript | N9 | 文章 44%、工具 33%、扩展条目 22% | `how-to-get-a-vimeo-transcript` | **做（2026-11-02 改判）** | 原判「不做」只看了 SERP。Trends 显示 `vimeo transcript` 是这批词里需求最稳的（52/52 周非零，约为 `how to download vimeo videos` 的 3.6 倍）；观众侧 Transcript 面板、VTT 转纯文本、真实样本都是 V5 没有的增量。产品仍不生成文字稿，正文照实写 |
 | I09 | 只下载一段（裁剪） | N10 | how-to 56%、工具 44%，意图含糊（Vimeo 内剪辑与下载片段混在一起） | 扩展（DASH/HLS 按时间裁剪） | 暂缓 | 需求未被证据证实；待上架和 GSC 数据后再评估 |
 | I10 | 封面图 | Q12 | 工具 89% | 扩展（JPEG） | 不做 | 做成说明页属于页面类型错配 |
 | I11 | Chrome 扩展 | Q7 | 商店/下载站 44%、对比评测 44% | 扩展 | 不做 | 由 CWS 条目和首页承接；会与首页争同一批词 |
@@ -128,12 +129,16 @@ Vimeo 官方页面（2026-10-06 读取：先用 WebFetch，再用 curl 下载页
 | V3 | How to download a video from my library | https://help.vimeo.com/hc/en-us/articles/29641523095057-How-to-download-a-video-from-my-library | Updated December 03, 2025 | 所有者或付费账号的团队成员；Share 按钮旁的下拉箭头 → Download；需要付费计划；Library 没有批量下载 |
 | V4 | How to change downloading permissions on my videos | https://help.vimeo.com/hc/en-us/articles/15059498665745-How-to-change-downloading-permissions-on-my-videos | Updated November 06, 2025 | 需要付费计划；观众只能在 vimeo.com 视频页下载，不能在内嵌播放器下载；所有者始终能看到按钮；Share → Viewer permissions → Downloads 开关；Upload Defaults 的「Download them」 |
 | V4b | How to prevent viewers from downloading my videos | https://help.vimeo.com/hc/en-us/articles/16332478147217-How-to-prevent-viewers-from-downloading-my-videos | Updated November 14, 2025 | 「There is currently no way to make videos available to download from the embedded player.」 |
-| V5 | How to view or download my video's transcript | https://help.vimeo.com/hc/en-us/articles/12425955868817-How-to-view-or-download-my-video-s-transcript | Updated August 31, 2026 | 「This feature requires a paid plan.」；对象是自己或团队上传的视频；「You must have edit access to the video to view or download its transcript」；仅限已上传或自动生成字幕的视频；路径：选择视频 → 左侧 Languages → 转录旁三点菜单 → Download；「The captions will download as .srt, .vtt, or a .ttml file」 |
+| V5 | How to view or download my video's transcript | https://help.vimeo.com/hc/en-us/articles/12425955868817-How-to-view-or-download-my-video-s-transcript | Updated August 31, 2026 | 2026-10-08 起改为「This feature is available on the Free plan and all paid plans.」（读取日当时是「This feature requires a paid plan.」；页面现为 Updated October 8, 2026，2026-11-02 复核）；对象是自己或团队上传的视频；「You must have edit access to the video to view or download its transcript」；仅限已上传或自动生成字幕的视频；路径：选择视频 → 左侧 Languages → 转录旁三点菜单 → Download；「The captions will download as .srt, .vtt, or a .ttml file」 |
 | V6 | Viewer features available on the Vimeo app for Android | https://help.vimeo.com/hc/en-us/articles/12425998892817-Viewer-features-available-on-the-Vimeo-app-for-Android | Updated June 13, 2025 | 离线列表；「can only be played within the Vimeo app and cannot be exported or played in other apps」 |
 | V7 | How do I download my video from the Vimeo mobile app? | https://help.vimeo.com/hc/en-us/articles/22593576635281-How-do-I-download-my-video-from-the-Vimeo-mobile-app | Updated May 10, 2024 | 自己的视频：Android「Save to device」、iOS「Save to Camera Roll」 |
 | V8 | I want to use a Creative Commons video I saw on Vimeo. Do I need permission? | https://help.vimeo.com/hc/en-us/articles/12427604972305-I-want-to-use-a-Creative-Commons-video-I-saw-on-Vimeo-Do-I-need-permission | Updated May 29, 2025 | 「others can use that video according to the applicable license's terms and conditions」；建议联系所有者；「Our members retain copyright ownership of their works」；Vimeo 不保证上传者拥有全部权利；该页没有提到下载 |
 | V9 | Vimeo Terms of Service | https://vimeo.com/terms | Last Updated: July 8, 2024 | §5.4 Prohibited Technical Measures（「You will not:」列表，含下载条款、规避访问限制、去水印）；第 6 节 Licenses Granted by You 的开头句（「you own and will retain ownership of all intellectual property rights in and to the content you submit」） |
 | V10 | Vimeo 官方落地页 Download & Save Vimeo Videos Online | https://vimeo.com/features/video-editor/download-video | 无 | 只用于调研，正文没有引用 |
+
+| V11 | How to access transcripts on the video page | https://help.vimeo.com/hc/en-us/articles/34067260063505-How-to-access-transcripts-on-the-video-page | Updated January 13, 2026 | 观众侧 Transcript 按钮和面板（2026-11-02 读取） |
+| V12 | Download captions or subtitles for On Demand titles | https://help.vimeo.com/hc/en-us/articles/12426105647249-Download-captions-or-subtitles-for-On-Demand-titles | Updated January 13, 2026 | On Demand 字幕文件下载，不是所有 VOD 都开放（2026-11-02 读取） |
+| V13 | How to add captions or subtitles to my video | https://help.vimeo.com/hc/en-us/articles/21956884955537-How-to-add-captions-or-subtitles-to-my-video | 未读 | 只引用标题（2026-11-02 确认地址） |
 
 第三方官方来源：
 
@@ -181,6 +186,14 @@ Vimeo 官方页面（2026-10-06 读取：先用 WebFetch，再用 curl 下载页
 
 ## 7. 需要 hydra 决定或核实
 
+### 2026-11-02 已裁决
+
+- 写文字稿文章（I08 改判）。hydra「一次改完吧」后已同步运行时，部署要等 1.0.3 上架和 2026-11-11 之后。
+- 第 3 条（手机端）：hydra 没有要求，手机篇和真机测试暂缓。
+- 在线工具解析失败率高是代理 IP 质量导致的预期情况，不再追查，页面和文章引导去插件。
+- 第 5 条（扩展上架）：how-to、not-working 的扩展块已启用并同步运行时。
+- 第 11 条（not-working 复现）：提交阶段已用真实后端逐条复现（2026-11-02）：空输入、无效 URL、其他平台（24031）、频道和个人主页（24033）、已失效视频（24034）、脚本加载后断网（`Failed to parse this link.`）、脚本加载前断网（`The download tool couldn't load…`，刷新后恢复）。限流和下载阶段各行没有复现：本地代理配置让解析止于 24034，到不了下载。
+
 ### 2026-10-07 已裁决
 
 - 第 1 条（路由与入口）：路由 `/guides/{slug}/`，索引页 `/guides/`；入口只放页脚 Resources 组，导航不加；只发布 en-US，某语言有正文才生成该语言页面；hreflang 只覆盖实际存在的版本，目前只有英文，不输出。
@@ -213,5 +226,5 @@ Vimeo 官方页面（2026-10-06 读取：先用 WebFetch，再用 curl 下载页
 - 没有真机验证：在线工具的实际界面、倒计时窗口、移动端、Edge/Brave、扩展的实际面板、MP3 转码、字幕文件的真实格式与文件名，以及 `vimeo-downloader-not-working` 里的每条报错。
 - 没有任何真实截图；各篇 `page_seo.md` 只列了需要截的清单。
 - 没有核实 SRT 是否被扩展支持：源码按 URL 后缀判断格式，Vimeo 默认交付 VTT，其余格式没有实测。
-- 没有核实 Vimeo 自动生成字幕是否出现在播放器的 text_tracks 里。
+- ~~没有核实 Vimeo 自动生成字幕是否出现在播放器的 text_tracks 里。~~ 2026-11-02 已核实，出现，且被 1.0.2 的白名单丢弃（已在 1.0.3 修复）。
 - 没有写入：对比页、片段裁剪页、手机端页、安全性页、封面页、日语与西语页。

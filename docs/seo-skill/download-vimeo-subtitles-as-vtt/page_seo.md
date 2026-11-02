@@ -1,6 +1,7 @@
 # page_seo：download-vimeo-subtitles-as-vtt
 
-> 事实核实日期 2026-10-06。来源编号（V/G/P）见 `../README.md` §5。本文件是内容决策记录，不是运行时数据源。
+> 事实核实日期 2026-10-06，官方与真实视频部分 2026-11-02 复核。来源编号（V/G/P）见 `../README.md` §5。本文件是内容决策记录，不是运行时数据源。
+> **2026-11-02 修改已同步运行时（hydra「一次改完吧」），未部署。** 改动：更正官方已过期的付费说法（S9）；补充自动字幕说明；链接文字稿文章。**线上 1.0.2 有字幕 bug（见 §4），本页的步骤在受影响视频上走不通，1.0.3 上架后才恢复成立。**
 > 发布状态：2026-10-25 已发布（插件已于 2026-10-08 上架）。运行时正文在 `website/src/content/guides/`，页面已构建并通过本地真实页面验证；2026-10-25 已部署生产并通过 GSC 要求建立索引；收录状态待观察。截图占位已按 spec §8「没有真实截图前不放图片」移除，`[EXTENSION_CTA]` 换成商店真实链接。
 
 ## 1. 基本信息
@@ -27,7 +28,7 @@
 - `save-vimeo-audio-as-mp3-or-m4a`：同一扩展的另一行（Audio）。意图不同，不互相链接，避免把两个意图写成一张互链网。
 - `how-to-download-a-vimeo-video`：在线工具只输出 MP4 的说明交给它；本页只链接。
 - 已合并：Q9「download vimeo video with subtitles」与 N23「download vimeo captions」是同一任务（拿到字幕）。「带字幕的视频文件」这个子意图在正文里直接回答为「不合并进视频」，没有为它另做页面。
-- 不另做「vimeo transcript」页：Vimeo 官方 V5 已完整覆盖所有者的文字稿下载，本页只用一节指向它。
+- 文字稿另有一篇（`how-to-get-a-vimeo-transcript`，2026-11-02 重新裁决，见 `../README.md` §3 I08）。本页只讲存字幕文件，并链接到那一篇的转纯文本方法。
 
 ## 3. 已用事实与出处
 
@@ -41,7 +42,7 @@
 | S6 | popup 的 Subtitle 行是语言下拉 + 下载箭头；没有字幕时下拉显示「Unavailable」、下载按钮禁用；页面面板显示禁用的「-」 | `extension/src/popup/components/VideoPanel.vue` L87–155；`buttons.ts` L153–176、L268–285；`extension/src/locales/en-US.json` L147、L158；`docs/feat/002.下载功能/feat.md` L178 | 源码与文档 |
 | S7 | 字幕始终下载完整文件，Trim 不作用于字幕 | `docs/feat/002.下载功能/feat.md` L184；`en-US.json` L163 `videoPanel.clip.hint`（"Subtitles and the cover always download the full file."） | 文档与文案 |
 | S8 | 文件写入下载目录下的子目录，默认 `vimeoMediaDownloader`，可在设置里改；最终文件名按设置里的文件名模板渲染，扩展名为 `.vtt` | `feat.md` L185–187；`extension/src/background/services/downloadFilename.ts` L44–82 | 源码与文档 |
-| S9 | Vimeo 官方：转录文字下载需要付费计划；只对你或你的团队上传的视频；需要对视频有编辑权限；仅限已上传或自动生成字幕的视频；路径是选择视频 → 左侧 Languages → 转录旁的三点菜单 → Download；文件为 .srt、.vtt 或 .ttml | V5（https://help.vimeo.com/hc/en-us/articles/12425955868817-How-to-view-or-download-my-video-s-transcript），Updated August 31, 2026；2026-10-06 curl 读取 HTML 逐字核对 | 官方帮助 |
+| S9 | Vimeo 官方：转录文字下载 Free 和所有付费计划可用（2026-10-08 起，此前是需要付费计划）；只对你或你的团队上传的视频；需要对视频有编辑权限；仅限已上传或自动生成字幕的视频；路径是选择视频 → 左侧 Languages → 转录旁的三点菜单 → Download；文件为 .srt、.vtt 或 .ttml | V5（https://help.vimeo.com/hc/en-us/articles/12425955868817-How-to-view-or-download-my-video-s-transcript），Updated October 8, 2026；2026-11-02 curl 读取 HTML 逐字核对 | 官方帮助 |
 | S10 | WebVTT 是 W3C 的字幕与 captions 文本格式；文件为 UTF-8 编码，类型 `text/vtt`；每条字幕是时间区间（示例 `00:00:00.000 --> 00:00:25.000`）加文本 | G4：W3C《WebVTT: The Web Video Text Tracks Format》Candidate Recommendation Draft，20 May 2026，https://www.w3.org/TR/webvtt1/，2026-10-06 curl 读取；摘要「WebVTT files provide captions or subtitles for video content」，§4.1「A WebVTT file must consist of a WebVTT file body encoded as UTF-8 and labeled with the MIME type text/vtt」 | 标准文档（草案状态） |
 | S11 | 仅公开视频；不保证私密、密码保护、付费视频；不去除 DRM；只在 vimeo.com 与 player.vimeo.com 页面；不支持 Vimeo 桌面或手机 App、其他站点；免费档有每日额度，付费 Unlimited 去掉每日限制；登录可选；每个下载任务消耗 1 次额度（字幕也是一个任务） | 事实表；P18（`DownloadOrchestrator.ts` L619、L817）；P19；`extension/dist/manifest.json` | 源码与文案 |
 | S12 | 运营主体与非关联声明 | 事实表；`en-US.ts` scope.compliance；`website/src/lib/site.mjs` `OPERATOR_LEGAL_NAME`（工作区未提交改动） | 源码 |
@@ -51,7 +52,8 @@
 - 扩展尚未在 Chrome Web Store 上架。全文以扩展为前提，`[EXTENSION_CTA]` 出现 2 次（开头、结尾）。上架前不发布；上架后回填链接。
 - 额度数字（免费档每日几次）不写：首页政策是不写额度数字（009 feat.md）。
 - 付费卖点文案「All video qualities, audio tracks & subtitles」暗示免费档受限，但源码没有按订阅档位的功能门禁，只有每日次数。正文不写免费档的功能限制（README §7 第 6 条）。
-- 字幕格式「normally WebVTT」依据源码注释「Vimeo 默认交付的 WebVTT」与 `/texttrack/{id}.vtt` 的地址形态，没有在真实视频上核对过；发布前必须实测（§11 第 1 条）。
+- 字幕格式「normally WebVTT」已实测：2026-11-02 的 11 条真实字幕轨都是 WebVTT，地址都在 `captions.vimeo.com`。
+- **字幕 bug（线上 1.0.2）**：过滤器不放行 `captions.vimeo.com`，这 11 条轨全部被丢弃，Subtitle 行显示 Unavailable。本页 10-25 发布时没有在发布版上实测（§10 第 2 条），所以没有发现。修复在 1.0.3。
 
 ## 5. SERP 证据与限制
 
@@ -104,8 +106,8 @@ popup 步骤不配图：三步操作简单，一张面板图已能定位 Subtitl
 
 ## 11. 待核实（正文没有写）
 
-1. 真实视频上字幕轨的标签与文件格式（上面 §10 第 2 条）。正文对格式写的是「normally WebVTT」。
-2. 自动生成字幕（auto-generated）是否会出现在播放器配置的 `text_tracks` 里：没有验证。V5 说所有者可以下载自动生成字幕的转录，但那是另一条路径；正文没有对观众侧能否保存自动生成字幕作任何断言。
+1. 已核实（2026-11-02）：真实轨道标签形如 `English (auto-generated)`；保存的文件名含标签，扩展名 `.vtt`，内容以 `WEBVTT` 开头（`extension/tests/e2e/vimeo-real-subtitle.spec.ts`）。
+2. 已核实（2026-11-02）：自动生成字幕在 `text_tracks` 里，`provenance` 为 `ai_generated`，观众侧可以保存。标签里的语言不一定对：一条标为 English 的轨道实际是高棉文。
 3. 同一语言有多条轨道时的表现：代码按语言标识去重，只保留第一条（`seenLangs`），真实视频上是否出现这种情形没有验证；正文没有写这个限制。
 4. 页面面板里字幕按钮在下载过程中是否显示进度：没有验证，正文没有写。
 5. On Demand（付费租售）视频的字幕：没有验证；正文只写「私密、密码保护、付费视频不保证」。

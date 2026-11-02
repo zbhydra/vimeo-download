@@ -1,8 +1,8 @@
 # Vimeo Downloader not working: error messages and fixes
 
-If the Vimeo Downloader online tool shows an error, find the exact message below. Most failures come down to the link, the video itself, your browser's storage or connection, or too many requests in a short time. The tool only works for public Vimeo videos, and it doesn't try to get around private, password-protected or paid ones.
+If the Vimeo Downloader online tool shows an error, find the exact message below. Most failures come down to the link, the video itself, our server's connection to Vimeo, your browser's storage or connection, or too many requests in a short time. If the tool can't read a video that plays fine in your browser, try the [browser extension](https://chromewebstore.google.com/detail/vimeo-downloader-download/joalfalamongfmejacciadcpdeahblai?utm_source=vimeodownloader.app&utm_medium=guide&utm_campaign=vimeo-downloader-not-working): it reads the video from the page you have open, not through our server. The online tool only works for public Vimeo videos, and neither the tool nor the extension gets around Vimeo's access controls.
 
-*Last reviewed: October 6, 2026. The messages below are the ones the online tool shows on that date.*
+*The messages below are the ones the online tool shows as of November 2, 2026.*
 
 ## Check these first
 
@@ -17,9 +17,10 @@ If the Vimeo Downloader online tool shows an error, find the exact message below
 | "Please enter a media link." | The field is empty. | Paste a Vimeo video link and submit again. |
 | "This is not a valid URL." | The tool couldn't find a usable link in what you pasted. It needs the full address, starting with `http://` or `https://`. | Copy the whole link from your browser's address bar and paste it again. |
 | "This link platform is not supported." | The link is not on `vimeo.com`, `www.vimeo.com` or `player.vimeo.com`. The tool only works with Vimeo. | Use a link to a Vimeo video. |
-| "This Vimeo video is private or cannot be parsed." | The tool couldn't read a file it can save from that link. Typical reasons: the video is private, password-protected, paid or no longer available, the link doesn't point to a single video, or the video doesn't offer a file type the tool supports. | Run the private-window check above. If Vimeo asks for access there, the tool doesn't support that video. If the video plays without logging in and the message stays, try again later. |
+| "We couldn't read this video from our server…" | The online tool reads the video through our server, not your browser. Reading can fail because the link is incomplete or doesn't point to a single video, because the video is private, password-protected, paid or no longer available, or because our server's connection to Vimeo failed. That last reason can affect a public video that plays fine for you. | Try once more in a moment: a failed connection can be temporary. If it fails again, run the private-window check above. If the video plays there, use the [browser extension](https://chromewebstore.google.com/detail/vimeo-downloader-download/joalfalamongfmejacciadcpdeahblai?utm_source=vimeodownloader.app&utm_medium=guide&utm_campaign=vimeo-downloader-not-working) shown below the message, in a browser on a computer. It reads the video from the page you have open, so our server's connection doesn't matter. If Vimeo asks for access there, the online tool doesn't support that video. |
 | "Too many requests. Please try again later." | The tool limits how many requests it accepts in a short time. It can appear when you submit links, or select **Download**, several times in a row, and also when the tool is busy. | Wait a little, then try once. |
-| "Failed to parse this link." | A general message for when the tool couldn't read the link and has no more specific reason, for example because the request failed. | Check your connection and try once more. |
+| "Failed to parse this link." | A general message for when the tool couldn't read the link and has no more specific reason, for example because the request failed. | Check your connection and try once more. If it keeps failing, use the extension shown below the message. |
+| "The download tool couldn't load…" | The page couldn't load the script that runs the tool, because the connection dropped or the site was updated while the page was open. | Check your connection, then refresh the page and paste the link again. |
 
 ## Errors while downloading
 
@@ -29,12 +30,10 @@ If the Vimeo Downloader online tool shows an error, find the exact message below
 | "Network connection interrupted. Click Continue to resume." | Your connection dropped and the page's automatic retries didn't recover it. | Select **Continue**. This works for videos delivered as a single MP4 file. |
 | "Failed to download the video tracks." | For a video delivered as separate video and audio streams, one stream couldn't be downloaded. The tool has already retried once. | Check your connection and start the download again. Downloads that need merging can't be resumed. |
 | "Failed to generate MP4." | The tool downloaded the video and audio streams but couldn't combine them into one MP4. | Try again. If it keeps failing for the same video, [contact us](/contact/) with the link. |
-| "This video exceeds the browser download size limit." | The file is larger than the size the tool can download in the browser. | The online tool can't download this file.<!-- EXTENSION_BLOCK_START --> Use the browser extension instead.<!-- EXTENSION_BLOCK_END --> |
-| "This browser does not have enough reliable local storage for this file…" | Before it starts, the tool checks how much storage your browser lets this site use. For a video that has to be merged, it needs room for the video stream, the audio stream and the finished MP4 at the same time, so it needs noticeably more than the final file size. The message also shows the file size and the storage that is available. | Free up disk space and try again.<!-- EXTENSION_BLOCK_START --> The message suggests the browser extension as an alternative.<!-- EXTENSION_BLOCK_END --> |
-| "This resource can only be downloaded with the browser extension. Install it to continue." | The online tool doesn't download this file, for example because it is very large or Vimeo doesn't report its size. | The online tool can't download this file.<!-- EXTENSION_BLOCK_START --> Use the browser extension instead.<!-- EXTENSION_BLOCK_END --> |
+| "This video exceeds the browser download size limit." | The file is larger than the size the tool can download in the browser. | The online tool can't download this file. Use the browser extension instead. |
+| "This browser does not have enough reliable local storage for this file…" | Before it starts, the tool checks how much storage your browser lets this site use. For a video that has to be merged, it needs room for the video stream, the audio stream and the finished MP4 at the same time, so it needs noticeably more than the final file size. The message also shows the file size and the storage that is available. | Free up disk space and try again. The message suggests the browser extension as an alternative. |
+| "This resource can only be downloaded with the browser extension. Install it to continue." | The online tool doesn't download this file, for example because it is very large or Vimeo doesn't report its size. | The online tool can't download this file. Use the browser extension instead. |
 | "This download method is not supported yet. Please try again later." | The tool received a delivery method it can't handle yet. | Try again later. |
-
-<!-- MEDIA: online-tool-error-message.png | alt: Vimeo Downloader showing the message "This Vimeo video is private or cannot be parsed." under the link field -->
 
 ## What the buttons mean
 
@@ -47,15 +46,17 @@ If the Vimeo Downloader online tool shows an error, find the exact message below
 
 [Contact us](/contact/) with the Vimeo link and the exact message you saw. Please don't send links to private or password-protected videos. The tool can't read them, and it doesn't help you get around Vimeo's access controls.
 
+**If only part of the file is a problem.** The online tool saves one MP4 with the picture and sound. If what you actually need is the separate audio track or the subtitles, a browser limitation won't be fixed by retrying: those are not part of what the online tool produces. The [Chrome extension](/ext-pricing/) handles [audio as M4A or MP3](/guides/save-vimeo-audio-as-mp3-or-m4a/) and [subtitles as VTT](/guides/download-vimeo-subtitles-as-vtt/), and it keeps large downloads running outside the tab.
+
 ## Frequently asked questions
 
-### Why does the tool say the video is private when I can watch it?
+### Why can't the tool read a video I can watch?
 
-Being able to watch a video while you are logged in, or after typing a password, is not the same as the video being public. The tool reads the video without logging in, so it only sees what an anonymous visitor sees. It doesn't unlock or bypass Vimeo's access controls.
+There are two common reasons. The tool reads the video through our server without logging in, so it only sees what an anonymous visitor sees, and being able to watch a video while you are logged in or after typing a password doesn't make it public. Our server's connection to Vimeo can also fail, even for a public video. The browser extension reads the video from the page open in your browser, so that connection doesn't matter. Neither the tool nor the extension unlocks or bypasses Vimeo's access controls.
 
 ### Does the tool work for every public Vimeo video?
 
-No. It saves the highest quality Vimeo provides for a public video as an MP4, and some files can be turned away, for example when they are very large or their size is unknown, or when your browser doesn't have enough storage.
+No. It saves the highest quality Vimeo provides for a public video as an MP4, and some files can be turned away, for example when they are very large or their size is unknown, or when your browser doesn't have enough storage. It can also fail to read a public video when our server's connection to Vimeo fails.
 
 ### Where do I find the file after the download finishes?
 

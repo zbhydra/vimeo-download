@@ -1,12 +1,12 @@
 ---
 title: How to download a Vimeo video
-seoTitle: 'How to Download a Vimeo Video: Button or Online Tool'
-description: "Use Vimeo's Download button when the owner enables it. For a public video you have the right to save, an online tool saves an MP4. Steps and limits."
+seoTitle: 'How to Download a Vimeo Video: Button, Tool or Extension'
+description: "Use Vimeo's Download button when the owner enables it. For a public video you have the right to save, an online tool or browser extension saves a file."
 publishedAt: 2026-10-07
-updatedAt: 2026-10-26
+updatedAt: 2026-11-02
 ---
 
-Look for the **Download** button below the video on vimeo.com. If the owner turned downloads on, that button is Vimeo's own way to get a file. For a public video you have the right to save, you can also paste its link into the [Vimeo Downloader online tool](/), which saves one video at a time as an MP4 in the highest quality Vimeo provides for it. Private, password-protected and paid videos are not supported, and you are responsible for having the right to save the video.
+Look for the **Download** button below the video on vimeo.com. If the owner turned downloads on, that button is Vimeo's own way to get a file. For a public video you have the right to save, you can also paste its link into the [Vimeo Downloader online tool](/), which saves one video at a time as an MP4 in the highest quality Vimeo provides for it. If the tool can't read the video, or you need a specific quality, the audio or the subtitles, use the [browser extension](#option-4-the-browser-extension). Private, password-protected and paid videos are not supported, and you are responsible for having the right to save the video.
 
 *Vimeo's help pages and this tool can change, so the official sources are linked where they matter.*
 
@@ -16,6 +16,7 @@ Look for the **Download** button below the video on vimeo.com. If the owner turn
 - **It's your own video:** download it from [your Vimeo Library](#your-own-videos).
 - **You only want to watch it offline on a phone or tablet:** use [the offline list in the Vimeo app](#option-2-the-offline-list-in-the-vimeo-app). It doesn't give you a file.
 - **You have the right to keep a copy of a public video:** use [the online tool](#option-3-the-online-tool-for-public-videos). It saves one MP4 per link.
+- **The online tool can't read the video, or you need a specific quality, the audio, subtitles or a clip:** use [the browser extension](#option-4-the-browser-extension).
 
 Not sure why the button is missing? Read [why a Vimeo video has no Download button](/guides/vimeo-download-button-missing/).
 
@@ -59,19 +60,34 @@ The [Vimeo Downloader online tool](/) is free, needs no account, and runs in you
 - **One MP4 per link.** The tool works on one link at a time and has no batch mode.
 - **The highest quality Vimeo provides for that video.** There is no quality menu. The result card shows the resolution before you download, so you know what you are getting.
 - **The video as a single file.** You get one MP4 with the picture and sound. Separate audio files, subtitle files and cover images are not part of it. If you need one of those on its own, the [Chrome extension](/ext-pricing/) can save [audio as M4A or MP3](/guides/save-vimeo-audio-as-mp3-or-m4a/) and [subtitles as VTT](/guides/download-vimeo-subtitles-as-vtt/).
-- **Public videos only.** The online tool only works with public videos. Private, password-protected and paid videos are not supported, and the tool does not remove DRM or unlock access controls. If it says "This Vimeo video is private or cannot be parsed", read [Vimeo Downloader not working](/guides/vimeo-downloader-not-working/).
-- **Very large files can be refused.** Files that are very large, or whose size Vimeo doesn't report, may be turned down. The tool also checks that your browser has enough storage before it starts.
+- **Public videos only.** The online tool only works with public videos. Private, password-protected and paid videos are not supported, and the tool does not remove DRM or unlock access controls. If it says it couldn't read the video from our server, the video may be private, or our server's connection to Vimeo may have failed, which can also happen to a public video. If the video plays in your browser, try [the browser extension](#option-4-the-browser-extension). [Vimeo Downloader not working](/guides/vimeo-downloader-not-working/) lists the other messages.
+- **Very large files can be refused.** Files that are very large, or whose size Vimeo doesn't report, may be turned down. The tool also checks that your browser has enough storage before it starts. In those cases the tool suggests the browser extension.
 - **Interrupted downloads.** If your connection drops while a single-file MP4 is downloading, the page retries on its own and, if that fails, shows **Continue** so you can pick up where it stopped. Videos that need merging can't be resumed; start those again.
+
+## Option 4: The browser extension
+
+The online tool reads a video through our server, and that connection to Vimeo can fail even for a public video. The Vimeo Downloader browser extension doesn't depend on it, because it reads the video from the Vimeo page you have open. It also does more than save one MP4. It adds a download panel with Video, Audio, Subtitle and Image rows, so you can:
+
+- pick a specific quality instead of the highest one;
+- save the audio as M4A, or as MP3 from the extension's popup;
+- save subtitles as VTT, if the video has any;
+- save just a time range of videos delivered as DASH or HLS streams;
+- save the cover image as a JPEG;
+- queue several downloads, even from different tabs, and let them run one after another.
+
+It runs in Chrome and other Chromium-based browsers on a computer, and only on vimeo.com and player.vimeo.com pages. It doesn't work in the Vimeo desktop or mobile apps, or on other sites. It's free to start, with a daily allowance and a paid Unlimited plan ([see Pricing](/ext-pricing/)), and signing in is optional. Private, password-protected and paid videos are not guaranteed to work, and it doesn't remove DRM or bypass Vimeo's access controls.
+
+[Install Vimeo Downloader from the Chrome Web Store](https://chromewebstore.google.com/detail/vimeo-downloader-download/joalfalamongfmejacciadcpdeahblai?utm_source=vimeodownloader.app&utm_medium=guide&utm_campaign=how-to-download-a-vimeo-video).
 
 ## Frequently asked questions
 
 ### Can I choose the resolution?
 
-With Vimeo's Download button you choose among the file sizes the owner offers. The online tool has no quality menu: it saves the highest quality Vimeo provides, and the result card shows the resolution before you download.
+With Vimeo's Download button you choose among the file sizes the owner offers. The online tool has no quality menu: it saves the highest quality Vimeo provides, and the result card shows the resolution before you download. The browser extension lets you pick a specific quality.
 
 ### Can I download several Vimeo videos at once?
 
-Not with the online tool. It handles one link at a time and reads only the first valid link if you paste several. According to Vimeo's help center, Vimeo's own download feature doesn't support bulk downloads either.
+Not with the online tool. It handles one link at a time and reads only the first valid link if you paste several. According to Vimeo's help center, Vimeo's own download feature doesn't support bulk downloads either. The browser extension can queue several downloads, one video at a time.
 
 ### Do I need an account?
 
@@ -87,7 +103,7 @@ It depends on the owner's settings, Vimeo's Terms of Service and copyright law. 
 
 ### What if the tool shows an error?
 
-Find the message in [Vimeo Downloader not working: error messages and fixes](/guides/vimeo-downloader-not-working/).
+Find the message in [Vimeo Downloader not working: error messages and fixes](/guides/vimeo-downloader-not-working/). If the tool can't read a video that plays in your browser, try [the browser extension](#option-4-the-browser-extension).
 
 ## Using the tool responsibly
 

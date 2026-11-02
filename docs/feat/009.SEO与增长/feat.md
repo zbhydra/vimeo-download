@@ -44,6 +44,7 @@
 - **多语言 Sitemap 治理**:根 sitemap index + 14 语言 sitemap + 扁平 sitemap + 可读样式表;每个 URL 带 lastmod(以页面族源文件的 git 提交时间为准);不输出 priority/changefreq;robots 只暴露根 sitemap 入口;排除 404/500 与四个支付回跳页。
 - **llms 文件**:短入口给一句话定位 + 核心页面 + Guides 文章;完整入口另给 14 语言入口与 sitemap 索引;英文为主;只引用真实存在的站内页面;不含邮箱与站外链接;robots 显式 Allow 这两个入口。
 - **导航与安装 CTA**:导航只有 Home 一个链接 + 安装按钮 + 语言切换;安装按钮带浏览器插件品牌图标。(Pricing 导航项已于 2026-10 移除,`/ext-pricing/` 仍可从首页方案区块进入。)
+- **Chrome 商店入口**:页面上所有安装按钮带来源参数(`utm_source`、`utm_medium=website`),商店后台才能把官网带来的访问单独拆出来;文章内的商店链接用 `utm_medium=guide` 和文章 slug 作为 `utm_campaign`。结构化数据里的商店地址和评价页地址不带参数。
 - **页脚**:Company(About / Contact)与 Resources(Guides / Terms / Privacy)两个分组,底部是版权行与运营主体说明行。Guides 只在当前语言有文章时出现。
 - **Guides 文章页**:`/guides/` 索引页 + 文章页,规则与界面见下文「Guides 文章页」。
 - **官方 X 身份入口（暂停）**:账号尚未可用,站内不出现 X 链接,`Organization.sameAs` 也不声明它;账号确认后按原规格恢复。当前支持渠道只有邮件与 Contact 页。
@@ -67,7 +68,7 @@
 
 ## 现状说明(以代码为准)
 
-- **页面集合**:首页、Pricing、About、Contact、Terms、Privacy 六个页面族(各 14 语言);Guides 页面族(索引页 + 6 篇文章,目前只有英文);外加仅英文、不收录的四个支付回跳页。已删除路由:平台落地页、更新日志；旧积分页路径 `/pricing/` 也不再生成。
+- **页面集合**:首页、Pricing、About、Contact、Terms、Privacy 六个页面族(各 14 语言);Guides 页面族(索引页 + 7 篇文章,目前只有英文);外加仅英文、不收录的四个支付回跳页。已删除路由:平台落地页、更新日志；旧积分页路径 `/pricing/` 也不再生成。
 - **首页即工具页**:首屏下载器沿用下载工作区,不重写解析 / 下载链路。
 - **导航与页脚只含上述入口**:没有 Solution 分组、没有 Changelog 链接、没有 Credits 或账户入口;文章入口在网页教程与页脚,不进导航。
 - **Sitemap 为自定义集成**:主站 sitemap 文件全部由构建生成。
@@ -99,12 +100,13 @@
 
 | 文章 | 地址 | 回答的问题 |
 | --- | --- | --- |
-| How to download a Vimeo video | `/guides/how-to-download-a-vimeo-video/` | 有哪些办法、先用哪个、在线工具的步骤与限制 |
+| How to download a Vimeo video | `/guides/how-to-download-a-vimeo-video/` | 有哪些办法、先用哪个、在线工具的步骤与限制、读不到时改用插件 |
 | Is it legal to download Vimeo videos? | `/guides/is-it-legal-to-download-vimeo-videos/` | 所有者设置、Vimeo 条款与版权法各管什么 |
 | Why a Vimeo video has no Download button | `/guides/vimeo-download-button-missing/` | 按钮缺失的三个原因,所有者与观众各能做什么 |
-| Vimeo Downloader not working | `/guides/vimeo-downloader-not-working/` | 在线工具每条报错的含义与处理 |
+| Vimeo Downloader not working | `/guides/vimeo-downloader-not-working/` | 在线工具每条报错的含义与处理;服务器读不到视频时改用插件 |
 | Save Vimeo audio as M4A or MP3 | `/guides/save-vimeo-audio-as-mp3-or-m4a/` | 只存音频:页内面板出 M4A、popup 出 MP3;在线工具只出 MP4 |
 | Download Vimeo subtitles as VTT | `/guides/download-vimeo-subtitles-as-vtt/` | 存字幕轨道为独立 `.vtt`;不是文字稿、不烧进视频、不转 SRT |
+| How to get the transcript of a Vimeo video | `/guides/how-to-get-a-vimeo-transcript/` | 页面 Transcript 面板、所有者下载、别人公开视频的字幕存为 VTT 后转纯文本、没有字幕时怎么办 |
 
 在线工具在文中一律写作「只针对公开视频」;文章不把它写成越过所有者关闭下载的办法。
 
@@ -165,7 +167,7 @@
 - **已删除页面**:平台落地页、更新日志及其语言版本不再生成;`/pricing/` 不存在,订阅购买页是 `/ext-pricing/`;导航、页脚、sitemap、llms 都无残留。
 - **导航与 CTA**:导航只有 Home + Pricing 两个链接(桌面与移动一致);安装按钮含插件品牌图标 + i18n 文案 + 跳转 Chrome Web Store;不出现 Solution 下拉或文章页入口。
 - **页脚**:只有 Company(About / Contact)与 Resources(Guides / Terms / Privacy);Guides 只在当前语言有文章时出现(目前只有英文页面);链接同当前语言前缀,链接文案随页面语言本地化;底部有版权行与运营主体说明行。
-- **Guides**:英文索引页与 6 篇文章可访问、可收录,各有唯一标题、描述、canonical 与一个一级标题;文章页有文章与面包屑结构化数据,索引页有合集页结构化数据;只有英文版本时不输出 hreflang、不显示语言切换器;其他语言不生成 Guides 地址;文中站内锚点都能跳到对应小节;手机上表格折成卡片,页面无横向滚动。
+- **Guides**:英文索引页与 7 篇文章可访问、可收录,各有唯一标题、描述、canonical 与一个一级标题;文章页有文章与面包屑结构化数据,索引页有合集页结构化数据;只有英文版本时不输出 hreflang、不显示语言切换器;其他语言不生成 Guides 地址;文中站内锚点都能跳到对应小节;手机上表格折成卡片,页面无横向滚动。
 - **品牌词**:页头品牌、14 语言首页 title、页脚、全站结构化数据的 name(WebSite / Organization)与 `og:site_name` 都是 `Vimeo Downloader`。
 - **法务页索引**:英文 Terms、Privacy 可收录;其余 13 语言的 Terms、Privacy 为 noindex、无 hreflang、不进 sitemap,正文标注为英文。
 - **Sitemap**:根 sitemap 是索引并收录 14 语言 sitemap;索引别名内容相同;扁平 sitemap 收录全部 canonical URL;每个 URL 有 loc + lastmod;不输出 priority/changefreq;URL 总数等于构建 canonical 页面数扣除 noindex 页;robots 屏蔽四个支付回跳页并指向根 sitemap。

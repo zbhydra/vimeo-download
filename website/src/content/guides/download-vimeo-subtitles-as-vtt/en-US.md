@@ -3,26 +3,27 @@ title: How to download subtitles from a Vimeo video as VTT
 seoTitle: How to Download Vimeo Subtitles and Captions as a VTT File
 description: "Save a Vimeo video's subtitles or captions as a .vtt file with the browser extension. Steps, what you get, limits, and why the online tool can't do it."
 publishedAt: 2026-10-25
-updatedAt: 2026-10-26
+updatedAt: 2026-11-02
 ---
 
-To save a Vimeo video's subtitles or captions, use the Vimeo Downloader browser extension. Open a public video that has subtitles, pick a language in the Subtitle row, and the extension saves it as a separate `.vtt` file. The [online tool](/) can't do this: it saves an MP4 video only. Vimeo's own transcript download covers only videos you or your team uploaded, and it needs a paid plan.
+To save a Vimeo video's subtitles or captions, use the Vimeo Downloader browser extension. Open a public video that has subtitles, pick a language in the Subtitle row, and the extension saves it as a separate `.vtt` file. The [online tool](/) can't do this: it saves an MP4 video only. Vimeo's own transcript download covers only videos you or your team uploaded, and it needs edit access.
 
-If you don't have the extension yet, [install it from the Chrome Web Store](https://chromewebstore.google.com/detail/vimeo-downloader-download/joalfalamongfmejacciadcpdeahblai).
+If you don't have the extension yet, [install it from the Chrome Web Store](https://chromewebstore.google.com/detail/vimeo-downloader-download/joalfalamongfmejacciadcpdeahblai?utm_source=vimeodownloader.app&utm_medium=guide&utm_campaign=download-vimeo-subtitles-as-vtt).
 
-*Last reviewed: October 25, 2026.*
+*Last reviewed: November 2, 2026.*
 
 ## What you get
 
 - **A separate `.vtt` file for the language you pick.** WebVTT is a W3C text format for captions and subtitles. A WebVTT file is encoded as UTF-8, and each caption is a time range, such as `00:00:00.000 --> 00:00:25.000`, followed by its text ([W3C WebVTT specification](https://www.w3.org/TR/webvtt1/)).
 - **The subtitles the video already has.** The extension doesn't create, edit or translate subtitles.
-- **Not a plain transcript.** The file contains timing lines as well as the text. The extension doesn't produce a clean text transcript.
+- **Auto-generated tracks too.** Many videos only have captions Vimeo generated automatically, listed with a name such as `English (auto-generated)`. They can contain errors, and the language in the name isn't always right, so read the text before you rely on it.
+- **Not a plain transcript.** The file contains timing lines as well as the text. The extension doesn't produce a clean text transcript, but [you can remove the timing lines yourself](/guides/how-to-get-a-vimeo-transcript/#turn-a-vtt-file-into-plain-text).
 - **Not merged into the video.** The subtitles stay in their own file. If you also want the video, see [How to download a Vimeo video](/guides/how-to-download-a-vimeo-video/).
 - **The whole track.** Subtitles always download as a full file, and the extension's Trim controls don't cut them.
 
 ## What you need
 
-- A Chrome or other Chromium-based browser with the extension installed.
+- Chrome or another Chromium-based browser on a computer, with the extension installed.
 - A public Vimeo video that has at least one subtitle or caption track, open on a vimeo.com or player.vimeo.com page.
 - The right to keep the subtitles. They can be protected by copyright, like the video and its audio. [Is it legal to download Vimeo videos?](/guides/is-it-legal-to-download-vimeo-videos/) explains the rules.
 
@@ -49,7 +50,7 @@ If the video page has no download panel at all, [Why a Vimeo video has no Downlo
 
 ## If the video is yours
 
-Vimeo's own transcript download is the first thing to try. Vimeo says it needs a paid plan and edit access to the video, and that transcripts are available only for videos with captions or subtitles uploaded or auto-generated. Select the video, choose **Languages** in the left-hand navigation, open the three-dot menu next to the transcript, and select **Download**. Vimeo says the file downloads as `.srt`, `.vtt` or `.ttml` ([How to view or download my video's transcript](https://help.vimeo.com/hc/en-us/articles/12425955868817-How-to-view-or-download-my-video-s-transcript), updated August 31, 2026).
+Vimeo's own transcript download is the first thing to try. Vimeo says it works on the Free plan and all paid plans, that you need edit access to the video, and that transcripts are available only for videos with captions or subtitles uploaded or auto-generated. Select the video, choose **Languages** in the left-hand navigation, open the three-dot menu next to the transcript, and select **Download**. Vimeo says the file downloads as `.srt`, `.vtt` or `.ttml` ([How to view or download my video's transcript](https://help.vimeo.com/hc/en-us/articles/12425955868817-How-to-view-or-download-my-video-s-transcript), updated October 8, 2026).
 
 ## Using the file
 

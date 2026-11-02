@@ -37,7 +37,7 @@
 https://chromewebstore.google.com/detail/vimeo-video-downloader/PLACEHOLDER_EXTENSION_ID/reviews
 ```
 
-URL 由 `website/src/lib/site.mjs` 的 `CHROME_WEB_STORE_URL` 派生,商店地址当前仍是占位值,上线前随该常量一起替换。点击事件中先异步发起 `web_extension_store_review_click` 双写,再同步用新标签页打开商店;日志失败不阻断跳转和倒计时。不与商店页建立消息通信,不检测评价是否提交。
+URL 由 `website/src/lib/site.mjs` 的 `CHROME_WEB_STORE_URL` 派生(不带 utm 的规范地址,因为要在后面拼 `/reviews`)。点击事件中先异步发起 `web_extension_store_review_click` 双写,再同步用新标签页打开商店;日志失败不阻断跳转和倒计时。不与商店页建立消息通信,不检测评价是否提交。
 
 ## 4. 页面数据
 

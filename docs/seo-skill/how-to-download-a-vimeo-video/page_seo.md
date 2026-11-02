@@ -1,6 +1,7 @@
 # page_seo：how-to-download-a-vimeo-video
 
 > 事实核实日期 2026-10-06。来源编号（V/G/P）见 `../README.md` §5。本文件是内容决策记录，不是运行时数据源。
+> **2026-11-02 修改已同步运行时（hydra「一次改完吧」），未部署。** 本页 §10 第 5 条「扩展上架后启用块」一直没有执行。这次恢复方法列表一条、Option 4 整节和 FAQ 里的扩展内容，并加入「在线工具读不到时改用插件」。A20 的能力清单已与 1.0.3 核对。Title 没有用「上架后」版本（63 字符，可能被截断），改为 `How to Download a Vimeo Video: Button, Tool or Extension`（56）；Meta 改为 `Use Vimeo's Download button when the owner enables it. For a public video you have the right to save, an online tool or browser extension saves a file.`（151）。本页尚未被抓取，改 Title 没有历史排名风险。
 
 ## 1. 基本信息
 

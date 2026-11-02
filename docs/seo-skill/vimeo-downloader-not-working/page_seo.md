@@ -1,6 +1,7 @@
 # page_seo：vimeo-downloader-not-working
 
-> 事实核实日期 2026-10-06。来源编号（V/G/P）见 `../README.md` §5。本文件是内容决策记录，不是运行时数据源。
+> 事实核实日期 2026-10-06，解析失败部分 2026-11-02 复核。来源编号（V/G/P）见 `../README.md` §5。本文件是内容决策记录，不是运行时数据源。
+> **2026-11-02 修改已同步运行时（hydra「一次改完吧」），未部署。** 改动：解析失败行换成新文案并说明公开视频也可能失败；启用上架前删掉的 3 处扩展建议；FAQ 第一问改写；开头和「Failed to parse」行引导改用插件。官网新文案和本页要同一次部署。
 
 ## 1. 基本信息
 
@@ -35,7 +36,7 @@
 |---|---|---|---|
 | C1 | 工具读取视频时不登录，只能看到匿名访客能看到的内容 | `backend/src/app/provider/media/vimeo_media.py` L1 文档串「匿名读取」；L329–331 新建无登录态的浏览器上下文 | 源码 |
 | C2 | 输入为空：「Please enter a media link.」；找不到有效链接：「This is not a valid URL.」；有效链接必须以 http:// 或 https:// 开头；只取第一条有效链接 | `website/src/scripts/download/workspace.ts` L168–178；`url.ts` L54–56、L79–94；`en-US.ts` L71–72 | 源码 |
-| C3 | 非 Vimeo 链接：「This link platform is not supported.」（错误码 24000/24031）；Vimeo 解析失败：「This Vimeo video is private or cannot be parsed.」（24005） | `workspace-errors.ts` L21–29、L78–86；`en-US.ts` L90–91 | 源码 |
+| C3 | 非 Vimeo 链接：「This link platform is not supported.」（错误码 24000/24031）；服务端读不到视频：「We couldn't read this video from our server…」（24005、24033、24034、24050，见 `SERVER_READ_FAILED_CODES`；2026-11-02 真实后端验证 24034。旧文案只挂在 24005 上，而 Provider 的 `VIMEO_PARSE_FAILED` 到 `parse-v2` 对外时已转成 24033，此前本行的判断只读了前端源码。文案和正文都先提示重试再引导插件：设计上「失败由用户重试」，见 `tech-网站Vimeo匿名解析与客户端合并.md`） | `workspace-errors.ts` L21–29、L78–86；`en-US.ts` L90–91 | 源码 |
 | C4 | 24005 的可能原因：非 Vimeo 主机或缺少数字视频 ID；取不到播放器配置；缺少 DASH 清单；缺少 AVC 视频轨或 AAC 音频轨且没有渐进式 MP4。正文写成「private、password-protected、paid、no longer available、链接不是单个视频、文件类型不支持」，没有写内部细节 | `vimeo_media.py` L140–148、L302–303、L480–483 | 源码 |
 | C5 | 「Too many requests. Please try again later.」对应错误码 998 与 24004；后端有两处限流：解析按用户或设备限流；下载材料刷新按已签名 token 的 `device_id` 限制 6 次/60 秒，旧 token 缺少 `device_id` 时按 `issued_ip` 回退，仍为 6 次/60 秒。因此正文写「提交或点击 Download 多次，也可能在工具繁忙时出现」，没有写数字 | `workspace-errors.ts` L21、L28、L65–69；`vimeo_media.py` L179–185、L207–215；`backend/src/app/utils/redis_fixed_limiter.py` L39–52、L73 | 源码 |
 | C6 | 通用兜底：「Failed to parse this link.」 | `workspace.ts` L247–250；`en-US.ts` L73 | 源码 |
@@ -52,6 +53,7 @@
 | C17 | 文件名是视频标题加 .mp4；浏览器按普通下载保存 | P4、P7 | 源码 |
 | C18 | `/contact/` 路由存在 | `website/src/pages/contact.astro` | 源码 |
 | C19 | 运营主体 Ginyo Technologies Limited；不隶属于 Vimeo, Inc.；仅限有权保存的公开视频 | 事实表；`en-US.ts` scope.compliance；`website/src/lib/site.mjs` `OPERATOR_LEGAL_NAME`（工作区未提交改动） | 源码 |
+| C20 | 工作区脚本加载失败：「The download tool couldn't load…」，要刷新页面才能恢复 | `workspace-loader.ts` `showRuntimeLoadError`；`en-US.ts` `workspaceLoadFailed` | 2026-11-02 真实浏览器断网复现：重新联网再点仍失败，刷新后恢复 |
 
 ## 4. 当前行为与待实施目标的差异
 
@@ -95,7 +97,7 @@
 
 | 文件名 | 内容 | alt | 说明 |
 |---|---|---|---|
-| `online-tool-error-message.png` | 在线工具链接输入框下方显示 "This Vimeo video is private or cannot be parsed." | Vimeo Downloader showing the message "This Vimeo video is private or cannot be parsed." under the link field | 用自己上传并设为私密的测试视频触发；不要用别人的视频 |
+| `online-tool-error-message.png` | 在线工具链接输入框下方显示 "We couldn't read this video from our server…" 和插件引导卡 | Vimeo Downloader showing the message "We couldn't read this video from our server" with the extension cards below it | 用自己上传并设为私密的测试视频触发；不要用别人的视频 |
 
 ## 10. 发布条件
 

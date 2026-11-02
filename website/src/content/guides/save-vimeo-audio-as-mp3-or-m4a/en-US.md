@@ -8,13 +8,13 @@ updatedAt: 2026-10-26
 
 To save only the audio of a public Vimeo video, use the Vimeo Downloader browser extension. Open the video on vimeo.com, then choose **Best Audio** in the Audio row of the page panel to get an M4A file, or open the extension's popup, set the Audio row's format to MP3 and select its download arrow. The [online tool](/) can't do this: it saves an MP4 video only.
 
-If you don't have the extension yet, [install it from the Chrome Web Store](https://chromewebstore.google.com/detail/vimeo-downloader-download/joalfalamongfmejacciadcpdeahblai).
+If you don't have the extension yet, [install it from the Chrome Web Store](https://chromewebstore.google.com/detail/vimeo-downloader-download/joalfalamongfmejacciadcpdeahblai?utm_source=vimeodownloader.app&utm_medium=guide&utm_campaign=save-vimeo-audio-as-mp3-or-m4a).
 
 *Last reviewed: October 25, 2026.*
 
 ## What you need
 
-- A Chrome or other Chromium-based browser with the extension installed.
+- Chrome or another Chromium-based browser on a computer, with the extension installed.
 - A public Vimeo video, open on a vimeo.com or player.vimeo.com page.
 - A video that offers a separate audio stream. If it doesn't, the Audio row stays empty. See [When the Audio row is empty](#when-the-audio-row-is-empty).
 - The right to keep the audio. The audio in a video, including any music in it, can be protected by copyright. [Is it legal to download Vimeo videos?](/guides/is-it-legal-to-download-vimeo-videos/) explains the rules.

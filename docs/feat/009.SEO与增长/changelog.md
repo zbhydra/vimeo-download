@@ -1,5 +1,17 @@
 # 009 · SEO 与增长 - 变更记录
 
+## 2026-11-02 官网商店入口加 UTM；新增文字稿文章，修正三篇指南
+
+**Why**：hydra 确定官网和插件商店两手抓，商店后台可按 UTM 拆分来源（developer.chrome.com/blog/cws-analytics-revamp），目前看不出官网带来多少商店访问。复核发现三篇已发布指南有问题：字幕篇写「官方文字稿下载需要付费计划」，官方 2026-10-08 已改为 Free 和付费都可用；not-working 篇引用的报错文案，在 `parse-v2` 主路径上并不是用户实际看到的；how-to 篇上架前拿掉的 Option 4 扩展节，上架后没有按计划恢复。
+
+**变更**：
+
+- `website/src/lib/site.mjs`：新增 `CHROME_WEB_STORE_INSTALL_URL`。`Layout.astro`、`HomePage.astro`、`PricingPage.astro`、`CompanyPage.astro` 的安装入口改用它。`sameAs` 和 `PricingSubscriptionConfirmModal.astro` 的评价地址用规范地址，因为后者要在地址后面拼 `/reviews`。
+- `docs/seo-skill/how-to-get-a-vimeo-transcript/`、`website/src/content/guides/how-to-get-a-vimeo-transcript/`：新增文字稿文章、决策记录和运行时正文；`website/public/llms.txt`、`llms-full.txt` 和本域 `feat.md` 同步登记。
+- `docs/seo-skill/{how-to-download-a-vimeo-video,vimeo-downloader-not-working,download-vimeo-subtitles-as-vtt,save-vimeo-audio-as-mp3-or-m4a}/en-US.md`：先用运行时正文覆盖旧源稿（旧稿还留着上架前的占位块），再写入修改。运行时正文已同步（hydra 2026-11-02「一次改完吧」）。how-to 篇的 `seoTitle` 和 `description` 同时改为含插件的版本，`save-vimeo-audio` 篇只改商店链接和浏览器说明，`updatedAt` 不变。
+- **未部署。** 部署要等 1.0.3 上架（新文章和字幕篇依赖它）和 2026-11-11 观察期结束；部署时重读官方页面并把日期改成实际日期。
+- `website/src/i18n/lang/*.ts`：解析失败文案写明插件只在电脑浏览器可用。手机浏览器装不了插件，原文案把手机用户引向走不通的路。
+
 ## 2026-11-02 `/es/`、`/pt/` Title 恢复当地动作词
 
 **Why**：10-27 把 14 语言 Title 统一成「免费 HD + Chrome 扩展」时，去掉了 es / pt 的动作词（`Descarga vídeos`、`Baixe vídeos`），而这两个市场搜的正是动作词。证据如下，GSC 资源为 `sc-domain:vimeodownloader.app`，网页搜索、全部国家与设备，选择过去 28 天（实际覆盖 10-06 至 10-31），2026-11-02 读取：

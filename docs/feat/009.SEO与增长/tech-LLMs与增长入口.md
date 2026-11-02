@@ -99,7 +99,7 @@ LLMs 文件**不包含**：
 1. **品牌**：Logo + 品牌名，指向当前语言首页。
 2. **Home 链接**：指向当前语言首页，当前页高亮。
 3. **Install CTA**：
-   - 主按钮（`btn-primary nav-install-link`），链接为 `CHROME_WEB_STORE_URL`，新标签页打开且带 `noopener`。
+   - 主按钮（`btn-primary nav-install-link`），链接为 `CHROME_WEB_STORE_INSTALL_URL`（`site.mjs`，在规范地址上加 `utm_source`、`utm_medium=website`），新标签页打开且带 `noopener`。结构化数据 `sameAs` 和评价页地址仍用不带参数的 `CHROME_WEB_STORE_URL`。
    - 左侧图标是 `public/googe-ext-logo-192px.svg` 图片，`alt` 为空，装饰用。
    - 可访问名称与按钮文字均取 `t.common.installCta`。
    - 沿用外链点击埋点（来源为 `nav`）。
