@@ -8,6 +8,7 @@ import {
   classifyOrderStatus,
   getDefaultOrderPaymentChannel,
   hasOrderPollingTimedOut,
+  isPendingOrderExpired,
   isPaymentGatewayError,
   isPaymentPriceUpdatedError,
   isRecoverableOrderStatusError,
@@ -135,6 +136,17 @@ describe('orderApi', () => {
     expect(getDefaultOrderPaymentChannel([paypal, clink])).toBe(clink)
     expect(getDefaultOrderPaymentChannel([paypal])).toBe(paypal)
     expect(getDefaultOrderPaymentChannel([])).toBeNull()
+  })
+
+  it('isPendingOrderExpired 只把过了 expired_at 的待支付订单算过期', () => {
+    const past = Date.now() - 1000
+    const future = Date.now() + 60_000
+    expect(isPendingOrderExpired(orderStatus({ order_status: 1, expired_at: past }))).toBe(true)
+    expect(isPendingOrderExpired(orderStatus({ order_status: 1, expired_at: future }))).toBe(false)
+    // 已支付的订单过了窗口也要走成功分支，不能算放弃。
+    expect(
+      isPendingOrderExpired(orderStatus({ order_status: 2, callback_status: 3, expired_at: past }))
+    ).toBe(false)
   })
 
   it('hasOrderPollingTimedOut 区分未开始与超时', () => {

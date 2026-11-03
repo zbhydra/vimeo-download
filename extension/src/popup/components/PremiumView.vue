@@ -397,7 +397,8 @@
  * 状态机：gate（未登录）→ loading → ready ⇄ creating → pending → success / failed；
  * 套餐配置与下单合同复用官网 pricing 同一套后端协议（checkout-configs → order/create
  * → 外部收银台 → 轮询 order/status），不发明新协议。轮询只在 popup 存活期间进行：
- * background 创建订单并保存当前用户的订单引用，重开视图立即向服务端查询该订单。
+ * background 创建订单并保存当前用户的订单引用，重开视图立即向服务端查询该订单；
+ * 用户点取消或订单已过可支付窗口后清除引用，不再恢复等待。
  */
 
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
@@ -415,6 +416,7 @@ import {
   getDefaultOrderPaymentChannel,
   getOrderStatus,
   hasOrderPollingTimedOut,
+  isPendingOrderExpired,
   isRecoverableOrderStatusError,
   ORDER_POLL_INTERVAL_MS,
   readPaymentUrl
@@ -866,6 +868,10 @@ async function pollOnce(): Promise<void> {
       )
       return
     }
+    if (isPendingOrderExpired(status)) {
+      handleCancelPayment()
+      return
+    }
     if (hasOrderPollingTimedOut(pollStartedAt.value)) {
       finishFailed('timeout')
     }
@@ -895,7 +901,7 @@ async function pollOnce(): Promise<void> {
   }
 }
 
-/** 清理失败只影响下次是否再查询，不改变服务端已经确认的结果。 */
+/** 清理失败只影响下次是否再恢复等待，不改变服务端的订单状态。 */
 function forgetOrderReference(completedOrderNo: string): void {
   background.clearOrderReference({ orderNo: completedOrderNo }).catch(error => {
     logger.error(`[PremiumView] 清理已终态订单引用失败: orderNo=${completedOrderNo}`, error)
@@ -934,9 +940,16 @@ function finishFailed(reason: FailedReason): void {
   phase.value = 'failed'
 }
 
-/** 用户放弃等待：停止轮询并回到套餐选择；订单留待服务端过期。 */
+/**
+ * 放弃等待：停止轮询、不再恢复这笔订单并回到套餐选择。
+ *
+ * 不调用服务端取消：用户可能还在收银台付款，已取消的订单收到支付回调不会履约。
+ */
 function handleCancelPayment(): void {
   stopPolling()
+  if (orderNo.value) {
+    forgetOrderReference(orderNo.value)
+  }
   void loadPlans()
 }
 

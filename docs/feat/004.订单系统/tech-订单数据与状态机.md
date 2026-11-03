@@ -353,7 +353,7 @@ class OrderCheckProductParam:   # 下单前校验输入(api 层组装,service �
 
 `extension/src/background/services/orderCheckout.ts` 的 `createCheckoutOrder` 在返回收银台前保存唯一 `{userId, orderNo}` 定位到 `latest_order_reference`；不在客户端保存交易阶段。`PremiumView.enterView` 重开时只取当前用户引用并查询服务端 status，轮询仅在 popup 存活期间运行。其他账号的引用不返回，也不因此删除。
 
-仅服务端终态或订单不存在时，按当前用户与订单号匹配清除引用；网络错误、超时、关闭视图或取消等待保留引用，用户可重开再查。价格更新拒绝经 background typed 结果保留为 `priceUpdated`，视图重新读取 checkout 配置。支付与履约仍由原服务端链路完成。
+以下情况按当前用户与订单号匹配清除引用：服务端终态或订单不存在；用户点取消等待；查询到待支付订单已过 `expired_at`（服务端不写 `EXPIRED`，§7，不能等它过期）。后两种直接回到套餐选择，不调用服务端取消接口：用户可能还在收银台付款，已取消的订单收到支付回调不会履约。网络错误、轮询超时、关闭视图保留引用，用户可重开再查。价格更新拒绝经 background typed 结果保留为 `priceUpdated`，视图重新读取 checkout 配置。支付与履约仍由原服务端链路完成。
 
 ## 10. 事务边界
 

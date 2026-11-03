@@ -176,6 +176,15 @@ export function classifyOrderStatus(status: OrderStatusResponse): OrderStatusOut
   return 'pending'
 }
 
+/**
+ * 待支付订单是否已过可支付窗口。
+ *
+ * 服务端不会把过期订单改成 EXPIRED，它们一直是待支付，所以客户端要自己看 `expired_at`。
+ */
+export function isPendingOrderExpired(status: OrderStatusResponse): boolean {
+  return classifyOrderStatus(status) === 'pending' && Date.now() >= status.expired_at
+}
+
 /** 判断轮询是否超过自动等待窗口。 */
 export function hasOrderPollingTimedOut(pollStartedAt: number | null): boolean {
   return pollStartedAt !== null && Date.now() - pollStartedAt >= ORDER_POLL_TIMEOUT_MS

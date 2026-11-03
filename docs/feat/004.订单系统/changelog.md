@@ -1,5 +1,14 @@
 # 004 · 订单系统 - 变更记录
 
+## 2026-11-03 插件取消等待后不再恢复订单
+
+**Why**：插件订阅页重开时按本地订单引用恢复「等待支付」，只有服务端终态才清引用，点「Cancel payment」也保留，注释写的是「订单留待服务端过期」。但服务端不写 `EXPIRED`（`tech-订单数据与状态机.md` §7），待支付订单永远是待支付，所以用户点多少次取消，下次打开还是等待页，已开通 Unlimited 也一样。hydra 手测 1.0.3 生产包时发现。
+
+**变更**：
+- `extension/src/popup/components/PremiumView.vue`：`handleCancelPayment` 清除订单引用；轮询查到待支付订单已过 `expired_at` 时走同一路径，回到套餐选择。不调用服务端取消接口：已取消的订单收到支付回调不会履约，用户可能还在收银台付款。
+- `extension/src/core/api/order/api.ts`：新增 `isPendingOrderExpired`。
+- `tech-订单数据与状态机.md` §9.4、`feat.md` 同步。
+
 ## 2026-10-06 支付回跳页返回链接改回 `/ext-pricing/`
 
 **Why**：005 恢复订阅购买页 `/ext-pricing/`，回跳页「返回价格页」随之改回。决策见 `../000.架构/plans/005.官网视觉升级与Pricing路径改回.md`。

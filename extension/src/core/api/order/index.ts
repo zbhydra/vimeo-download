@@ -10,6 +10,7 @@ export {
   readPaymentUrl,
   classifyOrderStatus,
   hasOrderPollingTimedOut,
+  isPendingOrderExpired,
   isRecoverableOrderStatusError,
   isPaymentPriceUpdatedError,
   isActiveSubscriptionExistsError,

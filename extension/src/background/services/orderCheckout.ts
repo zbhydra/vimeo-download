@@ -60,7 +60,7 @@ export async function getLatestOrderReference(): Promise<BackgroundOrderReferenc
   return user && reference?.userId === user.user_id ? reference : null
 }
 
-/** 服务端确认终态后，清理仍属于当前用户、且订单号匹配的引用。 */
+/** 订单不再需要恢复等待时，清理仍属于当前用户、且订单号匹配的引用。 */
 export async function clearOrderReference(orderNo: string): Promise<void> {
   const reference = await getLatestOrderReference()
   if (reference?.orderNo === orderNo) {
