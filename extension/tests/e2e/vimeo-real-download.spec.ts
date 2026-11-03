@@ -176,7 +176,10 @@ async function checkPopupDialogs(popup: Page): Promise<void> {
   ])
   await expect(login).toHaveURL(/\/ext-login\.html\?source=popup$/)
   await expect(login.locator('.login-google-button')).toBeVisible()
-  await expect(login.locator('input[type="email"]')).toBeVisible()
+  const emailInput = login.locator('input[type="email"]')
+  await expect(emailInput).toHaveCount(0)
+  await login.locator('.login-email-link').click()
+  await expect(emailInput).toBeVisible()
   await login.close()
   await popup.bringToFront()
 }

@@ -5,6 +5,7 @@
 **Why**：希望用户尽量用 Google 登录，邮箱输入框不应一开始就占据页面。交互与官网认证弹窗对齐。
 
 - `extension/src/login/LoginPanel.vue`：首屏只显示 Google 按钮和 `or Continue with email` 一行；点入口展开邮箱表单并聚焦输入框；Google 要求邮箱二次确认时直接展开。文案复用已有 i18n key。
+- `extension/tests/e2e/vimeo-real-download.spec.ts`、`test-插件端e2e.md`：登录入口改为检查邮箱表单默认收起、点入口后出现。
 
 ## 2026-10-22 插件登录统一到登录页
 
