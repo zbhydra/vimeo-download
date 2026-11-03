@@ -238,7 +238,7 @@ Authorized JavaScript origins 需包含 `https://vimeodownloader.app`；本地 O
 
 ### 9.4 插件登录页
 
-插件登录页是 Google 与邮箱登录的唯一承载面，Google 按钮与邮箱表单同页常驻。Popup 与插件订阅页只提供登录入口。UI 规格见 [用户系统产品需求](./feat.md#extension-插件登录页)。
+插件登录页是 Google 与邮箱登录的唯一承载面。首屏引导 Google，邮箱表单默认收起，点邮箱入口或 Google 要求邮箱二次确认时展开。Popup 与插件订阅页只提供登录入口。UI 规格见 [用户系统产品需求](./feat.md#extension-插件登录页)。
 
 文件树：
 

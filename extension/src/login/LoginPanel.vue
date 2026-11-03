@@ -28,61 +28,72 @@
       </svg>
       <span>{{ t(I18N_KEYS.AUTH.MODAL_CONTINUE_WITH_GOOGLE) }}</span>
     </button>
-    <div class="login-panel-divider">{{ t(I18N_KEYS.AUTH.MODAL_OR) }}</div>
 
-    <form class="login-panel-form" @submit.prevent="handleSubmit">
-      <label class="login-field">
-        <span class="login-field-label">{{ t(I18N_KEYS.AUTH.MODAL_EMAIL_LABEL) }}</span>
-        <input
-          v-model.trim="email"
-          type="email"
-          autocomplete="email"
-          class="login-input"
-          :placeholder="t(I18N_KEYS.AUTH.MODAL_EMAIL_PLACEHOLDER)"
-          :disabled="busy"
-        />
-      </label>
-
-      <button
-        v-if="step === 'email'"
-        type="button"
-        class="login-primary-button"
-        :disabled="busy"
-        @click="handleSendCode"
-      >
+    <div v-if="!emailFormOpen" class="login-email-entry">
+      <span>{{ t(I18N_KEYS.AUTH.MODAL_OR) }}</span>
+      <button type="button" class="login-email-link" :disabled="busy" @click="openEmailForm">
         {{ t(I18N_KEYS.AUTH.MODAL_CONTINUE_WITH_EMAIL) }}
       </button>
+    </div>
 
-      <div v-else class="login-code-area">
+    <template v-else>
+      <div class="login-panel-divider">{{ t(I18N_KEYS.AUTH.MODAL_OR) }}</div>
+
+      <form class="login-panel-form" @submit.prevent="handleSubmit">
         <label class="login-field">
-          <span class="login-field-label">{{ t(I18N_KEYS.AUTH.MODAL_CODE_LABEL) }}</span>
-          <div class="login-code-row">
-            <input
-              v-model.trim="code"
-              type="text"
-              inputmode="numeric"
-              autocomplete="one-time-code"
-              maxlength="6"
-              class="login-input login-code-input"
-              :placeholder="t(I18N_KEYS.AUTH.MODAL_CODE_PLACEHOLDER)"
-              :disabled="busy"
-            />
-            <button
-              type="button"
-              class="login-secondary-button"
-              :disabled="busy"
-              @click="handleSendCode"
-            >
-              {{ t(I18N_KEYS.AUTH.MODAL_RESEND) }}
-            </button>
-          </div>
+          <span class="login-field-label">{{ t(I18N_KEYS.AUTH.MODAL_EMAIL_LABEL) }}</span>
+          <input
+            ref="emailInput"
+            v-model.trim="email"
+            type="email"
+            autocomplete="email"
+            class="login-input"
+            :placeholder="t(I18N_KEYS.AUTH.MODAL_EMAIL_PLACEHOLDER)"
+            :disabled="busy"
+          />
         </label>
 
-        <button type="submit" class="login-primary-button" :disabled="busy">
-          {{ t(I18N_KEYS.AUTH.MODAL_SIGN_IN) }}
+        <button
+          v-if="step === 'email'"
+          type="button"
+          class="login-primary-button"
+          :disabled="busy"
+          @click="handleSendCode"
+        >
+          {{ t(I18N_KEYS.AUTH.MODAL_CONTINUE_WITH_EMAIL) }}
         </button>
-      </div>
-    </form>
+
+        <div v-else class="login-code-area">
+          <label class="login-field">
+            <span class="login-field-label">{{ t(I18N_KEYS.AUTH.MODAL_CODE_LABEL) }}</span>
+            <div class="login-code-row">
+              <input
+                v-model.trim="code"
+                type="text"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                maxlength="6"
+                class="login-input login-code-input"
+                :placeholder="t(I18N_KEYS.AUTH.MODAL_CODE_PLACEHOLDER)"
+                :disabled="busy"
+              />
+              <button
+                type="button"
+                class="login-secondary-button"
+                :disabled="busy"
+                @click="handleSendCode"
+              >
+                {{ t(I18N_KEYS.AUTH.MODAL_RESEND) }}
+              </button>
+            </div>
+          </label>
+
+          <button type="submit" class="login-primary-button" :disabled="busy">
+            {{ t(I18N_KEYS.AUTH.MODAL_SIGN_IN) }}
+          </button>
+        </div>
+      </form>
+    </template>
 
     <p v-if="statusMessage" class="login-panel-status" role="status" aria-live="polite">
       {{ statusMessage }}
@@ -105,9 +116,9 @@
 
 <script setup lang="ts">
 /**
- * 插件登录页表单：Google 与邮箱入口常驻，邮箱发码后原地展示验证码步骤。
+ * 插件登录页表单：优先引导 Google，邮箱表单默认收起；发码后原地展示验证码步骤。
  */
-import { ref } from 'vue'
+import { nextTick, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { I18N_KEYS } from '@/core/constants/i18n'
 import { logger } from '@/core/utils/logger'
@@ -145,12 +156,21 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
+const emailFormOpen = ref(false)
+const emailInput = ref<HTMLInputElement | null>(null)
 const step = ref<LoginStep>('email')
 const email = ref('')
 const code = ref('')
 const busy = ref(false)
 const statusMessage = ref('')
 const errorMessage = ref('')
+
+/** 展开邮箱表单，焦点直接落到输入框。 */
+async function openEmailForm(): Promise<void> {
+  emailFormOpen.value = true
+  await nextTick()
+  emailInput.value?.focus()
+}
 
 /** 发送验证码并展开验证码区。 */
 async function handleSendCode(): Promise<void> {
@@ -230,6 +250,7 @@ async function handleGoogleLogin(): Promise<void> {
     }
 
     if (result.status === 'email_verification') {
+      emailFormOpen.value = true
       email.value = result.email
       step.value = 'code'
       statusMessage.value = t(I18N_KEYS.AUTH.MODAL_CODE_SENT)
@@ -313,6 +334,36 @@ function openPrivacy(): void {
 }
 
 .login-google-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.login-email-entry {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--login-gray-500);
+}
+
+.login-email-link {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--login-primary);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.login-email-link:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.login-email-link:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }

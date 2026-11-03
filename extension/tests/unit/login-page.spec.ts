@@ -75,13 +75,20 @@ describe('插件登录页 URL 与入口', () => {
 })
 
 describe('登录页 Google 结果', () => {
-  it('Google 按钮与邮箱表单同时可见', () => {
+  it('默认只有 Google 按钮和邮箱入口，点入口才展开邮箱表单并聚焦', async () => {
     const wrapper = mount(LoginPanel, {
       props: { source: 'popup' },
-      global: { plugins: createPlugins() }
+      global: { plugins: createPlugins() },
+      attachTo: document.body
     })
     expect(wrapper.find('.login-google-button').exists()).toBe(true)
-    expect(wrapper.find('input[type="email"]').exists()).toBe(true)
+    expect(wrapper.find('.login-email-link').exists()).toBe(true)
+    expect(wrapper.find('input[type="email"]').exists()).toBe(false)
+
+    await wrapper.get('.login-email-link').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('.login-email-link').exists()).toBe(false)
+    expect(document.activeElement).toBe(wrapper.get('input[type="email"]').element)
     expect(wrapper.find('input[autocomplete="one-time-code"]').exists()).toBe(false)
     wrapper.unmount()
   })
@@ -126,7 +133,7 @@ describe('登录页 Google 结果', () => {
     wrapper.unmount()
   })
 
-  it('cancelled 保留表单，成功事件为零且不重复记录取消', async () => {
+  it('cancelled 保持当前界面，成功事件为零且不重复记录取消', async () => {
     mocks.startGoogleLogin.mockResolvedValue({ status: 'cancelled', reason: 'user_closed_window' })
     const wrapper = mount(LoginPanel, {
       props: { source: 'popup' },
@@ -135,7 +142,8 @@ describe('登录页 Google 结果', () => {
     await wrapper.get('.login-google-button').trigger('click')
     await flushPromises()
     expect(wrapper.emitted('success')).toBeUndefined()
-    expect(wrapper.find('form').exists()).toBe(true)
+    expect(wrapper.find('form').exists()).toBe(false)
+    expect(wrapper.get('.login-email-link').attributes('disabled')).toBeUndefined()
     expect(wrapper.get('.login-google-button').attributes('disabled')).toBeUndefined()
     expect(mocks.recordMark).not.toHaveBeenCalled()
     wrapper.unmount()
