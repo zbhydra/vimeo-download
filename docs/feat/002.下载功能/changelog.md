@@ -10,7 +10,7 @@
 **变更**：
 
 - `extension/src/sites/vimeo/shared.ts`：字幕白名单加入 `captions.vimeo.com/captions/*`。新增单测和真实 E2E（`tests/e2e/vimeo-real-subtitle.spec.ts`）。
-- 插件版本升到 1.0.3，14 语言商店短描述改为写明 MP4、MP3/M4A、VTT 和 4K，详细描述同步（`docs/store/`）。
+- 插件版本升到 1.0.3，14 语言商店短描述改为写明 MP4、MP3/M4A、VTT 和 4K，详细描述同步（`docs/assets/store/`）。原 `docs/store/locales/` 与这里各有一份详细描述并已不一致，线上用的是前者的短版，现合并到 `docs/assets/store/`，`verify-descriptions.mjs` 校验的也是这里。
 - `website/src/scripts/download/workspace-errors.ts`：24005、24033、24034、24050 统一映射到 `serverReadFailed`（原键名 `vimeoParseFailed` 已不准确）；14 语言文案改写，说明可能原因，提示重试，仍失败再改用下方插件。真实后端跑通桌面和手机页面。
 - `website/src/scripts/download/workspace-loader.ts`：工作区脚本加载失败（断网、部署后旧页面）时，用户点提交原来毫无反应，现在显示 `workspaceLoadFailed`，提示检查网络并刷新。真实浏览器验证：Chromium 会缓存失败的动态 import，重新联网再点也不会恢复，刷新后才恢复。
 - 真实样本：1196869805 从 2026-10-22 起返回 401（后端日志 `vimeo_config_missing`），1194296700 同样失效。`extension/tests/e2e/vimeo-real-download.spec.ts`、`website/e2e/vimeo-client-mux-real.spec.ts`、`website/e2e/parse-download-smoke.spec.ts`、`backend/tests/integration/real/api/client/test_vimeo_media_api_real.py` 和相关文档换成 1225933284。

@@ -9,8 +9,22 @@
 - `website/src/lib/site.mjs`：新增 `CHROME_WEB_STORE_INSTALL_URL`。`Layout.astro`、`HomePage.astro`、`PricingPage.astro`、`CompanyPage.astro` 的安装入口改用它。`sameAs` 和 `PricingSubscriptionConfirmModal.astro` 的评价地址用规范地址，因为后者要在地址后面拼 `/reviews`。
 - `docs/seo-skill/how-to-get-a-vimeo-transcript/`、`website/src/content/guides/how-to-get-a-vimeo-transcript/`：新增文字稿文章、决策记录和运行时正文；`website/public/llms.txt`、`llms-full.txt` 和本域 `feat.md` 同步登记。
 - `docs/seo-skill/{how-to-download-a-vimeo-video,vimeo-downloader-not-working,download-vimeo-subtitles-as-vtt,save-vimeo-audio-as-mp3-or-m4a}/en-US.md`：先用运行时正文覆盖旧源稿（旧稿还留着上架前的占位块），再写入修改。运行时正文已同步（hydra 2026-11-02「一次改完吧」）。how-to 篇的 `seoTitle` 和 `description` 同时改为含插件的版本，`save-vimeo-audio` 篇只改商店链接和浏览器说明，`updatedAt` 不变。
-- **未部署。** 部署要等 1.0.3 上架（新文章和字幕篇依赖它）和 2026-11-11 观察期结束；部署时重读官方页面并把日期改成实际日期。
 - `website/src/i18n/lang/*.ts`：解析失败文案写明插件只在电脑浏览器可用。手机浏览器装不了插件，原文案把手机用户引向走不通的路。
+
+**部署**：
+
+- 已部署生产，版本 `v20261102_213914`，上一版 `v20261102_155453`；IndexNow 返回 202。hydra 决定不等 1.0.3 和 2026-11-11：10-26 实验的观察期记录是 7–14 天，到部署当天已满 7 天，期间也已有其他上线。
+- 部署前核对：相对线上构建，页面从 95 增加到 96，只多文字稿文章；可见文本变化 5 页（4 篇旧文章和 Guides 索引）；Title 只变 how-to 篇；静态文件变化只有 sitemap 和 llms；Nginx 配置校验值与服务器一致。
+
+**线上验证**（2026-11-02，真实浏览器，不拦截请求）：
+
+- 7 篇文章在 1280px 和 390px 都返回 200、无横向溢出，55 条站内链接无断链；含商店链接的 5 篇都带各自的 `utm_campaign`（legal 和 button-missing 两篇没有商店链接），首页带 `utm_medium=website`；`llms.txt`、`llms-full.txt`、sitemap、Guides 索引都有新文章。
+- 报错：空输入、`abc`、YouTube 链接的提示正确；`/de/` 手机宽度下频道链接返回 24033，显示 `serverReadFailed` 德语文案，无溢出，插件卡在。断网时点解析显示 `workspaceLoadFailed`，刷新后恢复。
+- 解析和下载：`https://vimeo.com/1225933284` 在正式版 Chrome 156 的普通配置和隐身上下文下都保存 189,516,045 字节，H.264/AAC、高 1412、130.6 秒，ffmpeg 完整解码无错误。
+- 测试环境坑：Playwright 自带的 Chromium 143 在 `browser.newContext()`（隐身上下文）里，OPFS 文件会静默变短且不报错，保存出来的 MP4 没有 moov，ffprobe 报 `moov atom not found`。同一样本在该 Chromium 的普通配置下完整，正式版 Chrome 156 的隐身上下文（无头）也完整。更旧版本的 Chrome、其他 Chromium 内核浏览器的隐身窗口没有测过，产品代码也不校验合成文件的长度，这些环境如果有同样的行为，用户会拿到损坏文件且没有提示。官网下载验证要用 `channel: 'chrome'`。
+- 10015（提示刷新）：正式版 Chrome 的两次全新环境，首次点击在页面刚加载完时都返回 10015，15 秒后不刷新重试成功。2026-11-03 再测 6 个全新隐身上下文（2 次加载完立刻点，2 次等 Logo 返回后点，另外 2 次等 2 秒、5 秒后点）都返回 10000，其中立刻点的 2 次在 Logo 响应回来前就发出了解析请求，也通过了。没有复现，原因未确认，不能认定是点击抢在 Logo 请求前面。用户侧按 007 的设计提示刷新后重试。
+
+**已知限制**：1.0.3 上架前，文字稿文章和字幕篇的插件保存字幕步骤在受影响视频上走不通。文字稿文章等 1.0.3 上架后再到 GSC 提交「要求建立索引」。
 
 ## 2026-11-02 `/es/`、`/pt/` Title 恢复当地动作词
 

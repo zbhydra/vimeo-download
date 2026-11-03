@@ -11,16 +11,11 @@ The name and short description come from the extension package (`extension/publi
 
 ## Detailed description
 
-The complete English store copy is maintained in [locales/en.md](locales/en.md). Copy its **Detailed description** section into the Chrome Web Store listing.
+The store copy lives in [../assets/store/](../assets/store/), one file per locale (`en_US.txt`, `zh_CN.txt` and so on). Each file contains only the detailed description, ready to paste into the Chrome Web Store listing. After saving, `extension/scripts/cws-publish/verify-descriptions.mjs` checks the listing against these files.
 
-## Permission justifications
+## Permission justifications and single purpose
 
-- storage: save extension settings, download history, and local device state.
-- identity: support the extension's optional account sign-in flow.
-- downloads: create and track browser downloads requested by the user.
-- offscreen: process media work that cannot run in the popup document.
-- notifications: report download completion and actionable failures.
-- Vimeo host permissions: read media metadata and add download controls on supported Vimeo pages.
+See [../assets/store/permission-reasons.md](../assets/store/permission-reasons.md) and [../assets/store/single-purpose.md](../assets/store/single-purpose.md).
 
 ## Privacy statement
 

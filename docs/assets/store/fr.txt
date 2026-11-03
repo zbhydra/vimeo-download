@@ -1,186 +1,23 @@
-Vimeo Downloader — Enregistrez les vidéos, l'audio, les sous-titres et les images de couverture Vimeo dans Chrome
+Téléchargez les vidéos Vimeo en MP4, enregistrez l'audio en MP3 ou M4A et les sous-titres en fichiers VTT, directement depuis la page que vous regardez. Démarrage gratuit.
 
-Une extension Chrome pour les spectateurs de Vimeo qui veulent une copie locale de la vidéo qu'ils regardent déjà, avec un panneau dans la page pour télécharger vidéo, audio, sous-titres et image de couverture.
+Vimeo Downloader ajoute un panneau de téléchargement aux pages Vimeo compatibles. Inutile de copier des liens dans un autre site : l'extension fonctionne dans votre propre navigateur.
 
+Ce que vous pouvez enregistrer :
 
-CE QUE C'EST
+- Vidéo : toute qualité proposée par la source, jusqu'en 4K, en MP4.
+- Audio : uniquement le son, en M4A ou MP3.
+- Sous-titres : chaque langue disponible dans un fichier VTT, y compris les pistes générées automatiquement. Un fichier VTT s'ouvre dans n'importe quel éditeur de texte et sert de transcription horodatée.
+- Vignette : l'image de couverture de la vidéo.
+- Extrait : coupez une plage de temps d'une qualité DASH ou HLS avant le téléchargement.
 
-Vimeo Downloader est une extension Chrome pour les pages vidéo Vimeo compatibles (vimeo.com, www.vimeo.com et player.vimeo.com). Elle analyse les informations de lecture du lecteur et propose des boutons pour télécharger vidéo, audio, sous-titres et image de couverture.
+Conçue pour les longues vidéos :
 
-Ce n'est pas un client Vimeo, ni un bot, ni un téléchargeur autonome. Elle détecte les ressources sur les pages Vimeo compatibles et exécute les téléchargements en arrière-plan dans le navigateur.
+- Mettez plusieurs téléchargements en file d'attente et continuez à naviguer.
+- Gérez les gros fichiers avec le découpage automatique ou le mode de flux vers un seul fichier.
+- Suivez la progression, les fichiers terminés, les échecs et l'historique dans le popup.
 
+L'extension fonctionne sur les pages compatibles de vimeo.com et player.vimeo.com. Elle lit les informations du média sur la page et ne contourne ni connexion, ni paywall, ni DRM, ni aucun autre contrôle d'accès. Téléchargez uniquement les contenus que vous avez le droit d'enregistrer. Vimeo Downloader est un outil indépendant, sans lien avec Vimeo, Inc.
 
-À QUI CELA S'ADRESSE
+Usages courants : enregistrer une leçon de cours autorisée, une revue de portfolio, une démo de produit, un entretien ou un extrait de référence pour le regarder hors ligne ou le monter.
 
-Vous êtes probablement arrivé sur cette page parce que vous voulez l'une des choses suivantes :
-
-1. Une copie locale d'une vidéo que vous regardez
-   La vidéo se lit dans le navigateur, mais la page n'offre aucune possibilité de l'enregistrer.
-
-2. Une qualité précise plutôt que celle par défaut
-   Vous voulez le fichier 720p ou 1080p, ou seulement la piste audio, plutôt que ce que le lecteur diffuse à ce moment-là.
-
-3. L'image de couverture
-   Vous voulez l'image de couverture de la vidéo dans un fichier à part.
-
-4. Plusieurs fichiers en file d'attente
-   Vous voulez ajouter les éléments un par un depuis la fenêtre contextuelle et les télécharger dans l'ordre.
-
-Si rien de tout cela ne correspond à votre situation, les options d'enregistrement de votre navigateur suffisent probablement et vous n'avez pas besoin de cette extension.
-
-
-FONCTIONNALITÉS PRINCIPALES
-
-### Panneau de téléchargement dans la page
-Sur les pages vidéo Vimeo compatibles, l'extension ajoute un petit panneau près du titre ou des commandes, avec quatre lignes :
-
-- Video : un bouton par qualité vidéo disponible
-- Audio : un bouton par piste audio disponible
-- Subtitle : pistes de sous-titres disponibles
-- Image : l'image de couverture
-
-Si ce type de fichier est indisponible, la ligne affiche un emplacement désactivé. Le panneau est reconstruit lorsque vous passez à une autre vidéo sans recharger la page.
-
-### Téléchargement de vidéos
-Enregistre la vidéo dans un fichier MP4. Selon ce que le lecteur Vimeo propose pour cette vidéo, vous verrez :
-
-- Des entrées MP4 directes étiquetées avec leur résolution, par exemple « 720p MP4 » ou « 1080p MP4 »
-- Des entrées adaptatives étiquetées « 1080p HD », où les pistes vidéo et audio sont combinées en un seul MP4 avant l'enregistrement
-- Une entrée de repli « 1080p HLS » pour les vidéos qui ne proposent que ce mode de diffusion
-- Un bouton « Best » qui choisit la meilleure qualité disponible pour cette vidéo
-
-Seules les qualités identifiées sont listées. La vidéo est assemblée sans transcodage ni agrandissement ; la sortie audio MP3 utilise un transcodage.
-
-### Téléchargement de l'audio
-Enregistre la piste audio en M4A, ou en MP3 avec transcodage via la fenêtre contextuelle. Les boutons indiquent le débit (par exemple « 128 kbps ») et « Best Audio » choisit le débit le plus élevé disponible.
-
-### Sous-titres, découpe et réglages
-Enregistre les sous-titres disponibles en VTT. La fenêtre contextuelle permet de découper vidéo et audio adaptatifs ; la vidéo est découpée sans transcodage, à la précision des images clés. Les MP4 progressifs sont enregistrés en entier. La découpe télécharge toujours la source complète. Les réglages comprennent le sous-dossier, le modèle de nom de fichier et la langue. L'historique local des téléchargements réussis et échoués peut être exporté en CSV.
-
-### Téléchargement de l'image de couverture
-Enregistre l'image de couverture de la vidéo dans un fichier JPEG.
-
-### Liste des ressources dans la fenêtre contextuelle
-Cliquez sur l'icône de l'extension pour voir tous les éléments téléchargeables que l'onglet courant a identifiés :
-
-- Lignes pour vidéo, audio, sous-titres et images ; les MP4 progressifs ont une ligne de téléchargement direct distincte
-- Choisir une option et télécharger un élément depuis sa ligne
-- Progression en direct, vitesse de transfert et état par élément
-
-
-### File de téléchargement
-Ajoutez les éléments un par un à une file globale FIFO partagée entre les onglets. Ils sont enregistrés dans l'ordre ; changer de page ou fermer l'onglet source n'interrompt pas à lui seul les téléchargements.
-
-### Fichiers volumineux
-Les fichiers directs utilisent le gestionnaire de téléchargement de Chrome. Les médias adaptatifs DASH/HLS sont assemblés dans un document offscreen, avec une sortie temporaire dans le stockage local du navigateur (OPFS). L'entrée occupe toujours de la mémoire, avec un budget par défaut de 768 MiB : les éléments connus comme trop gros ne sont pas proposés et les téléchargements sont arrêtés en cas de dépassement. Les entrées en streaming de taille illimitée ne sont pas prises en charge.
-
-Ce budget est réglable depuis la configuration distante de l'extension : il peut donc être augmenté ou diminué sans publier une nouvelle version.
-
-### Conçue pour le comportement des pages Vimeo
-Vimeo est une application monopage. L'extension surveille la navigation entre les vidéos et reconstruit le panneau pour la vidéo sur laquelle vous êtes réellement, au lieu d'afficher les entrées obsolètes de la précédente.
-
-### Indépendante du bouton de téléchargement du lecteur
-L'extension ne clique sur rien à votre place dans le lecteur Vimeo. Elle lit la configuration de lecture que le lecteur a déjà chargée dans votre navigateur et propose ses propres boutons d'enregistrement.
-
-
-COMMENT ÇA MARCHE
-
-1. Installez l'extension depuis le Chrome Web Store
-2. Épinglez l'icône à la barre d'outils pour y accéder rapidement
-3. Ouvrez une page vidéo compatible sur vimeo.com ou player.vimeo.com et lancez la lecture
-4. Un panneau apparaît avec les lignes Video, Audio, Subtitle et Image
-5. Cliquez sur la qualité souhaitée, ou ouvrez l'icône de l'extension pour la liste complète
-6. Le fichier est écrit par votre navigateur sur votre disque local
-
-La connexion est facultative. Elle ne sert qu'à votre quota quotidien de téléchargements et à l'état de votre abonnement ; elle n'est pas nécessaire pour que l'extension lise la page.
-
-
-CE POUR QUOI ELLE EST FAITE, ET CE QU'ELLE NE FAIT PAS
-
-Faite pour :
-- Les pages vidéo compatibles ouvertes comme page principale sur vimeo.com, www.vimeo.com et player.vimeo.com ; une lecture possible ne garantit pas un téléchargement
-- Choisir une qualité précise ou la piste audio plutôt que le flux par défaut
-- Enregistrer l'image de couverture
-- Mettre en file plusieurs éléments de la même page
-
-Ne fait pas :
-- Contourner les contrôles d'accès. Les vidéos privées, protégées par mot de passe ou payantes ne sont pas garanties compatibles, même si vous pouvez les lire
-- Supprimer ou contourner des DRM
-- Prendre en charge tous les formats HLS : MPEG-TS, capture intégrale en direct, pistes audio/sous-titres externes et chiffrement inconnu ne sont pas pris en charge
-- Fonctionner sur des sites autres que Vimeo
-- Fonctionner dans les applications Vimeo de bureau ou mobiles : il s'agit uniquement d'une extension de navigateur
-- Effectuer un crawl ou un scraping en arrière-plan
-
-
-QUESTIONS FRÉQUENTES
-
-Q : Faut-il un compte pour utiliser l'extension ?
-R : Non. Vous pouvez télécharger sans vous connecter. La connexion est facultative et n'affecte que votre quota quotidien de téléchargements et l'état de votre abonnement.
-
-Q : Peut-elle télécharger des vidéos Vimeo privées, protégées par mot de passe ou payantes ?
-R : La compatibilité n'est pas garantie. L'extension utilise les informations de lecture accessibles à votre navigateur et ne déverrouille ni ne contourne les contrôles d'accès Vimeo.
-
-Q : Quelles qualités puis-je obtenir ?
-R : Les qualités compatibles que l'extension peut identifier pour cette vidéo. « Best » choisit la plus élevée disponible. Une résolution absente peut dépendre de la source, des formats pris en charge ou du budget des entrées adaptatives.
-
-Q : Pourquoi y a-t-il une limite de taille sur certains téléchargements ?
-R : Les fichiers directs utilisent le gestionnaire de Chrome. L'entrée adaptative occupe de la mémoire malgré la sortie OPFS ; le budget configurable à distance est de 768 MiB par défaut. La découpe ne réduit pas le téléchargement de la source complète.
-
-Q : L'extension envoie-t-elle mes données quelque part ?
-R : Les médias ne passent jamais par les serveurs des développeurs. Vidéo, audio, sous-titres et images vont de Vimeo à votre navigateur et disque local. Des services du développeur sont aussi contactés pour les comptes, quotas, abonnements, réglages distants et rapports d'utilisation ou d'erreurs.
-
-Q : De quelles autorisations l'extension a-t-elle besoin ?
-R : storage (réglages, connexion et historique local), identity (connexion Google), downloads (enregistrement et suivi des fichiers), offscreen (traitement des médias en arrière-plan), notifications (téléchargement réussi ou échoué) et accès à Vimeo et à son CDN média.
-
-Q : Est-elle gratuite ?
-R : Il existe un quota quotidien de téléchargements gratuit, et un nouveau compte ou appareil démarre avec une première journée illimitée. Une formule Unlimited payante est disponible pour davantage de téléchargements quotidiens, voire illimités. La liste complète figure sur la page de tarifs du site de l'extension.
-
-Q : Quels navigateurs sont pris en charge ?
-R : Chrome et les autres navigateurs basés sur Chromium, comme Edge et Brave.
-
-Q : Fonctionne-t-elle sur toutes les pages Vimeo ?
-R : Elle prend en charge un ensemble limité de pages vidéo principales sur vimeo.com, www.vimeo.com et player.vimeo.com. Les lecteurs intégrés sur des sites tiers et toutes les pages privées ou en direct ne sont pas garantis compatibles.
-
-Q : Quels formats de fichiers sont produits ?
-R : MP4 pour la vidéo, M4A ou MP3 pour l'audio, VTT pour les sous-titres, JPEG pour l'image de couverture.
-
-
-NOTES TECHNIQUES
-
-- Navigateur : Chrome, Edge, Brave et autres navigateurs basés sur Chromium
-- Manifest V3
-- Autorisations d'hôte : vimeo.com, www.vimeo.com, player.vimeo.com et les hôtes du CDN média de Vimeo
-- Téléchargements : file globale FIFO ; fichiers directs via Chrome, DASH/HLS dans un document offscreen
-- Budget mémoire des entrées adaptatives : 768 MiB par défaut, configurable à distance ; OPFS ne stocke que la sortie
-- Langues de l'interface : 14 locales
-
-
-LANGUES D'INTERFACE PRISES EN CHARGE
-
-- Anglais
-- Chinois (simplifié et traditionnel)
-- Japonais
-- Coréen
-- Allemand
-- Espagnol
-- Français
-- Italien
-- Portugais
-- Russe
-- Indonésien
-- Thaï
-- Vietnamien
-
-
-INSTALLATION
-
-Si vous voulez une copie locale d'une vidéo Vimeo que vous pouvez déjà regarder, installez Vimeo Downloader depuis le Chrome Web Store. L'extension ne s'active que sur les pages Vimeo.
-
-
-MENTIONS LÉGALES ET CONFORMITÉ
-
-Cette extension est un outil tiers développé de manière indépendante. Elle n'est ni affiliée à Vimeo, Inc., ni approuvée par Vimeo, Inc., ni liée à Vimeo, Inc. Vimeo est une marque de Vimeo, Inc.
-
-L'extension est destinée à enregistrer du contenu auquel vous avez déjà un accès légitime. Il vous appartient de respecter le droit d'auteur applicable, la réglementation locale et les conditions d'utilisation de Vimeo ainsi que celles de l'auteur original du contenu. N'utilisez pas cette extension pour redistribuer du contenu protégé par le droit d'auteur, pour contourner les contrôles d'accès de contenus auxquels vous n'avez pas droit, ni pour quelque usage non autorisé.
-
-L'extension s'exécute localement dans votre navigateur. Les développeurs n'exploitent aucun serveur qui reçoit, stocke ou relaie les médias que vous téléchargez, et l'extension ne collecte pas les vidéos, les audios ou les images que vous enregistrez.
+Fonctionnement : ouvrez une page Vimeo compatible, choisissez dans le panneau ou le popup la vidéo, l'audio, les sous-titres ou l'image, puis la qualité ou la langue. La tâche rejoint la file d'attente et le popup affiche son état pendant que vous continuez à naviguer.

@@ -1,186 +1,23 @@
-Vimeo Downloader — Simpan Video, Audio, Subtitle, dan Gambar Sampul Vimeo di Chrome
+Unduh video Vimeo sebagai MP4, simpan audio sebagai MP3 atau M4A, dan simpan subtitel sebagai file VTT, langsung dari halaman yang sedang Anda tonton. Mulai gratis.
 
-Ekstensi Chrome untuk penonton Vimeo yang ingin salinan lokal video yang sedang ditonton, dengan panel di halaman untuk mengunduh video, audio, subtitle, dan gambar sampul.
+Vimeo Downloader menambahkan panel unduhan di halaman Vimeo yang didukung. Anda tidak perlu menyalin tautan ke situs lain karena ekstensi ini bekerja di browser Anda sendiri.
 
+Yang bisa Anda simpan:
 
-APA INI
+- Video: kualitas apa pun yang disediakan sumber, hingga 4K, sebagai MP4.
+- Audio: suaranya saja, sebagai M4A atau MP3.
+- Subtitel: setiap bahasa yang tersedia sebagai file VTT, termasuk trek yang dibuat otomatis. File VTT bisa dibuka di editor teks apa pun dan berfungsi sebagai transkrip dengan penanda waktu.
+- Gambar sampul: thumbnail video.
+- Klip: potong rentang waktu dari kualitas DASH atau HLS sebelum mengunduh.
 
-Vimeo Downloader adalah ekstensi Chrome untuk halaman video Vimeo yang didukung (vimeo.com, www.vimeo.com, dan player.vimeo.com). Ekstensi mengurai informasi pemutaran dan menawarkan tombol unduh untuk video, audio, subtitle, dan gambar sampul.
+Dibuat untuk video panjang:
 
-Ini bukan klien Vimeo, bukan bot, dan bukan pengunduh mandiri. Ekstensi mendeteksi sumber daya di halaman Vimeo yang didukung dan menjalankan unduhan di latar belakang browser.
+- Masukkan beberapa unduhan ke antrean dan tetap menjelajah selagi berjalan.
+- Tangani file besar dengan pemisahan otomatis atau mode streaming satu file.
+- Lihat progres, file selesai, kegagalan, dan riwayat unduhan di popup.
 
+Ekstensi ini berfungsi di halaman vimeo.com dan player.vimeo.com yang didukung. Ekstensi membaca metadata media dari halaman dan tidak melewati login, paywall, DRM, atau kontrol akses lainnya. Unduh hanya konten yang berhak Anda simpan. Vimeo Downloader adalah alat independen dan tidak berafiliasi dengan Vimeo, Inc.
 
-UNTUK SIAPA
+Penggunaan umum: menyimpan pelajaran kursus yang diizinkan, tinjauan portofolio, demo produk, wawancara, atau klip referensi untuk diputar offline atau diedit.
 
-Anda mungkin sampai ke halaman ini karena menginginkan salah satu hal berikut:
-
-1. Salinan lokal dari video yang sedang Anda tonton
-   Video bisa diputar di browser, tetapi halaman tidak menyediakan cara menyimpannya.
-
-2. Kualitas tertentu alih-alih kualitas bawaan
-   Anda ingin berkas 720p atau 1080p, atau hanya trek audionya, bukan apa pun yang kebetulan dialirkan pemutar saat itu.
-
-3. Gambar sampul
-   Anda ingin gambar sampul video sebagai berkas terpisah.
-
-4. Beberapa berkas dalam antrean
-   Anda ingin menambahkan item satu per satu dari sembulan dan mengunduhnya secara berurutan.
-
-Jika tidak ada yang sesuai dengan situasi Anda, opsi penyimpanan bawaan browser mungkin sudah cukup dan Anda tidak memerlukan ekstensi ini.
-
-
-FITUR UTAMA
-
-### Panel unduh di halaman
-Di halaman video Vimeo yang didukung, ekstensi menambahkan panel kecil dekat judul atau kontrol dengan empat baris:
-
-- Video — satu tombol untuk setiap kualitas video yang tersedia
-- Audio — satu tombol untuk setiap trek audio yang tersedia
-- Subtitle — trek subtitle yang tersedia
-- Image — gambar sampul
-
-Jika jenis berkas tidak tersedia, baris menampilkan penanda nonaktif. Panel dibangun ulang saat Anda berpindah ke video lain tanpa memuat ulang halaman.
-
-### Unduhan video
-Menyimpan video sebagai berkas MP4. Bergantung pada apa yang disediakan pemutar Vimeo untuk video tersebut, Anda akan melihat:
-
-- Entri MP4 langsung dengan label resolusinya, misalnya "720p MP4" atau "1080p MP4"
-- Entri adaptif berlabel "1080p HD", di mana trek video dan audio digabungkan menjadi satu MP4 sebelum disimpan
-- Entri cadangan "1080p HLS" untuk video yang hanya menyediakan cara pengiriman itu
-- Tombol "Best" yang memilih kualitas tertinggi yang tersedia untuk video tersebut
-
-Hanya kualitas yang terdeteksi yang didaftar. Video digabungkan tanpa transkode atau pembesaran; keluaran audio MP3 menggunakan transkode.
-
-### Unduhan audio
-Menyimpan trek audio sebagai M4A, atau pilih MP3 di sembulan untuk melakukan transkode. Tombol menampilkan bitrate (misalnya "128 kbps"), dan "Best Audio" memilih bitrate tertinggi yang tersedia.
-
-### Subtitle, pemotongan, dan pengaturan
-Menyimpan subtitle yang tersedia sebagai VTT. Sembulan dapat memotong video dan audio adaptif; video tanpa transkode dengan ketelitian keyframe. MP4 progresif disimpan utuh. Pemotongan tetap mengunduh sumber lengkap. Pengaturan mencakup subfolder, templat nama berkas, dan bahasa. Riwayat lokal unduhan berhasil dan gagal dapat diekspor sebagai CSV.
-
-### Unduhan gambar sampul
-Menyimpan gambar sampul video sebagai berkas JPEG.
-
-### Daftar sumber daya di sembulan
-Klik ikon ekstensi untuk melihat semua item yang bisa diunduh yang sudah dikenali tab saat ini:
-
-- Baris video, audio, subtitle, dan gambar; MP4 progresif memiliki baris unduhan langsung tersendiri
-- Pilih opsi dan unduh satu item dari barisnya
-- Progres langsung, kecepatan transfer, dan status per item
-
-
-### Antrean unduhan
-Tambahkan item satu per satu ke antrean FIFO global bersama antar tab. Item disimpan berurutan; berpindah halaman atau menutup tab sumber tidak dengan sendirinya menghentikan unduhan.
-
-### Berkas besar
-Berkas langsung memakai pengelola unduhan Chrome. Media adaptif DASH/HLS dirakit dalam dokumen offscreen, dan keluaran sementara ditulis ke penyimpanan lokal browser (OPFS). Masukan tetap memakai memori, dengan anggaran bawaan 768 MiB: item yang diketahui terlalu besar tidak ditawarkan dan unduhan dihentikan jika melampaui anggaran. Masukan streaming berukuran tak terbatas tidak didukung.
-
-Anggaran ini dapat diatur melalui konfigurasi jarak jauh ekstensi, sehingga bisa dinaikkan atau diturunkan tanpa merilis versi baru.
-
-### Dirancang untuk perilaku halaman Vimeo
-Vimeo adalah aplikasi satu halaman. Ekstensi memantau perpindahan antar video dan membangun ulang panel untuk video yang benar-benar sedang Anda buka, bukan menampilkan entri lama dari video sebelumnya.
-
-### Tidak bergantung pada tombol unduh milik pemutar
-Ekstensi tidak mengklik apa pun di dalam pemutar Vimeo atas nama Anda. Ekstensi membaca konfigurasi pemutaran yang sudah dimuat pemutar ke browser Anda dan menyediakan tombol simpannya sendiri.
-
-
-CARA KERJANYA
-
-1. Pasang ekstensi dari Chrome Web Store
-2. Sematkan ikonnya ke bilah alat untuk akses cepat
-3. Buka halaman video yang didukung di vimeo.com atau player.vimeo.com dan mulai memutarnya
-4. Panel unduh muncul dengan baris Video, Audio, Subtitle, dan Image
-5. Klik kualitas yang Anda inginkan, atau buka ikon ekstensi untuk daftar lengkapnya
-6. Berkas ditulis oleh browser Anda ke disk lokal
-
-Masuk akun bersifat opsional. Ini hanya dipakai untuk kuota unduhan harian dan status langganan Anda; tidak diperlukan agar ekstensi dapat membaca halaman.
-
-
-UNTUK APA INI BERGUNA, DAN APA YANG TIDAK DILAKUKAN
-
-Berguna untuk:
-- Halaman video tingkat atas yang didukung di vimeo.com, www.vimeo.com, dan player.vimeo.com; bisa diputar tidak menjamin bisa diunduh
-- Memilih kualitas tertentu atau trek audio alih-alih aliran bawaan
-- Menyimpan gambar sampul
-- Memasukkan beberapa item dari halaman yang sama ke antrean
-
-Tidak melakukan:
-- Melewati kontrol akses. Video privat, berkata sandi, atau berbayar tidak dijamin didukung meskipun dapat diputar
-- Menghapus atau melewati DRM
-- Mendukung semua format HLS: MPEG-TS, rekaman siaran langsung lengkap, trek audio/subtitle eksternal, dan enkripsi tak dikenal tidak didukung
-- Bekerja di situs selain Vimeo
-- Bekerja di aplikasi desktop atau seluler Vimeo — ini hanya ekstensi browser
-- Melakukan perayapan atau pengikisan di latar belakang
-
-
-PERTANYAAN UMUM
-
-T: Apakah saya perlu akun untuk memakai ekstensi ini?
-J: Tidak. Anda bisa mengunduh tanpa masuk akun. Masuk akun bersifat opsional dan hanya memengaruhi kuota unduhan harian serta status langganan Anda.
-
-T: Bisakah mengunduh video Vimeo privat, dilindungi kata sandi, atau berbayar?
-J: Dukungan tidak dijamin. Ekstensi memakai informasi pemutaran yang tersedia bagi browser dan tidak membuka kunci atau melewati kontrol akses Vimeo.
-
-T: Kualitas apa saja yang bisa saya dapatkan?
-J: Kualitas yang didukung dan dapat diurai ekstensi untuk video itu. "Best" memilih yang tertinggi tersedia. Resolusi yang tidak muncul dapat terkait sumber, dukungan format, atau anggaran masukan adaptif.
-
-T: Mengapa ada batas ukuran pada sebagian unduhan?
-J: Berkas langsung memakai pengelola Chrome. Masukan adaptif tetap memakai memori meski keluaran ditulis ke OPFS; anggaran yang bisa diatur jarak jauh bawaannya 768 MiB. Pemotongan tidak mengurangi unduhan sumber lengkap.
-
-T: Apakah ekstensi mengunggah data saya ke suatu tempat?
-J: Media tidak pernah melewati server pengembang. Video, audio, subtitle, dan gambar dikirim dari Vimeo ke browser dan disk lokal. Layanan pengembang juga dihubungi untuk akun, kuota, langganan, pengaturan jarak jauh, serta laporan penggunaan dan kesalahan.
-
-T: Izin apa yang dibutuhkan ekstensi?
-J: storage (pengaturan, status masuk, riwayat lokal), identity (masuk Google), downloads (menyimpan berkas dan membaca status), offscreen (pemrosesan media di latar belakang), notifications (unduhan selesai atau gagal), serta akses ke Vimeo dan CDN medianya.
-
-T: Apakah gratis?
-J: Ada kuota unduhan harian gratis, dan akun atau perangkat baru memulai dengan hari pertama tanpa batas. Tersedia paket Unlimited berbayar untuk unduhan harian yang lebih banyak atau tanpa batas. Daftar lengkapnya ada di halaman harga situs web ekstensi.
-
-T: Browser apa yang didukung?
-J: Chrome dan browser berbasis Chromium lainnya seperti Edge dan Brave.
-
-T: Apakah bekerja di semua halaman Vimeo?
-J: Mendukung sebagian halaman video tingkat atas di vimeo.com, www.vimeo.com, dan player.vimeo.com. Pemutar tertanam di situs pihak ketiga serta semua halaman privat atau siaran langsung tidak dijamin didukung.
-
-T: Format berkas apa yang dihasilkan?
-J: MP4 untuk video, M4A atau MP3 untuk audio, VTT untuk subtitle, JPEG untuk gambar sampul.
-
-
-CATATAN TEKNIS
-
-- Browser: Chrome, Edge, Brave, dan browser berbasis Chromium lainnya
-- Manifest V3
-- Izin host: vimeo.com, www.vimeo.com, player.vimeo.com, dan host CDN media Vimeo
-- Unduhan: antrean FIFO global; berkas langsung melalui Chrome, DASH/HLS dalam dokumen offscreen
-- Anggaran memori masukan adaptif: bawaan 768 MiB, dapat diatur jarak jauh; OPFS hanya menyimpan keluaran
-- Bahasa antarmuka: 14 lokal
-
-
-BAHASA ANTARMUKA YANG DIDUKUNG
-
-- Inggris
-- Tionghoa (Sederhana dan Tradisional)
-- Jepang
-- Korea
-- Jerman
-- Spanyol
-- Prancis
-- Italia
-- Portugis
-- Rusia
-- Indonesia
-- Thailand
-- Vietnam
-
-
-PEMASANGAN
-
-Jika Anda ingin salinan lokal dari video Vimeo yang sudah bisa Anda tonton, pasang Vimeo Downloader dari Chrome Web Store. Ekstensi hanya aktif di halaman Vimeo.
-
-
-LEGAL DAN KEPATUHAN
-
-Ekstensi ini adalah alat pihak ketiga yang dikembangkan secara independen. Tidak berafiliasi dengan, tidak didukung oleh, dan tidak terhubung dengan Vimeo, Inc. Vimeo adalah merek dagang Vimeo, Inc.
-
-Ekstensi ini ditujukan untuk menyimpan konten yang memang sudah Anda miliki hak akses sahnya. Anda bertanggung jawab mematuhi hukum hak cipta yang berlaku, peraturan setempat, serta ketentuan layanan Vimeo dan penulis asli konten. Jangan gunakan ekstensi ini untuk menyebarkan materi berhak cipta, melewati kontrol akses konten yang bukan hak Anda, atau untuk tujuan yang tidak sah.
-
-Ekstensi ini berjalan secara lokal di dalam browser Anda. Pengembang tidak mengoperasikan server apa pun yang menerima, menyimpan, atau meneruskan media yang Anda unduh, dan ekstensi tidak mengumpulkan video, audio, atau gambar yang Anda simpan.
+Cara kerjanya: buka halaman Vimeo yang didukung, pilih video, audio, subtitel, atau gambar di panel atau popup, lalu pilih kualitas atau bahasanya. Tugas masuk ke antrean, dan popup menampilkan statusnya selagi Anda terus menjelajah.
