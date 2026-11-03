@@ -21,8 +21,10 @@ test('下载视频时面板其他按钮可点，点击后排队并依次落盘',
   const subtitle = optionOf('subtitle').filter({ hasText: SUBTITLE_LABEL })
   await expect(subtitle).toBeVisible({ timeout: 60_000 })
 
+  // 字幕轨早于视频档出现，视频行此时可能还是占位按钮，要等到带资源 ID 的真实按钮。
   // 选最小的无音轨档，缩短视频下载时间；行内顺序固定，最后一个就是最低画质。
-  const video = optionOf('video').last()
+  const video = optionOf('video').and(page.locator('[data-vdl-source-id]:not([data-vdl-source-id=""])')).last()
+  await expect(video).toBeVisible({ timeout: 60_000 })
   const videoLabel = (await video.textContent()) ?? ''
   const thumbnail = optionOf('image').first()
   // 界面语言跟随浏览器，状态文案取按钮自带的本地化标签。

@@ -5,8 +5,7 @@
 
 import { logger } from './logger'
 import { WEBSITE } from '@/core/api/config'
-import { buildExtensionPricingUrl, buildPricingUrl, type PricingSource } from './pricingUrl'
-export { buildExtensionPricingUrl, buildPricingUrl, type PricingSource } from './pricingUrl'
+import { buildExtensionPricingUrl } from './pricingUrl'
 
 /**
  * 构建官网首页 URL，埋点参数与 Pricing 保持同一套约定。
@@ -42,14 +41,6 @@ export async function openExternalPage(url: string, destination: string): Promis
     logger.error(`[Navigation] 打开外部页面失败: destination=${destination}, url=${url}`, error)
     return false
   }
-}
-
-/**
- * 打开官网 Pricing 页。
- */
-export async function openPricingPage(source: PricingSource): Promise<boolean> {
-  const url = buildPricingUrl(source)
-  return openExternalPage(url, `pricing:${source}`)
 }
 
 /** 在新标签页打开插件内独立订阅页。 */

@@ -76,7 +76,7 @@ content 与 injected 使用一个固定 DOM `CustomEvent` 通道传递 request-r
 
 **injected**(content 调 injected,走固定 EventRpc 通道):只保留检测与配置能力——`getCapturedVimeoConfig`（按 videoId 取 MAIN world 捕获的原生 config 快照）、`listCapturedVimeoConfigs`（聚合页枚举概要）、`applyRuntimeConfig` / `applySiteConfig`（同步日志级别与站点运行参数）。页面内分片下载与 remux 已退役,MAIN world 不再承载下载;config 捕获不主动推送,只由 content 主动查询。
 
-**background**(content/popup/offscreen 调 background):连通性检查、状态/运行时/远端配置查询、徽标更新、打点、Google 登录、Vimeo 播放页 config 直连获取;下载编排能力——`downloadBatch`（入队，含发起 tab）、`getDownloadQueue`（快照）、`cancelDownloadTask` / `retryDownloadTask`（取消/重试）；offscreen 回传通道——`taskProgress` / `taskComplete` / `taskFailed` / `taskCancelled`（进度与终态）、`refreshSignatureRequest`（签名重签）、`keepAlive`（任务期心跳）。旧 `startBrowserDownload` / `getBrowserDownloadStatus` / `checkQuota` 已删除,统一并入编排器。
+**background**(content/popup/offscreen 调 background):连通性检查、状态/运行时/远端配置查询、徽标更新、打点、Google 登录、Vimeo 播放页 config 直连获取;下载编排能力——`downloadBatch`（入队，含发起 tab）、`getDownloadQueue`（快照）、`cancelDownloadTask` / `retryDownloadTask`（取消/重试）；页面升级弹窗打开插件订阅页——`openUpgradePricingPage`（只允许 content 调用）；offscreen 回传通道——`taskProgress` / `taskComplete` / `taskFailed` / `taskCancelled`（进度与终态）、`refreshSignatureRequest`（签名重签）、`keepAlive`（任务期心跳）。旧 `startBrowserDownload` / `getBrowserDownloadStatus` / `checkQuota` 已删除,统一并入编排器。
 
 **offscreen**(background 调 offscreen):`startTask`（下发完整 MediaResource 启动 DASH/HLS 任务）、`cancelTask`（中止执行中任务）、`listActiveTasks`（活跃任务清单,SW 冷启动对账的真相源）、`releaseTaskArtifact`（落盘确认后释放 blob）。
 

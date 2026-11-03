@@ -65,8 +65,6 @@ export const API = {
 export const WEBSITE = {
   /** 官网基础 URL */
   BASE_URL: __WEBSITE_BASE_URL__,
-  /** Pricing 页路径 */
-  PRICING_PATH: '/ext-pricing/',
   /** 服务条款页路径 */
   TERMS_PATH: '/terms/',
   /** 隐私政策页路径 */

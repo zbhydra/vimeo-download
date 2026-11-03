@@ -166,7 +166,7 @@ except AppCommonException as exc:
 | --- | --- | --- |
 | 剩余次数 / 已用次数文本 | `extension_download.use / remaining`,或最近一次扣减返回 | 实时反映当天用量 |
 | 计数器显隐 | `showCounter`(`daily_limit === -1` 时隐藏) | 无限额度时不展示 |
-| 限额引导 modal | 次数不足拦截时触发 | 未登录展示登录提示，已登录展示升级提示；主按钮统一交给宿主处理：popup 打开内嵌购买视图，content 打开官网 Pricing 页，插件购买视图负责登录门控。服务端提供刷新时间时展示刷新提示 |
+| 限额引导 modal | 次数不足拦截时触发 | 未登录展示登录提示，已登录展示升级提示；主按钮统一交给宿主处理：popup 打开内嵌购买视图，content 经 background 打开独立插件订阅页，插件购买视图负责登录门控。服务端提供刷新时间时展示刷新提示 |
 
 Popup 顶栏的额度与升级按钮打开独立插件订阅页，未登录也可浏览套餐；插件购买视图负责登录门控，统一进入插件登录页（见 `@../006.订阅系统/tech-订阅商品与状态.md`）。登录完成后重新打开 Popup 会恢复登录态并刷新账号额度，页面下载重试使用后台保存的凭据。登录成功不代表获得额外免费次数，也不自动发起支付。
 
@@ -180,7 +180,7 @@ Popup 顶栏的额度与升级按钮打开独立插件订阅页，未登录也�
 
 升级跳转:
 
-- 所有用户的 modal 主按钮都由宿主决定去向：popup 打开内嵌购买视图，content 打开官网 Pricing URL；插件购买视图负责登录门控。
+- 所有用户的 modal 主按钮都由宿主决定去向：popup 打开内嵌购买视图，content 经 background 打开独立插件订阅页；插件购买视图负责登录门控。
 - Pricing URL 使用网站当前公开 pricing 路径;可附带来源参数用于埋点,但购买逻辑不依赖该参数。
 - 打开官网后,website Pricing 按自身登录态处理:有 token 调 `auth/me`,无 token 展示登录入口。
 
@@ -200,15 +200,14 @@ Popup 顶栏的额度与升级按钮打开独立插件订阅页，未登录也�
 - 插件端额度 API 调用:`@extension/src/core/api/quota/api.ts`
 - 插件端下载链路对扣减的调用点:`@extension/src/background/services/DownloadOrchestrator.ts`（全局下载队列在任务出队执行前扣减一次）
 - 插件端升级弹窗:`@extension/src/core/content/components/UpgradeModal.vue`（配额拒绝由 background 向发起 tab 广播 `showUpgradeModal` 事件触发）
-- 插件内购买视图(popup 场景升级落点):`@extension/src/popup/components/PremiumView.vue`
-- 官网 Pricing 页:`@../011.Pricing页/feat.md`
+- 插件内购买视图(popup 内嵌与独立订阅页共用的升级落点):`@extension/src/popup/components/PremiumView.vue`
 
 ## 6. 测试覆盖要点
 
 - `/api/client/quota/check` 直接调用计数 service 并扣 `EXTENSION_DOWNLOAD`,不调用其他额度消耗方法。
 - 已登录按 user_id 计数;匿名按 device_id 计数。
 - 次数不足时返回 `status=0` 且不增加已用。
-- 次数不足时响应携带与额度 key 过期时刻一致的 `reset_at`；插件升级 modal 在说明文字和按钮之间展示相对倒计时及本地绝对时间，点击后 popup 场景打开插件内购买视图、页面注入场景打开官网 Pricing 页。
+- 次数不足时响应携带与额度 key 过期时刻一致的 `reset_at`；插件升级 modal 在说明文字和按钮之间展示相对倒计时及本地绝对时间，点击后 popup 场景打开插件内购买视图、页面注入场景打开独立插件订阅页。
 - 升级 modal 初次显示和关闭后重开分别记录一次 `upgrade_modal_open`;已显示时重复打开不重复记录。
 - 底层异常时 fail-open 放行(`status=1, remaining=-1`),且日志可定位。
 - 插件本地文件下载不调用后端下载执行入口(下载链路本身见 `@../002.下载功能/feat.md`)。

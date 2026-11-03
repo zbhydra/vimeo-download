@@ -181,6 +181,11 @@ export const Handler = {
   /** 由 popup 查询下载编排队列快照。 */
   getDownloadQueue(): Promise<BackgroundGetDownloadQueueResponse> {
     return declarationOnly('background.getDownloadQueue')
+  },
+
+  /** 打开插件订阅页：content 没有 tabs 接口，也不能直接打开扩展页面。 */
+  openUpgradePricingPage(): Promise<void> {
+    return declarationOnly('background.openUpgradePricingPage')
   }
 }
 
@@ -230,7 +235,9 @@ export const METHOD_TARGETS = {
   /** 队列重试入口只由 popup 调用。 */
   retryDownloadTask: ['popup'],
   /** 队列快照只由 popup 查询。 */
-  getDownloadQueue: ['popup']
+  getDownloadQueue: ['popup'],
+  /** 页面升级弹窗打开插件订阅页，只由 content 调用。 */
+  openUpgradePricingPage: ['content']
 } as const satisfies Record<keyof BackgroundHandler, readonly RpcCaller[]>
 
 /** background 方法允许传输。 */
@@ -276,7 +283,9 @@ export const METHOD_TRANSPORTS = {
   /** retryDownloadTask 使用 Chrome message。 */
   retryDownloadTask: ['chrome'],
   /** getDownloadQueue 使用 Chrome message。 */
-  getDownloadQueue: ['chrome']
+  getDownloadQueue: ['chrome'],
+  /** openUpgradePricingPage 使用 Chrome message。 */
+  openUpgradePricingPage: ['chrome']
 } as const satisfies Record<keyof BackgroundHandler, readonly ['chrome']>
 
 /** background 方法请求体限制，单位字节。 */
@@ -322,7 +331,9 @@ export const METHOD_REQUEST_LIMITS = {
   /** retryDownloadTask 只携带任务 ID。 */
   retryDownloadTask: 1024,
   /** getDownloadQueue 无业务参数。 */
-  getDownloadQueue: 1024
+  getDownloadQueue: 1024,
+  /** openUpgradePricingPage 无业务参数。 */
+  openUpgradePricingPage: 1024
 } as const satisfies Record<keyof BackgroundHandler, number>
 
 /** background 方法响应体限制，单位字节。 */
@@ -368,7 +379,9 @@ export const METHOD_RESPONSE_LIMITS = {
   /** retryDownloadTask 返回受理结果。 */
   retryDownloadTask: 1024,
   /** getDownloadQueue 返回编排队列的轻量展示快照。 */
-  getDownloadQueue: 65536
+  getDownloadQueue: 65536,
+  /** openUpgradePricingPage 无返回内容。 */
+  openUpgradePricingPage: 1024
 } as const satisfies Record<keyof BackgroundHandler, number>
 
 /** register 占位函数，避免声明被业务代码误调用。 */

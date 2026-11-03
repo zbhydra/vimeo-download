@@ -314,4 +314,4 @@ Google 授权调用的 RPC 超时：授权窗口内的选账号、输密码、�
 
 - 登录表单与成功去向统一见 §9.4；邮箱兑换与登录态写入 owner 见 [账号与认证](./tech-账号与认证.md#81-邮箱验证码登录)。
 - 登录取消、回跳缺 code、兑换或持久化失败时保留登录页，用户可再次发起。
-- 升级动作由宿主决定：popup 打开内嵌 `PremiumView`，content 页面经 `UpgradeModalManager` 打开官网 Pricing（`utm_source=extension` + `source=<入口>`，页面见 `@../011.Pricing页/feat.md`）。渲染位置参数不决定业务动作；导航失败只记录错误，不回滚登录态。
+- 升级动作由宿主决定：popup 打开内嵌 `PremiumView`，content 页面经 `UpgradeModalManager` 请求 background 打开独立插件订阅页（`source=upgrade_modal`）。渲染位置参数不决定业务动作；导航失败只记录错误，不回滚登录态。

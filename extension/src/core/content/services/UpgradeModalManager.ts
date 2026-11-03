@@ -11,7 +11,7 @@ import { SUPPORTED_LANGUAGES } from '@/core/constants/i18n'
 import { ChromeEventEmitter } from '@/core/rpc/ChromeEventBus'
 import type { ExtensionEvents } from '@/core/events/types'
 import { logger } from '@/core/utils/logger'
-import { openPricingPage } from '@/core/utils/navigation'
+import { BackgroundChannel } from '@/content/rpc/background.rpc'
 import messages from '../../../locales/index'
 import UpgradeModal from '../components/UpgradeModal.vue'
 import upgradeModalStyles from '../components/UpgradeModal.css?inline'
@@ -190,7 +190,9 @@ class UpgradeModalManagerClass {
             resetAt: manager.resetAtRef!.value,
             useTeleport: false,
             onUpgrade: () => {
-              void openPricingPage('upgrade_modal')
+              new BackgroundChannel().openUpgradePricingPage().catch(error => {
+                logger.error('[UpgradeModalManager] 打开插件订阅页失败:', error)
+              })
             },
             'onUpdate:show': (val: boolean) => {
               if (!val) {

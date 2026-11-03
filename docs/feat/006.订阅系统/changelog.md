@@ -1,5 +1,18 @@
 # 006 · 订阅系统 - 变更记录
 
+## 2026-11-03 Vimeo 页面升级弹窗改开插件订阅页
+
+**Why**：同样是升级入口，页面弹窗跳官网 Pricing（要在官网再登录一次），popup 留在插件内。这个差别的理由是页面里没有 popup 可承载，但独立插件订阅页已经有了，理由不再成立。hydra 手测 1.0.3 时提出，决定全部走插件（「全跳插件」）。
+
+**影响**：官网 Pricing 的好评赠送独立入口只对插件来源显示，而这个弹窗是插件通往官网 Pricing 的唯一入口。升级到 1.0.3 的用户不会再看到它，插件订阅页也没有好评入口；官网购买确认里的「去好评」仍在。`web_pricing_open_from_extension` 只来自旧版本，插件内订阅页曝光看 `pricing_view`。
+
+**变更**：
+- `extension/src/background/background-register.ts`、`BackgroundMessageRouter.ts`：新增 RPC `openUpgradePricingPage`，只允许 content 调用。content 没有 tabs 接口，也不能直接打开扩展页面，把订阅页声明成 web accessible 又会暴露给网页。
+- `extension/src/core/content/services/UpgradeModalManager.ts`：弹窗主按钮改调这个 RPC。
+- `extension/src/core/utils/navigation.ts`、`pricingUrl.ts`、`core/api/config.ts`：删除 `openPricingPage`、`buildPricingUrl`、`PricingSource`、`WEBSITE.PRICING_PATH`。
+- 新增真实 E2E `tests/e2e/vimeo-real-upgrade-modal.spec.ts`。
+- 同步 000、002、005、006、007、011 的文档。官网 `/ext-pricing/` 路由和插件来源逻辑保留，1.0.2 及以前的版本还会用到。
+
 ## 2026-09-18 整仓单平台转型：订阅 metadata 字段与 Pro 站口径订正
 
 **Why**：服务端输出限速链路已删除，`proxy_user_rate_limit_mb_per_second` 在代码中零读取；`website-tgd-pro` / `extension-pro` 已删除。

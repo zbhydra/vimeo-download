@@ -42,6 +42,7 @@ import { isVimeoHostname, type VimeoSourceDescriptor } from '@/sites/vimeo/share
 import { getRuntimeConfig } from '../runtimeConfig'
 import { authApi } from '@/core/api/auth/api'
 import { clearDownloadHistory, removeDownloadHistoryEntry } from '@/core/storage/downloadHistory'
+import { openExtensionPricingPage } from '@/core/utils/navigation'
 import { clearOrderReference, createCheckoutOrder, getLatestOrderReference } from './orderCheckout'
 
 const MARK_TYPE_VALUES: readonly string[] = Object.values(MARK_TYPE)
@@ -137,7 +138,10 @@ export class BackgroundMessageRouter {
         const { taskId } = parseTaskScopedRequest(params, 'retryDownloadTask')
         return Promise.resolve({ accepted: downloadOrchestrator.retryTask(taskId) })
       },
-      getDownloadQueue: () => Promise.resolve(downloadOrchestrator.getSnapshot())
+      getDownloadQueue: () => Promise.resolve(downloadOrchestrator.getSnapshot()),
+      openUpgradePricingPage: async () => {
+        await openExtensionPricingPage('upgrade_modal')
+      }
     }
   }
 

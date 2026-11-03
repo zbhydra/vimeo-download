@@ -107,6 +107,17 @@ export class BackgroundChannel {
     >('downloadBatch', params, options)
   }
 
+  /** 调用 openUpgradePricingPage 能力。 */
+  openUpgradePricingPage(
+    options?: RpcCallOptions
+  ): Promise<RpcMethodResult<BackgroundHandler, 'openUpgradePricingPage'>> {
+    return this.transport.call<RpcMethodResult<BackgroundHandler, 'openUpgradePricingPage'>>(
+      'openUpgradePricingPage',
+      undefined,
+      options
+    )
+  }
+
   /** 销毁 RPC transport。 */
   destroy(): void {
     this.transport.destroy()
