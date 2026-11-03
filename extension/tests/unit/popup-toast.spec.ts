@@ -59,6 +59,9 @@ vi.mock('../../src/core/api/mark', () => ({
 }))
 
 vi.mock('../../src/core/rpc/ChromeEventBus', () => ({
+  ChromeEventEmitter: class {
+    emit = vi.fn()
+  },
   ChromeEventSubscriber: class {
     on = mocks.eventOn
     destroy = mocks.eventDestroy

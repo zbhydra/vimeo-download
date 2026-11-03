@@ -1,5 +1,16 @@
 # 000 · 架构 · 变更记录
 
+## 2026-11-03 插件打点：删除 `content_open`，新增 `daily_first_opened`
+
+**Why**：`content_open` 在 content script 每次启动时上报，只说明页面打开过 Vimeo，不代表用户用了插件，hydra 判定无意义，改为统计每台设备每天第一次打开插件。
+
+**影响**：只浏览没有视频的 Vimeo 页面、也不打开 popup 的插件用户不产生任何 SLS 事件。1.0.2 及以前的版本继续上报 `content_open`，随用户升级减少；历史数据不动。
+
+**变更**：
+- `extension/src/core/api/mark/types.ts` 删除 `CONTENT_OPEN`，新增 `DAILY_FIRST_OPENED`；`extension/src/sites/vimeo/content/index.ts` 删除启动时的上报。
+- `ExtensionMarkReporter` 订阅新事件 `extensionOpened`，按业务日去重，日期存在 `daily_first_opened_date`。Popup 挂载和 Vimeo 面板渲染出资源时广播这个事件。
+- `tech-可观测与SLS.md` 同步事件表和说明。
+
 ## 2026-10-07 Guides 内容集合与 Layout 语言切换器合同
 
 **Why**：上线 Guides 长尾文章（只有英文）。文章不做语言回退，所以「页面在所有语言都存在」不再成立，语言切换器不能再固定列出 14 语言。产品与收录规则见 `@../009.SEO与增长/feat.md`「Guides 文章页」，变更明细见 `@../009.SEO与增长/changelog.md` 同日条目。

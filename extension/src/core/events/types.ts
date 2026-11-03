@@ -4,6 +4,7 @@
  * 只用于 Chrome/DOM EventBus 的通知链路，不承载 req-resp RPC。
  */
 
+import type { ExtensionOpenSource } from '@/core/api/mark/types'
 import type { DownloadQueueSnapshot } from '@/core/types'
 
 /** EventBus 可传递的事件 payload。 */
@@ -61,6 +62,8 @@ export interface ExtensionEvents extends EventDefinition {
   upgradeModalOpened: void
   /** 游客登录提示从隐藏进入显示。 */
   loginModalOpened: void
+  /** 插件界面被打开：Popup 挂载，或 Vimeo 页面面板渲染出资源。 */
+  extensionOpened: { source: ExtensionOpenSource }
   /** 当前页面未完成下载任务发生变化。 */
   downloadQueueUpdated: DownloadQueueSnapshot
 }

@@ -32,11 +32,14 @@ export const MARK_TYPE = {
   PRICING_VIEW: 'pricing_view',
   /** 插件定价页支付成功 */
   CHECKOUT_SUCCESS: 'checkout_success',
-  /** Vimeo content script 初始化 */
-  CONTENT_OPEN: 'content_open'
+  /** 同一设备在业务日内第一次打开插件界面 */
+  DAILY_FIRST_OPENED: 'daily_first_opened'
 } as const
 
 export type MarkType = (typeof MARK_TYPE)[keyof typeof MARK_TYPE]
+
+/** 打开插件界面的入口：Popup，或 Vimeo 页面上渲染出资源的面板。 */
+export type ExtensionOpenSource = 'popup' | 'vimeo_panel'
 
 /** 登录按钮的业务入口取值，不依赖 RPC 运行上下文；跨上下文参数校验也用它。 */
 export const LOGIN_SOURCES = [

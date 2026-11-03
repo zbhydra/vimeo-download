@@ -44,7 +44,7 @@ import { useDownloadStatusStore } from '@/popup/stores/downloadStatusStore'
 import { useAuthStore } from '@/core/stores/authStore'
 import { useQuotaStore } from '@/core/stores/quotaStore'
 import { openPremiumView } from '@/core/composables/premiumView'
-import { ChromeEventSubscriber } from '@/core/rpc/ChromeEventBus'
+import { ChromeEventEmitter, ChromeEventSubscriber } from '@/core/rpc/ChromeEventBus'
 import type { ExtensionEvents } from '@/core/events/types'
 import { ensureSupportedTabOpen, openSiteTab } from '@/popup/utils/tabs'
 import { MARK_TYPE, type MarkType } from '@/core/api/mark'
@@ -100,6 +100,7 @@ onMounted(async () => {
 
   // 第一时间记录弹窗打开打点（不等待，不阻塞）
   recordMark(MARK_TYPE.POPUP_OPEN)
+  new ChromeEventEmitter<ExtensionEvents>().emit('extensionOpened', { source: 'popup' })
 
   // 最终目标 tab 只在 Popup 打开时确定一次，后续刷新和下载始终使用该 tabId。
   const targetTab = await ensureSupportedTabOpen()

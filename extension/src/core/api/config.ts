@@ -122,6 +122,8 @@ export const STORAGE_KEYS = {
   DEVICE_ID: 'counter_device_id',
   /** 首次观测到 background 启动的毫秒时间戳 */
   FIRST_OPENED_AT: 'first_opened_at',
+  /** 最后一次成功上报每日首次打开的业务日（YYYY-MM-DD） */
+  DAILY_FIRST_OPENED_DATE: 'daily_first_opened_date',
   /** 生产构建 DEBUG 日志开关 */
   DEBUG_LOGGING: 'debug_logging',
   /** 本插件最后一次订单定位；只保存用户 ID 与订单号，状态以服务端为准。 */
