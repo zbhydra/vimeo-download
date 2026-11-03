@@ -10,7 +10,7 @@
 ## 简体中文
 
 **要求 storage 的理由**
-保存扩展的设置项（远端配置的本地缓存）、界面语言偏好、登录状态与本地下载历史，以便下次打开时沿用。
+保存下载设置（保存位置、文件命名和大文件下载模式）、界面语言偏好、登录状态、设备标识与本地下载历史，以便下次打开时沿用。
 
 **要求 identity 的理由**
 完成 Google 登录授权流程。扩展使用 Chrome 自带的授权窗口打开 Google 登录页，并通过 Chrome 为扩展生成的固定回调地址接收登录结果；`identity` 权限是调用该授权窗口与获取回调地址所必需的。
@@ -35,7 +35,7 @@
 ## 繁体中文
 
 **要求 storage 的理由**
-儲存擴充功能的設定項目（遠端設定的本機快取）、介面語言偏好、登入狀態與本機下載歷史，以便下次開啟時沿用。
+儲存下載設定（儲存位置、檔案命名與大型檔案下載模式）、介面語言偏好、登入狀態、裝置識別碼與本機下載歷史，以便下次開啟時沿用。
 
 **要求 identity 的理由**
 完成 Google 登入授權流程。擴充功能使用 Chrome 內建的授權視窗開啟 Google 登入頁，並透過 Chrome 為擴充功能產生的固定回呼位址接收登入結果；`identity` 權限是呼叫該授權視窗與取得回呼位址所必需的。
@@ -60,7 +60,7 @@
 ## English
 
 **Reason for requesting storage**
-To save the extension's settings (a local cache of the remote configuration), interface language, sign-in state and local download history so they persist the next time the extension is opened.
+To save download settings (save location, filename pattern and large-file download mode), interface language, sign-in state, a device identifier and local download history so they persist the next time the extension is opened.
 
 **Reason for requesting identity**
 To complete the Google sign-in authorization flow. The extension opens Google's sign-in page in Chrome's own authorization window and receives the result on the fixed callback address that Chrome generates for the extension. The `identity` permission is what allows the extension to open that window and obtain the callback address.
@@ -85,7 +85,7 @@ To show system notifications when downloads complete or fail, including when the
 ## 日本語
 
 **storage が必要な理由**
-拡張機能の設定（リモート設定のローカルキャッシュ）、UI 言語、ログイン状態、ローカルのダウンロード履歴を保存し、次回起動時に引き継ぐため。
+ダウンロード設定（保存先、ファイル名の形式、大きなファイルの保存方法）、UI 言語、ログイン状態、デバイス識別子、ローカルのダウンロード履歴を保存し、次回起動時に引き継ぐため。
 
 **identity が必要な理由**
 Google ログインの認可フローを完了するため。拡張機能は Chrome 標準の認可ウィンドウで Google のログインページを開き、Chrome が拡張機能用に発行する固定のコールバックアドレスで結果を受け取ります。`identity` 権限は、この認可ウィンドウを開きコールバックアドレスを取得するために必要です。
@@ -110,7 +110,7 @@ Google ログインの認可フローを完了するため。拡張機能は Chr
 ## 한국어
 
 **storage가 필요한 이유**
-확장 프로그램의 설정(원격 설정의 로컬 캐시), UI 언어, 로그인 상태, 로컬 다운로드 기록을 저장해 다음 실행 시 이어 쓰기 위함.
+다운로드 설정(저장 위치, 파일명 형식, 대용량 파일 다운로드 모드), UI 언어, 로그인 상태, 기기 식별자, 로컬 다운로드 기록을 저장해 다음 실행 시 이어 쓰기 위함.
 
 **identity가 필요한 이유**
 Google 로그인 인증 흐름을 완료하기 위함. 확장 프로그램은 Chrome 자체 인증 창으로 Google 로그인 페이지를 열고, Chrome이 확장 프로그램용으로 발급하는 고정 콜백 주소에서 결과를 받습니다. `identity` 권한은 이 인증 창을 열고 콜백 주소를 얻기 위해 필요합니다.
