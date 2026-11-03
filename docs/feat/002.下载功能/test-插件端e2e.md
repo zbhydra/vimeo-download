@@ -30,8 +30,9 @@
 |---|---|---:|---|
 | `extension-e2e-vimeo-real` | `vimeo-real-download.spec.ts` | 1 | player 样本经 popup 下载 MP4 和裁剪 MP3：injected mux、FIFO 队列、真实额度、下载历史 |
 | `extension-e2e-vimeo-real` | `vimeo-real-subtitle.spec.ts` | 2 | 自动生成字幕从 popup 和页面面板保存为 WebVTT |
+| `extension-e2e-vimeo-real` | `vimeo-real-panel-queue.spec.ts` | 1 | 页面面板下载视频时其他按钮可点，点击后排队，视频和字幕依次落盘 |
 
-`pnpm test` 发现这 3 条真实自动化用例；不存在 UI、controlled 或 mock site project。
+`pnpm test` 发现这 4 条真实自动化用例；不存在 UI、controlled 或 mock site project。
 Playwright 使用 `fullyParallel=false`、`workers=1`；`retries` 在本地为 0、CI 为 2。
 
 ## Vimeo
@@ -63,10 +64,17 @@ Playwright 使用 `fullyParallel=false`、`workers=1`；`retries` 在本地为 0
 - 页面面板：打开同一 player 样本，在 `vdl-vimeo-row-subtitle` 里真实点击该轨道的选项（按钮要求 `event.isTrusted`）。
 - 落盘等待上限 60 秒，只认本轮新出现的 `.vtt`：文件名含轨道名，内容以 `WEBVTT` 开头并含时间轴。
 
+### 页面面板队列（`vimeo-real-panel-queue.spec.ts`）
+
+- 打开字幕样本的 player 页面，真实点击 Video 行最后一个按钮（最低画质、无音轨）。该按钮禁用并显示下载中或百分比，字幕、封面和 `Best` 仍可点击。
+- 再点字幕按钮：它显示等待中并禁用，封面仍可点击。
+- 只认本轮新出现的文件：`.mp4` 非空、`.vtt` 以 `WEBVTT` 开头。队列清空后两个按钮恢复原文案和可点击态。
+- 界面语言跟随浏览器，状态文案从按钮的本地化属性读取，不写死英文。
+
 ## 不在当前 E2E 的范围
 
 - 完整登录流程、Pricing、语言切换、空态和假资源列表不用当前 Vimeo E2E 验收；登录入口仅检查新开插件登录页及 Google 与邮箱表单同页。
-- 面板的视频和音频下载：只有字幕走了页面面板，视频和音频走 popup。
+- 面板的音频下载：视频和字幕走了页面面板，音频走 popup。
 - 正常 vimeo.com 页面：自动化 profile 每次都被人机验证盖住，面板在那里的位置没有真实 E2E。
 - 面板选项解析、配置捕获、mux 分段边界、局部失败与并发由 Unit/Integration 覆盖。
 - `tests/manual/*.manual.spec.ts` 是人工诊断，不进入自动化通过数（当前仓库没有 manual 套件）。
@@ -84,6 +92,7 @@ Playwright 使用 `fullyParallel=false`、`workers=1`；`retries` 在本地为 0
 | `extension/tests/fixtures.ts` | Vimeo profile 解析、持久化 Chromium、扩展加载、下载目录与落盘等待 |
 | `extension/tests/e2e/vimeo-real-download.spec.ts` | 视频和音频真实下载 |
 | `extension/tests/e2e/vimeo-real-subtitle.spec.ts` | 字幕真实保存 |
+| `extension/tests/e2e/vimeo-real-panel-queue.spec.ts` | 页面面板下载队列 |
 | `extension/scripts/setup-vimeo-test-profile.mjs` | 准备 Vimeo 测试 profile 与运行时 |
 
 ## 命令
@@ -91,7 +100,7 @@ Playwright 使用 `fullyParallel=false`、`workers=1`；`retries` 在本地为 0
 | 命令 | 含义 |
 |---|---|
 | `pnpm test` | fresh build 后执行真实用例 |
-| `pnpm test:e2e:vimeo` | 只运行 `extension-e2e-vimeo-real` 的 3 条 |
+| `pnpm test:e2e:vimeo` | 只运行 `extension-e2e-vimeo-real` 的 4 条 |
 | `pnpm test:setup:vimeo` | 准备 Vimeo 测试 profile（`pnpm test:setup` 是它的别名） |
 | `pnpm test:report` | 打开最近一次 Playwright 报告 |
 | `pnpm test:clean` | 清理运行产物，不删除人工 login profile |
@@ -99,7 +108,7 @@ Playwright 使用 `fullyParallel=false`、`workers=1`；`retries` 在本地为 0
 
 ## 验收标准
 
-1. `pnpm exec playwright test --list` 只发现这 3 条真实自动化 E2E。
+1. `pnpm exec playwright test --list` 只发现这 4 条真实自动化 E2E。
 2. 默认项目名必须明确包含站点名和 `real`，不能使用含糊的 `ui` 或 `controlled`。
 3. E2E 源码不能包含 fake document、controlled media、通用 `**/api/client/**` route。
 4. Vimeo 页面、媒体请求和项目 API 保持真实；只有 SLS sink 可固定响应。

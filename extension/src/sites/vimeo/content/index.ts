@@ -136,7 +136,7 @@ class VimeoContentController {
   /**
    * 订阅 background 下载编排快照，驱动页面按钮进度。
    *
-   * 下载执行在 background/offscreen，页面按钮只消费投影：仍在队列的任务更新进度，
+   * 下载执行在 background/offscreen，页面按钮只消费投影：等待中和下载中的任务显示状态，
    * 消失（完成/取消）或失败的任务复位按钮。
    */
   private installQueueSnapshotListener(): void {
@@ -371,7 +371,7 @@ class VimeoContentController {
     this.buttonPanel.render(videoId, snapshot.resources, snapshot.config.expiresAt)
   }
 
-  /** 下载某个 Vimeo 资源。 */
+  /** 把资源加入 background 队列；按钮状态由随后的队列快照驱动。 */
   private async downloadResource(resourceId: string): Promise<void> {
     const resource = vimeoResourceBuffer.getResource(resourceId)
     if (!resource) {
@@ -380,14 +380,8 @@ class VimeoContentController {
       return
     }
 
-    const videoId = resource.messageId
-    if (!this.buttonPanel.beginDownload(videoId, resource.id)) {
-      return
-    }
-
     try {
-      // U8 改道：页面按钮下载统一发 background 编排（带完整 resource），执行与页面
-      // 生命周期解耦；按钮进度由 installQueueSnapshotListener 消费 background 快照驱动。
+      // U8 改道：页面按钮下载统一发 background 编排（带完整 resource），执行与页面生命周期解耦。
       const response = await this.backgroundClient.downloadBatch({ resources: [resource] })
       if (!response.accepted) {
         logger.warn(
@@ -396,7 +390,6 @@ class VimeoContentController {
       }
     } catch (error) {
       logger.error(`[VimeoContent] 发起 background 下载失败: resourceId=${resource.id}`, error)
-      this.buttonPanel.endDownload(videoId)
     }
   }
 

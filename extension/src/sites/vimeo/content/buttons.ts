@@ -2,6 +2,7 @@
  * Vimeo 页面按钮面板注入。
  *
  * 面板固定展示 Video / Audio / Subtitle / Image 四行，优先插在 action bar 前，找不到时插到 h1 后。
+ * 按钮的下载状态只来自 background 队列快照：已在队列里的按钮显示状态并禁用，其余按钮随时可点，点击即入队。
  */
 
 import { I18N_KEYS } from '@/core/constants/i18n'
@@ -22,19 +23,12 @@ const VIDEO_ID_ATTR = 'data-vdl-video-id'
 const CONFIG_EXPIRES_ATTR = 'data-vdl-config-expires'
 const LABEL_ATTR = 'data-vdl-label'
 const BUSY_LABEL_ATTR = 'data-vdl-busy-label'
+const WAITING_LABEL_ATTR = 'data-vdl-waiting-label'
 /** 面板行类型；每行对应一种资源语义。 */
 type VimeoRowKind = 'video' | 'audio' | 'subtitle' | 'image'
 
-const DOWNLOADING_CLASS = 'is-downloading'
-const LOCKED_CLASS = 'is-download-locked'
-
-/** 单个 Vimeo 视频的活动下载会话。 */
-interface VimeoDownloadSession {
-  /** 当前下载的资源 ID。 */
-  sourceId: string
-  /** 当前真实进度；null 表示总字节不可计算。 */
-  progress: number | null
-}
+/** 按钮对应的任务在队列里（等待中或下载中）。 */
+const QUEUED_CLASS = 'is-queued'
 
 /** Vimeo 页面按钮点击处理函数。 */
 export type VimeoDownloadClickHandler = (resourceId: string) => void
@@ -44,8 +38,8 @@ export class VimeoButtonPanel {
   /** 点击回调。 */
   private clickHandler: VimeoDownloadClickHandler | null = null
 
-  /** 按 videoId 隔离下载锁，允许 SPA 切换后的不同视频独立下载。 */
-  private readonly activeDownloads = new Map<string, VimeoDownloadSession>()
+  /** background 队列的最新任务；SPA 切换后重新渲染的面板也从这里恢复按钮状态。 */
+  private queueTasks: readonly DownloadTaskSnapshot[] = []
 
   /** 设置点击回调。 */
   onClick(handler: VimeoDownloadClickHandler): void {
@@ -92,7 +86,7 @@ export class VimeoButtonPanel {
         resources.filter(isImageResource)
       )
     )
-    this.renderDownloadState(videoId)
+    this.renderQueueState()
   }
 
   /** 渲染加载失败时的禁用四行面板。 */
@@ -107,46 +101,10 @@ export class VimeoButtonPanel {
     })
   }
 
-  /** 当前视频没有下载任务时进入忙碌态。 */
-  beginDownload(videoId: string, sourceId: string): boolean {
-    if (this.activeDownloads.has(videoId)) {
-      return false
-    }
-
-    this.activeDownloads.set(videoId, { sourceId, progress: null })
-    this.renderDownloadState(videoId)
-    return true
-  }
-
-  /** 更新当前视频触发按钮的进度。 */
-  updateProgress(videoId: string, sourceId: string, progress: number | null): void {
-    const session = this.activeDownloads.get(videoId)
-    if (!session || session.sourceId !== sourceId) {
-      return
-    }
-
-    session.progress = progress === null ? null : clampProgress(progress)
-    this.renderDownloadState(videoId)
-  }
-
-  /** 下载完成或失败后恢复当前视频的所有按钮。 */
-  endDownload(videoId: string): void {
-    this.activeDownloads.delete(videoId)
-    this.renderDownloadState(videoId)
-  }
-
-  /** 按 background 唯一队列投影更新会话，页面切换只移除 DOM，不丢失终态清理。 */
+  /** 应用 background 队列快照并刷新按钮状态。 */
   applyQueueSnapshot(tasks: readonly DownloadTaskSnapshot[]): void {
-    for (const [videoId, session] of this.activeDownloads) {
-      const task = tasks.find(
-        entry => entry.resourceId === session.sourceId && entry.status !== 'failed'
-      )
-      if (task) {
-        this.updateProgress(videoId, session.sourceId, task.progress)
-      } else {
-        this.endDownload(videoId)
-      }
-    }
+    this.queueTasks = tasks
+    this.renderQueueState()
   }
 
   /** 创建一行按钮。 */
@@ -182,7 +140,6 @@ export class VimeoButtonPanel {
     const label = getVimeoResourceLabel(resource, (key, params) => I18nService.t(key, params))
     const choice = getVimeoResourceChoice(resource)
     const title = `${I18nService.t(I18N_KEYS.RESOURCE_ITEM.DOWNLOAD)} ${label}`
-    const busyLabel = I18nService.t(I18N_KEYS.RESOURCE_ITEM.DOWNLOADING)
     button.type = 'button'
     button.className = isBestChoice(choice) ? 'vdl-vimeo-option is-primary' : 'vdl-vimeo-option'
     button.title = title
@@ -192,7 +149,8 @@ export class VimeoButtonPanel {
     button.setAttribute(CHOICE_ATTR, choice)
     button.setAttribute(SOURCE_ID_ATTR, resource.id)
     button.setAttribute(LABEL_ATTR, label)
-    button.setAttribute(BUSY_LABEL_ATTR, busyLabel)
+    button.setAttribute(BUSY_LABEL_ATTR, I18nService.t(I18N_KEYS.RESOURCE_ITEM.DOWNLOADING))
+    button.setAttribute(WAITING_LABEL_ATTR, I18nService.t(I18N_KEYS.RESOURCE_ITEM.WAITING))
     labelElement.className = 'vdl-vimeo-option-label'
     labelElement.textContent = label
     button.appendChild(labelElement)
@@ -207,58 +165,38 @@ export class VimeoButtonPanel {
     return button
   }
 
-  /** 根据活动会话同步文本、禁用态与辅助技术状态。 */
-  private renderDownloadState(videoId: string): void {
-    const panel = Array.from(
-      document.querySelectorAll<HTMLElement>(`[${TEST_ID_ATTR}="${PANEL_TEST_ID}"]`)
-    ).find(candidate => candidate.getAttribute(VIDEO_ID_ATTR) === videoId)
-    if (!panel) {
-      return
-    }
-
-    const session = this.activeDownloads.get(videoId)
-    if (session) {
-      panel.setAttribute('aria-busy', 'true')
-    } else {
-      panel.removeAttribute('aria-busy')
-    }
-
-    panel
-      .querySelectorAll<HTMLButtonElement>(`button[${SOURCE_ID_ATTR}]:not([${SOURCE_ID_ATTR}=""])`)
+  /** 按队列快照同步每个按钮的文本、禁用态与辅助技术状态。 */
+  private renderQueueState(): void {
+    document
+      .querySelectorAll<HTMLButtonElement>(
+        `[${TEST_ID_ATTR}="${PANEL_TEST_ID}"] button[${SOURCE_ID_ATTR}]:not([${SOURCE_ID_ATTR}=""])`
+      )
       .forEach(button => {
-        const sourceId = button.getAttribute(SOURCE_ID_ATTR) ?? ''
+        const task = findButtonTask(this.queueTasks, button.getAttribute(SOURCE_ID_ATTR) ?? '')
         const originalLabel = button.getAttribute(LABEL_ATTR) ?? ''
         const label = button.querySelector<HTMLElement>('.vdl-vimeo-option-label')
-        const isCurrent = session?.sourceId === sourceId
-        const isLocked = session !== undefined
-        const downloadTitle = `${I18nService.t(I18N_KEYS.RESOURCE_ITEM.DOWNLOAD)} ${originalLabel}`
 
-        button.disabled = isLocked
-        button.classList.toggle(LOCKED_CLASS, isLocked)
-        button.classList.toggle(DOWNLOADING_CLASS, isCurrent)
-        button.removeAttribute('aria-busy')
-        button.removeAttribute('aria-live')
+        button.disabled = task !== null
+        button.classList.toggle(QUEUED_CLASS, task !== null)
 
-        if (!isCurrent || !session) {
+        if (!task) {
+          const downloadTitle = `${I18nService.t(I18N_KEYS.RESOURCE_ITEM.DOWNLOAD)} ${originalLabel}`
           if (label) {
             label.textContent = originalLabel
           }
-          button.title = isLocked
-            ? I18nService.t(I18N_KEYS.RESOURCE_ITEM.DOWNLOADING)
-            : downloadTitle
-          button.setAttribute('aria-label', button.title)
+          button.title = downloadTitle
+          button.setAttribute('aria-label', downloadTitle)
+          button.removeAttribute('aria-busy')
+          button.removeAttribute('aria-live')
           return
         }
 
-        const progressText =
-          session.progress === null
-            ? I18nService.t(I18N_KEYS.RESOURCE_ITEM.DOWNLOADING)
-            : `${Math.floor(session.progress)}%`
+        const statusText = getTaskStatusText(task)
         if (label) {
-          label.textContent = progressText
+          label.textContent = statusText
         }
-        button.title = progressText
-        button.setAttribute('aria-label', progressText)
+        button.title = statusText
+        button.setAttribute('aria-label', statusText)
         button.setAttribute('aria-busy', 'true')
         button.setAttribute('aria-live', 'polite')
       })
@@ -381,7 +319,31 @@ function isBestChoice(choice: string): boolean {
   return choice === 'best' || choice === 'best-audio' || choice === 'best-thumbnail'
 }
 
-/** 把不可信 DOM 事件进度约束到可显示范围。 */
-function clampProgress(progress: number): number {
-  return Math.max(0, Math.min(100, progress))
+/**
+ * 查找按钮对应的未结束任务；失败任务不占用按钮，用户可以重新点击。
+ *
+ * 大视频入队时会被自动分割，分片的资源 ID 是 `{按钮资源 ID}:clip:{区间}`，同样算这个按钮的任务，
+ * 下载中的分片优先，这样按钮显示的是正在进行的进度。
+ */
+function findButtonTask(
+  tasks: readonly DownloadTaskSnapshot[],
+  sourceId: string
+): DownloadTaskSnapshot | null {
+  const clipPrefix = `${sourceId}:clip:`
+  const matched = tasks.filter(
+    task =>
+      task.status !== 'failed' &&
+      (task.resourceId === sourceId || task.resourceId.startsWith(clipPrefix))
+  )
+  return matched.find(task => task.status === 'downloading') ?? matched[0] ?? null
+}
+
+/** 队列任务在按钮上显示的文字：等待中、下载中，或总字节可计算时的百分比。 */
+function getTaskStatusText(task: DownloadTaskSnapshot): string {
+  if (task.status === 'waiting') {
+    return I18nService.t(I18N_KEYS.RESOURCE_ITEM.WAITING)
+  }
+  return task.progress === null
+    ? I18nService.t(I18N_KEYS.RESOURCE_ITEM.DOWNLOADING)
+    : `${task.progress}%`
 }

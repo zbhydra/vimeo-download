@@ -22,7 +22,7 @@ pnpm run test:clean
 
 `pnpm test` 会 fresh build 当前源码，然后串行执行全部真实自动化项目：
 
-- `extension-e2e-vimeo-real`：真实 Vimeo 公网视频的 DASH 下载经 injected mux 合成 MP4，以及真实字幕轨从 Popup 和页面面板保存为 VTT，共 3 条。
+- `extension-e2e-vimeo-real`：真实 Vimeo 公网视频的 DASH 下载经 injected mux 合成 MP4，真实字幕轨从 Popup 和页面面板保存为 VTT，以及页面面板下载时其他按钮排队，共 4 条。
 
 `pnpm run test:e2e:vimeo` 只运行该 project。本机直连不到 Vimeo 时，用 `E2E_PROXY_SERVER=http://127.0.0.1:<端口>` 指定代理（Clash Verge 默认 7897）。Playwright 会强制回环地址也走代理，代理规则要能把 localhost 转回本机，Clash Verge 实测可以。
 
@@ -73,6 +73,7 @@ Playwright 使用 `fullyParallel=false`、`workers=1`。
 |---|---|---|
 | `vimeo-real-download.spec.ts` | `player.vimeo.com/video/1225933284`（只有 DASH/HLS） | Popup 下载最低画质 MP4 和 2 秒裁剪 MP3，覆盖 injected mux、FIFO 队列、真实额度和下载历史 |
 | `vimeo-real-subtitle.spec.ts` | `player.vimeo.com/video/1226740492`（字幕在 `captions.vimeo.com`，只有自动字幕） | 字幕从 Popup 和页面面板保存为 WebVTT |
+| `vimeo-real-panel-queue.spec.ts` | 同上 | 页面面板下载视频时其他按钮可点，字幕点击后排队，两个文件依次落盘 |
 
 样本失效时用例直接失败（导航或定位器超时），要更换样本，不改成假页面。
 

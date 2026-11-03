@@ -1,5 +1,16 @@
 # 002 · 下载功能 — 变更记录
 
+## 2026-11-03 页面面板按钮各自排队
+
+**Why**：后台队列早已支持排队（本文档 feat「扩展端本地任务管理」），页面面板却按视频加了一把锁：下载一个文件时其他按钮全部禁用，要等它结束才能点下一个。hydra 手测 1.0.3 生产包时发现。
+
+**变更**：
+- `extension/src/sites/vimeo/content/buttons.ts`：去掉按视频的下载会话和 `beginDownload` / `updateProgress` / `endDownload`，按钮状态只投影 background 队列快照。等待中显示 `Waiting...`，下载中显示百分比或 `Downloading...`，只禁用这个按钮自己；其余按钮点击即入队。自动分割的分片算作原按钮的任务（此前分片 ID 对不上，第一份快照就把按钮复位了）。Popup 发起的下载也会显示在对应按钮上。
+- `extension/src/sites/vimeo/content/index.ts`：点击只负责发 `downloadBatch`。
+- `extension/src/sites/vimeo/content/styles/buttons.css`：同时预留下载中和等待中文案的宽度；`is-downloading` 改为 `is-queued`，删除没有样式的 `is-download-locked`。
+- 单测按新模型重写；新增真实 E2E `tests/e2e/vimeo-real-panel-queue.spec.ts`。
+- `feat.md`、`tech-扩展端Vimeo本地下载.md`、`test-插件端e2e.md`、`extension/tests/README.md` 同步；顺手把 feat 里的「三行面板」改成现状的四行。
+
 ## 2026-11-02 插件字幕修复；官网解析失败引导改用插件
 
 **Why**：

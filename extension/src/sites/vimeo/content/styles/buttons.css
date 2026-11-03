@@ -52,12 +52,20 @@
     color 0.15s ease;
 }
 
-/* 隐形伪元素预留本地化忙碌文案宽度，百分比变化不会推动相邻按钮。 */
+/* 隐形伪元素预留本地化的下载中、等待中文案宽度，状态和百分比变化不会推动相邻按钮。 */
+.vdl-vimeo-option::before,
 .vdl-vimeo-option::after {
   grid-area: 1 / 1;
   visibility: hidden;
-  content: attr(data-vdl-busy-label);
   pointer-events: none;
+}
+
+.vdl-vimeo-option::before {
+  content: attr(data-vdl-waiting-label);
+}
+
+.vdl-vimeo-option::after {
+  content: attr(data-vdl-busy-label);
 }
 
 .vdl-vimeo-option-label {
@@ -86,7 +94,7 @@
   opacity: 0.55;
 }
 
-.vdl-vimeo-option.is-downloading:disabled {
+.vdl-vimeo-option.is-queued:disabled {
   cursor: wait;
   opacity: 1;
 }

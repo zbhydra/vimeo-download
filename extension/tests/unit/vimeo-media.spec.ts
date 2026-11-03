@@ -813,58 +813,83 @@ describe('Vimeo media parsing', () => {
     bestButton?.click()
     expect(clicked).toEqual([])
 
-    expect(panel.beginDownload('1201819515', 'vimeo:1201819515:video:best')).toBe(true)
-    expect(panel.beginDownload('1201819515', 'vimeo:1201819515:video:best')).toBe(false)
-    expect(bestButton?.textContent).toBe(I18nService.t(I18N_KEYS.RESOURCE_ITEM.DOWNLOADING))
-    expect(bestButton?.disabled).toBe(true)
-    expect(bestButton?.getAttribute('aria-busy')).toBe('true')
-    expect(
-      document.querySelector<HTMLButtonElement>(
-        '[data-testid="vdl-vimeo-option"][data-vdl-choice="progressive:1080p:30"]'
-      )?.disabled
-    ).toBe(true)
-
-    panel.updateProgress('1201819515', 'vimeo:1201819515:video:best', 52.8)
-    expect(bestButton?.textContent).toBe('52%')
-
-    panel.endDownload('1201819515')
-    expect(bestButton?.textContent).toBe('Best')
-    expect(bestButton?.disabled).toBe(false)
-    expect(bestButton?.hasAttribute('aria-busy')).toBe(false)
-
-    panel.beginDownload('1201819515', 'vimeo:1201819515:video:best')
-    panel.clear()
-    panel.render('1201819515', resources)
-    expect(document.querySelector<HTMLButtonElement>('[data-vdl-choice="best"]')?.disabled).toBe(
-      true
+    const otherButton = document.querySelector<HTMLButtonElement>(
+      '[data-testid="vdl-vimeo-option"][data-vdl-choice="progressive:1080p:30"]'
     )
-    const currentTask: DownloadTaskSnapshot = {
-      taskId: 'current-task',
-      resourceId: 'vimeo:1201819515:video:best',
+    const otherLabel = otherButton?.textContent
+    const bestId = 'vimeo:1201819515:video:best'
+    const otherId = 'vimeo:1201819515:video:progressive:1080p:30'
+    const task: DownloadTaskSnapshot = {
+      taskId: 'best-task',
+      resourceId: bestId,
       filename: 'video.mp4',
       type: RESOURCE_TYPES.VIDEO,
       resourceIndex: 0,
       status: 'downloading',
-      progress: 40,
+      progress: null,
       receivedBytes: null,
       totalBytes: null,
       bytesPerSecond: null,
       bytesAreEstimated: false
     }
+    const downloadingLabel = I18nService.t(I18N_KEYS.RESOURCE_ITEM.DOWNLOADING)
+    const waitingLabel = I18nService.t(I18N_KEYS.RESOURCE_ITEM.WAITING)
+
+    // 下载中只禁用它自己，其他按钮仍可点击入队。
+    panel.applyQueueSnapshot([task])
+    expect(bestButton?.textContent).toBe(downloadingLabel)
+    expect(bestButton?.disabled).toBe(true)
+    expect(bestButton?.getAttribute('aria-busy')).toBe('true')
+    expect(otherButton?.disabled).toBe(false)
+    expect(otherButton?.textContent).toBe(otherLabel)
+
+    panel.applyQueueSnapshot([{ ...task, progress: 52 }])
+    expect(bestButton?.textContent).toBe('52%')
+
+    // 排队中的按钮显示等待，同样不能重复点击。
+    const waitingTask: DownloadTaskSnapshot = {
+      ...task,
+      taskId: 'other-task',
+      resourceId: otherId,
+      status: 'waiting'
+    }
+    panel.applyQueueSnapshot([{ ...task, progress: 52 }, waitingTask])
+    expect(otherButton?.textContent).toBe(waitingLabel)
+    expect(otherButton?.disabled).toBe(true)
+    expect(otherButton?.getAttribute('aria-busy')).toBe('true')
+
+    // 前一个完成后复位，轮到的任务转为下载中。
+    panel.applyQueueSnapshot([{ ...waitingTask, status: 'downloading' }])
+    expect(bestButton?.textContent).toBe('Best')
+    expect(bestButton?.disabled).toBe(false)
+    expect(bestButton?.hasAttribute('aria-busy')).toBe(false)
+    expect(otherButton?.textContent).toBe(downloadingLabel)
+
+    // 失败任务不占用按钮，可以重新点击。
+    panel.applyQueueSnapshot([{ ...task, taskId: 'failed-task', status: 'failed' }])
+    expect(bestButton?.disabled).toBe(false)
+    expect(bestButton?.textContent).toBe('Best')
+
+    // 大视频自动分割后，分片也算这个按钮的任务，显示下载中分片的进度。
     panel.applyQueueSnapshot([
-      { ...currentTask, taskId: 'old-failed-task', status: 'failed' },
-      currentTask
+      { ...task, taskId: 'part-1', resourceId: `${bestId}:clip:0-100`, progress: 7 },
+      { ...task, taskId: 'part-2', resourceId: `${bestId}:clip:100-200`, status: 'waiting' }
     ])
-    expect(document.querySelector<HTMLButtonElement>('[data-vdl-choice="best"]')?.textContent).toBe(
-      '40%'
-    )
+    expect(bestButton?.textContent).toBe('7%')
+    expect(bestButton?.disabled).toBe(true)
+    expect(otherButton?.disabled).toBe(false)
+
+    // SPA 切换后重新渲染的面板从队列快照恢复状态。
+    panel.applyQueueSnapshot([task])
+    panel.clear()
+    panel.render('1201819515', resources)
     expect(document.querySelector<HTMLButtonElement>('[data-vdl-choice="best"]')?.disabled).toBe(
       true
     )
     expect(
       document.querySelector<HTMLButtonElement>('[data-vdl-choice="progressive:1080p:30"]')
         ?.disabled
-    ).toBe(true)
+    ).toBe(false)
     panel.applyQueueSnapshot([])
     expect(document.querySelector<HTMLButtonElement>('[data-vdl-choice="best"]')?.disabled).toBe(
       false

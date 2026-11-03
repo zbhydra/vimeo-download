@@ -148,8 +148,22 @@ describe('Vimeo content config 捕获降级', () => {
     const { vimeoResourceBuffer } = await import('@/sites/vimeo/content/resourceBuffer')
     const resource = vimeoResourceBuffer.getAllResources()[0]
     const panelOwner = renderSpy.mock.contexts[0] as InstanceType<typeof VimeoButtonPanel>
-    panelOwner.beginDownload(VIDEO_ID, resource.id)
-    expect(queryPanel()?.getAttribute('aria-busy')).toBe('true')
+    const enabledBeforeDownload = enabledOptions().length
+    panelOwner.applyQueueSnapshot([
+      {
+        taskId: 'task-1',
+        resourceId: resource.id,
+        type: resource.type,
+        resourceIndex: resource.index,
+        status: 'downloading',
+        progress: null,
+        receivedBytes: null,
+        totalBytes: null,
+        bytesPerSecond: null,
+        bytesAreEstimated: false
+      }
+    ])
+    expect(enabledOptions()).toHaveLength(enabledBeforeDownload - 1)
     vi.mocked(vimeoResourceBuffer.replaceSnapshot).mockClear()
 
     for (const [listener] of vi.mocked(chrome.storage.onChanged.addListener).mock.calls) {
@@ -160,8 +174,7 @@ describe('Vimeo content config 捕获降级', () => {
     expect(document.querySelector('[data-testid="vdl-vimeo-row-label"]')?.textContent).toBe(
       I18nService.t(I18N_KEYS.RESOURCE_ITEM.TYPE_VIDEO)
     )
-    expect(queryPanel()?.getAttribute('aria-busy')).toBe('true')
-    expect(enabledOptions()).toHaveLength(0)
+    expect(enabledOptions()).toHaveLength(enabledBeforeDownload - 1)
     expect(queryPanel()?.querySelector('[aria-busy="true"]')?.textContent).toBe(
       I18nService.t(I18N_KEYS.RESOURCE_ITEM.DOWNLOADING)
     )

@@ -78,7 +78,7 @@ https://*.vimeocdn.com/*
 
 | 上下文 | 职责 |
 | --- | --- |
-| top content(`vimeo.com` / 顶层 `player.vimeo.com`) | 提取 `videoId`、通过 EventRpc 消费捕获的 config(播放页按 videoId 点查、身份缺失聚合页枚举概要,见 §5.2)、注入按钮、维护 tab 资源缓存；把用户点击的资源(完整 MediaResource)投递给 background 编排器，并订阅编排快照驱动页面按钮进度(在途显示进度，终态复位) |
+| top content(`vimeo.com` / 顶层 `player.vimeo.com`) | 提取 `videoId`、通过 EventRpc 消费捕获的 config(播放页按 videoId 点查、身份缺失聚合页枚举概要,见 §5.2)、注入按钮、维护 tab 资源缓存；把用户点击的资源(完整 MediaResource)投递给 background 编排器，并订阅编排快照驱动页面按钮状态(等待中和下载中显示状态，终态复位) |
 | player-frame content(`player.vimeo.com`) | 只把 frame 内 `videoId` postMessage 给 top content 作为 identity 兜底;不传 config 或 signed URL,不启动资源缓存与下载调度 |
 | injected / MAIN world | `document_start` 安装原生 config 捕获,保留完整 signed URL 与 JSON,并按捕获序提供有界概要枚举；不执行下载（分片读取与 remux 已迁 offscreen），不做后端通信 |
 | popup | 视频面板（见 §12）：播放页展示单视频,身份缺失聚合页展示多视频选择器;展示当前 tab 的视频信息、档位行（Video / 直接下载 / Audio / Subtitle / Image，见 §12.5）与时间裁剪，按选中档位把资源投递给 background 编排器；底部队列订阅 background 编排快照,提供取消、重试与「全部停止」 |
@@ -208,10 +208,12 @@ wrapper.prepend(panel)
 - 行标签宽度固定 56px,避免按钮换行时抖动。
 - 按钮高度 32px,最小宽度 72px,圆角 6px。
 - `Best` / `Best Audio` 使用主按钮样式;其他画质使用次按钮样式。
-- 禁用态用于 config 加载中、该类型无资源、下载中。
-- 点击资源后锁定同一视频面板的全部可下载按钮,阻止重复下载与重复扣额;触发按钮设置 `aria-busy=true`,面板用 `aria-busy=true` 表达整体忙碌状态。
-- 能计算总字节时触发按钮显示整数百分比;缺少可信总字节时显示当前语言的 `Downloading...`;完成或失败后恢复原画质文案与可点击态。
-- 按钮用不可见的本地化忙碌文案预留宽度,下载状态与百分比变化不改变按钮尺寸。
+- 禁用态用于 config 加载中、该类型无资源、该按钮的任务已在队列里。
+- 按钮状态只投影 background 队列快照,面板不另存下载会话。任务等待中显示当前语言的 `Waiting...`;下载中能计算总字节时显示整数百分比,否则显示 `Downloading...`;这两种状态下该按钮禁用并设置 `aria-busy=true`。任务消失(完成/取消)或失败后恢复原画质文案与可点击态。
+- 其余按钮不受影响,点击即入队。同一资源的重复提交由编排器去重(§8.1),不靠禁用其他按钮防重复。
+- 自动分割的分片资源 ID 是 `{按钮资源 ID}:clip:{区间}`,算作原按钮的任务,显示下载中分片的进度。Popup 发起的同档位片段下载同样会显示在这个按钮上。
+- 点击到按钮显示状态靠第一份快照,不做乐观更新:2026-11-03 真实页面实测 SW 运行中 3–6 ms、冷启动 64–84 ms。页面刷新后面板没有快照,要等下一次队列变化才同步;此时点击已在队列的按钮由编排器去重。
+- 按钮用不可见的本地化下载中、等待中文案预留宽度,状态与百分比变化不改变按钮尺寸。
 
 ## 5. config 是什么
 
@@ -744,7 +746,7 @@ Vimeo 页面可能在同一 tab 内切换视频。`getVimeoPageKey` 以完整 hr
 4. 成功快照缓存在当前 content 控制器,后续 DOM 重排只重挂面板,不重复请求 config/playlist。
 5. 不使用 3 秒 reconcile,也不对 `/config` 做网络轮询。捕获超时或解析失败时展示空态,用户刷新页面重试。
 
-SPA 切换或离开页面时，content 的按钮状态与快照订阅随文档销毁；下载任务全部由 background 编排、offscreen 执行，切换视频、刷新或关闭来源页面都不中断（DASH/HLS 与直连类一致），产物照常落盘。用户回到页面后，页面按钮按编排快照驱动:仍在队列的任务显示进度,任务消失（完成/取消）或失败则复位按钮。
+SPA 切换或离开页面时，content 的按钮状态与快照订阅随文档销毁；下载任务全部由 background 编排、offscreen 执行，切换视频、刷新或关闭来源页面都不中断（DASH/HLS 与直连类一致），产物照常落盘。用户回到页面后，页面按钮按编排快照驱动:仍在队列的任务显示等待或进度,任务消失（完成/取消）或失败则复位按钮。
 
 Config 刷新触发条件:
 
