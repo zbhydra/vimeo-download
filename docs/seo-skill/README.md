@@ -26,7 +26,7 @@
 | `vimeo-downloader-not-working` | 排障型：本站在线工具的报错文案逐条解释与恢复 | vimeo downloader not working；vimeo download failed | N3 论坛/Issue 6/9、厂商文章 2/9，工具 0；N21 论坛/Issue 6/10、厂商文章 2/10，工具 0 | 可立即发布（只写在线工具现有错误态） | P1 | 已同步到站点源码（2026-10-07），构建与本地真实页面验证通过，线上待部署 |
 | `save-vimeo-audio-as-mp3-or-m4a` | 方法型：只存 Vimeo 视频的音频，M4A 或 MP3 | vimeo to mp3；extract audio from vimeo video | Q8 文章 56%；N11 文章 5/9（56%） | 可发布（插件 2026-10-08 已上架） | P2 | 已发布（2026-10-25），构建与本地真实页面验证通过，线上待部署 |
 | `download-vimeo-subtitles-as-vtt` | 方法型：把视频自带字幕存成 VTT 文件，并说明它不是文字稿 | download vimeo video with subtitles；download vimeo captions | Q9 文章 78%；N23 文章+官方 8/9（89%），工具 1 | 可发布（插件 2026-10-08 已上架） | P2 | 已发布（2026-10-25），构建与本地真实页面验证通过，线上待部署 |
-| `how-to-get-a-vimeo-transcript` | 方法型：拿到 Vimeo 视频的文字稿：看、下载，或存字幕文件后转纯文本 | vimeo transcript；vimeo transcript download；download vimeo transcript | N9 文章+官方 44%、工具 33%；Trends 见 §3 I08 | 已部署（2026-11-02）；插件步骤依赖 1.0.4 | P1 | 已部署（2026-11-02） |
+| `how-to-get-a-vimeo-transcript` | 方法型：拿到 Vimeo 视频的文字稿：看、下载，或存字幕文件后转纯文本 | vimeo transcript；vimeo transcript download；download vimeo transcript | N9 文章+官方 44%、工具 33%；Trends 见 §3 I08 | 已部署（2026-11-02）；插件步骤依赖 1.0.5 | P1 | 已部署（2026-11-02） |
 
 发布顺序：`how-to-download-a-vimeo-video` → `is-it-legal-to-download-vimeo-videos` → `vimeo-download-button-missing` → `vimeo-downloader-not-working`（均 2026-10-07 发布）→ `save-vimeo-audio-as-mp3-or-m4a` 与 `download-vimeo-subtitles-as-vtt`（2026-10-25 发布，插件 2026-10-08 上架后解锁）。六篇都只有英文；其他语言没有正文。
 
@@ -188,7 +188,7 @@ Vimeo 官方页面（2026-10-06 读取：先用 WebFetch，再用 curl 下载页
 
 ### 2026-11-02 已裁决
 
-- 写文字稿文章（I08 改判）。2026-11-02 已部署（`v20261102_213914`），hydra 决定不等 1.0.3 和 11-11；插件保存字幕这一步要等 1.0.4 上架才成立。
+- 写文字稿文章（I08 改判）。2026-11-02 已部署（`v20261102_213914`），hydra 决定不等 1.0.3 和 11-11；插件保存字幕这一步要等 1.0.5 上架才成立。
 - 第 3 条（手机端）：hydra 没有要求，手机篇和真机测试暂缓。
 - 在线工具解析失败率高是代理 IP 质量导致的预期情况，不再追查，页面和文章引导去插件。
 - 第 5 条（扩展上架）：how-to、not-working 的扩展块已启用并同步运行时。
@@ -226,5 +226,5 @@ Vimeo 官方页面（2026-10-06 读取：先用 WebFetch，再用 curl 下载页
 - 没有真机验证：在线工具的实际界面、倒计时窗口、移动端、Edge/Brave、扩展的实际面板、MP3 转码、字幕文件的真实格式与文件名，以及 `vimeo-downloader-not-working` 里的每条报错。
 - 没有任何真实截图；各篇 `page_seo.md` 只列了需要截的清单。
 - 没有核实 SRT 是否被扩展支持：源码按 URL 后缀判断格式，Vimeo 默认交付 VTT，其余格式没有实测。
-- ~~没有核实 Vimeo 自动生成字幕是否出现在播放器的 text_tracks 里。~~ 2026-11-02 已核实，出现，且被 1.0.2 的白名单丢弃（修复随 1.0.4 上架）。
+- ~~没有核实 Vimeo 自动生成字幕是否出现在播放器的 text_tracks 里。~~ 2026-11-02 已核实，出现，且被 1.0.2 的白名单丢弃（修复随 1.0.5 上架）。
 - 没有写入：对比页、片段裁剪页、手机端页、安全性页、封面页、日语与西语页。
