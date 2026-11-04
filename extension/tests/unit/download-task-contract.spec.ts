@@ -143,6 +143,12 @@ function inProgress(
 }
 
 const COMPLETE_ITEM = { id: 55, state: 'complete' } as chrome.downloads.DownloadItem
+const USER_CANCELED_ITEM = {
+  id: 55,
+  state: 'interrupted',
+  error: 'USER_CANCELED'
+} as chrome.downloads.DownloadItem
+
 function stubSearch(item: () => chrome.downloads.DownloadItem): void {
   vi.mocked(chrome.downloads.search).mockImplementation(() => Promise.resolve([item()]))
 }
@@ -540,6 +546,29 @@ describe('下载任务合同', () => {
       expect(outcomeMarkMessage('download_failed')).toContain('reason=STALLED')
     })
 
+    it('落盘中取消：Chrome 已 complete 也不算成功，只记一条取消', async () => {
+      vi.useFakeTimers()
+      let cancelled = false
+      vi.mocked(chrome.downloads.cancel).mockImplementation(async () => {
+        cancelled = true
+      })
+      stubSearch(() => (cancelled ? COMPLETE_ITEM : inProgress(1)))
+      await deliverThroughDrain('cancel-landing')
+
+      await expect(orchestrator.cancelTask('cancel-landing')).resolves.toBe(true)
+      expect(chrome.downloads.cancel).toHaveBeenCalledWith(55)
+      await vi.advanceTimersByTimeAsync(500)
+      await expectTaskRemoved()
+
+      expect(mocks.release).toHaveBeenCalledWith({
+        taskId: 'cancel-landing',
+        blobUrl: 'blob:cancel-landing'
+      })
+      expect(outcomeMarks()).toEqual(['download_cancelled'])
+      expect(mocks.notify).not.toHaveBeenCalled()
+      expect(mocks.history).not.toHaveBeenCalled()
+    })
+
     it('创建 Chrome 下载失败：仍应答已受理，由 background 释放产物并记失败', async () => {
       vi.mocked(chrome.downloads.download).mockRejectedValue(new Error('Invalid filename'))
 
@@ -558,6 +587,42 @@ describe('下载任务合同', () => {
   })
 
   describe('统一结算入口挡住迟到的结算', () => {
+    it('冷启动任务：取消转发失败已本地收敛，在途落盘流程随后再次结算，只记一条取消', async () => {
+      await restore('cold-race', resource('audio'))
+      // 让落盘流程停在读取设置：它已持有 task 引用，但还没有 downloadId，取消只能转发 offscreen。
+      let finishSettings: (() => void) | undefined
+      mocks.settings.mockImplementationOnce(
+        () =>
+          new Promise(resolve => {
+            finishSettings = () =>
+              resolve({ downloadPath: 'vimeoMediaDownloader', filenamePattern: '{title}' })
+          })
+      )
+      const delivery = orchestrator.handleTaskComplete(artifactRequest('cold-race'))
+      await vi.waitFor(() => expect(finishSettings).toBeDefined())
+
+      mocks.cancel.mockRejectedValueOnce(new Error('[mock] offscreen 无响应'))
+      await expect(orchestrator.cancelTask('cold-race')).resolves.toBe(true)
+      expect(orchestrator.getSnapshot().tasks).toHaveLength(0)
+      expect(outcomeMarks()).toEqual(['download_cancelled'])
+
+      // 放行后 startArtifactDownload 发现已取消并抛错，landArtifact 带着旧引用再次结算。
+      finishSettings?.()
+      await expect(delivery).resolves.toEqual({ accepted: true })
+      await vi.waitFor(() =>
+        expect(mocks.release).toHaveBeenCalledWith({
+          taskId: 'cold-race',
+          blobUrl: 'blob:cold-race'
+        })
+      )
+      await new Promise(resolve => setTimeout(resolve))
+
+      expect(chrome.downloads.download).not.toHaveBeenCalled()
+      expect(outcomeMarks()).toEqual(['download_cancelled'])
+      expect(mocks.notify).not.toHaveBeenCalled()
+      expect(mocks.history).not.toHaveBeenCalled()
+    })
+
     it('冷启动任务同一轮事件里收到两次失败回传：守卫到终态转移之间没有缺口，只记一条', async () => {
       await restore('cold-twice', resource('audio'))
 
@@ -592,4 +657,78 @@ describe('下载任务合同', () => {
     })
   })
 
+  describe('download_cancelled 打点', () => {
+    it('offscreen 产物在 Chrome 界面或另存为框被取消：只记取消，不算失败', async () => {
+      stubSearch(() => USER_CANCELED_ITEM)
+      await deliverThroughDrain('ui-cancel-blob')
+      await expectTaskRemoved()
+
+      expect(outcomeMarks()).toEqual(['download_cancelled'])
+      expect(mocks.notify).not.toHaveBeenCalled()
+      expect(mocks.history).not.toHaveBeenCalled()
+    })
+
+    it('直连下载在 Chrome 界面被取消：只记取消，不算失败', async () => {
+      stubSearch(() => USER_CANCELED_ITEM)
+      await startDirectThroughDrain('ui-cancel-direct')
+      await expectTaskRemoved()
+
+      expect(outcomeMarks()).toEqual(['download_cancelled'])
+      expect(mocks.notify).not.toHaveBeenCalled()
+      expect(mocks.history).not.toHaveBeenCalled()
+    })
+
+    it('插件队列取消下载中的 offscreen 任务：只记一条取消', async () => {
+      await restore('queue-cancel', resource('audio'))
+      await fail('queue-cancel')
+      clearOutcomeSpies()
+      mocks.start.mockResolvedValue({ started: true })
+      expect(orchestrator.retryTask('queue-cancel')).toBe(true)
+      await vi.waitFor(() => expect(mocks.start).toHaveBeenCalled())
+
+      await orchestrator.cancelTask('queue-cancel')
+      expect(mocks.cancel).toHaveBeenCalledWith({ taskId: 'queue-cancel' })
+      await orchestrator.handleTaskCancelled({ taskId: 'queue-cancel' })
+      await expectTaskRemoved()
+
+      expect(outcomeMarks()).toEqual(['download_cancelled'])
+    })
+
+    it('冷启动接管的任务在 Chrome 界面被取消：只记一条取消', async () => {
+      await restore('cold-ui-cancel', resource('audio'))
+      stubSearch(() => USER_CANCELED_ITEM)
+
+      await orchestrator.handleTaskComplete(artifactRequest('cold-ui-cancel'))
+      await expectTaskRemoved()
+
+      expect(outcomeMarks()).toEqual(['download_cancelled'])
+      expect(mocks.notify).not.toHaveBeenCalled()
+      expect(mocks.history).not.toHaveBeenCalled()
+    })
+
+    it('冷启动接管的任务由 offscreen 确认取消：重复确认不重复记', async () => {
+      await restore('cold-confirm', resource('audio'))
+
+      await expect(orchestrator.handleTaskCancelled({ taskId: 'cold-confirm' })).resolves.toEqual({
+        accepted: true
+      })
+      await expect(orchestrator.handleTaskCancelled({ taskId: 'cold-confirm' })).resolves.toEqual({
+        accepted: false
+      })
+
+      expect(orchestrator.getSnapshot().tasks).toHaveLength(0)
+      expect(outcomeMarks()).toEqual(['download_cancelled'])
+    })
+
+    it('等待队列里直接移除的任务不记', async () => {
+      await restore('blocker', resource('other'))
+      await orchestrator.enqueueBatch([resource('audio')], null)
+      const waiting = orchestrator.getSnapshot().tasks.find(task => task.status === 'waiting')
+
+      await expect(orchestrator.cancelTask(waiting?.taskId ?? '')).resolves.toBe(true)
+
+      expect(orchestrator.getSnapshot().tasks.map(task => task.taskId)).toEqual(['blocker'])
+      expect(outcomeMarks()).toEqual([])
+    })
+  })
 })

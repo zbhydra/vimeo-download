@@ -90,6 +90,7 @@ https://{project}.{host}/logstores/{logstore}/track?APIVersion=0.6.0&__topic__=m
 | `download_click` | extension 单个资源进入共享下载队列 | `resource_type`、`source_kind` |
 | `download_success` | extension 单个资源完成实际下载 | `resource_type`、`source_kind` |
 | `download_failed` | extension 单个资源下载抛错 | `error_name`、`error_message`、`resource_type`、`source_kind` |
+| `download_cancelled` | extension 已开始执行的单个资源被用户取消（Chrome 下载界面、另存为框或插件队列）；等待中直接移除不记 | `resource_type`、`source_kind` |
 | `download_quota_insufficient` | extension 单个资源因额度不足未开始下载 | `resource_type`、`source_kind` |
 | `daily_first_opened` | extension 同一设备在业务日（`America/New_York`）第一次打开 popup，或 Vimeo 面板第一次渲染出资源 | `source`：`popup` / `vimeo_panel`，当天先触发的入口 |
 

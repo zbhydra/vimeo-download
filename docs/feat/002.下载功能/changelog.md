@@ -1,5 +1,15 @@
 # 002 · 下载功能 — 变更记录
 
+## 2026-11-04 插件下载失败修复：落盘异步化、分片重试、文件名清洗、取消打点
+
+**Why**：SLS 近 30 天插件下载失败率 12.5%（93/747）。其中 21 条是落盘等待绑在 120s RPC 应答上被误杀，36 条是分片 5xx 与网络错误没有重试，6 条是 `Invalid filename`，9 条是用户在 Chrome 界面取消却被记成失败。
+
+**变更**：
+- `extension/src/background/services/DownloadOrchestrator.ts`：`handleTaskComplete` 拿到 downloadId 后立即应答，落盘轮询、产物释放与终态结算放到 `landArtifact` 继续；`pollDownload` 加 10 分钟无字节进展上限，到点取消并按 `STALLED` 失败；`USER_CANCELED` 接入取消路径；已开始执行的任务被取消时记 `download_cancelled`。
+- `extension/src/offscreen/OffscreenTaskRunner.ts`：删除 `taskComplete` 的 120s 专用超时；`fetchSegment` 对网络错误与 429/5xx 原地重试 2 次（退避 1s / 3s），重试前回滚本分片字节，错误文案不变。
+- `extension/src/core/utils/downloadFilename.ts`、`extension/src/background/services/downloadFilename.ts`：文件名清洗对齐 Chrome 路径校验，目录段用同一套字符规则。
+- `extension/src/core/api/mark/types.ts`：新增 `download_cancelled`。后端不改，SLS 自然出现新 `mark_type`。
+
 ## 2026-11-03 插件版本升到 1.0.4
 
 **Why**：hydra 要求。1.0.3 只打过本地测试包，没有上架（当天查商店更新接口，线上是 1.0.2），所以商店会从 1.0.2 直接到 1.0.4。

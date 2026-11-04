@@ -726,12 +726,16 @@ export class DownloadOrchestrator {
             this.recordTaskHistory(task, true)
           } else if (outcome.result === 'quota_rejected') {
             this.recordTaskMark(task, MARK_TYPE.DOWNLOAD_QUOTA_INSUFFICIENT)
+          } else {
+            // offscreen 任务的取消经 completion 以 'cancelled' 结果收敛，不走下面的异常分支。
+            this.recordTaskMark(task, MARK_TYPE.DOWNLOAD_CANCELLED)
           }
           this.removeTask(task.snapshot.taskId)
         } else if (outcome.error instanceof TaskCancelledError || task.cancelRequested) {
           logger.info(
             `[DownloadOrchestrator] 任务已取消: taskId=${taskId}, resourceId=${task.resource.id}`
           )
+          this.recordTaskMark(task, MARK_TYPE.DOWNLOAD_CANCELLED)
           this.removeTask(taskId)
         } else {
           logger.error(
@@ -898,6 +902,7 @@ export class DownloadOrchestrator {
       await this.notifyTaskFinished(task, true)
       this.recordTaskHistory(task, true)
     } else {
+      this.recordTaskMark(task, MARK_TYPE.DOWNLOAD_CANCELLED)
       this.removeTask(task.snapshot.taskId)
     }
     if (this.activeTaskId === task.snapshot.taskId) {
@@ -938,6 +943,10 @@ export class DownloadOrchestrator {
         return { kind: 'complete' }
       }
       if (item.state === 'interrupted') {
+        // Chrome 下载界面或另存为框的取消不经过 cancelTask，这里接入同一条取消路径。
+        if (item.error === 'USER_CANCELED') {
+          task.cancelRequested = true
+        }
         return { kind: 'interrupted', reason: item.error ?? 'UNKNOWN' }
       }
 

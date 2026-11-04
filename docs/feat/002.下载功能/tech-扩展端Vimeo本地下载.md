@@ -575,7 +575,7 @@ popup/content downloadBatch({resources, tabId})
 - 入队先完成异步文件名计算，再同步查活跃身份、创建并登记；格式、裁剪与所选音轨在创建时固定，重签只更新来源。failed 旧项不参与活跃判重。
 - 失败任务保留为 failed 投影，队列继续执行后续项；人工重试重新入队排到 FIFO 尾部并跳过配额（用户已见过的失败不重复扣额度），不自动重试。
 - 当前 SW 仅首次成功向 offscreen 对账接管：复用 `reconcilePromise` 缓存成功，失败清缓存并抛错，后续调用可重试；不在每次入队或迟到消息中重复重建任务。SW 内存中的等待队列不持久化；未知迟到 complete 拒绝并释放产物。
-- 打点统一由 background 记录：入队记 `download_click`，成功记 `download_success`，失败记 `download_failed`，配额拒绝记 `download_quota_insufficient`（不计为下载失败）；摘要不含媒体 URL 与签名。
+- 打点统一由 background 记录：入队记 `download_click`，成功记 `download_success`，失败记 `download_failed`，已开始执行后被用户取消记 `download_cancelled`（见 §8.7），配额拒绝记 `download_quota_insufficient`（不计为下载失败）；摘要不含媒体 URL 与签名。
 
 直连边界校验（`directSource`，原 `BrowserDownloadService` 收敛为共享校验/刷新函数）:
 
@@ -658,6 +658,8 @@ offscreen 分片拉取遇到 `403` / `404` / `410`（VimeoRetryableDownloadError
 - 直连下载中：`chrome.downloads.cancel(downloadId)`，执行路径按取消请求收敛为取消终态。
 - offscreen 下载中：转发 `cancelTask`，offscreen abort 在途分片 fetch（下载阶段即时生效；remux 阶段的取消在交付边界生效）。
 - 取消转发失败时本地收敛并移除任务；未知迟到交付直接拒绝并释放产物，不重新建任务，不保存取消墓碑或补发恢复队列。
+- Chrome 下载界面或另存为框取消（`USER_CANCELED`）：不经过 `cancelDownloadTask`，下载状态轮询读到后接入同一条取消路径（直连与 offscreen 产物都生效）；`STALLED` 超时的主动取消不走这条，仍记失败。
+- 打点：已开始执行的任务被取消记一条 `download_cancelled`；等待中直接移除的不记。
 - 取消不是下载失败或额度不足，不显示失败提示；已扣额度不退。
 
 ### 8.8 下载终态系统通知

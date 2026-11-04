@@ -12,6 +12,8 @@ export const MARK_TYPE = {
   DOWNLOAD_SUCCESS: 'download_success',
   /** 单个下载任务失败 */
   DOWNLOAD_FAILED: 'download_failed',
+  /** 已开始执行的下载任务被用户取消（Chrome 下载界面、另存为框或插件队列）；等待中移除不算 */
+  DOWNLOAD_CANCELLED: 'download_cancelled',
   /** 单个下载任务因额度不足未开始 */
   DOWNLOAD_QUOTA_INSUFFICIENT: 'download_quota_insufficient',
   /** 打开扩展弹窗 */
