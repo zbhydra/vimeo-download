@@ -16,7 +16,7 @@ import {
 } from '@/core/constants/resource'
 import type { MediaResource } from '@/core/types'
 import { SettingsManager } from '@/core/storage/settings'
-import { normalizeFilename } from '@/core/utils/downloadFilename'
+import { hasUnsafePathCharacters, normalizeFilename } from '@/core/utils/downloadFilename'
 import {
   FILENAME_PATTERN_DEFAULT,
   formatFilenameDate,
@@ -89,16 +89,13 @@ function stripExtension(filename: string): string {
  * 把保存位置归一化成安全的相对目录段。
  *
  * 反斜杠先按分隔符处理（`..\x` 不能绕过回退段判定），然后逐段判定：绝对路径的开头 `/` 与
- * 连续 `/` 产生的空段、`.` 与 `..` 回退段、以 `~` 开头的段、含 `:`（Windows 盘符）或
- * `<>"|?*` 与控制字符的段全部丢弃，剩下的段按原顺序拼回相对路径；全部丢弃时回退默认子目录，
- * 保证交给 Chrome 的永远是非空相对路径。
+ * 连续 `/` 产生的空段、`.` 与 `..` 回退段、首尾是空白、`.` 或 `~` 的段、含 `:`（Windows 盘符）、
+ * `<>"|?*`、控制字符、格式字符或非字符的段全部丢弃，剩下的段按原顺序拼回相对路径；全部丢弃
+ * 时回退默认子目录，保证交给 Chrome 的永远是非空相对路径。判定前不裁剪：`trim` 会顺手删掉段首尾
+ * 的 BOM、制表符和换行，把本该整段丢弃的段改写后保留下来。
  */
 export function normalizeDownloadDirectory(directory: string | undefined): string[] {
-  const segments = (directory ?? '')
-    .replace(/\\/g, '/')
-    .split('/')
-    .map(segment => segment.trim())
-    .filter(isSafeDirectorySegment)
+  const segments = (directory ?? '').replace(/\\/g, '/').split('/').filter(isSafeDirectorySegment)
 
   const kept: string[] = []
   let length = 0
@@ -113,17 +110,7 @@ export function normalizeDownloadDirectory(directory: string | undefined): strin
   return kept.length > 0 ? kept : [DEFAULT_DOWNLOAD_PATH]
 }
 
-/** 目录段里不允许出现的路径保留字符；`:` 同时挡掉 Windows 盘符。 */
-const RESERVED_SEGMENT_CHARACTERS = '<>:"|?*'
-
-/** 目录段合法性：非空、不是 `.` / `..` 回退段、不以 `~` 开头、不含保留字符与控制字符。 */
+/** 目录段合法性：非空，且满足与文件名同一套字符规则；不合法的段整段丢弃，不做清洗。 */
 function isSafeDirectorySegment(segment: string): boolean {
-  if (segment.length === 0 || segment === '.' || segment === '..' || segment.startsWith('~')) {
-    return false
-  }
-
-  // 控制字符按码点判定：与 `normalizeFilename` 同一口径，正则里的控制字符转义会被 lint 拦下。
-  return Array.from(segment).every(
-    character => character.charCodeAt(0) >= 32 && !RESERVED_SEGMENT_CHARACTERS.includes(character)
-  )
+  return segment.length > 0 && !hasUnsafePathCharacters(segment)
 }

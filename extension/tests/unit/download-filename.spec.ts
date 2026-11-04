@@ -59,6 +59,43 @@ describe('buildDownloadFilename', () => {
     )
   })
 
+  it('目录段含 Chrome 会拒绝的字符，或首尾是空白、点、~ 时整段丢弃', () => {
+    const rejected = [
+      '.videos',
+      'videos.',
+      '~videos',
+      'videos~',
+      ' videos',
+      'videos ',
+      '\u3000videos',
+      '\u00A0videos',
+      '\uFEFFvideos',
+      'videos\uFEFF',
+      '\tvideos',
+      'videos\t',
+      '\nvideos',
+      'videos\n',
+      'a\u200Db',
+      'a\u200Eb',
+      'a\u0007b',
+      'a\uFFFEb',
+      'a\uFDD0b',
+      ...Array.from('<>:"|?*', character => `a${character}b`)
+    ]
+    for (const segment of rejected) {
+      expect(normalizeDownloadDirectory(`keep/${segment}/tail`)).toEqual(['keep', 'tail'])
+    }
+  })
+
+  it('目录段中间的点、空格、~ 合法', () => {
+    expect(normalizeDownloadDirectory('my videos/v1.2~beta')).toEqual(['my videos', 'v1.2~beta'])
+  })
+
+  it('目录段判定前不裁剪：首尾带空白的段不会被改写后保留，全部丢弃时回退默认子目录', () => {
+    expect(normalizeDownloadDirectory(' my videos / v1.2~beta ')).toEqual([DEFAULT_DOWNLOAD_PATH])
+    expect(normalizeDownloadDirectory('\uFEFFvideos')).toEqual([DEFAULT_DOWNLOAD_PATH])
+  })
+
   it('目录长度超出预算时丢弃后续段，保证路径长度可控', () => {
     const longSegments = Array.from({ length: 40 }, (_, index) => `segment-${index}`)
     const segments = normalizeDownloadDirectory(longSegments.join('/'))
@@ -78,6 +115,57 @@ describe('normalizeFilename（popup 预览与 background 落盘共用的净化�
     expect(normalizeFilename('x'.repeat(200)).length).toBe(180)
     expect(normalizeFilename('')).toBe('vimeo-download')
     expect(normalizeFilename('..')).toBe('vimeo-download')
+  })
+
+  it('`"` 开头的标题不留前导空格', () => {
+    expect(normalizeFilename('"Quoted" title.mp4')).toBe('Quoted title.mp4')
+  })
+
+  it('格式字符（ZWJ、LRM、BOM、软连字符）直接删除，不留空隙', () => {
+    expect(normalizeFilename('👩\u200D💻 demo\u200E\uFEFF.mp4')).toBe('👩💻 demo.mp4')
+    expect(normalizeFilename('soft\u00ADhyphen.mp4')).toBe('softhyphen.mp4')
+    expect(normalizeFilename('\u200D')).toBe('vimeo-download')
+  })
+
+  it('控制字符与非字符替换成空格', () => {
+    expect(normalizeFilename('a\u0085b\uFFFEc\uFDD0d\u{1FFFF}e.mp4')).toBe('a b c d e.mp4')
+  })
+
+  it('裁掉主干首尾的空白、点、~，主干为空时保留扩展名回退兜底名', () => {
+    const cases: ReadonlyArray<readonly [string, string]> = [
+      ['~draft~.mp4', 'draft.mp4'],
+      ['..hidden..mp4', 'hidden.mp4'],
+      [' name .mp4', 'name.mp4'],
+      ['name. .mp4', 'name.mp4'],
+      ['name.', 'name'],
+      ['name.mp4 ', 'name.mp4'],
+      ['~', 'vimeo-download'],
+      ['...', 'vimeo-download'],
+      ['.mp4', 'vimeo-download.mp4'],
+      ['~ .mp4', 'vimeo-download.mp4']
+    ]
+    for (const [input, expected] of cases) {
+      expect({ input, output: normalizeFilename(input) }).toEqual({ input, output: expected })
+    }
+  })
+
+  it('主干中间的点与 ~ 保留，不像扩展名的结尾按主干处理', () => {
+    expect(normalizeFilename('v1.2~beta.final.mp4')).toBe('v1.2~beta.final.mp4')
+    expect(normalizeFilename('name.toolongext')).toBe('name.toolongext')
+  })
+
+  it('超长标题保留扩展名，按码点截断，不切开 surrogate pair', () => {
+    expect(normalizeFilename(`${'x'.repeat(300)}.mp4`)).toBe(`${'x'.repeat(176)}.mp4`)
+    expect(normalizeFilename(`${'😀'.repeat(200)}.mp4`)).toBe(`${'😀'.repeat(176)}.mp4`)
+  })
+
+  it('截断点落在空格或点上时再裁一次，交给 Chrome 的主干不以它们结尾', () => {
+    expect(normalizeFilename(`${'x'.repeat(175)} ${'y'.repeat(20)}.mp4`)).toBe(
+      `${'x'.repeat(175)}.mp4`
+    )
+    expect(normalizeFilename(`${'x'.repeat(175)}.${'y'.repeat(20)}.mp4`)).toBe(
+      `${'x'.repeat(175)}.mp4`
+    )
   })
 })
 
