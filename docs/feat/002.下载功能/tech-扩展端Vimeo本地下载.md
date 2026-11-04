@@ -593,8 +593,8 @@ popup/content downloadBatch({resources, tabId})
 1. background 出队 DASH/HLS 任务：惰性确保 offscreen document 存在，经 RPC 下发 `taskId + 完整 MediaResource`（描述符携带 playlist URL、track id、裁剪区间）。
 2. offscreen 请求并校验 playlist，按序分片 `fetch`（`credentials: omit`）：video init + segments、（有音轨时）audio init + segments；playlist 与分片共用原任务 AbortSignal，分片响应校验内容类型与字节。分片遇到网络错误（`TypeError`）或 429/5xx 时原地重试最多 2 次（退避 1s / 3s，可被取消打断），重试前回滚本分片已计入的字节；403/404/410 仍走 §8.6 重签。
 3. 分片流式喂给 Mediabunny remux 输出 MP4 / M4A（含 §8.5 的 packet 级裁剪）；remux 输出经 StreamTarget 流式写入 OPFS 临时文件，不在内存整份驻留（见下方「产物存储」）。
-4. 派发前 background 先登记 completion；OPFS File 的 blob URL 经 `taskComplete` 交付，background 用 `chrome.downloads.download` 写入保存位置子目录，并沿用 `downloads.search` 轮询确认 complete/interrupted。同一 RunnerTask 保留至交付 ACK，可被心跳与 `listActiveTasks` 读取；收到回执才释放 blob/OPFS 产物，落盘中断收敛为失败。
-5. 任务执行期间 offscreen 以 20s 心跳保活 SW，进度按 250ms 节流回传（终态与首次报告不受节流约束）；`taskComplete` 的应答超时单独放宽到 120s，避免大产物慢盘落盘被 RPC 默认超时误判失败。
+4. 派发前 background 先登记 completion；OPFS File 的 blob URL 经 `taskComplete` 交付，background 用 `chrome.downloads.download` 写入保存位置子目录，拿到 downloadId 后立即应答 `accepted`（已受理，不代表已落盘），再在应答后的分离流程里沿用 `downloads.search` 轮询确认 complete/interrupted。落盘不绑在应答上，是因为慢盘或另存为框可能持续数分钟，而 Chrome 会终止处理超过 5 分钟的单个事件。同一 RunnerTask 保留至交付 ACK，可被心跳与 `listActiveTasks` 读取；收到回执才释放 blob/OPFS 产物，落盘中断收敛为失败；串行队列等终态才放行下一项。连续 10 分钟 `bytesReceived` 不变（按 500ms 轮询次数计，电脑休眠不误判）时主动 `downloads.cancel` 并按 `STALLED` 失败，reason 带 `paused` 与目标路径是否已确定；直连下载共用这个上限。已知缺口：SW 在落盘期间被杀时新 SW 不会重建该任务，这次的打点、通知与 blob 释放会丢失（文件本身可能已完成），不做持久化对账。
+5. 任务执行期间 offscreen 以 20s 心跳保活 SW，进度按 250ms 节流回传（终态与首次报告不受节流约束）；`taskComplete` 走默认 RPC 超时；应答后的落盘阶段由 background 每 500ms 的 `downloads.search` 保活 SW。
 
 产物存储（OPFS 临时文件，`muxArtifactStore`）:
 

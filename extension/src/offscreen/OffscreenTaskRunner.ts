@@ -56,14 +56,6 @@ const VALID_MEDIA_STATUS_CODES = new Set([200, 206])
 /** 下载中进度回传节流间隔；终态与首次报告不受节流约束。 */
 const PROGRESS_THROTTLE_MS = 250
 
-/**
- * taskComplete 交付调用的独立超时（默认 30s 不够）。
- *
- * background 在应答前要查询 Chrome 落盘回执：超大产物（数百 MB）在慢盘上落盘
- * 可能远超默认 RPC 超时，误判失败会让执行侧撤销登记并 revoke 正在落盘的 blob，直接中断下载。
- */
-const TASK_COMPLETE_TIMEOUT_MS = 120_000
-
 /** 任务执行期间向 background 发送保活心跳的间隔。 */
 const HEARTBEAT_INTERVAL_MS = 20_000
 
@@ -1010,23 +1002,20 @@ export class OffscreenTaskRunner {
     let handedOff = false
     try {
       this.assertNotCancelled(task)
-      // 先登记后交付：background 在应答 taskComplete 之前就会（落盘回执确认后）发起
-      // releaseTaskArtifact，释放请求到达时登记必须已就位，否则按 mismatch 拒绝、blob 永不 revoke。
+      // 先登记后交付：background 在应答 taskComplete 之前就可能发起 saveTaskArtifact（备用交付）
+      // 或 releaseTaskArtifact（取消、下载创建失败），请求到达时登记必须已就位，否则按 mismatch 拒绝。
       this.deliveredArtifacts.set(task.taskId, {
         blobUrl,
         tempFileName: artifact.tempFileName
       })
       // remux 完成、blob 交给 Chrome 下载后，执行侧进度已经到顶；落盘进度由 background 投影接管。
       this.sendProgress(task, 100, true)
-      await this.client.taskComplete(
-        {
-          taskId: task.taskId,
-          blobUrl,
-          filename,
-          mimeType: artifact.mimeType
-        },
-        { timeout: TASK_COMPLETE_TIMEOUT_MS }
-      )
+      await this.client.taskComplete({
+        taskId: task.taskId,
+        blobUrl,
+        filename,
+        mimeType: artifact.mimeType
+      })
       handedOff = true
       logger.info(
         `[OffscreenTaskRunner] 产物已交付 background 落盘: taskId=${task.taskId}, resourceId=${task.resource.id}, filename=${filename}`

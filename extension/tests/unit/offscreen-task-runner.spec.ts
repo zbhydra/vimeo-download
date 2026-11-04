@@ -2,9 +2,10 @@
  * OffscreenTaskRunner 交付闭环单元测试。
  *
  * F1 回归防护：mock 的 BackgroundChannel.taskComplete 在应答前调用 runner.releaseTaskArtifact，
- * 精确复现 background「应答前先发起释放」的时序——修复前登记未就位恒返回 false（blob 永不
- * revoke），修复后必须穿透到 deliveredArtifacts 返回 true 并 revoke。另覆盖交付失败路径的
- * 登记撤销与 blob/OPFS 临时文件自回收。
+ * 复现 background 在取消或下载创建失败时「应答前先发起释放」的时序——修复前登记未就位恒返回
+ * false（blob 永不 revoke），修复后必须穿透到 deliveredArtifacts 返回 true 并 revoke。正常路径
+ * background 创建下载后即应答、落盘确认后才释放，由「应答后产物继续持有」用例覆盖。另覆盖交付
+ * 失败路径的登记撤销与 blob/OPFS 临时文件自回收。
  *
  * mux 产物走 OPFS（MuxOutputArtifact）：muxArtifactStore 整体 mock，断言 release 与交付失败
  * 两个回收点都会按 tempFileName 删除 OPFS 临时文件。
@@ -176,7 +177,7 @@ describe('OffscreenTaskRunner 交付闭环', () => {
   it('taskComplete 应答前的释放请求命中已登记产物：release 返回 true，revoke 并删除 OPFS 临时文件', async () => {
     let releasedDuringComplete: boolean | null = null
     mocks.taskComplete.mockImplementation(async (params: { taskId: string; blobUrl: string }) => {
-      // 复现 background handleTaskComplete：应答前先发起 releaseTaskArtifact
+      // 复现 background 取消或下载创建失败的路径：应答前先发起 releaseTaskArtifact
       releasedDuringComplete = offscreenTaskRunner.releaseTaskArtifact(
         params.taskId,
         params.blobUrl
@@ -200,6 +201,22 @@ describe('OffscreenTaskRunner 交付闭环', () => {
     expect(offscreenTaskRunner.releaseTaskArtifact('t-unknown', delivered.blobUrl)).toBe(false)
     expect(mocks.removeMuxArtifact).toHaveBeenCalledTimes(1)
     expect(offscreenTaskRunner.listActiveTasks()).toHaveLength(0)
+  })
+
+  it('taskComplete 应答后产物继续持有：不 revoke，任务离开活跃清单，释放时才回收', async () => {
+    mocks.taskComplete.mockResolvedValue({ accepted: true })
+
+    offscreenTaskRunner.startTask('t-ack', audioResourceFixture('vimeo:1196869805:audio:ack'))
+    await vi.waitFor(() => expect(offscreenTaskRunner.listActiveTasks()).toHaveLength(0))
+
+    const delivered = mocks.taskComplete.mock.calls[0][0] as { taskId: string; blobUrl: string }
+    expect(revokeObjectUrlMock).not.toHaveBeenCalled()
+    expect(mocks.removeMuxArtifact).not.toHaveBeenCalled()
+    expect(mocks.taskFailed).not.toHaveBeenCalled()
+
+    expect(offscreenTaskRunner.releaseTaskArtifact('t-ack', delivered.blobUrl)).toBe(true)
+    expect(revokeObjectUrlMock).toHaveBeenCalledWith(delivered.blobUrl)
+    expect(mocks.removeMuxArtifact).toHaveBeenCalledWith(TEMP_FILE_NAME)
   })
 
   it('taskComplete RPC 失败时撤销登记并自行回收 blob 与 OPFS 临时文件，任务转失败回传', async () => {
@@ -252,9 +269,9 @@ describe('OffscreenTaskRunner 交付闭环', () => {
           resource: expect.objectContaining({ targetFormat: 'mp3' })
         })
       ])
+      // 只传请求体：交付走默认 RPC 超时，不再为落盘放宽。
       expect(mocks.taskComplete).toHaveBeenLastCalledWith(
-        expect.objectContaining({ mimeType: 'audio/mpeg' }),
-        { timeout: 120_000 }
+        expect.objectContaining({ mimeType: 'audio/mpeg' })
       )
       const artifact = mocks.taskComplete.mock.calls.at(-1)?.[0] as { blobUrl: string }
       offscreenTaskRunner.releaseTaskArtifact(taskId, artifact.blobUrl)

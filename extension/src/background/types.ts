@@ -183,7 +183,7 @@ export interface BackgroundTaskCompleteRequest {
 
 /** offscreen 交付产物响应。 */
 export interface BackgroundTaskCompleteResponse {
-  /** background 是否已接手落盘。 */
+  /** background 是否已受理产物；true 不代表已落盘，落盘结果由 background 自行收敛。 */
   accepted: boolean
 }
 

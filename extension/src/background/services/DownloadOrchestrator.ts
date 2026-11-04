@@ -410,10 +410,11 @@ export class DownloadOrchestrator {
   }
 
   /**
-   * 接收 offscreen 交付的产物 blob 并落盘。
+   * 受理 offscreen 交付的产物 blob：Chrome 下载创建后立即应答，落盘由 landArtifact 继续。
    *
-   * 落盘回执在本方法内查询 downloads.search 才返回 offscreen：确认完成或中断后释放
-   * blob、收敛任务。这是对旧 injected 路径「触发浏览器保存即上报完成」的落盘回执修复。
+   * 落盘可能因慢盘或「下载前询问保存位置」弹框持续数分钟，而 Chrome 会终止处理超过 5 分钟的
+   * 单个事件，所以落盘等待不能绑在这次应答上。accepted 只表示已受理、不表示已落盘；串行队列
+   * 仍等 landArtifact 收敛终态后才放行下一项。
    */
   async handleTaskComplete(
     request: BackgroundTaskCompleteRequest
@@ -434,36 +435,62 @@ export class DownloadOrchestrator {
     task.snapshot.progress = 100
     this.publish()
 
-    try {
-      const settings = await SettingsManager.getSettings()
-      if (task.cancelRequested) {
-        throw new TaskCancelledError(task.snapshot.taskId)
-      }
-      const filename = buildDownloadFilename(settings.downloadPath, task.finalName)
-      registerFilenameSuggestion(request.blobUrl, filename, false)
-      const downloadId = settings.useBackgroundBlobDownload
-        ? await this.startOffscreenBlobDownload(request.taskId, request.blobUrl, filename)
-        : await chrome.downloads.download({
-            url: request.blobUrl,
-            filename,
-            conflictAction: 'uniquify',
-            saveAs: false
-          })
-      task.downloadId = downloadId
-      if (task.cancelRequested) {
-        await chrome.downloads.cancel(downloadId)
-      }
-      logger.info(
-        `[DownloadOrchestrator] 产物开始落盘: taskId=${request.taskId}, resourceId=${task.snapshot.resourceId}, downloadId=${downloadId}`
-      )
+    const download = this.startArtifactDownload(task, request)
+    void this.landArtifact(task, request, download)
+    // 只等 Chrome 下载创建；创建失败由 landArtifact 记录并收敛，这里不重复处理。
+    await download.catch(() => undefined)
+    return { accepted: true }
+  }
 
+  /** 创建产物的 Chrome 下载并登记 downloadId；创建期间受理的取消在拿到 ID 后转给 Chrome。 */
+  private async startArtifactDownload(
+    task: OrchestratorTask,
+    request: BackgroundTaskCompleteRequest
+  ): Promise<number> {
+    const settings = await SettingsManager.getSettings()
+    if (task.cancelRequested) {
+      throw new TaskCancelledError(task.snapshot.taskId)
+    }
+    const filename = buildDownloadFilename(settings.downloadPath, task.finalName)
+    registerFilenameSuggestion(request.blobUrl, filename, false)
+    const downloadId = settings.useBackgroundBlobDownload
+      ? await this.startOffscreenBlobDownload(request.taskId, request.blobUrl, filename)
+      : await chrome.downloads.download({
+          url: request.blobUrl,
+          filename,
+          conflictAction: 'uniquify',
+          saveAs: false
+        })
+    task.downloadId = downloadId
+    if (task.cancelRequested) {
+      await chrome.downloads.cancel(downloadId)
+    }
+    logger.info(
+      `[DownloadOrchestrator] 产物开始落盘: taskId=${request.taskId}, resourceId=${task.snapshot.resourceId}, downloadId=${downloadId}`
+    )
+    return downloadId
+  }
+
+  /**
+   * 等待产物落盘，释放 blob 并收敛任务终态；在 taskComplete 应答之后继续执行。
+   *
+   * 已知缺口（已接受）：应答后任务不在 offscreen 的 listActiveTasks 里，SW 在落盘期间被杀时
+   * 新 SW 不会重建它，这次的打点、通知与 blob 释放会丢失，文件本身可能已完成；不做持久化对账。
+   */
+  private async landArtifact(
+    task: OrchestratorTask,
+    request: BackgroundTaskCompleteRequest,
+    download: Promise<number>
+  ): Promise<void> {
+    try {
+      const downloadId = await download
       const settle = await this.pollDownload(task, downloadId)
       task.downloadId = null
       await this.releaseArtifact(request.taskId, request.blobUrl)
 
       if (task.cancelRequested) {
         await this.settleOffscreenTask(task, { kind: 'cancelled' })
-        return { accepted: true }
+        return
       }
 
       if (settle.kind === 'complete') {
@@ -471,7 +498,7 @@ export class DownloadOrchestrator {
           `[DownloadOrchestrator] 产物落盘完成: taskId=${request.taskId}, downloadId=${downloadId}`
         )
         await this.settleOffscreenTask(task, { kind: 'completed' })
-        return { accepted: true }
+        return
       }
 
       await this.settleOffscreenTask(task, {
@@ -480,7 +507,6 @@ export class DownloadOrchestrator {
           `[DownloadOrchestrator] 产物落盘中断: taskId=${request.taskId}, downloadId=${downloadId}, reason=${settle.reason}`
         )
       })
-      return { accepted: true }
     } catch (error) {
       logger.error(`[DownloadOrchestrator] 产物落盘未完成: taskId=${request.taskId}`, error)
       await this.releaseArtifact(request.taskId, request.blobUrl)
@@ -490,7 +516,6 @@ export class DownloadOrchestrator {
           ? { kind: 'cancelled' }
           : { kind: 'failed', error: error instanceof Error ? error : new Error(String(error)) }
       )
-      return { accepted: true }
     }
   }
 
@@ -836,11 +861,19 @@ export class DownloadOrchestrator {
    *
    * 正常路径由 drain 等待 completion Promise 并负责移除/打点；SW 冷启动对账重建的任务没有
    * 等待方，由这里直接收敛投影并唤醒队列。
+   *
+   * 落盘流程与 offscreen 回传都持有 task 引用，可能晚于任务终态才走到这里，所以已移除或已离开
+   * 执行态的任务直接返回，否则同一任务会重复打点。守卫到终态转移之间不能有 await，因此冷启动
+   * 路径先移除/改状态，再发通知。
    */
   private async settleOffscreenTask(
     task: OrchestratorTask,
     settle: { kind: 'completed' } | { kind: 'cancelled' } | { kind: 'failed'; error: Error }
   ): Promise<void> {
+    if (this.tasks.get(task.snapshot.taskId) !== task || task.snapshot.status !== 'downloading') {
+      return
+    }
+
     if (task.resolveCompletion) {
       if (settle.kind === 'failed') {
         task.rejectCompletion?.(settle.error)
@@ -855,15 +888,15 @@ export class DownloadOrchestrator {
         `[DownloadOrchestrator] 对账重建的任务失败: taskId=${task.snapshot.taskId}`,
         settle.error
       )
+      task.snapshot.status = 'failed'
       this.recordTaskMark(task, MARK_TYPE.DOWNLOAD_FAILED, settle.error)
       await this.notifyTaskFinished(task, false)
       this.recordTaskHistory(task, false)
-      task.snapshot.status = 'failed'
     } else if (settle.kind === 'completed') {
+      this.removeTask(task.snapshot.taskId)
       this.recordTaskMark(task, MARK_TYPE.DOWNLOAD_SUCCESS)
       await this.notifyTaskFinished(task, true)
       this.recordTaskHistory(task, true)
-      this.removeTask(task.snapshot.taskId)
     } else {
       this.removeTask(task.snapshot.taskId)
     }
@@ -881,13 +914,20 @@ export class DownloadOrchestrator {
   /** 下载状态轮询间隔；每次 chrome.downloads.search 都会重置 SW idle 计时器。 */
   private static readonly DIRECT_POLL_INTERVAL_MS = 500
 
+  /** 无字节进展上限（10 分钟）对应的轮询次数；按次数而非时钟计，电脑休眠不会误判。 */
+  private static readonly STALL_POLL_LIMIT =
+    (10 * 60 * 1000) / DownloadOrchestrator.DIRECT_POLL_INTERVAL_MS
+
   /**
    * 轮询 Chrome 下载状态直到 settle，覆盖直连与 blob 交付。
    *
    * onChanged 不携带 bytesReceived 增量，进度投影沿用旧 content 轮询口径（500ms search）；
-   * 轮询的 API 调用同时保活 SW，覆盖整个网络传输期。
+   * 轮询的 API 调用同时保活 SW，覆盖整个网络传输期。Chrome 下载暂停或卡住时不会自己结束，
+   * 所以连续无字节进展到上限就主动取消，避免永久占住串行队列。
    */
   private async pollDownload(task: OrchestratorTask, downloadId: number): Promise<DownloadSettle> {
+    let lastBytesReceived: number | null = null
+    let stalledPolls = 0
     while (true) {
       const items = await chrome.downloads.search({ id: downloadId })
       const item = items[0]
@@ -904,7 +944,30 @@ export class DownloadOrchestrator {
       if (task.kind === 'direct') {
         this.updateDirectProgress(task, item.bytesReceived)
       }
+
+      stalledPolls = item.bytesReceived === lastBytesReceived ? stalledPolls + 1 : 0
+      lastBytesReceived = item.bytesReceived
+      if (stalledPolls >= DownloadOrchestrator.STALL_POLL_LIMIT) {
+        await this.cancelStalledDownload(task, downloadId)
+        // 直接返回、不再查询：否则这次主动取消产生的 USER_CANCELED 会把技术超时洗成用户取消。
+        return {
+          kind: 'interrupted',
+          reason: `STALLED paused=${item.paused} target=${item.filename ? 'set' : 'pending'}`
+        }
+      }
       await delay(DownloadOrchestrator.DIRECT_POLL_INTERVAL_MS)
+    }
+  }
+
+  /** 取消无进展的 Chrome 下载；取消失败不改变 STALLED 结论，只记日志。 */
+  private async cancelStalledDownload(task: OrchestratorTask, downloadId: number): Promise<void> {
+    try {
+      await chrome.downloads.cancel(downloadId)
+    } catch (error) {
+      logger.error(
+        `[DownloadOrchestrator] 取消无进展下载失败: taskId=${task.snapshot.taskId}, downloadId=${downloadId}`,
+        error
+      )
     }
   }
 

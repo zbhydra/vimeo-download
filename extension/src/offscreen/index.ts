@@ -8,8 +8,8 @@
  * 消息流程：
  * 1. background startTask → 执行器后台跑分片下载与 remux，期间按节流回传 taskProgress、
  *    每 20s 发送 keepAlive 心跳；
- * 2. 产物以 blob URL 经 taskComplete 交 background 落盘（chrome.downloads）；
- * 3. background 经 downloads.onChanged 确认落盘后调用 releaseTaskArtifact 释放 blob；
+ * 2. 产物以 blob URL 经 taskComplete 交 background，Chrome 下载创建后即应答（已受理，未落盘）；
+ * 3. background 经 downloads.search 确认落盘后调用 releaseTaskArtifact 释放 blob；
  * 4. 签名失效时执行器经 refreshSignatureRequest 请求 background 重签；
  * 5. 取消经 cancelTask 触发 AbortController，执行器以 taskCancelled 确认。
  */

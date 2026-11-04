@@ -1,5 +1,5 @@
 /** 下载任务合同检查：使用对账及人工重试入口，不伪造或调用首次配额消费。 */
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   AUDIO_TARGET_FORMATS,
   RESOURCE_SOURCE_KINDS,
@@ -16,7 +16,10 @@ const mocks = vi.hoisted(() => ({
   release: vi.fn(),
   save: vi.fn(),
   ensure: vi.fn(),
-  settings: vi.fn()
+  settings: vi.fn(),
+  mark: vi.fn(),
+  notify: vi.fn(),
+  history: vi.fn()
 }))
 
 vi.mock('@/background/rpc/offscreen.rpc', () => ({
@@ -35,6 +38,15 @@ vi.mock('@/background/services/offscreenDocument', () => ({
 vi.mock('@/core/storage/settings', () => ({
   SettingsManager: { getSettings: mocks.settings },
   DEFAULT_DOWNLOAD_PATH: 'vimeoMediaDownloader'
+}))
+vi.mock('@/background/services/ExtensionMarkReporter', () => ({
+  recordBackgroundMark: mocks.mark
+}))
+vi.mock('@/background/services/downloadNotifications', () => ({
+  notifyDownloadFinished: mocks.notify
+}))
+vi.mock('@/background/services/downloadHistoryWriteback', () => ({
+  recordDownloadTaskOutcome: mocks.history
 }))
 vi.mock('@/core/api/quota', () => ({
   quotaApi: {
@@ -77,19 +89,20 @@ function resource(id: string, direct = false): MediaResource {
   }
 }
 
+/** offscreen 活跃任务清单的一项。 */
+function activeTask(taskId: string, item: MediaResource) {
+  return {
+    taskId,
+    resourceId: item.id,
+    resource: item,
+    progress: null,
+    receivedBytes: null,
+    totalBytes: null
+  }
+}
+
 async function restore(taskId: string, item: MediaResource): Promise<void> {
-  mocks.list.mockResolvedValue({
-    tasks: [
-      {
-        taskId,
-        resourceId: item.id,
-        resource: item,
-        progress: null,
-        receivedBytes: null,
-        totalBytes: null
-      }
-    ]
-  })
+  mocks.list.mockResolvedValue({ tasks: [activeTask(taskId, item)] })
   await orchestrator.reconcile()
 }
 
@@ -102,7 +115,89 @@ async function fail(taskId: string): Promise<void> {
   )
 }
 
+/** 任务结局打点（不含入队时的 download_click），按发生顺序。 */
+function outcomeMarks(): string[] {
+  return mocks.mark.mock.calls
+    .map(call => call[0] as string)
+    .filter(markType => markType !== 'download_click')
+}
+
+function outcomeMarkMessage(markType: string): string {
+  const call = mocks.mark.mock.calls.find(([type]) => type === markType)
+  return call?.[1] as string
+}
+
+/** 进行中的 Chrome 下载；filename 为空表示目标路径还没确定（如另存为框未确认）。 */
+function inProgress(
+  bytesReceived: number,
+  fields: Partial<chrome.downloads.DownloadItem> = {}
+): chrome.downloads.DownloadItem {
+  return {
+    id: 55,
+    state: 'in_progress',
+    bytesReceived,
+    paused: false,
+    filename: '',
+    ...fields
+  } as chrome.downloads.DownloadItem
+}
+
+const COMPLETE_ITEM = { id: 55, state: 'complete' } as chrome.downloads.DownloadItem
+function stubSearch(item: () => chrome.downloads.DownloadItem): void {
+  vi.mocked(chrome.downloads.search).mockImplementation(() => Promise.resolve([item()]))
+}
+
+/** 清掉前置 fail 步骤留下的打点与通知，只看后续这轮执行。 */
+function clearOutcomeSpies(): void {
+  mocks.mark.mockClear()
+  mocks.notify.mockClear()
+  mocks.history.mockClear()
+}
+
+function artifactRequest(taskId: string) {
+  return {
+    taskId,
+    blobUrl: `blob:${taskId}`,
+    filename: 'ignored-by-background.m4a',
+    mimeType: 'audio/mp4'
+  }
+}
+
+/** 让 offscreen 任务进入 drain 的执行轮次并交付产物，返回 taskComplete 的应答。 */
+async function deliverThroughDrain(taskId: string): Promise<{ accepted: boolean }> {
+  await restore(taskId, resource('audio'))
+  await fail(taskId)
+  clearOutcomeSpies()
+  const response = new Promise<{ accepted: boolean }>(resolve => {
+    mocks.start.mockImplementation(async () => {
+      resolve(await orchestrator.handleTaskComplete(artifactRequest(taskId)))
+      return { started: true }
+    })
+  })
+  expect(orchestrator.retryTask(taskId)).toBe(true)
+  return response
+}
+
+/** 让直连任务进入 drain 的执行轮次，并等到 Chrome 下载已创建。 */
+async function startDirectThroughDrain(taskId: string): Promise<void> {
+  await restore(taskId, resource('video', true))
+  await fail(taskId)
+  clearOutcomeSpies()
+  expect(orchestrator.retryTask(taskId)).toBe(true)
+  await vi.waitFor(() => expect(chrome.downloads.download).toHaveBeenCalled())
+}
+
+function expectTaskRemoved(): Promise<void> {
+  return vi.waitFor(() => expect(orchestrator.getSnapshot().tasks).toHaveLength(0))
+}
+
+const STALL_LIMIT_MS = 10 * 60 * 1000
+
 describe('下载任务合同', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   beforeEach(async () => {
     vi.resetModules()
     vi.clearAllMocks()
@@ -304,4 +399,197 @@ describe('下载任务合同', () => {
     await vi.waitFor(() => expect(orchestrator.getSnapshot().tasks).toHaveLength(0))
     expect(chrome.downloads.cancel).toHaveBeenCalledWith(55)
   })
+
+  describe('落盘异步化与无进展上限', () => {
+    it('落盘超过原 120s 但字节持续增长：应答不等落盘，最终正常结算', async () => {
+      vi.useFakeTimers()
+      let polls = 0
+      stubSearch(() => {
+        polls += 1
+        return polls > 300 ? COMPLETE_ITEM : inProgress(polls)
+      })
+
+      await expect(deliverThroughDrain('slow')).resolves.toEqual({ accepted: true })
+
+      // 已应答，但落盘没结束：任务仍占着队列，产物未释放，也没有结局打点。
+      expect(chrome.downloads.download).toHaveBeenCalledTimes(1)
+      expect(mocks.release).not.toHaveBeenCalled()
+      expect(orchestrator.getSnapshot().tasks).toEqual([
+        expect.objectContaining({ taskId: 'slow', status: 'downloading' })
+      ])
+      expect(outcomeMarks()).toEqual([])
+
+      await vi.advanceTimersByTimeAsync(121_000)
+      expect(mocks.release).not.toHaveBeenCalled()
+      expect(outcomeMarks()).toEqual([])
+
+      await vi.advanceTimersByTimeAsync(30_000)
+      await expectTaskRemoved()
+      expect(mocks.release).toHaveBeenCalledWith({ taskId: 'slow', blobUrl: 'blob:slow' })
+      expect(outcomeMarks()).toEqual(['download_success'])
+      expect(mocks.notify).toHaveBeenCalledWith(expect.objectContaining({ succeeded: true }))
+      expect(chrome.downloads.cancel).not.toHaveBeenCalled()
+    })
+
+    it('串行队列等落盘结束才放行下一项：两项都经人工重试，不调用配额', async () => {
+      vi.useFakeTimers()
+      const { quotaApi } = await import('@/core/api/quota')
+      mocks.list.mockResolvedValue({
+        tasks: [activeTask('first', resource('first')), activeTask('next', resource('next'))]
+      })
+      await orchestrator.reconcile()
+      await fail('first')
+      await fail('next')
+
+      let landed = false
+      stubSearch(() => (landed ? COMPLETE_ITEM : inProgress(1)))
+      mocks.start.mockImplementation(async ({ taskId }: { taskId: string }) => {
+        if (taskId === 'first') {
+          await orchestrator.handleTaskComplete(artifactRequest('first'))
+        }
+        return { started: true }
+      })
+
+      expect(orchestrator.retryTask('first')).toBe(true)
+      await vi.waitFor(() => expect(chrome.downloads.download).toHaveBeenCalledTimes(1))
+      expect(orchestrator.retryTask('next')).toBe(true)
+
+      // 第一项已应答 taskComplete、还在落盘：第二项只能排队。
+      await vi.advanceTimersByTimeAsync(500)
+      expect(mocks.start).toHaveBeenCalledTimes(1)
+      expect(orchestrator.getSnapshot().tasks.find(task => task.taskId === 'next')?.status).toBe(
+        'waiting'
+      )
+
+      landed = true
+      await vi.advanceTimersByTimeAsync(500)
+      await vi.waitFor(() => expect(mocks.start).toHaveBeenCalledTimes(2))
+      expect(mocks.start).toHaveBeenLastCalledWith(expect.objectContaining({ taskId: 'next' }))
+      expect(quotaApi.checkAndConsume).not.toHaveBeenCalled()
+    })
+
+    it('连续 10 分钟无字节进展：取消下载、释放产物，按 STALLED 记失败而不是取消', async () => {
+      vi.useFakeTimers()
+      stubSearch(() => inProgress(1024, { paused: true }))
+      await deliverThroughDrain('stalled')
+
+      await vi.advanceTimersByTimeAsync(STALL_LIMIT_MS - 1_000)
+      expect(chrome.downloads.cancel).not.toHaveBeenCalled()
+
+      await vi.advanceTimersByTimeAsync(1_000)
+      expect(chrome.downloads.cancel).toHaveBeenCalledWith(55)
+      await vi.waitFor(() =>
+        expect(orchestrator.getSnapshot().tasks[0]?.status).toBe('failed')
+      )
+      expect(mocks.release).toHaveBeenCalledWith({ taskId: 'stalled', blobUrl: 'blob:stalled' })
+      expect(outcomeMarks()).toEqual(['download_failed'])
+      expect(outcomeMarkMessage('download_failed')).toContain(
+        'reason=STALLED paused=true target=pending'
+      )
+      expect(mocks.notify).toHaveBeenCalledWith(expect.objectContaining({ succeeded: false }))
+    })
+
+    it('无进展判定的 reason 只说目标路径是否确定，不记录路径本身；取消失败只记日志', async () => {
+      vi.useFakeTimers()
+      vi.mocked(chrome.downloads.cancel).mockRejectedValue(new Error('[mock] already gone'))
+      stubSearch(() => inProgress(1024, { filename: '/Users/someone/Downloads/secret.mp4' }))
+      await deliverThroughDrain('stalled-target')
+
+      await vi.advanceTimersByTimeAsync(STALL_LIMIT_MS)
+      await vi.waitFor(() =>
+        expect(orchestrator.getSnapshot().tasks[0]?.status).toBe('failed')
+      )
+
+      expect(outcomeMarks()).toEqual(['download_failed'])
+      const message = outcomeMarkMessage('download_failed')
+      expect(message).toContain('reason=STALLED paused=false target=set')
+      expect(message).not.toContain('secret')
+    })
+
+    it('字节有进展就重新计时', async () => {
+      vi.useFakeTimers()
+      let bytes = 1
+      stubSearch(() => inProgress(bytes))
+      await deliverThroughDrain('progressing')
+
+      await vi.advanceTimersByTimeAsync(STALL_LIMIT_MS - 60_000)
+      bytes = 2
+      await vi.advanceTimersByTimeAsync(STALL_LIMIT_MS - 60_000)
+      expect(chrome.downloads.cancel).not.toHaveBeenCalled()
+
+      // 新字节要到下一次轮询（500ms 后）才被读到，计时从那一刻重新开始。
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect(chrome.downloads.cancel).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(500)
+      expect(chrome.downloads.cancel).toHaveBeenCalledWith(55)
+    })
+
+    it('直连下载共用无进展上限，STALLED 不触发重签刷新', async () => {
+      vi.useFakeTimers()
+      stubSearch(() => inProgress(1024))
+      await startDirectThroughDrain('direct-stalled')
+
+      await vi.advanceTimersByTimeAsync(STALL_LIMIT_MS)
+      expect(chrome.downloads.cancel).toHaveBeenCalledWith(55)
+      await vi.waitFor(() =>
+        expect(orchestrator.getSnapshot().tasks[0]?.status).toBe('failed')
+      )
+
+      expect(chrome.downloads.download).toHaveBeenCalledTimes(1)
+      expect(outcomeMarks()).toEqual(['download_failed'])
+      expect(outcomeMarkMessage('download_failed')).toContain('reason=STALLED')
+    })
+
+    it('创建 Chrome 下载失败：仍应答已受理，由 background 释放产物并记失败', async () => {
+      vi.mocked(chrome.downloads.download).mockRejectedValue(new Error('Invalid filename'))
+
+      await expect(deliverThroughDrain('invalid-name')).resolves.toEqual({ accepted: true })
+      await vi.waitFor(() =>
+        expect(orchestrator.getSnapshot().tasks[0]?.status).toBe('failed')
+      )
+
+      expect(mocks.release).toHaveBeenCalledWith({
+        taskId: 'invalid-name',
+        blobUrl: 'blob:invalid-name'
+      })
+      expect(outcomeMarks()).toEqual(['download_failed'])
+      expect(outcomeMarkMessage('download_failed')).toContain('Invalid filename')
+    })
+  })
+
+  describe('统一结算入口挡住迟到的结算', () => {
+    it('冷启动任务同一轮事件里收到两次失败回传：守卫到终态转移之间没有缺口，只记一条', async () => {
+      await restore('cold-twice', resource('audio'))
+
+      await Promise.all([
+        orchestrator.handleTaskFailed({ taskId: 'cold-twice', message: '第一次' }),
+        orchestrator.handleTaskFailed({ taskId: 'cold-twice', message: '第二次' })
+      ])
+
+      expect(outcomeMarks()).toEqual(['download_failed'])
+      expect(mocks.notify).toHaveBeenCalledTimes(1)
+      expect(mocks.history).toHaveBeenCalledTimes(1)
+    })
+
+    it('冷启动任务已记失败：在途落盘随后完成，不改写失败终态，也不再打点', async () => {
+      vi.useFakeTimers()
+      let landed = false
+      stubSearch(() => (landed ? COMPLETE_ITEM : inProgress(1)))
+      await restore('cold-failed', resource('audio'))
+      await orchestrator.handleTaskComplete(artifactRequest('cold-failed'))
+      await fail('cold-failed')
+      expect(outcomeMarks()).toEqual(['download_failed'])
+
+      landed = true
+      await vi.advanceTimersByTimeAsync(500)
+      await vi.waitFor(() => expect(mocks.release).toHaveBeenCalled())
+      await vi.advanceTimersByTimeAsync(0)
+
+      expect(outcomeMarks()).toEqual(['download_failed'])
+      expect(orchestrator.getSnapshot().tasks[0]?.status).toBe('failed')
+      expect(mocks.notify).toHaveBeenCalledTimes(1)
+      expect(mocks.history).toHaveBeenCalledTimes(1)
+    })
+  })
+
 })
