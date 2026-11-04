@@ -1,5 +1,14 @@
 # 002 · 下载功能 — 变更记录
 
+## 2026-11-04 未列出视频重签带上访问口令
+
+**Why**：SLS 近 30 天有 7 条 `player page 请求失败 status=403`。未列出视频的播放页必须带 `?h=`，而下载中途重签只用 videoId 请求，这类视频必然 403。日志分不出这 7 条里有多少是这个原因，有多少是域名限制或风控，修后要看残留。
+
+**变更**：
+- `extension/src/sites/vimeo/media.ts`、`extension/src/sites/vimeo/shared.ts`：config 的 `video.unlisted_hash` 校验后写进下载描述符的可选字段 `unlistedHash`，描述符版本仍是 2；`/config/request` 刷新片段不带 `video` 时沿用刷新前的值。
+- `extension/src/background/services/BackgroundMessageRouter.ts`：重签请求的描述符按白名单重建，补上 `unlistedHash`。
+- `extension/src/background/services/vimeoSignatureRefresh.ts`、`extension/src/sites/vimeo/config.ts`：重签时拼 `?h=`。旧描述符和公开视频的请求不变；content 侧兜底仍不带口令。
+
 ## 2026-11-04 插件下载失败修复：落盘异步化、分片重试、文件名清洗、取消打点
 
 **Why**：SLS 近 30 天插件下载失败率 12.5%（93/747）。其中 21 条是落盘等待绑在 120s RPC 应答上被误杀，36 条是分片 5xx 与网络错误没有重试，6 条是 `Invalid filename`，9 条是用户在 Chrome 界面取消却被记成失败。

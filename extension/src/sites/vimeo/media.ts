@@ -26,6 +26,7 @@ import {
   readFiniteNumber,
   readPositiveInt,
   readString,
+  readVimeoUnlistedHash,
   type VimeoDelivery,
   type VimeoOptionKind,
   type VimeoSourceDescriptor,
@@ -94,6 +95,8 @@ export interface VimeoParsedConfig {
   configUrl: string
   /** config_refresh_url。 */
   refreshConfigUrl?: string
+  /** 未列出视频的访问口令（`video.unlisted_hash`）；公开视频或口令形状不合法时缺失。 */
+  unlistedHash?: string
   /** signed URL 绝对过期时间（Unix 秒）。 */
   expiresAt?: number
   /**
@@ -323,6 +326,8 @@ export function parseVimeoConfig(
   const timestamp = readPositiveInt(request.timestamp)
   const expiresInSeconds = readPositiveInt(request.expires)
   const owner = isJsonObject(video?.owner) ? video.owner : null
+  // `/config/request` 刷新片段不带 `video`，不沿用的话临期 config 刷新后描述符就丢了口令。
+  const unlistedHash = readVimeoUnlistedHash(video?.unlisted_hash) ?? fallbackConfig?.unlistedHash
   const thumbnailUrl =
     readGroupThumbnailUrl(video?.thumbnail_url) ?? fallbackConfig?.groupMetadata?.thumbnailUrl
   const thumbnails = withThumbnailUrlFallback(
@@ -338,6 +343,7 @@ export function parseVimeoConfig(
     duration: readPositiveInt(video?.duration) ?? fallbackConfig?.duration,
     configUrl,
     refreshConfigUrl: readAllowedFetchUrl(request.config_refresh_url),
+    ...(unlistedHash ? { unlistedHash } : {}),
     expiresAt:
       timestamp !== undefined && expiresInSeconds !== undefined
         ? timestamp + expiresInSeconds
@@ -1467,6 +1473,7 @@ function createOption(
       ...(input.labelParams ? { labelParams: input.labelParams } : {}),
       configUrl: config.configUrl,
       refreshConfigUrl: config.refreshConfigUrl,
+      ...(config.unlistedHash ? { unlistedHash: config.unlistedHash } : {}),
       dashPlaylistUrl: input.dashPlaylistUrl,
       videoTrackId: input.videoTrackId,
       audioTrackId: input.audioTrackId,

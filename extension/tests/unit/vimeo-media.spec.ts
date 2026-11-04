@@ -40,6 +40,9 @@ const PLAYLIST_URL = 'https://vod-adaptive-ak.vimeocdn.com/exp/master.json'
 const HLS_MASTER_URL = 'https://vod-adaptive-ak.vimeocdn.com/hls/master.m3u8'
 const HLS_MEDIA_URL = 'https://vod-adaptive-ak.vimeocdn.com/hls/1080/prog.m3u8'
 const HLS_KEY_URL = 'https://player.vimeo.com/hls-key/demo?sig=1'
+const UNLISTED_HASH = '43f047633a'
+/** 拼进 URL 会改变请求语义的口令形状，必须丢弃。 */
+const INVALID_UNLISTED_HASHES = ['', 'abc&x=1', '../abc', 'abc?x', 'a b', 'abc\n', '口令']
 
 describe('Vimeo media parsing', () => {
   beforeEach(() => {
@@ -180,6 +183,70 @@ describe('Vimeo media parsing', () => {
 
     expect(refreshed.author).toBe('Demo Author')
     expect(refreshed.duration).toBe(754)
+  })
+
+  it('video.unlisted_hash 进入 config，并写进每个下载选项的 descriptor', () => {
+    const config = parseVimeoConfig(configFixture({ unlistedHash: UNLISTED_HASH }), CONFIG_URL)
+    const options = buildVimeoDownloadOptions(
+      config,
+      parseVimeoDashPlaylist(dashPlaylistFixture(1080), PLAYLIST_URL)
+    )
+
+    expect(config.unlistedHash).toBe(UNLISTED_HASH)
+    expect(options.length).toBeGreaterThan(0)
+    for (const option of options) {
+      expect(option.descriptor.unlistedHash).toBe(UNLISTED_HASH)
+    }
+  })
+
+  it('video.unlisted_hash 缺失、为 null 或形状不合法时不产生字段', () => {
+    const values = [undefined, null, ...INVALID_UNLISTED_HASHES]
+    for (const unlistedHash of values) {
+      const config = parseVimeoConfig(configFixture({ unlistedHash }), CONFIG_URL)
+      expect(config).not.toHaveProperty('unlistedHash')
+      for (const option of buildVimeoDownloadOptions(config, null)) {
+        expect(option.descriptor).not.toHaveProperty('unlistedHash')
+      }
+    }
+  })
+
+  it('config/request 刷新片段不带 video 时沿用刷新前的访问口令', () => {
+    const base = parseVimeoConfig(configFixture({ unlistedHash: UNLISTED_HASH }), CONFIG_URL)
+    const refreshed = parseVimeoConfig(
+      configRequestFixture({ dash: false }),
+      REFRESH_CONFIG_URL,
+      base
+    )
+
+    expect(refreshed.unlistedHash).toBe(UNLISTED_HASH)
+    for (const option of buildVimeoDownloadOptions(refreshed, null)) {
+      expect(option.descriptor.unlistedHash).toBe(UNLISTED_HASH)
+    }
+  })
+
+  it('descriptor 编解码保留访问口令，旧描述符仍可解析，不合法口令被丢弃', () => {
+    const legacy = {
+      version: 2,
+      videoId: '1201819515',
+      sourceId: 'vimeo:1201819515:video:best',
+      optionId: 'best',
+      kind: 'video',
+      delivery: 'progressive',
+      label: '1080p',
+      configUrl: REFRESH_CONFIG_URL
+    } as const
+
+    expect(decodeVimeoSourceDescriptor(encodeVimeoSourceDescriptor(legacy))).toEqual(legacy)
+    expect(
+      decodeVimeoSourceDescriptor(
+        encodeVimeoSourceDescriptor({ ...legacy, unlistedHash: UNLISTED_HASH })
+      )
+    ).toEqual({ ...legacy, unlistedHash: UNLISTED_HASH })
+    for (const unlistedHash of INVALID_UNLISTED_HASHES) {
+      expect(
+        decodeVimeoSourceDescriptor(encodeVimeoSourceDescriptor({ ...legacy, unlistedHash }))
+      ).toEqual(legacy)
+    }
   })
 
   it('解析组元数据：标题/作者/时长/封面取 config 原值并透传到每个档位', () => {
@@ -1148,6 +1215,8 @@ interface ConfigFixtureOptions {
   readonly thumbnailUrl?: string
   /** `video.thumbs` 字典；`null` 表示 config 不带该字段（聚合页等 surface 的形态）。 */
   readonly thumbs?: Record<string, string> | null
+  /** `video.unlisted_hash`；不传表示 config 不带该键，`null` 是公开视频的线上形态。 */
+  readonly unlistedHash?: string | null
 }
 
 function configFixture(options: ConfigFixtureOptions = {}) {
@@ -1219,6 +1288,7 @@ function configFixture(options: ConfigFixtureOptions = {}) {
       ...(options.ownerName === undefined ? {} : { owner: { name: options.ownerName } }),
       ...(options.duration === undefined ? {} : { duration: options.duration }),
       ...(options.thumbnailUrl === undefined ? {} : { thumbnail_url: options.thumbnailUrl }),
+      ...(options.unlistedHash === undefined ? {} : { unlisted_hash: options.unlistedHash }),
       ...(options.thumbs === null
         ? {}
         : {

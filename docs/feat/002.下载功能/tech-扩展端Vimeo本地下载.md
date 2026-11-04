@@ -643,7 +643,7 @@ popup/content downloadBatch({resources, tabId})
 
 offscreen 分片拉取遇到 `403` / `404` / `410`（VimeoRetryableDownloadError）时不依赖页面刷新 config，而是向 background 请求重签（`refreshSignatureRequest`）:
 
-1. background 用扩展身份直连 `https://player.vimeo.com/video/{videoId}`，从返回 HTML 取内嵌原生 `window.playerConfig`（不依赖页面注入，不需要 `h` 可见的播放页以外的入口），解析出最新资源快照。
+1. background 用扩展身份直连 `https://player.vimeo.com/video/{videoId}`，描述符带 `unlistedHash` 时拼 `?h=`（未列出视频不带会 403），从返回 HTML 取内嵌原生 `window.playerConfig`（不依赖页面注入），解析出最新资源快照。请求不带 Cookie、不伪造 Referer，域名限制和风控造成的 403 仍然失败。
 2. **track 一致守卫**决定续跑方式:
    - DASH 新快照的 videoTrackId/audioTrackId 与原任务一致 → `continue`：回传新签名资源，offscreen 按分片游标（按索引）续跑，进度不回退;
    - DASH track 不一致，或 HLS 无法证明来源一致 → `restart`：整任务以新快照从头重跑，用户输出格式、区间与音轨意图仍固定;
@@ -773,6 +773,7 @@ Vimeo 下载描述符随 `documentId` 携带恢复资源所需的最小合同:
 | `delivery` | `progressive` / `dash` / `hls` / `subtitle` / `thumbnail` |
 | `configUrl` | 捕获的完整 signed config URL,或内嵌 config 的 signed refresh URL |
 | `refreshConfigUrl` | config 返回的原生刷新 URL |
+| `unlistedHash` | 未列出视频的访问口令,取自 config 的 `video.unlisted_hash`,只允许字母和数字,不合法就丢弃；公开视频和旧描述符没有该字段。只用于重签时拼播放页的 `?h=`（§8.6）,不进日志和用户可见文本 |
 | track/playlist id | DASH/HLS 下载恢复所需的最小标识 |
 | `audioTrackId` | DASH video 选项可选；无音轨交付不带该字段，audio 选项仍必需 |
 | `startSeconds/endSeconds` | 片段裁剪区间，秒、相对媒体起点；两者同时合法（含十进制文本约束，见 §8.5）才生效，只支持 `dash` / `hls` |

@@ -20,6 +20,7 @@ vi.mock('@/sites/vimeo/config', () => ({
 import { RESOURCE_SOURCE_KINDS, RESOURCE_TYPES } from '@/core/constants/resource'
 import type { MediaResource } from '@/core/types'
 import {
+  decodeVimeoSourceDescriptor,
   encodeVimeoSourceDescriptor,
   type VimeoSourceDescriptor
 } from '@/sites/vimeo/shared'
@@ -182,5 +183,29 @@ describe('vimeoSignatureRefresh', () => {
       ]
     })
     expect((await refreshVimeoTaskResource(original)).mode).toBe('restart')
+  })
+
+  it('未列出视频按描述符的访问口令请求播放页，新描述符继续携带口令', async () => {
+    const unlistedHash = '43f047633a'
+    mocks.loadResources.mockResolvedValue({
+      resources: [freshResource(freshDescriptor({ unlistedHash }))]
+    })
+
+    const outcome = await refreshVimeoTaskResource(originalDescriptor({ unlistedHash }))
+
+    expect(mocks.loadPlayerPage).toHaveBeenCalledWith('1196869805', unlistedHash)
+    expect(decodeVimeoSourceDescriptor(outcome.resource.documentId)?.unlistedHash).toBe(
+      unlistedHash
+    )
+  })
+
+  it('旧描述符没有访问口令时不传口令', async () => {
+    mocks.loadResources.mockResolvedValue({
+      resources: [freshResource(freshDescriptor())]
+    })
+
+    await refreshVimeoTaskResource(originalDescriptor())
+
+    expect(mocks.loadPlayerPage).toHaveBeenCalledWith('1196869805', undefined)
   })
 })

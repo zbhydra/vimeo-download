@@ -36,7 +36,10 @@ export interface SignatureRefreshOutcome {
 export async function refreshVimeoTaskResource(
   descriptor: VimeoSourceDescriptor
 ): Promise<SignatureRefreshOutcome> {
-  const snapshot = await loadVimeoCapturedConfigFromPlayerPage(descriptor.videoId)
+  const snapshot = await loadVimeoCapturedConfigFromPlayerPage(
+    descriptor.videoId,
+    descriptor.unlistedHash
+  )
   if (!snapshot) {
     throw new Error(
       `[VimeoSignatureRefresh] 播放页给不出可用 config: videoId=${descriptor.videoId}, stage=config-refresh`

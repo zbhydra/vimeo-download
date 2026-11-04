@@ -202,4 +202,43 @@ describe('background rpc router', () => {
       }
     })
   })
+
+  it('refreshSignatureRequest 把合法访问口令带到播放页请求，其它情况请求不带 query', async () => {
+    const unlistedHash = '43f047633a'
+    const descriptor = {
+      version: 2,
+      videoId: VIMEO_VIDEO_ID,
+      sourceId: `vimeo:${VIMEO_VIDEO_ID}:video:best`,
+      optionId: 'best',
+      kind: 'video',
+      delivery: 'dash',
+      label: '1080p',
+      configUrl: VIMEO_REFRESH_CONFIG_URL
+    }
+    const cases: Array<{ descriptor: JsonObject; url: string }> = [
+      {
+        descriptor: { ...descriptor, unlistedHash },
+        url: `${VIMEO_PLAYER_PAGE_URL}?h=${unlistedHash}`
+      },
+      { descriptor, url: VIMEO_PLAYER_PAGE_URL },
+      { descriptor: { ...descriptor, unlistedHash: 'abc&x=1' }, url: VIMEO_PLAYER_PAGE_URL }
+    ]
+
+    for (const testCase of cases) {
+      const fetchMock = vi.fn(() => Promise.resolve(new Response('forbidden', { status: 403 })))
+      vi.stubGlobal('fetch', fetchMock)
+
+      // 播放页 403 让重签在请求之后立刻结束，这里只关心请求发往哪里。
+      await expect(
+        getHandler('refreshSignatureRequest')(
+          { taskId: 'task-1', descriptor: testCase.descriptor },
+          createContentContext()
+        )
+      ).rejects.toThrow('player page 请求失败')
+      expect(fetchMock).toHaveBeenCalledWith(testCase.url, {
+        credentials: 'omit',
+        referrerPolicy: 'no-referrer'
+      })
+    }
+  })
 })

@@ -38,7 +38,11 @@ import { downloadOrchestrator } from './DownloadOrchestrator'
 import { refreshVimeoTaskResource } from './vimeoSignatureRefresh'
 import { parseMediaResource } from '@/core/utils/mediaResource'
 import { loadVimeoCapturedConfigFromPlayerPage } from '@/sites/vimeo/config'
-import { isVimeoHostname, type VimeoSourceDescriptor } from '@/sites/vimeo/shared'
+import {
+  isVimeoHostname,
+  readVimeoUnlistedHash,
+  type VimeoSourceDescriptor
+} from '@/sites/vimeo/shared'
 import { getRuntimeConfig } from '../runtimeConfig'
 import { authApi } from '@/core/api/auth/api'
 import { clearDownloadHistory, removeDownloadHistoryEntry } from '@/core/storage/downloadHistory'
@@ -358,8 +362,8 @@ function parseRefreshSignatureRequest(
  * 校验重签请求携带的下载描述符身份字段。
  *
  * 重签只消费身份、守卫与展示字段（videoId/sourceId/optionId/kind/delivery/track/区间/
- * labelKey/labelParams），不消费 playlist URL，因此这里不套用 decodeVimeoSourceDescriptor
- * 的完整结构规则。
+ * labelKey/labelParams）和请求播放页用的 unlistedHash，不消费 playlist URL，因此这里不套用
+ * decodeVimeoSourceDescriptor 的完整结构规则。描述符按白名单重建，新增重签要用的字段必须加在这里。
  */
 function parseVimeoDescriptorIdentity(
   value: JsonValue | undefined,
@@ -395,6 +399,10 @@ function parseVimeoDescriptorIdentity(
     configUrl: requireString(value, 'configUrl', label)
   }
 
+  const unlistedHash = readVimeoUnlistedHash(value.unlistedHash)
+  if (unlistedHash) {
+    descriptor.unlistedHash = unlistedHash
+  }
   if (typeof value.videoTrackId === 'string' && value.videoTrackId.length > 0) {
     descriptor.videoTrackId = value.videoTrackId
   }

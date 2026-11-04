@@ -99,11 +99,15 @@ export async function refreshVimeoDirectResourcesFromConfigUrl(
  * `docs/feat/002.下载功能/tech-扩展端Vimeo本地下载.md` §5），因此兜底不构造 config URL，只取
  * 播放页初始 HTML 里的 `window.playerConfig`：与 MAIN world 内嵌通道同一份数据，但由
  * background 发起，不依赖页面注入是否成功。请求失败抛错，播放页给不出可用 config 时返回 null。
+ *
+ * @param videoId Vimeo 数字 video id
+ * @param unlistedHash 未列出视频的访问口令；只有下载期重签传入，content 侧兜底拿不到口令
  */
 export async function loadVimeoCapturedConfigFromPlayerPage(
-  videoId: string
+  videoId: string,
+  unlistedHash?: string
 ): Promise<VimeoCapturedConfigSnapshot | null> {
-  const pageUrl = `https://player.vimeo.com/video/${videoId}`
+  const pageUrl = buildVimeoPlayerPageUrl(videoId, unlistedHash)
   assertFetchUrl(pageUrl, 'player page')
 
   const response = await fetch(pageUrl, {
@@ -131,6 +135,16 @@ export async function loadVimeoCapturedConfigFromPlayerPage(
   }
 
   return createEmbeddedVimeoConfigSnapshot(config, finalUrl)
+}
+
+/**
+ * 拼 Vimeo 播放页 URL。
+ *
+ * 未列出视频不带 `h` 时播放页返回 403；没有口令时不带 query，公开视频的请求保持不变。
+ */
+export function buildVimeoPlayerPageUrl(videoId: string, unlistedHash?: string): string {
+  const pageUrl = `https://player.vimeo.com/video/${videoId}`
+  return unlistedHash ? `${pageUrl}?h=${encodeURIComponent(unlistedHash)}` : pageUrl
 }
 
 /** 兜底只接受仍落在 Vimeo 播放页的最终响应，不跟随重定向到其它页面。 */

@@ -8,9 +8,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { JsonValue } from '@/core/rpc/types'
 import {
+  buildVimeoPlayerPageUrl,
   loadVimeoCapturedConfigFromPlayerPage,
   loadVimeoResourcesFromCapturedConfig
 } from '@/sites/vimeo/config'
+import { decodeVimeoSourceDescriptor } from '@/sites/vimeo/shared'
 
 const mocks = vi.hoisted(() => ({
   getCapturedVimeoConfig: vi.fn(),
@@ -47,6 +49,12 @@ const VIDEO_ID = '1196869805'
 
 /** 播放页兜底请求的固定 URL。 */
 const PLAYER_PAGE_URL = `https://player.vimeo.com/video/${VIDEO_ID}`
+
+/** 未列出视频的访问口令。 */
+const UNLISTED_HASH = '43f047633a'
+
+/** 未列出视频的播放页 URL。 */
+const UNLISTED_PLAYER_PAGE_URL = `${PLAYER_PAGE_URL}?h=${UNLISTED_HASH}`
 
 /** config 自带的原生 signed refresh URL。 */
 const SIGNED_REFRESH_CONFIG_URL = `https://player.vimeo.com/video/${VIDEO_ID}/config/request?expires=1999999999&signature=refresh_signature`
@@ -123,6 +131,68 @@ describe('Vimeo background 播放页 config 兜底', () => {
 
     await expect(loadVimeoCapturedConfigFromPlayerPage(VIDEO_ID)).rejects.toThrow(
       '不是 Vimeo 播放页'
+    )
+  })
+
+  it('带访问口令时请求 ?h= 播放页，新资源的描述符继续携带口令', async () => {
+    fetchMock.mockResolvedValue(
+      playerPageResponse(playerPageHtml(configFixture({ unlistedHash: UNLISTED_HASH })), {
+        url: UNLISTED_PLAYER_PAGE_URL
+      })
+    )
+
+    const snapshot = await loadVimeoCapturedConfigFromPlayerPage(VIDEO_ID, UNLISTED_HASH)
+
+    expect(fetchMock).toHaveBeenCalledWith(UNLISTED_PLAYER_PAGE_URL, {
+      credentials: 'omit',
+      referrerPolicy: 'no-referrer'
+    })
+    // 快照身份仍是 config 自带的 refresh URL，口令不混进 configUrl。
+    expect(snapshot?.configUrl).toBe(SIGNED_REFRESH_CONFIG_URL)
+
+    const { resources } = await loadVimeoResourcesFromCapturedConfig(snapshot!)
+    expect(resources.length).toBeGreaterThan(0)
+    for (const resource of resources) {
+      expect(decodeVimeoSourceDescriptor(resource.documentId)?.unlistedHash).toBe(UNLISTED_HASH)
+    }
+  })
+
+  it('带访问口令的请求失败时，错误消息不泄露口令', async () => {
+    fetchMock.mockResolvedValue(
+      playerPageResponse('<html>forbidden</html>', {
+        status: 403,
+        url: UNLISTED_PLAYER_PAGE_URL
+      })
+    )
+
+    const error: Error = await loadVimeoCapturedConfigFromPlayerPage(
+      VIDEO_ID,
+      UNLISTED_HASH
+    ).then(
+      () => {
+        throw new Error('播放页 403 时应当抛错')
+      },
+      (reason: Error) => reason
+    )
+
+    expect(error.message).toContain('player page 请求失败')
+    expect(error.message).not.toContain(UNLISTED_HASH)
+  })
+})
+
+describe('buildVimeoPlayerPageUrl', () => {
+  it('没有口令时不带 query', () => {
+    expect(buildVimeoPlayerPageUrl(VIDEO_ID)).toBe(PLAYER_PAGE_URL)
+    expect(buildVimeoPlayerPageUrl(VIDEO_ID, '')).toBe(PLAYER_PAGE_URL)
+  })
+
+  it('有口令时拼 h 参数', () => {
+    expect(buildVimeoPlayerPageUrl(VIDEO_ID, UNLISTED_HASH)).toBe(UNLISTED_PLAYER_PAGE_URL)
+  })
+
+  it('需要转义的输入被完整编码，不会改变 query 结构', () => {
+    expect(buildVimeoPlayerPageUrl(VIDEO_ID, 'a b&c=d/e?f#g')).toBe(
+      `${PLAYER_PAGE_URL}?h=a%20b%26c%3Dd%2Fe%3Ff%23g`
     )
   })
 })
@@ -326,7 +396,7 @@ function primarySnapshot() {
 }
 
 /** 最小但结构合法的 Vimeo config。 */
-function configFixture(overrides: { refreshUrl?: string } = {}): JsonValue {
+function configFixture(overrides: { refreshUrl?: string; unlistedHash?: string } = {}): JsonValue {
   return {
     request: {
       timestamp: 1_999_996_399,
@@ -349,7 +419,8 @@ function configFixture(overrides: { refreshUrl?: string } = {}): JsonValue {
       id: Number(VIDEO_ID),
       // 真实标题可能含括号与引号，用于验证内嵌 JSON 的截取边界。
       title: 'Fallback } "quoted" \\ fixture',
-      thumbs: {}
+      thumbs: {},
+      ...(overrides.unlistedHash ? { unlisted_hash: overrides.unlistedHash } : {})
     }
   }
 }

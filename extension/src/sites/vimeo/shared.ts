@@ -55,6 +55,11 @@ export interface VimeoSourceDescriptor {
   configUrl: string
   /** Vimeo config 内的刷新 URL。 */
   refreshConfigUrl?: string
+  /**
+   * 未列出视频的访问口令（`video.unlisted_hash`），重签请求播放页时作为 `?h=`。
+   * 公开视频与旧描述符没有该字段。它是访问凭据，不得写入日志或任何用户可见文本。
+   */
+  unlistedHash?: string
   /** DASH playlist URL；DASH 下载首次直接使用，不预先刷新 config。 */
   dashPlaylistUrl?: string
   /** DASH video track id。 */
@@ -111,6 +116,7 @@ const VIMEO_DESCRIPTOR_URI_PREFIX = 'vimeo:descriptor-uri:'
 const VIMEO_DESCRIPTOR_LEGACY_PREFIX = 'vimeo:descriptor:'
 const VIMEO_FRAME_IDENTITY_MESSAGE_TYPE = 'vdl:vimeo:frame-identity'
 const VIDEO_ID_RE = /^\d+$/
+const VIMEO_UNLISTED_HASH_RE = /^[A-Za-z0-9]+$/
 
 /** Vimeo player frame helper 发给 top content 的身份消息。 */
 export interface VimeoFrameIdentityMessage {
@@ -460,6 +466,17 @@ export function readPositiveInt(value: JsonValue | undefined): number | undefine
   return undefined
 }
 
+/**
+ * 读取未列出视频的访问口令。
+ *
+ * 口令会被拼进播放页 URL，而 config 经 EventRpc 从 MAIN world 传来，宿主页面可以伪造，所以形状
+ * 不对就丢弃：丢弃后最多是重签失败，不会把任意文本带进请求。
+ */
+export function readVimeoUnlistedHash(value: JsonValue | undefined): string | undefined {
+  const hash = readString(value)
+  return hash && VIMEO_UNLISTED_HASH_RE.test(hash) ? hash : undefined
+}
+
 /** 读取字符串字段表；非字符串项直接丢弃，空表返回 undefined。 */
 function readStringRecord(value: JsonValue | undefined): Record<string, string> | undefined {
   if (!isJsonObject(value)) {
@@ -585,6 +602,11 @@ function parseVimeoSourceDescriptor(value: JsonValue): VimeoSourceDescriptor | n
   const refreshConfigUrl = readString(value.refreshConfigUrl)
   if (refreshConfigUrl) {
     descriptor.refreshConfigUrl = refreshConfigUrl
+  }
+
+  const unlistedHash = readVimeoUnlistedHash(value.unlistedHash)
+  if (unlistedHash) {
+    descriptor.unlistedHash = unlistedHash
   }
 
   const labelKey = readString(value.labelKey)
