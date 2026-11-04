@@ -24,7 +24,7 @@ Vimeo 扩展端可以做**纯前端下载**,并且不应该只做“首版 progr
 - DASH/HLS 交付可按秒级区间裁剪成片段,在 remux 阶段按 packet 边界截取,不重新编码。
 - 任务成功/失败终态回写下载历史,Popup 提供历史视图（§12.11）;文件名按设置弹层的模板渲染（§8.1）。
 
-失败处理保持简单:config 过期、CDN 403、CORS/网络失败、mux 失败时由 background 重签一次(直连播放页取回原生 config,见 §8.6);仍失败任务进入失败投影等用户重试,不做后端 fallback。
+失败处理保持简单:分片网络错误与 429/5xx 原地重试 2 次;config 过期、CDN 403 时由 background 重签一次(直连播放页取回原生 config,见 §8.6);仍失败任务进入失败投影等用户重试,不做后端 fallback。
 
 ## 2. 范围
 
@@ -591,7 +591,7 @@ popup/content downloadBatch({resources, tabId})
 执行在 offscreen document（`OffscreenTaskRunner`），与页面生命周期解耦:
 
 1. background 出队 DASH/HLS 任务：惰性确保 offscreen document 存在，经 RPC 下发 `taskId + 完整 MediaResource`（描述符携带 playlist URL、track id、裁剪区间）。
-2. offscreen 请求并校验 playlist，按序分片 `fetch`（`credentials: omit`）：video init + segments、（有音轨时）audio init + segments；playlist 与分片共用原任务 AbortSignal，分片响应校验内容类型与字节。
+2. offscreen 请求并校验 playlist，按序分片 `fetch`（`credentials: omit`）：video init + segments、（有音轨时）audio init + segments；playlist 与分片共用原任务 AbortSignal，分片响应校验内容类型与字节。分片遇到网络错误（`TypeError`）或 429/5xx 时原地重试最多 2 次（退避 1s / 3s，可被取消打断），重试前回滚本分片已计入的字节；403/404/410 仍走 §8.6 重签。
 3. 分片流式喂给 Mediabunny remux 输出 MP4 / M4A（含 §8.5 的 packet 级裁剪）；remux 输出经 StreamTarget 流式写入 OPFS 临时文件，不在内存整份驻留（见下方「产物存储」）。
 4. 派发前 background 先登记 completion；OPFS File 的 blob URL 经 `taskComplete` 交付，background 用 `chrome.downloads.download` 写入保存位置子目录，并沿用 `downloads.search` 轮询确认 complete/interrupted。同一 RunnerTask 保留至交付 ACK，可被心跳与 `listActiveTasks` 读取；收到回执才释放 blob/OPFS 产物，落盘中断收敛为失败。
 5. 任务执行期间 offscreen 以 20s 心跳保活 SW，进度按 250ms 节流回传（终态与首次报告不受节流约束）；`taskComplete` 的应答超时单独放宽到 120s，避免大产物慢盘落盘被 RPC 默认超时误判失败。

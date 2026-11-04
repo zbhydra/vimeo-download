@@ -320,6 +320,198 @@ describe('OffscreenTaskRunner 下载分派', () => {
     vi.unstubAllGlobals()
   })
 
+  describe('分片瞬时失败重试', () => {
+    /** 单次分片响应；Response 只能读一次，所以每次重试都现造。 */
+    type SegmentAttempt = () => Promise<Response>
+
+    const respondWith =
+      (status: number): SegmentAttempt =>
+      () =>
+        Promise.resolve(responseWithUrl('unavailable', status, AUDIO_SEGMENT_URL, 'text/plain'))
+    const networkError: SegmentAttempt = () => Promise.reject(new TypeError('Failed to fetch'))
+    const success: SegmentAttempt = () =>
+      Promise.resolve(segmentResponse(AUDIO_SEGMENT_URL, 'audio/mp4'))
+
+    /** playlist 固定成功，分片请求按给定顺序逐次响应。 */
+    function stubSegmentFetch(attempts: SegmentAttempt[]): () => number {
+      const pending = [...attempts]
+      let segmentCalls = 0
+      vi.stubGlobal(
+        'fetch',
+        vi.fn((input: RequestInfo | URL) => {
+          if (input.toString() === PLAYLIST_URL) {
+            return Promise.resolve(jsonResponse(dashPlaylistPayload(), PLAYLIST_URL))
+          }
+          segmentCalls += 1
+          const next = pending.shift()
+          if (!next) {
+            throw new Error(`[dispatch.spec] 分片请求次数超出预期: ${segmentCalls}`)
+          }
+          return next()
+        })
+      )
+      return () => segmentCalls
+    }
+
+    /** 只让真实任务队列前进、不推进假时钟，用于断言精确退避时长。 */
+    async function flushUntil(condition: () => boolean): Promise<void> {
+      for (let turn = 0; turn < 2000 && !condition(); turn += 1) {
+        await new Promise<void>(resolve => setImmediate(resolve))
+      }
+      expect(condition()).toBe(true)
+    }
+
+    /** 走完一次退避：等它开始计时，再把假时钟拨过去。 */
+    async function passRetryDelay(delayMs: number): Promise<void> {
+      await flushUntil(() => vi.getTimerCount() === 1)
+      await vi.advanceTimersByTimeAsync(delayMs)
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+      mocks.taskCancelled.mockResolvedValue({ accepted: true })
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it.each([
+      { label: '503', failure: respondWith(503) },
+      { label: '504', failure: respondWith(504) },
+      { label: '429', failure: respondWith(429) },
+      { label: 'TypeError', failure: networkError }
+    ])('$label 按 1s / 3s 退避重试 2 次后恢复', async ({ label, failure }) => {
+      const segmentCalls = stubSegmentFetch([failure, failure, success])
+      offscreenTaskRunner.startTask(`retry-${label}`, dashAudioResource())
+
+      await passRetryDelay(999)
+      expect(segmentCalls()).toBe(1)
+      await vi.advanceTimersByTimeAsync(1)
+      await flushUntil(() => segmentCalls() === 2)
+
+      await passRetryDelay(2_999)
+      expect(segmentCalls()).toBe(2)
+      await vi.advanceTimersByTimeAsync(1)
+      await flushUntil(() => mocks.taskComplete.mock.calls.length === 1)
+
+      expect(segmentCalls()).toBe(3)
+      expect(mocks.taskFailed).not.toHaveBeenCalled()
+    })
+
+    it('重试耗尽后任务失败，错误文案与未重试时一致', async () => {
+      const failure = respondWith(503)
+      const segmentCalls = stubSegmentFetch([failure, failure, failure])
+      const resource = dashAudioResource()
+      offscreenTaskRunner.startTask('retry-exhausted', resource)
+
+      await passRetryDelay(1_000)
+      await flushUntil(() => segmentCalls() === 2)
+      await passRetryDelay(3_000)
+      await flushUntil(() => mocks.taskFailed.mock.calls.length === 1)
+
+      expect(segmentCalls()).toBe(3)
+      expect(mocks.taskFailed.mock.calls[0][0].message).toBe(
+        `[OffscreenTaskRunner] Vimeo segment fetch 失败: id=${resource.id}, host=vod-adaptive-ak.vimeocdn.com, stage=response, status=503`
+      )
+      expect(mocks.refreshSignatureRequest).not.toHaveBeenCalled()
+    })
+
+    it.each([403, 404, 410])('%i 不原地重试，走重签链', async status => {
+      mocks.refreshSignatureRequest.mockRejectedValueOnce(new Error('[mock] refresh down'))
+      const segmentCalls = stubSegmentFetch([respondWith(status)])
+      offscreenTaskRunner.startTask(`retry-resign-${status}`, dashAudioResource())
+
+      await flushUntil(() => mocks.taskFailed.mock.calls.length === 1)
+
+      expect(segmentCalls()).toBe(1)
+      expect(mocks.refreshSignatureRequest).toHaveBeenCalledTimes(1)
+      expect(vi.getTimerCount()).toBe(0)
+    })
+
+    it('其它 4xx 不重试也不重签，直接失败', async () => {
+      const segmentCalls = stubSegmentFetch([respondWith(400)])
+      offscreenTaskRunner.startTask('retry-400', dashAudioResource())
+
+      await flushUntil(() => mocks.taskFailed.mock.calls.length === 1)
+
+      expect(segmentCalls()).toBe(1)
+      expect(mocks.refreshSignatureRequest).not.toHaveBeenCalled()
+      expect(mocks.taskFailed.mock.calls[0][0].message).toContain('status=400')
+    })
+
+    it('断流重试不重复累计字节：进度与产物输入都只算成功那次', async () => {
+      const brokenStream: SegmentAttempt = () => {
+        let sent = false
+        const body = new ReadableStream<Uint8Array>(
+          {
+            pull(controller) {
+              if (sent) {
+                controller.error(new TypeError('network error'))
+                return
+              }
+              sent = true
+              controller.enqueue(Uint8Array.from([9, 9]))
+            }
+          },
+          { highWaterMark: 0 }
+        )
+        return Promise.resolve(responseWithUrl(body, 200, AUDIO_SEGMENT_URL, 'audio/mp4'))
+      }
+      const segmentCalls = stubSegmentFetch([brokenStream, success])
+      offscreenTaskRunner.startTask('retry-broken-stream', dashAudioResource())
+
+      await passRetryDelay(1_000)
+      await flushUntil(() => mocks.taskComplete.mock.calls.length === 1)
+
+      expect(segmentCalls()).toBe(2)
+      // init 3 字节 + 分片 4 字节；不回滚的话断流前的 2 字节会让这里变成 9。
+      expect(mocks.taskProgress.mock.calls.at(-1)?.[0]).toMatchObject({
+        progress: 100,
+        receivedBytes: 7
+      })
+      expect(mocks.remuxAudio.mock.calls[0][0].size).toBe(7)
+    })
+
+    it('退避等待中取消立即退出：不再请求，不留定时器，也不报失败', async () => {
+      const segmentCalls = stubSegmentFetch([respondWith(503)])
+      offscreenTaskRunner.startTask('retry-cancel-wait', dashAudioResource())
+      await flushUntil(() => vi.getTimerCount() === 1)
+
+      expect(offscreenTaskRunner.cancelTask('retry-cancel-wait')).toBe(true)
+      await flushUntil(() => mocks.taskCancelled.mock.calls.length === 1)
+
+      expect(mocks.taskCancelled).toHaveBeenCalledWith({ taskId: 'retry-cancel-wait' })
+      expect(vi.getTimerCount()).toBe(0)
+      expect(segmentCalls()).toBe(1)
+      expect(mocks.taskFailed).not.toHaveBeenCalled()
+    })
+
+    it.each([
+      { label: 'AbortError', error: new DOMException('cancelled', 'AbortError') },
+      { label: 'TypeError', error: new TypeError('Failed to fetch') }
+    ])('在途请求因取消抛 $label 时不进入退避', async ({ label, error }) => {
+      let failInFlight: ((reason: Error) => void) | undefined
+      const segmentCalls = stubSegmentFetch([
+        () =>
+          new Promise<Response>((_resolve, reject) => {
+            failInFlight = reject
+          })
+      ])
+      const taskId = `retry-cancel-${label}`
+      offscreenTaskRunner.startTask(taskId, dashAudioResource())
+      await flushUntil(() => failInFlight !== undefined)
+
+      offscreenTaskRunner.cancelTask(taskId)
+      failInFlight?.(error)
+      await flushUntil(() => mocks.taskCancelled.mock.calls.length === 1)
+
+      expect(vi.getTimerCount()).toBe(0)
+      expect(segmentCalls()).toBe(1)
+      expect(mocks.taskFailed).not.toHaveBeenCalled()
+    })
+  })
+
   it('DASH video 描述符带区间时把区间透传给 mux', async () => {
     vi.stubGlobal(
       'fetch',

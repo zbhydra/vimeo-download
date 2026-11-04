@@ -67,6 +67,9 @@ const TASK_COMPLETE_TIMEOUT_MS = 120_000
 /** 任务执行期间向 background 发送保活心跳的间隔。 */
 const HEARTBEAT_INTERVAL_MS = 20_000
 
+/** 分片瞬时失败的重试退避；长度即最多重试次数。 */
+const SEGMENT_RETRY_DELAYS_MS = [1_000, 3_000]
+
 /** Vimeo 下载可重签错误：签名过期（403）或资源下线（404/410）。 */
 class VimeoRetryableDownloadError extends Error {
   /** HTTP 状态码。 */
@@ -76,6 +79,19 @@ class VimeoRetryableDownloadError extends Error {
     super(`[OffscreenTaskRunner] ${message}, status=${status}`)
     this.name = 'VimeoRetryableDownloadError'
     this.status = status
+  }
+}
+
+/**
+ * 分片响应 429/5xx：CDN 瞬时失败，原地重试。
+ *
+ * 文案由调用方传入，与其它状态码的 fetch 失败保持同一格式，SLS 分类不受影响。不并入
+ * VimeoRetryableDownloadError：那条链路会请求重签，5xx 不该进匿名播放页。
+ */
+class TransientSegmentError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'TransientSegmentError'
   }
 }
 
@@ -770,8 +786,45 @@ export class OffscreenTaskRunner {
   // 分片 fetch / 预算 / 交付
   // ============================================================================
 
-  /** 下载单个媒体分片。 */
+  /**
+   * 下载单个媒体分片；网络错误（TypeError）与 429/5xx 原地重试，其余错误交回调用方。
+   *
+   * 一个任务有几十到几千个分片，任何一片失败都要整片重下，所以瞬时错误在这一层消化。
+   * 取消时 fetch 抛的是 AbortError（DOMException），不会被当成 TypeError 重试。
+   */
   private async fetchSegment(
+    task: RunnerTask,
+    url: string,
+    budget: ByteBudget
+  ): Promise<ArrayBuffer> {
+    const startBudgetBytes = budget.bytes
+    const startReceivedBytes = task.receivedBytes
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        return await this.fetchSegmentOnce(task, url, budget)
+      } catch (error) {
+        const transient = error instanceof TypeError || error instanceof TransientSegmentError
+        if (!transient || attempt >= SEGMENT_RETRY_DELAYS_MS.length) {
+          throw error
+        }
+        this.assertNotCancelled(task)
+
+        const retryDelayMs = SEGMENT_RETRY_DELAYS_MS[attempt]
+        logger.error(
+          `[OffscreenTaskRunner] 分片瞬时失败，等待后重试: taskId=${task.taskId}, id=${task.resource.id}, host=${urlHostname(url)}, attempt=${attempt + 1}, retryDelayMs=${retryDelayMs}`,
+          error
+        )
+        // 字节按块累计，断流前已计入的部分要作废，否则进度虚高，还可能误触 mux 上限。
+        budget.bytes = startBudgetBytes
+        task.receivedBytes = startReceivedBytes
+        await waitUnlessAborted(retryDelayMs, task.controller.signal)
+        this.assertNotCancelled(task)
+      }
+    }
+  }
+
+  /** 发起一次分片请求并读完响应。 */
+  private async fetchSegmentOnce(
     task: RunnerTask,
     url: string,
     budget: ByteBudget
@@ -796,9 +849,10 @@ export class OffscreenTaskRunner {
     }
 
     if (!VALID_MEDIA_STATUS_CODES.has(response.status)) {
-      throw new Error(
-        `[OffscreenTaskRunner] Vimeo segment fetch 失败: id=${task.resource.id}, host=${urlHostname(response.url || url)}, stage=response, status=${response.status}`
-      )
+      const message = `[OffscreenTaskRunner] Vimeo segment fetch 失败: id=${task.resource.id}, host=${urlHostname(response.url || url)}, stage=response, status=${response.status}`
+      throw response.status === 429 || response.status >= 500
+        ? new TransientSegmentError(message)
+        : new Error(message)
     }
 
     assertDownloadContentType(
@@ -1182,6 +1236,19 @@ function decodeBase64ToArrayBuffer(value: string): ArrayBuffer {
 /** 两个可选 size 都已知时返回总 size。 */
 function sumKnownSizes(left: number | undefined, right: number | undefined): number | undefined {
   return left !== undefined && right !== undefined ? left + right : undefined
+}
+
+/** 可被任务取消打断的等待；取消后立即结束，由调用方检查 cancelRequested 短路。 */
+function waitUnlessAborted(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise(resolve => {
+    const finish = (): void => {
+      clearTimeout(timer)
+      signal.removeEventListener('abort', finish)
+      resolve()
+    }
+    const timer = setTimeout(finish, ms)
+    signal.addEventListener('abort', finish)
+  })
 }
 
 /** 只保留日志定位需要的 host，不输出 signed path/query。 */
