@@ -124,7 +124,7 @@ https://{project}.{host}/logstores/{logstore}/track?APIVersion=0.6.0&__topic__=m
 
 - **下载工作区 mark-log**:用户触发解析/下载/恢复/失败 → `recordHomepageMark()` → 立即 fire-and-forget SLS → 继续请求后端 `/api/client/mark/record`;任一通道失败都不阻断用户操作。
 - **安装 CTA**:`globalClickEvents.ts` 生成 `web_extension_install_click` → SLS(keepalive)→ `postJsonKeepalive()` 请求后端 mark;CTA 跳转不被等待。
-- **插件来源订阅页曝光**:目标订阅页检测 `utm_source=extension` → `recordHomepageMark()` 双写 `web_pricing_open_from_extension`,不限制 `source`;页面刷新重复写入,旧入口中转页不记录,失败不阻断页面初始化。插件 1.0.5 起不再跳官网订阅页,这个事件只来自旧版本,会随用户升级下降;插件内订阅页曝光看 `pricing_view`。
+- **插件来源订阅页曝光**:目标订阅页检测 `utm_source=extension` → `recordHomepageMark()` 双写 `web_pricing_open_from_extension`,不限制 `source`;页面刷新重复写入,旧入口中转页不记录,失败不阻断页面初始化。插件 1.0.4 起不再跳官网订阅页,这个事件只来自旧版本,会随用户升级下降;插件内订阅页曝光看 `pricing_view`。
 - **插件商店评价点击**:Pricing 订阅确认弹窗点击“去好评” → `recordHomepageMark()` 双写 `web_extension_store_review_click`,空 `mark_msg`;每次点击都发起,失败不阻断商店跳转和领取倒计时。
 - **首次打开网站时间**:website 首次运行时把毫秒时间戳写入 `homepage_first_opened_at`;SLS 的 `first_opened_at` 与后端 `mark_logs.first_opened_at` 使用同一口径,旧客户端不传后端字段时默认 `0`。extension 只写 SLS，时间来自 background 持久化的 `first_opened_at`，初始化合同见 [Extension](./tech-extension.md#a7-sls-mark-log-上报)。
 - **首次访问事件**:website 确认 `homepage_first_opened_at` 后,若本机没有 `homepage_web_first_opened_submitted_at` 提交标记,异步上报 `web_first_opened`,同时写 SLS 与后端 `mark_logs`,并写入提交标记。`localStorage` 不可用或写入失败时仍上报,`mark_msg` 为 `{"reason":"localStorage_unavailable"}`;这种场景不能跨刷新去重,Dashboard 排查时按 reason 区分。
