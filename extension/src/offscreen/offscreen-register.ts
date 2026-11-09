@@ -89,8 +89,13 @@ export const METHOD_TRANSPORTS = {
 
 /** offscreen 方法请求体限制，单位字节。 */
 export const METHOD_REQUEST_LIMITS = {
-  /** startTask 携带完整 MediaResource（含 Vimeo 下载描述符）。 */
-  startTask: 32768,
+  /**
+   * startTask 携带完整 MediaResource（含 Vimeo 下载描述符）。
+   *
+   * DASH 描述符内的分片时间线随视频时长线性增长，约 28 字节/秒（6 秒分片、双轨），
+   * 2 MiB 可覆盖约 20 小时；旧上限 32 KiB 只够约 19 分钟，长视频会在派发阶段直接失败。
+   */
+  startTask: 2097152,
   /** cancelTask 只携带任务 ID。 */
   cancelTask: 1024,
   /** listActiveTasks 无业务参数。 */
@@ -106,8 +111,8 @@ export const METHOD_RESPONSE_LIMITS = {
   startTask: 1024,
   /** cancelTask 返回是否受理。 */
   cancelTask: 1024,
-  /** listActiveTasks 返回活跃任务及完整资源；单并发下通常 0~1 条。 */
-  listActiveTasks: 65536,
+  /** listActiveTasks 返回活跃任务及完整资源；单并发下通常 0~1 条，资源上限同 startTask。 */
+  listActiveTasks: 2097152,
   /** releaseTaskArtifact 返回释放结果。 */
   releaseTaskArtifact: 1024,
   saveTaskArtifact: 1024

@@ -1183,11 +1183,23 @@ function readDashSegments(value: JsonValue | undefined): VimeoDashSegment[] {
       continue
     }
 
+    const startSeconds = readFiniteNumber(item.start_seconds) ?? readFiniteNumber(item.start)
+    const endSeconds = readFiniteNumber(item.end_seconds) ?? readFiniteNumber(item.end)
+    const explicitDuration =
+      readFiniteNumber(item.duration_seconds) ?? readFiniteNumber(item.duration)
+    // Vimeo 线上 DASH 分片只给绝对 start/end，没有 duration 字段；缺 duration 时用 end-start 补，
+    // 否则时间线恒为 undefined，自动分割和超大画质选项都不会生效。
+    const durationSeconds =
+      explicitDuration ??
+      (startSeconds !== undefined && endSeconds !== undefined && endSeconds > startSeconds
+        ? endSeconds - startSeconds
+        : undefined)
+
     segments.push({
       url,
       size: readPositiveInt(item.size),
-      startSeconds: readFiniteNumber(item.start_seconds) ?? readFiniteNumber(item.start),
-      durationSeconds: readFiniteNumber(item.duration_seconds) ?? readFiniteNumber(item.duration)
+      startSeconds,
+      durationSeconds
     })
   }
 

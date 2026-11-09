@@ -21,6 +21,7 @@ import {
   parseVimeoDashPlaylist,
   parseVimeoHlsMediaPlaylist,
   parseVimeoHlsMasterPlaylist,
+  splitVimeoResourceBySize,
   type VimeoHlsVariant
 } from '@/sites/vimeo/media'
 import { logger } from '@/core/utils/logger'
@@ -415,6 +416,59 @@ describe('Vimeo media parsing', () => {
     expect(options.find(option => option.sourceId === 'vimeo:1201819515:video:best')?.delivery).toBe(
       'progressive'
     )
+  })
+
+  it('derives DASH timeline from start/end so oversized tracks stay selectable', () => {
+    const config = parseVimeoConfig(configFixture(), CONFIG_URL)
+    const playlist = parseVimeoDashPlaylist(
+      {
+        base_url: '',
+        video: [
+          {
+            ...dashVideoTrackFixture(2160, {
+              id: 'v-real-shape',
+              segmentSize: DEFAULT_VIMEO_CONFIG.muxMaxBytes
+            }),
+            segments: [
+              {
+                url: 'https://vod-adaptive-ak.vimeocdn.com/video/1.m4s',
+                start: 0,
+                end: 6,
+                size: DEFAULT_VIMEO_CONFIG.muxMaxBytes
+              },
+              { url: 'https://vod-adaptive-ak.vimeocdn.com/video/2.m4s', start: 6, end: 12, size: 1 }
+            ]
+          }
+        ],
+        audio: [
+          {
+            ...dashAudioTrackFixture('a-real-shape', { segmentSize: 1024 }),
+            segments: [
+              { url: 'https://vod-adaptive-ak.vimeocdn.com/audio/1.m4s', start: 0, end: 6, size: 1024 },
+              { url: 'https://vod-adaptive-ak.vimeocdn.com/audio/2.m4s', start: 6, end: 12, size: 1024 }
+            ]
+          }
+        ]
+      },
+      PLAYLIST_URL
+    )
+    const options = buildVimeoDownloadOptions(config, playlist)
+    const option = options.find(option => option.sourceId.includes('v-real-shape'))
+
+    expect(option).toBeDefined()
+    expect(option?.videoSegmentTimeline).toEqual([
+      { startSeconds: 0, endSeconds: 6 },
+      { startSeconds: 6, endSeconds: 12 }
+    ])
+    expect(option?.audioSegmentTimeline).toHaveLength(2)
+    if (!option) throw new Error('missing real-shape option')
+
+    const resource = createVimeoResource(option, 0)
+    const parts = splitVimeoResourceBySize(
+      { ...resource, size: DEFAULT_VIMEO_CONFIG.muxMaxBytes * 2, duration: 12 },
+      Math.floor(DEFAULT_VIMEO_CONFIG.muxMaxBytes / 2)
+    )
+    expect(parts.length).toBeGreaterThan(1)
   })
 
   it('roundtrips descriptor labels and titles with non-ASCII text', () => {

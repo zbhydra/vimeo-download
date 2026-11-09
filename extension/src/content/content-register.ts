@@ -47,13 +47,11 @@ export const METHOD_RESPONSE_LIMITS = {
   /**
    * getResources 返回完整资源缓存。
    *
-   * 聚合页回退按视频分组缓存（上限 16 个视频，单视频约 30 条资源、2.7KB 序列化体积），
-   * 实测 8 视频 113 条资源约 305KB；对齐检测上限 16 后最坏组合为
-   * 16 视频 × 约 30 条 × 2.7KB ≈ 1.3MB，超出原 768KB 上界，取 1.5MB 覆盖并留余量。
-   * 组元数据随每条资源多带 groupMetadata（标题/作者/时长/封面约 0.25KB/条）：最坏组合
-   * 再加 16 × 30 × 0.25KB ≈ 120KB → 约 1.42MB，videoGroups 本身仅 16 组约 3KB，上限不调。
+   * 每条 DASH 视频资源都带完整分片时间线（约 28 字节/秒），19 分钟视频的单视频响应实测
+   * 429KB，随时长线性增长；旧 1.5MiB 上限约 65 分钟视频就会撑破。8MiB 可覆盖约 6 小时
+   * 视频（聚合页 16 个短视频的最坏组合也在内），超过时显式报错而不是静默截断。
    */
-  getResources: 1572864
+  getResources: 8388608
 } as const satisfies Record<keyof ContentHandler, number>
 
 /** register 占位函数，避免声明被业务代码误调用。 */

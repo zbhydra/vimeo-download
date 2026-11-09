@@ -320,12 +320,22 @@ export const METHOD_REQUEST_LIMITS = {
   taskFailed: 4096,
   /** taskCancelled 只携带任务 ID。 */
   taskCancelled: 1024,
-  /** refreshSignatureRequest 携带任务 ID 与下载描述符。 */
-  refreshSignatureRequest: 8192,
+  /**
+   * refreshSignatureRequest 携带任务 ID 与下载描述符。
+   *
+   * 描述符内含 DASH 分片时间线，大小随时长线性增长（见 offscreen startTask 上限注释），
+   * 8 KiB 只够约 4 分钟视频，必须按完整资源的上限放宽。
+   */
+  refreshSignatureRequest: 2097152,
   /** keepAlive 无业务参数。 */
   keepAlive: 1024,
-  /** downloadBatch 携带完整 MediaResource 列表。 */
-  downloadBatch: 65536,
+  /**
+   * downloadBatch 携带完整 MediaResource 列表。
+   *
+   * 单个 DASH 资源的描述符含随时长线性增长的分片时间线，64 KiB 只够约 40 分钟视频；
+   * 放宽到与 startTask 相同上限，避免长视频点击即失败。
+   */
+  downloadBatch: 2097152,
   /** cancelDownloadTask 只携带任务 ID。 */
   cancelDownloadTask: 1024,
   /** retryDownloadTask 只携带任务 ID。 */
@@ -368,8 +378,8 @@ export const METHOD_RESPONSE_LIMITS = {
   taskFailed: 1024,
   /** taskCancelled 返回写入结果。 */
   taskCancelled: 1024,
-  /** refreshSignatureRequest 返回续跑/重跑判定与刷新后的完整资源。 */
-  refreshSignatureRequest: 32768,
+  /** refreshSignatureRequest 返回续跑/重跑判定与刷新后的完整资源；大小同请求上限。 */
+  refreshSignatureRequest: 2097152,
   /** keepAlive 返回存活确认。 */
   keepAlive: 1024,
   /** downloadBatch 返回受理结果。 */
