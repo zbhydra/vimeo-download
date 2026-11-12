@@ -74,6 +74,7 @@ export interface AdminUserListRow {
   user_id: number;
   email: string | null;
   register_source: string | null;
+  register_country: string | null;
   account_status: AdminUserAccountStatus;
   created_at: number;
   last_login_at: number | null;

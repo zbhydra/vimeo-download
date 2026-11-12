@@ -172,6 +172,7 @@
     "accountDeleted": "已注销",
     "loginCount": "登录次数",
     "registerSource": "注册来源",
+    "registerCountry": "注册地区",
     "registerSources": {
       "web": "网站",
       "extension": "插件"

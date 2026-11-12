@@ -82,6 +82,7 @@ class AdminUserProfileService:
                     user_id=user.user_id,
                     email=user.email,
                     register_source=user.register_source,
+                    register_country=user.register_country,
                     account_status=self._account_status(user),
                     created_at=user.created_at,
                     last_login_at=user.last_login_at,

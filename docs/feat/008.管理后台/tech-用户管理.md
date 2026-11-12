@@ -19,7 +19,7 @@
 | POST | `/users/{user_id}/subscription` | `product_id: string`、`expires_at: int \| null` | 保存后的订阅摘要 |
 | POST | `/users/{user_id}/subscription/cancel` | 空请求体 | 撤销后的订阅摘要 |
 
-列表行只返回界面使用的字段:用户 ID、邮箱、注册来源 `register_source`、账号状态、注册时间、最后登录时间,以及 `subscription.product_id / period / has_subscription / expires_at`。注册来源直接读取用户记录,取值与写入规则见 [账号与认证](../007.用户系统/tech-账号与认证.md);列表与详情弹窗共用来源翻译。不返回密码哈希、token 或登录凭据。账号状态与订阅摘要复用既有用户详情口径;保留已过期记录的原结束时间。
+列表行只返回界面使用的字段:用户 ID、邮箱、注册来源 `register_source`、注册地区 `register_country`、账号状态、注册时间、最后登录时间,以及 `subscription.product_id / period / has_subscription / expires_at`。注册来源与注册地区直接读取用户记录,取值与写入规则见 [账号与认证](../007.用户系统/tech-账号与认证.md);列表与详情弹窗共用来源翻译。不返回密码哈希、token 或登录凭据。账号状态与订阅摘要复用既有用户详情口径;保留已过期记录的原结束时间。
 
 设置读取响应:
 

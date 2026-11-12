@@ -172,6 +172,7 @@
     "accountDeleted": "Deleted",
     "loginCount": "Login Count",
     "registerSource": "Register Source",
+    "registerCountry": "Registration Region",
     "registerSources": {
       "web": "Website",
       "extension": "Extension"

@@ -73,7 +73,7 @@
       :loading="loading"
       :pagination="pagination"
       :row-key="(row: AdminUserListRow) => row.user_id"
-      :scroll-x="1520"
+      :scroll-x="1640"
       :bordered="false"
       striped
       remote
@@ -257,6 +257,17 @@ const timeError = computed(() =>
     : undefined,
 );
 
+function formatRegistrationCountry(country: string | null): string {
+  if (!country) return "-";
+  try {
+    const name = new Intl.DisplayNames(["zh-CN"], { type: "region", fallback: "none" }).of(country);
+    return name ? `${country} (${name})` : country;
+  } catch (error) {
+    console.error("UsersView.formatRegistrationCountry", error);
+    return country;
+  }
+}
+
 const columns = computed<DataTableColumns<AdminUserListRow>>(() => [
   {
     title: t("userInfo.userId"),
@@ -288,6 +299,12 @@ const columns = computed<DataTableColumns<AdminUserListRow>>(() => [
       row.register_source
         ? t(`userInfo.registerSources.${row.register_source}`, row.register_source)
         : "-",
+  },
+  {
+    title: t("userInfo.registerCountry"),
+    key: "register_country",
+    width: 120,
+    render: (row) => formatRegistrationCountry(row.register_country),
   },
   {
     title: t("userInfo.accountStatus"),
