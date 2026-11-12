@@ -39,7 +39,14 @@
               {{ profile.user.login_count }}
             </NDescriptionsItem>
             <NDescriptionsItem :label="t('userInfo.registerSource')">
-              {{ profile.user.register_source || "-" }}
+              {{
+                profile.user.register_source
+                  ? t(
+                      `userInfo.registerSources.${profile.user.register_source}`,
+                      profile.user.register_source,
+                    )
+                  : "-"
+              }}
             </NDescriptionsItem>
             <NDescriptionsItem :label="t('userInfo.registerMethod')">
               {{ profile.user.register_method || "-" }}

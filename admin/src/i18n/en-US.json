@@ -172,6 +172,10 @@
     "accountDeleted": "Deleted",
     "loginCount": "Login Count",
     "registerSource": "Register Source",
+    "registerSources": {
+      "web": "Website",
+      "extension": "Extension"
+    },
     "registerMethod": "Register Method",
     "registerIp": "Register IP",
     "lastLoginIp": "Last Login IP",

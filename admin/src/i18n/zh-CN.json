@@ -172,6 +172,10 @@
     "accountDeleted": "已注销",
     "loginCount": "登录次数",
     "registerSource": "注册来源",
+    "registerSources": {
+      "web": "网站",
+      "extension": "插件"
+    },
     "registerMethod": "注册方式",
     "registerIp": "注册 IP",
     "lastLoginIp": "最后登录 IP",

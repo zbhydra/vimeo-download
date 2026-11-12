@@ -73,7 +73,7 @@
       :loading="loading"
       :pagination="pagination"
       :row-key="(row: AdminUserListRow) => row.user_id"
-      :scroll-x="1320"
+      :scroll-x="1520"
       :bordered="false"
       striped
       remote
@@ -279,6 +279,15 @@ const columns = computed<DataTableColumns<AdminUserListRow>>(() => [
     key: "email",
     width: 240,
     render: (row) => h(NEllipsis, { tooltip: true }, { default: () => row.email ?? "-" }),
+  },
+  {
+    title: t("userInfo.registerSource"),
+    key: "register_source",
+    width: 120,
+    render: (row) =>
+      row.register_source
+        ? t(`userInfo.registerSources.${row.register_source}`, row.register_source)
+        : "-",
   },
   {
     title: t("userInfo.accountStatus"),

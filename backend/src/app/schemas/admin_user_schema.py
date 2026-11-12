@@ -75,6 +75,7 @@ class AdminUserListRow(BaseModel):
 
     user_id: int
     email: str | None
+    register_source: str | None
     account_status: AdminUserAccountStatus
     created_at: int
     last_login_at: int | None

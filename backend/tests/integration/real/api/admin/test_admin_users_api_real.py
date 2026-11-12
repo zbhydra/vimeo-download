@@ -235,6 +235,10 @@ async def test_real_users_queries_share_literal_prefix_and_count(
         first_row = await db.get(UserModel, first.user_id)
         assert first_row is not None
         first_row.locked_until = timestamp_now() + 60_000
+        first_row.register_source = "web"
+        second_row = await db.get(UserModel, second.user_id)
+        assert second_row is not None
+        second_row.register_source = "extension"
         await db.commit()
     params: dict[str, str | int] = {
         "email": f" {env.prefix.upper()}%_ ",
@@ -245,6 +249,7 @@ async def test_real_users_queries_share_literal_prefix_and_count(
     )
     assert page["total"] == 2
     assert page["rows"][0]["user_id"] == second.user_id
+    assert page["rows"][0]["register_source"] == "extension"
     page2 = _ok(
         await env.client.get(
             "/api/admin/users", params={**params, "page": 2}, headers=env.headers
@@ -253,6 +258,7 @@ async def test_real_users_queries_share_literal_prefix_and_count(
     assert page2["total"] == 2
     assert page2["rows"][0]["user_id"] == first.user_id
     assert page2["rows"][0]["account_status"] == "locked"
+    assert page2["rows"][0]["register_source"] == "web"
     for user_id, expected in ((first.user_id, 1), (other.user_id, 0)):
         data = _ok(
             await env.client.get(
@@ -269,9 +275,11 @@ async def test_real_users_queries_share_literal_prefix_and_count(
         )
     )
     assert exact["rows"][0]["account_status"] == "deleted"
+    assert exact["rows"][0]["register_source"] is None
     assert set(exact["rows"][0]) == {
         "user_id",
         "email",
+        "register_source",
         "account_status",
         "created_at",
         "last_login_at",
